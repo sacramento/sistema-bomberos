@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -50,16 +51,14 @@ const getStatusLabel = (status: AttendanceStatus) => {
     }
 }
 
-export default function AttendancePage({ params }: { params: { id: string } }) {
-    const { id: sessionId } = params;
-    
+// Main component logic moved to a child component to properly handle params
+function AttendanceContent({ sessionId }: { sessionId: string }) {
     const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
 
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
         const initialAttendance: Record<string, AttendanceStatus> = {};
-        const currentSession = sessions.find(s => s.id === sessionId);
-        if (currentSession) {
-            currentSession.attendees.forEach(a => {
+        if (session) {
+            session.attendees.forEach(a => {
                 initialAttendance[a.id] = 'present'; // Default to present
             });
         }
@@ -84,8 +83,7 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
         absent: Object.values(attendance).filter(s => s === 'absent').length,
         tardy: Object.values(attendance).filter(s => s === 'tardy').length,
         excused: Object.values(attendance).filter(s => s === 'excused').length,
-    }
-
+    };
 
     return (
         <>
@@ -246,5 +244,10 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
                 </TabsContent>
             </Tabs>
         </>
-    )
+    );
+}
+
+
+export default function AttendancePage({ params }: { params: { id: string } }) {
+    return <AttendanceContent sessionId={params.id} />;
 }
