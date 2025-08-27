@@ -25,7 +25,7 @@ export type Session = {
   id: string;
   title: string;
   description: string;
-  specialization: 'MatPel' | 'Médica' | 'Rescate' | 'General';
+  specialization: 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'VARIOS';
   date: string;
   startTime: string;
   instructors: Firefighter[];

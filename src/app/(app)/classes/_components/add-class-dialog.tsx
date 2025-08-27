@@ -24,7 +24,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const specializations = ['General', 'MatPel', 'Médica', 'Rescate'];
+const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 type HierarchySelection = "all-ranks" | "bomberos" | "oficiales";
 type StationSelection = "all-stations" | "station-1" | "station-2" | "station-3";
 
