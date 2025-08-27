@@ -61,18 +61,19 @@ export default function ClassesPage() {
   };
   
   const getCardBorderColor = (session: Session): string => {
-    const ranks = new Set(session.attendees.map(a => a.rank));
-    const firehouses = new Set(session.attendees.map(a => a.firehouse));
-
+    if (!session.attendees || session.attendees.length === 0) return 'border-gray-500';
+    
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-    
-    const hasAspirantes = ranks.has('ASPIRANTE');
-    const hasSuboficialesOficiales = session.attendees.some(a => [...suboficialRanks, ...oficialRanks].includes(a.rank));
+    const suboficialesYOficialesRanks = [...suboficialRanks, ...oficialRanks];
 
-    if (hasAspirantes) return 'border-orange-500';
-    if (hasSuboficialesOficiales) return 'border-red-500';
+    const isOnlyAspirantes = session.attendees.every(a => a.rank === 'ASPIRANTE');
+    const isOnlySuboficialesYOficiales = session.attendees.every(a => suboficialesYOficialesRanks.includes(a.rank));
 
+    if (isOnlyAspirantes) return 'border-orange-500';
+    if (isOnlySuboficialesYOficiales) return 'border-red-500';
+
+    const firehouses = new Set(session.attendees.map(a => a.firehouse));
     if (firehouses.size === 1) {
         const firehouse = firehouses.values().next().value;
         if (firehouse === 'Cuartel 1') return 'border-yellow-500';
