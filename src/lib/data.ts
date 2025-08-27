@@ -1,4 +1,4 @@
-import type { Firefighter, Session, User } from '@/lib/types';
+import type { Firefighter, Session } from '@/lib/types';
 
 export const firefighters: Firefighter[] = [
   { id: 'FG-001', name: 'Juan Pérez', rank: 'COMANDANTE', firehouse: 'Cuartel 1', status: 'Active' },
@@ -44,10 +44,4 @@ export const sessions: Session[] = [
     assistants: [firefighters[1]],
     attendees: firefighters,
   },
-];
-
-export const users: User[] = [
-    { id: 'U-001', name: 'Usuario Admin', email: 'admin@fuego.com', role: 'Administrador' },
-    { id: 'U-002', name: 'Usuario Operador', email: 'operator@fuego.com', role: 'Operador' },
-    { id: 'U-003', name: 'Usuario Asistente', email: 'assistant@fuego.com', role: 'Asistente' },
 ];

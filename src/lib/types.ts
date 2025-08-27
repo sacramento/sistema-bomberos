@@ -41,11 +41,13 @@ export type Leave = {
   type: 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio';
 };
 
+export type UserRole = 'Administrador' | 'Operador' | 'Asistente';
+
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'Administrador' | 'Operador' | 'Asistente';
+  role: UserRole;
 };
 
 // Tipo para el usuario logueado, puede ser nulo si no está autenticado
