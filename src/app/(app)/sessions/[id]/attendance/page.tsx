@@ -11,6 +11,7 @@ import { firefighters, sessions } from "@/lib/data";
 import { Download, Filter } from "lucide-react";
 
 const ranks = [
+    'ASPIRANTE',
     'BOMBERO',
     'CABO',
     'CABO PRIMERO',

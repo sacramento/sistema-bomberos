@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
 const ranks = [
+    'ASPIRANTE',
     'BOMBERO',
     'CABO',
     'CABO PRIMERO',
