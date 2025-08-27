@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessions } from "@/lib/data";
-import { Download, Filter, Eye, Edit, UserCheck, UserX, UserClock, ShieldAlert } from "lucide-react";
+import { Download, Eye, Edit, UserCheck, UserX, UserClock, ShieldAlert } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -36,7 +35,6 @@ const getStatusLabel = (status: AttendanceStatus) => {
 
 function AttendanceContent({ sessionId }: { sessionId: string }) {
     const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
-
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
 
     useEffect(() => {
@@ -49,16 +47,14 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         }
     }, [session]);
 
-
     const summary = useMemo(() => {
         if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
-        return {
-            present: Object.values(attendance).filter(s => s === 'present').length,
-            absent: Object.values(attendance).filter(s => s === 'absent').length,
-            tardy: Object.values(attendance).filter(s => s === 'tardy').length,
-            excused: Object.values(attendance).filter(s => s === 'excused').length,
-            total: session.attendees.length
-        }
+        const total = session.attendees.length;
+        const present = Object.values(attendance).filter(s => s === 'present').length;
+        const absent = Object.values(attendance).filter(s => s === 'absent').length;
+        const tardy = Object.values(attendance).filter(s => s === 'tardy').length;
+        const excused = Object.values(attendance).filter(s => s === 'excused').length;
+        return { present, absent, tardy, excused, total };
     }, [attendance, session]);
 
     if (!session) {
@@ -81,7 +77,6 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
 
-
     return (
         <>
             <PageHeader title={`Asistencia: ${session.title}`} description={`Clase del ${session.date} a las ${session.startTime}hs.`}>
@@ -90,6 +85,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                     Exportar
                 </Button>
             </PageHeader>
+            
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                  {summaryCards.map((card, index) => (
                     <Card key={index}>
