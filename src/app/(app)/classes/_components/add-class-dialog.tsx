@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { firefighters } from "@/lib/data";
 import { useState } from "react";
-import { Firefighter } from "@/lib/types";
+import { Firefighter, Session } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
@@ -25,6 +25,9 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 
 const specializations = ['General', 'MatPel', 'Médica', 'Rescate'];
+type HierarchySelection = "all-ranks" | "bomberos" | "oficiales";
+type StationSelection = "all-stations" | "station-1" | "station-2" | "station-3";
+
 
 const MultiSelectFirefighter = ({ 
     title, 
@@ -97,20 +100,92 @@ const MultiSelectFirefighter = ({
     );
 };
 
-export default function AddClassDialog({ children }: { children: React.ReactNode }) {
+export default function AddClassDialog({ children, onAddClass }: { children: React.ReactNode; onAddClass: (newClass: Session) => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Form state
+  const [title, setTitle] = useState('');
+  const [specialization, setSpecialization] = useState<Session['specialization'] | ''>('');
+  const [description, setDescription] = useState('');
+  const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
+  const [hierarchy, setHierarchy] = useState<HierarchySelection>('all-ranks');
+  const [station, setStation] = useState<StationSelection>('all-stations');
 
+
+  const getAttendees = (): Firefighter[] => {
+    let filtered = firefighters.filter(f => f.rank !== 'ASPIRANTE'); // Exclude Aspirantes by default
+    
+    // Filter by Hierarchy
+    if (hierarchy === 'bomberos') {
+        filtered = filtered.filter(f => f.rank === 'BOMBERO' || f.rank === 'CABO' || f.rank === 'CABO PRIMERO');
+    } else if (hierarchy === 'oficiales') {
+        filtered = filtered.filter(f => ['SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'].includes(f.rank));
+    }
+    
+    // Filter by Station
+    if (station === 'station-1') {
+        filtered = filtered.filter(f => f.firehouse === 'Estación 1');
+    } else if (station === 'station-2') {
+        filtered = filtered.filter(f => f.firehouse === 'Estación 2');
+    } else if (station === 'station-3') {
+        filtered = filtered.filter(f => f.firehouse === 'Estación 3');
+    }
+    
+    // Exclude instructors and assistants from attendees
+    const instructorIds = new Set(instructors.map(i => i.id));
+    const assistantIds = new Set(assistants.map(a => a.id));
+
+    return filtered.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
+  };
+  
+  const resetForm = () => {
+    setTitle('');
+    setSpecialization('');
+    setDescription('');
+    setDate('');
+    setTime('');
+    setInstructors([]);
+    setAssistants([]);
+    setHierarchy('all-ranks');
+    setStation('all-stations');
+  };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Logic to add class would go here
+
+    if (!title || !specialization || !date || !time || instructors.length === 0) {
+        toast({
+            title: "Error",
+            description: "Por favor, complete todos los campos obligatorios.",
+            variant: "destructive",
+        });
+        return;
+    }
+    
+    const newClass: Session = {
+        id: `S-${Date.now()}`,
+        title,
+        specialization: specialization as Session['specialization'],
+        description,
+        date,
+        startTime: time,
+        instructors,
+        assistants,
+        attendees: getAttendees()
+    };
+    
+    onAddClass(newClass);
+
     toast({
         title: "¡Éxito!",
         description: "La nueva clase ha sido creada.",
     });
+    
+    resetForm();
     setOpen(false);
   }
 
@@ -130,11 +205,11 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="title">Título</Label>
-                    <Input id="title" placeholder="Ej: RCP y Primeros Auxilios" />
+                    <Input id="title" placeholder="Ej: RCP y Primeros Auxilios" value={title} onChange={(e) => setTitle(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="specialization">Especialidad</Label>
-                    <Select>
+                    <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
                         <SelectTrigger>
                         <SelectValue placeholder="Seleccione una especialidad" />
                         </SelectTrigger>
@@ -147,15 +222,15 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                 </div>
                 <div className="space-y-2 col-span-1 md:col-span-2">
                     <Label htmlFor="description">Descripción</Label>
-                    <Textarea id="description" placeholder="Describa brevemente la clase..." />
+                    <Textarea id="description" placeholder="Describa brevemente la clase..." value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" />
+                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="time">Hora de Inicio</Label>
-                    <Input id="time" type="time" />
+                    <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required/>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="instructor">Instructores</Label>
@@ -173,20 +248,20 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                      <div className="space-y-2">
                          <Label>Seleccionar por Jerarquía</Label>
-                         <Select>
+                         <Select onValueChange={(value: HierarchySelection) => setHierarchy(value)} value={hierarchy}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar jerarquía" />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all-ranks">Todos</SelectItem>
-                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
+                                <SelectItem value="bomberos">Solo Bomberos y Cabos</SelectItem>
                                 <SelectItem value="oficiales">Solo Suboficiales y Oficiales</SelectItem>
                             </SelectContent>
                          </Select>
                     </div>
                     <div className="space-y-2">
                         <Label>Seleccionar por Estación</Label>
-                        <Select>
+                        <Select onValueChange={(value: StationSelection) => setStation(value)} value={station}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Seleccionar estación" />
                             </SelectTrigger>

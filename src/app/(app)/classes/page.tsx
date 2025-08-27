@@ -1,19 +1,29 @@
+'use client';
+
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { sessions } from '@/lib/data';
+import { sessions as initialSessions } from '@/lib/data';
 import { PlusCircle, ArrowRight, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AddClassDialog from './_components/add-class-dialog';
+import { useState } from 'react';
+import { Session } from '@/lib/types';
 
 export default function ClassesPage() {
+  const [sessions, setSessions] = useState<Session[]>(initialSessions);
+
+  const handleAddClass = (newClass: Session) => {
+    setSessions(prevSessions => [newClass, ...prevSessions]);
+  };
+
   return (
     <>
       <PageHeader title="Clases de Capacitación" description="Cree y gestione clases de capacitación.">
-        <AddClassDialog>
+        <AddClassDialog onAddClass={handleAddClass}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Crear Clase
@@ -37,6 +47,12 @@ export default function ClassesPage() {
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Instructor: {session.instructors.map(i => i.name).join(', ')}</span>
                  </div>
+                  {session.assistants && session.assistants.length > 0 && (
+                    <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">Ayudantes: {session.assistants.map(a => a.name).join(', ')}</span>
+                    </div>
+                  )}
                  <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm font-medium">{session.attendees.length} Asistentes</span>
