@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessions } from "@/lib/data";
 import { Download, Filter, Eye, Edit, UserCheck, UserX, UserClock, ShieldAlert } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
@@ -37,15 +37,18 @@ const getStatusLabel = (status: AttendanceStatus) => {
 function AttendanceContent({ sessionId }: { sessionId: string }) {
     const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
 
-    const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
-        const initialAttendance: Record<string, AttendanceStatus> = {};
+    const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
+
+    useEffect(() => {
         if (session) {
+            const initialAttendance: Record<string, AttendanceStatus> = {};
             session.attendees.forEach(a => {
                 initialAttendance[a.id] = 'present'; 
             });
+            setAttendance(initialAttendance);
         }
-        return initialAttendance;
-    });
+    }, [session]);
+
 
     const summary = useMemo(() => ({
         present: Object.values(attendance).filter(s => s === 'present').length,
@@ -163,7 +166,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                         <CardHeader>
                             <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
                             <CardDescription>Resumen de la asistencia registrada para esta clase.</CardDescription>
-                        </CardHeader>
+                        </Header>
                         <CardContent>
                                 <div className="overflow-x-auto">
                                 <Table>
