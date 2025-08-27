@@ -18,14 +18,12 @@ export const getUsers = async (): Promise<User[]> => {
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
         const users: User[] = [];
         querySnapshot.forEach((doc) => {
-            // Explicitly cast to User, assuming password will be there.
-            // For security, you might want to omit password for general fetching.
             const data = doc.data();
             users.push({ 
                 id: doc.id,
                 name: data.name,
                 role: data.role,
-                password: data.password || '', // provide a default or handle missing password
+                password: data.password,
              } as User);
         });
         return users;
@@ -37,14 +35,19 @@ export const getUsers = async (): Promise<User[]> => {
 
 export const getUserById = async (id: string): Promise<User | null> => {
      try {
-        await seedUsers(initialUsers); // Ensure data exists for the demo
         const docRef = doc(db, USERS_COLLECTION, id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
             return { id: docSnap.id, ...docSnap.data() } as User;
         } else {
-            console.log("No such user!");
+            // Seed if user not found, useful for the first run
+            await seedUsers(initialUsers);
+            const seededDocSnap = await getDoc(docRef);
+            if (seededDocSnap.exists()) {
+                return { id: seededDocSnap.id, ...seededDocSnap.data() } as User;
+            }
+            console.log("No such user even after seeding!");
             return null;
         }
     } catch (error) {
