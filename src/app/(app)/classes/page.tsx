@@ -1,7 +1,7 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { sessions as initialSessions } from '@/lib/data';
 import { PlusCircle, ArrowRight, User, Users, Calendar as CalendarIcon, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
@@ -252,7 +252,7 @@ export default function ClassesPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} className={cn(Button({variant: 'destructive'}))}>
+                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} className={buttonVariants({variant: 'destructive'})}>
                             Eliminar
                         </AlertDialogAction>
                         </AlertDialogFooter>
@@ -322,5 +322,3 @@ export default function ClassesPage() {
     </>
   );
 }
-
-    
