@@ -58,7 +58,7 @@ export default function ClassesPage() {
       
       let stationMatch = true;
       if (filterStation !== 'all') {
-          stationMatch = attendees.some(a => a.firehouse === `Estación ${filterStation.split('-')[1]}`);
+          stationMatch = attendees.some(a => a.firehouse === `Cuartel ${filterStation.split('-')[1]}`);
       }
 
       let hierarchyMatch = true;
@@ -119,16 +119,16 @@ export default function ClassesPage() {
                       </Select>
                   </div>
                    <div className="space-y-2">
-                       <Label>Estación</Label>
+                       <Label>Cuartel</Label>
                         <Select value={filterStation} onValueChange={setFilterStation}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Todas las estaciones" />
+                                <SelectValue placeholder="Todos los cuarteles" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="all">Todas las Estaciones</SelectItem>
-                               <SelectItem value="station-1">Estación 1</SelectItem>
-                               <SelectItem value="station-2">Estación 2</SelectItem>
-                               <SelectItem value="station-3">Estación 3</SelectItem>
+                               <SelectItem value="all">Todos los Cuarteles</SelectItem>
+                               <SelectItem value="station-1">Cuartel 1</SelectItem>
+                               <SelectItem value="station-2">Cuartel 2</SelectItem>
+                               <SelectItem value="station-3">Cuartel 3</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -244,5 +244,3 @@ export default function ClassesPage() {
     </>
   );
 }
-
-    

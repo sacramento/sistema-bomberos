@@ -33,7 +33,7 @@ export default function FirefightersPage() {
                 <TableHead>ID</TableHead>
                 <TableHead>Nombre Completo</TableHead>
                 <TableHead>Rango</TableHead>
-                <TableHead>Estación</TableHead>
+                <TableHead>Cuartel</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>

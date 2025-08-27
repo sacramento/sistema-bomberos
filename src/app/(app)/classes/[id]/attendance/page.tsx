@@ -62,7 +62,7 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
                                     <TableRow>
                                         <TableHead>Nombre</TableHead>
                                         <TableHead>Rango</TableHead>
-                                        <TableHead>Estación</TableHead>
+                                        <TableHead>Cuartel</TableHead>
                                         <TableHead className="text-right">Estado</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -108,15 +108,15 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="space-y-2">
-                               <Label>Estación</Label>
+                               <Label>Cuartel</Label>
                                <Select>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Todas las Estaciones" />
+                                    <SelectValue placeholder="Todos los Cuarteles" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="s1">Estación 1</SelectItem>
-                                    <SelectItem value="s2">Estación 2</SelectItem>
-                                    <SelectItem value="s3">Estación 3</SelectItem>
+                                    <SelectItem value="s1">Cuartel 1</SelectItem>
+                                    <SelectItem value="s2">Cuartel 2</SelectItem>
+                                    <SelectItem value="s3">Cuartel 3</SelectItem>
                                 </SelectContent>
                                </Select>
                             </div>

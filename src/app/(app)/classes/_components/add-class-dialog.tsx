@@ -128,11 +128,11 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     
     // Filter by Station
     if (station === 'station-1') {
-        filtered = filtered.filter(f => f.firehouse === 'Estación 1');
+        filtered = filtered.filter(f => f.firehouse === 'Cuartel 1');
     } else if (station === 'station-2') {
-        filtered = filtered.filter(f => f.firehouse === 'Estación 2');
+        filtered = filtered.filter(f => f.firehouse === 'Cuartel 2');
     } else if (station === 'station-3') {
-        filtered = filtered.filter(f => f.firehouse === 'Estación 3');
+        filtered = filtered.filter(f => f.firehouse === 'Cuartel 3');
     }
     
     // Exclude instructors and assistants from attendees
@@ -260,16 +260,16 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
                          </Select>
                     </div>
                     <div className="space-y-2">
-                        <Label>Seleccionar por Estación</Label>
+                        <Label>Seleccionar por Cuartel</Label>
                         <Select onValueChange={(value: StationSelection) => setStation(value)} value={station}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar estación" />
+                                <SelectValue placeholder="Seleccionar cuartel" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="all-stations">Todos las Estaciones</SelectItem>
-                               <SelectItem value="station-1">Estación 1</SelectItem>
-                               <SelectItem value="station-2">Estación 2</SelectItem>
-                               <SelectItem value="station-3">Estación 3</SelectItem>
+                               <SelectItem value="all-stations">Todos los Cuarteles</SelectItem>
+                               <SelectItem value="station-1">Cuartel 1</SelectItem>
+                               <SelectItem value="station-2">Cuartel 2</SelectItem>
+                               <SelectItem value="station-3">Cuartel 3</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
