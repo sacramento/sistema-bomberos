@@ -35,12 +35,12 @@ const ranks = [
     'COMANDANTE GENERAL'
 ];
 
-// Get unique firehouses from data
-const firehouses = [...new Set(firefighters.map(f => f.firehouse))];
-
 export default function AddFirefighterDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Get unique firehouses from data inside the component
+  const firehouses = [...new Set(firefighters.map(f => f.firehouse))];
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
