@@ -87,8 +87,6 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                     Exportar
                 </Button>
             </PageHeader>
-
-            {/* Stylized Summary */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                  {summaryCards.map((card, index) => (
                     <Card key={index}>
@@ -207,8 +205,5 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
 }
 
 export default function AttendancePage({ params }: { params: { id: string } }) {
-    // This is the correct way to access params in a client component in the App Router.
-    // The main component receives the params, and then passes the relevant ID to the child component that does the rendering.
-    // This avoids the Next.js warning about accessing params directly.
     return <AttendanceContent sessionId={params.id} />;
 }
