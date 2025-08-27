@@ -25,9 +25,18 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
-type HierarchySelection = "all" | "bomberos" | "suboficiales" | "oficiales";
-type StationSelection = "all-stations" | "station-1" | "station-2" | "station-3";
 
+const hierarchyOptions = [
+    { value: 'aspirantes', label: 'Aspirantes' },
+    { value: 'bomberos', label: 'Bomberos' },
+    { value: 'suboficiales_oficiales', label: 'Suboficiales y Oficiales' }
+];
+
+const stationOptions = [
+    { value: 'Cuartel 1', label: 'Cuartel 1' },
+    { value: 'Cuartel 2', label: 'Cuartel 2' },
+    { value: 'Cuartel 3', label: 'Cuartel 3' },
+];
 
 const MultiSelectFirefighter = ({ 
     title, 
@@ -101,6 +110,81 @@ const MultiSelectFirefighter = ({
     );
 };
 
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto"
+                >
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+
 export default function AddClassDialog({ children, onAddClass }: { children: React.ReactNode; onAddClass: (newClass: Session) => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -113,33 +197,29 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
   const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
-  const [hierarchy, setHierarchy] = useState<HierarchySelection>('all');
-  const [station, setStation] = useState<StationSelection>('all-stations');
+  const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
+  const [selectedStations, setSelectedStations] = useState<string[]>([]);
 
 
   const getAttendees = (): Firefighter[] => {
-    // Exclude Aspirantes by default for all selections
-    let filtered = firefighters.filter(f => f.rank !== 'ASPIRANTE');
-    
+    let filtered = firefighters;
+
     // Filter by Hierarchy
-    if (hierarchy === 'bomberos') {
-        filtered = filtered.filter(f => f.rank === 'BOMBERO');
-    } else if (hierarchy === 'suboficiales') {
+    if (selectedHierarchies.length > 0) {
         const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-        filtered = filtered.filter(f => suboficialRanks.includes(f.rank));
-    } else if (hierarchy === 'oficiales') {
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-        filtered = filtered.filter(f => oficialRanks.includes(f.rank));
+        
+        filtered = filtered.filter(f => {
+            if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+            if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+            if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+            return false;
+        });
     }
-    // 'all' case already handled by initial filter
     
     // Filter by Station
-    if (station === 'station-1') {
-        filtered = filtered.filter(f => f.firehouse === 'Cuartel 1');
-    } else if (station === 'station-2') {
-        filtered = filtered.filter(f => f.firehouse === 'Cuartel 2');
-    } else if (station === 'station-3') {
-        filtered = filtered.filter(f => f.firehouse === 'Cuartel 3');
+    if (selectedStations.length > 0) {
+        filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
     }
     
     // Exclude instructors and assistants from attendees
@@ -157,8 +237,8 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     setTime('');
     setInstructors([]);
     setAssistants([]);
-    setHierarchy('all');
-    setStation('all-stations');
+    setSelectedHierarchies([]);
+    setSelectedStations([]);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -173,6 +253,17 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
         return;
     }
     
+    const attendees = getAttendees();
+
+    if (attendees.length === 0) {
+         toast({
+            title: "Sin asistentes",
+            description: "No se encontraron bomberos que coincidan con los filtros de asignación. La clase no fue creada.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     const newClass: Session = {
         id: `S-${Date.now()}`,
         title,
@@ -182,14 +273,14 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
         startTime: time,
         instructors,
         assistants,
-        attendees: getAttendees()
+        attendees,
     };
     
     onAddClass(newClass);
 
     toast({
         title: "¡Éxito!",
-        description: "La nueva clase ha sido creada.",
+        description: `La nueva clase ha sido creada con ${attendees.length} asistentes.`,
     });
     
     resetForm();
@@ -254,34 +345,27 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
                 <h4 className="font-medium text-lg font-headline">Asignar Asistentes</h4>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                      <div className="space-y-2">
-                         <Label>Seleccionar por Jerarquía</Label>
-                         <Select onValueChange={(value: HierarchySelection) => setHierarchy(value)} value={hierarchy}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar jerarquía" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
-                                <SelectItem value="suboficiales">Solo Suboficiales</SelectItem>
-                                <SelectItem value="oficiales">Solo Oficiales</SelectItem>
-                            </SelectContent>
-                         </Select>
+                        <Label>Seleccionar por Jerarquía</Label>
+                        <MultiSelectFilter
+                            title="Jerarquías"
+                            options={hierarchyOptions}
+                            selected={selectedHierarchies}
+                            onSelectedChange={setSelectedHierarchies}
+                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Seleccionar por Cuartel</Label>
-                        <Select onValueChange={(value: StationSelection) => setStation(value)} value={station}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Seleccionar cuartel" />
-                            </SelectTrigger>
-                            <SelectContent>
-                               <SelectItem value="all-stations">Todos los Cuarteles</SelectItem>
-                               <SelectItem value="station-1">Cuartel 1</SelectItem>
-                               <SelectItem value="station-2">Cuartel 2</SelectItem>
-                               <SelectItem value="station-3">Cuartel 3</SelectItem>
-                            </SelectContent>
-                        </Select>
+                         <Label>Seleccionar por Cuartel</Label>
+                         <MultiSelectFilter
+                            title="Cuarteles"
+                            options={stationOptions}
+                            selected={selectedStations}
+                            onSelectedChange={setSelectedStations}
+                         />
                     </div>
                 </div>
+                <p className="text-xs text-muted-foreground pt-2">
+                    Si no se selecciona ninguna jerarquía o cuartel, se incluirán todos los bomberos por defecto (excluyendo instructores y ayudantes).
+                </p>
             </div>
           </div>
           <DialogFooter>
@@ -292,5 +376,3 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     </Dialog>
   );
 }
-
-    

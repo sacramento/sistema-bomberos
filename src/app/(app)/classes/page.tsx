@@ -244,7 +244,7 @@ export default function ClassesPage() {
                           <DropdownMenuItem className="text-destructive focus:text-destructive">
                             <Trash2 className="mr-2 h-4 w-4" />
                             Eliminar
-                          </DropdownMenuItem>
+                          DropdownMenuItem>
                         </AlertDialogTrigger>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -297,36 +297,33 @@ export default function ClassesPage() {
                             </TooltipTrigger>
                             <TooltipContent>
                                 <p>{attendee.name}</p>
-                            </TooltipContent>
+                            TooltipContent>
                         </Tooltip>
                     ))}
                     {session.attendees.length > 5 && (
                          <Avatar>
                             <AvatarFallback>+{session.attendees.length - 5}</AvatarFallback>
-                        </Avatar>
+                        Avatar>
                     )}
-                    </TooltipProvider>
+                    TooltipProvider>
                  </div>
-               </div>
-            </CardContent>
-            <CardFooter>
+               CardContent>
+            CardFooter>
               <Button asChild variant="outline" className="w-full">
                 <Link href={`/classes/${session.id}/attendance`}>
                   Registrar Asistencia
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
+                  ArrowRight className="ml-2 h-4 w-4" />
+                Link>
+              Button>
+            CardFooter>
+          Card>
         ))}
-      </div>
+      div>
        {filteredSessions.length === 0 && (
         <div className="text-center text-muted-foreground py-16">
             <p>No se encontraron clases con los filtros aplicados.</p>
-        </div>
+        div>
       )}
-    </>
+    >
   );
 }
-
-    
