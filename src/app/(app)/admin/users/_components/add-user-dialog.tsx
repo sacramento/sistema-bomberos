@@ -51,14 +51,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setLoading(true);
 
     try {
-        // Construct the user object without the ID, as it will be the document key
         const newUser: Omit<User, 'id'> = {
             name,
             password,
             role: role as UserRole,
         };
         
-        // Pass the ID separately to be used as the document ID in Firestore
         await addUser(id, newUser);
 
         toast({

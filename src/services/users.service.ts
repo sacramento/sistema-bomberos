@@ -17,7 +17,6 @@ export const getUsers = async (): Promise<User[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
         if (querySnapshot.empty) {
-            // If no users exist, seed them
             console.log('No users found, seeding initial data...');
             for (const user of initialUsers) {
                 const { id, ...userData } = user;
@@ -57,9 +56,18 @@ export const getUserById = async (id: string): Promise<User | null> => {
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
     try {
         const userRef = doc(db, USERS_COLLECTION, id);
+        // Check if user already exists before setting new data
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+            throw new Error('El legajo de usuario ya existe.');
+        }
         await setDoc(userRef, userData);
     } catch (error) {
         console.error("Error adding user: ", error);
+        // Re-throw the original error if it's our custom one, otherwise a generic one.
+        if (error instanceof Error && error.message.includes('legajo')) {
+          throw error;
+        }
         throw new Error('No se pudo agregar el usuario.');
     }
 };

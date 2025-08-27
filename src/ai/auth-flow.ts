@@ -6,7 +6,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { LoginInput, LoginInputSchema, LoginOutput, LoginOutputSchema } from '@/lib/schemas/auth.schema';
-import { getUserById } from '@/services/users.service';
+import { getUserById, getUsers } from '@/services/users.service';
 
 
 export async function login(input: LoginInput): Promise<LoginOutput> {
@@ -22,17 +22,15 @@ const loginFlow = ai.defineFlow(
   async ({ legajo, password }) => {
     console.log(`Intentando iniciar sesión para el legajo: ${legajo}`);
     
-    // Busca el usuario en Firestore por su ID (legajo).
+    // Primero, nos aseguramos que la colección de usuarios exista y tenga datos.
+    // La función getUsers se encargará de popular los datos iniciales si es necesario.
+    await getUsers();
+
+    // Ahora, busca el usuario en Firestore por su ID (legajo).
     const user = await getUserById(legajo);
 
     if (!user) {
       console.log('Usuario no encontrado');
-      // Seed initial data if user not found, for the very first run.
-      // This is a simple approach for demo purposes.
-      // A more robust solution would be a separate seeding script or admin interface.
-      if (legajo === 'U-001' && password === 'password') {
-          return { id: 'U-001', name: 'Usuario Admin', role: 'Administrador' };
-      }
       return null;
     }
 
