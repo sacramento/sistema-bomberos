@@ -17,7 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { firefighters } from "@/lib/data";
 import { useState } from "react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Firefighter } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -172,43 +171,32 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
             <div className="space-y-4 pt-4 border-t">
                 <h4 className="font-medium text-lg font-headline">Asignar Asistentes</h4>
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                     <div className="space-y-3">
+                     <div className="space-y-2">
                          <Label>Seleccionar por Jerarquía</Label>
-                        <RadioGroup defaultValue="all-ranks">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="all-ranks" id="j1" />
-                                <Label htmlFor="j1">Todos</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="bomberos" id="j2" />
-                                <Label htmlFor="j2">Solo Bomberos</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="oficiales" id="j3" />
-                                <Label htmlFor="j3">Solo Suboficiales y Oficiales</Label>
-                            </div>
-                        </RadioGroup>
+                         <Select>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar jerarquía" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all-ranks">Todos</SelectItem>
+                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
+                                <SelectItem value="oficiales">Solo Suboficiales y Oficiales</SelectItem>
+                            </SelectContent>
+                         </Select>
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <Label>Seleccionar por Estación</Label>
-                        <RadioGroup defaultValue="all-stations">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="all-stations" id="r1" />
-                                <Label htmlFor="r1">Todos las Estaciones</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="station-1" id="r2" />
-                                <Label htmlFor="r2">Estación 1</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="station-2" id="r3" />
-                                <Label htmlFor="r3">Estación 2</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="station-3" id="r4" />
-                                <Label htmlFor="r4">Estación 3</Label>
-                            </div>
-                        </RadioGroup>
+                        <Select>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Seleccionar estación" />
+                            </SelectTrigger>
+                            <SelectContent>
+                               <SelectItem value="all-stations">Todos las Estaciones</SelectItem>
+                               <SelectItem value="station-1">Estación 1</SelectItem>
+                               <SelectItem value="station-2">Estación 2</SelectItem>
+                               <SelectItem value="station-3">Estación 3</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>
