@@ -51,7 +51,6 @@ export default function UsersPage() {
                     <TableRow>
                         <TableHead>Legajo</TableHead>
                         <TableHead>Nombre</TableHead>
-                        <TableHead>Email</TableHead>
                         <TableHead>Rol</TableHead>
                         <TableHead>
                         <span className="sr-only">Acciones</span>
@@ -64,7 +63,6 @@ export default function UsersPage() {
                         <TableRow key={index}>
                             <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                             <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                         </TableRow>
@@ -74,7 +72,6 @@ export default function UsersPage() {
                         <TableRow key={user.id}>
                             <TableCell className="font-medium">{user.id}</TableCell>
                             <TableCell>{user.name}</TableCell>
-                            <TableCell>{user.email}</TableCell>
                             <TableCell>{user.role}</TableCell>
                             <TableCell>
                             <DropdownMenu>

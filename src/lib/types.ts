@@ -46,9 +46,9 @@ export type UserRole = 'Administrador' | 'Operador' | 'Asistente';
 export type User = {
   id: string;
   name: string;
-  email: string;
+  password?: string; // Optional for security reasons on client-side
   role: UserRole;
 };
 
 // Tipo para el usuario logueado, puede ser nulo si no está autenticado
-export type LoggedInUser = User | null;
+export type LoggedInUser = Omit<User, 'password'> | null;

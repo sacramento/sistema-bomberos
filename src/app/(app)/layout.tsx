@@ -96,7 +96,7 @@ function AppSidebar() {
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
             <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
+            <p className="text-xs text-muted-foreground">{user.role}</p>
           </div>
         </div>
       </SidebarFooter>

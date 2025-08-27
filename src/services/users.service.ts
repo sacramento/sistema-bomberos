@@ -7,9 +7,9 @@ const USERS_COLLECTION = 'users';
 
 // Seed data - only for initial setup
 const initialUsers: User[] = [
-    { id: 'U-001', name: 'Usuario Admin', email: 'admin@fuego.com', role: 'Administrador' },
-    { id: 'U-002', name: 'Usuario Operador', email: 'operator@fuego.com', role: 'Operador' },
-    { id: 'U-003', name: 'Usuario Asistente', email: 'assistant@fuego.com', role: 'Asistente' },
+    { id: 'U-001', name: 'Usuario Admin', password: 'password', role: 'Administrador' },
+    { id: 'U-002', name: 'Usuario Operador', password: 'password', role: 'Operador' },
+    { id: 'U-003', name: 'Usuario Asistente', password: 'password', role: 'Asistente' },
 ];
 
 export const getUsers = async (): Promise<User[]> => {

@@ -30,11 +30,11 @@ const loginFlow = ai.defineFlow(
       return null;
     }
 
-    // Simulación de verificación de contraseña.
-    // ¡NUNCA hagas esto en producción! Por ahora, aceptamos cualquier contraseña.
-    if (password) { 
+    // Verificación de contraseña.
+    if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
-      const { ...userData } = user;
+      // No devolver la contraseña al cliente.
+      const { password: _, ...userData } = user;
       return userData;
     }
 

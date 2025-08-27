@@ -10,7 +10,6 @@ export const LoginOutputSchema = z.nullable(
   z.object({
     id: z.string(),
     name: z.string(),
-    email: z.string(),
     role: z.enum(['Administrador', 'Operador', 'Asistente']),
   })
 );

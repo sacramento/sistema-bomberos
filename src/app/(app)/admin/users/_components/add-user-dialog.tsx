@@ -26,20 +26,20 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
 
   const [id, setId] = useState(''); // This will be the legajo
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole | ''>('');
   const [loading, setLoading] = useState(false);
   
   const resetForm = () => {
     setId('');
     setName('');
-    setEmail('');
+    setPassword('');
     setRole('');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id || !name || !email || !role) {
+    if (!id || !name || !password || !role) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -53,7 +53,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     try {
         const newUser: Omit<User, 'id'> = {
             name,
-            email,
+            password,
             role: role as UserRole,
         };
         
@@ -105,16 +105,16 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
               <Input id="name" placeholder="Ej: María López" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
+              <Label htmlFor="password" className="text-right">
+                Contraseña
               </Label>
-              <Input id="email" type="email" placeholder="Ej: maria@fuego.com" className="col-span-3" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
                 Rol
               </Label>
-              <Select onValuechaange={(value) => setRole(value as UserRole)} value={role} required>
+              <Select onValueChange={(value) => setRole(value as UserRole)} value={role} required>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un rol" />
                 </SelectTrigger>
