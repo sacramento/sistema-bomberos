@@ -46,7 +46,7 @@ export type UserRole = 'Administrador' | 'Operador' | 'Asistente';
 export type User = {
   id: string;
   name: string;
-  password?: string; // Optional for security reasons on client-side
+  password: string;
   role: UserRole;
 };
 

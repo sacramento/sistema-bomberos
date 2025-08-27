@@ -18,7 +18,15 @@ export const getUsers = async (): Promise<User[]> => {
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
         const users: User[] = [];
         querySnapshot.forEach((doc) => {
-            users.push({ id: doc.id, ...doc.data() } as User);
+            // Explicitly cast to User, assuming password will be there.
+            // For security, you might want to omit password for general fetching.
+            const data = doc.data();
+            users.push({ 
+                id: doc.id,
+                name: data.name,
+                role: data.role,
+                password: data.password || '', // provide a default or handle missing password
+             } as User);
         });
         return users;
     } catch (error) {
