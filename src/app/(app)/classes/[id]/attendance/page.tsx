@@ -51,7 +51,8 @@ const getStatusLabel = (status: AttendanceStatus) => {
 }
 
 export default function AttendancePage({ params }: { params: { id: string } }) {
-    const session = sessions.find(s => s.id === params.id);
+    const sessionId = params.id;
+    const session = sessions.find(s => s.id === sessionId);
     
     // Mocked attendance data. In a real app, this would be fetched or managed in state.
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
@@ -244,5 +245,3 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
         </>
     )
 }
-
-    
