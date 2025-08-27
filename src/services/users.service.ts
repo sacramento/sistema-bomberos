@@ -12,19 +12,37 @@ const initialUsers: User[] = [
     { id: 'U-003', name: 'Usuario Asistente', password: 'password', role: 'Asistente' },
 ];
 
+/**
+ * Ensures the users collection is seeded with initial data if it's empty.
+ */
+const seedUsers = async () => {
+    try {
+        console.log('Seeding initial user data...');
+        for (const user of initialUsers) {
+            const { id, ...userData } = user;
+            await setDoc(doc(db, USERS_COLLECTION, id), userData);
+        }
+        console.log('Initial user data seeded successfully.');
+    } catch (error) {
+        console.error("Error seeding users: ", error);
+        throw new Error('Failed to seed users.');
+    }
+};
 
 export const getUsers = async (): Promise<User[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
+        
         if (querySnapshot.empty) {
-            console.log('No users found, seeding initial data...');
-            for (const user of initialUsers) {
-                const { id, ...userData } = user;
-                await setDoc(doc(db, USERS_COLLECTION, id), userData);
-            }
-            console.log('Initial user data seeded.');
-            return initialUsers;
+            await seedUsers();
+            const seededSnapshot = await getDocs(collection(db, USERS_COLLECTION));
+            const users: User[] = [];
+            seededSnapshot.forEach((doc) => {
+                users.push({ id: doc.id, ...doc.data() } as User);
+            });
+            return users;
         }
+
         const users: User[] = [];
         querySnapshot.forEach((doc) => {
             users.push({ id: doc.id, ...doc.data() } as User);

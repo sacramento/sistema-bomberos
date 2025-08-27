@@ -16,18 +16,35 @@ const initialFirefighters: Firefighter[] = [
   { id: 'FG-007', name: 'Roberto Díaz', rank: 'SARGENTO', firehouse: 'Cuartel 3', status: 'Active' },
 ];
 
+/**
+ * Ensures the firefighters collection is seeded with initial data if it's empty.
+ */
+const seedFirefighters = async () => {
+    try {
+        console.log('Seeding initial firefighter data...');
+        for (const firefighter of initialFirefighters) {
+            const { id, ...data } = firefighter;
+            await setDoc(doc(db, FIREFIGHTERS_COLLECTION, id), data);
+        }
+        console.log('Initial firefighter data seeded successfully.');
+    } catch (error) {
+        console.error("Error seeding firefighters: ", error);
+        throw new Error('Failed to seed firefighters.');
+    }
+};
+
 export const getFirefighters = async (): Promise<Firefighter[]> => {
     try {
         const querySnapshot = await getDocs(collection(db, FIREFIGHTERS_COLLECTION));
         
         if (querySnapshot.empty) {
-            console.log('No firefighters found, seeding initial data...');
-            for (const firefighter of initialFirefighters) {
-                const { id, ...data } = firefighter;
-                await setDoc(doc(db, FIREFIGHTERS_COLLECTION, id), data);
-            }
-            console.log('Initial firefighter data seeded.');
-            return initialFirefighters;
+            await seedFirefighters();
+            const seededSnapshot = await getDocs(collection(db, FIREFIGHTERS_COLLECTION));
+            const firefighters: Firefighter[] = [];
+            seededSnapshot.forEach((doc) => {
+                firefighters.push({ id: doc.id, ...doc.data() } as Firefighter);
+            });
+            return firefighters;
         }
 
         const firefighters: Firefighter[] = [];

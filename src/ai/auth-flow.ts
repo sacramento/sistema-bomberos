@@ -22,11 +22,10 @@ const loginFlow = ai.defineFlow(
   async ({ legajo, password }) => {
     console.log(`Intentando iniciar sesión para el legajo: ${legajo}`);
     
-    // Primero, nos aseguramos que la colección de usuarios exista y tenga datos.
-    // La función getUsers se encargará de popular los datos iniciales si es necesario.
+    // This will seed the database if it's empty, ensuring collections exist.
     await getUsers();
 
-    // Ahora, busca el usuario en Firestore por su ID (legajo).
+    // Now, find the user in Firestore by their ID (legajo).
     const user = await getUserById(legajo);
 
     if (!user) {
@@ -34,10 +33,10 @@ const loginFlow = ai.defineFlow(
       return null;
     }
 
-    // Verificación de contraseña.
+    // Password verification.
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
-      // No devolver la contraseña al cliente.
+      // Do not return password to the client.
       const { password: _, ...userData } = user;
       return userData;
     }
