@@ -6,7 +6,7 @@
  */
 import { ai } from '@/ai/genkit';
 import { LoginInput, LoginInputSchema, LoginOutput, LoginOutputSchema } from '@/lib/schemas/auth.schema';
-import { getUserById, getUsers } from '@/services/users.service';
+import { getUserById } from '@/services/users.service';
 
 
 export async function login(input: LoginInput): Promise<LoginOutput> {
@@ -22,10 +22,7 @@ const loginFlow = ai.defineFlow(
   async ({ legajo, password }) => {
     console.log(`Intentando iniciar sesión para el legajo: ${legajo}`);
     
-    // This will seed the database if it's empty, ensuring collections exist.
-    await getUsers();
-
-    // Now, find the user in Firestore by their ID (legajo).
+    // Busca al usuario directamente por su legajo, que es el ID del documento.
     const user = await getUserById(legajo);
 
     if (!user) {
@@ -33,10 +30,10 @@ const loginFlow = ai.defineFlow(
       return null;
     }
 
-    // Password verification.
+    // Verificación de contraseña.
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
-      // Do not return password to the client.
+      // No devolver la contraseña al cliente.
       const { password: _, ...userData } = user;
       return userData;
     }
