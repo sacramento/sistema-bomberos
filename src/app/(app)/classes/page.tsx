@@ -59,6 +59,30 @@ export default function ClassesPage() {
   const handleDeleteClass = (sessionId: string) => {
     setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionId));
   };
+  
+  const getCardBorderColor = (session: Session): string => {
+    const ranks = new Set(session.attendees.map(a => a.rank));
+    const firehouses = new Set(session.attendees.map(a => a.firehouse));
+
+    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+    
+    const hasAspirantes = ranks.has('ASPIRANTE');
+    const hasSuboficialesOficiales = session.attendees.some(a => [...suboficialRanks, ...oficialRanks].includes(a.rank));
+
+    if (hasAspirantes) return 'border-l-orange-500';
+    if (hasSuboficialesOficiales) return 'border-l-red-500';
+
+    if (firehouses.size === 1) {
+        const firehouse = firehouses.values().next().value;
+        if (firehouse === 'Cuartel 1') return 'border-l-yellow-500';
+        if (firehouse === 'Cuartel 2') return 'border-l-blue-500';
+        if (firehouse === 'Cuartel 3') return 'border-l-green-500';
+    }
+
+    return 'border-l-gray-500'; // Default for "Todos" or mixed
+  };
+
 
   const filteredSessions = useMemo(() => {
     return sessions.filter(session => {
@@ -223,7 +247,7 @@ export default function ClassesPage() {
       
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredSessions.map((session) => (
-          <Card key={session.id} className="flex flex-col">
+          <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
              <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-2 flex-grow">
@@ -298,5 +322,3 @@ export default function ClassesPage() {
     </>
   );
 }
-
-    
