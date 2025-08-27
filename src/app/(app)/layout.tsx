@@ -31,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero' },
@@ -101,6 +102,13 @@ function AppSidebar() {
 
 
 function AppHeader({children}: {children: React.ReactNode}) {
+  const router = useRouter();
+  
+  const handleLogout = () => {
+    // Aquí iría la lógica para limpiar la sesión (ej. borrar cookie)
+    router.push('/login');
+  }
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
         <div className="md:hidden">
@@ -110,6 +118,10 @@ function AppHeader({children}: {children: React.ReactNode}) {
             {/* Can add breadcrumbs or page title here */}
         </div>
         {children}
+        <Button variant="ghost" size="icon" onClick={handleLogout}>
+            <LogOut className="h-5 w-5"/>
+            <span className="sr-only">Cerrar Sesión</span>
+        </Button>
     </header>
   )
 }
@@ -119,12 +131,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <AppHeader>
-            <Button variant="ghost" size="icon">
-                <LogOut className="h-5 w-5"/>
-                <span className="sr-only">Cerrar Sesión</span>
-            </Button>
-        </AppHeader>
+        <AppHeader />
         <main className="flex-1 p-4 md:p-8">{children}</main>
       </SidebarInset>
     </SidebarProvider>
