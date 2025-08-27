@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { firefighters } from "@/lib/data";
 
 const ranks = [
     'ASPIRANTE',
@@ -33,6 +34,9 @@ const ranks = [
     'COMANDANTE MAYOR',
     'COMANDANTE GENERAL'
 ];
+
+// Get unique firehouses from data
+const firehouses = [...new Set(firefighters.map(f => f.firehouse))];
 
 export default function AddFirefighterDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -97,7 +101,16 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
               <Label htmlFor="firehouse" className="text-right">
                 Cuartel
               </Label>
-              <Input id="firehouse" placeholder="e.g. Cuartel 1" className="col-span-3" />
+              <Select>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccione un cuartel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {firehouses.map(house => (
+                    <SelectItem key={house} value={house}>{house}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>
