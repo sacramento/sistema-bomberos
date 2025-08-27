@@ -1,7 +1,21 @@
 export type Firefighter = {
   id: string;
   name: string;
-  rank: 'Bombero' | 'Teniente' | 'Capitán' | 'Jefe de Batallón';
+  rank: 
+    | 'BOMBERO'
+    | 'CABO'
+    | 'CABO PRIMERO'
+    | 'SARGENTO'
+    | 'SARGENTO PRIMERO'
+    | 'SUBOFICIAL PRINCIPAL'
+    | 'SUBOFICIAL MAYOR'
+    | 'OFICIAL AYUDANTE'
+    | 'OFICIAL INSPECTOR'
+    | 'OFICIAL PRINCIPAL'
+    | 'SUBCOMANDANTE'
+    | 'COMANDANTE'
+    | 'COMANDANTE MAYOR'
+    | 'COMANDANTE GENERAL';
   firehouse: string;
   status: 'Activo' | 'Inactivo';
 };

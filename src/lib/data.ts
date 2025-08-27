@@ -1,13 +1,13 @@
 import type { Firefighter, Session, User } from '@/lib/types';
 
 export const firefighters: Firefighter[] = [
-  { id: 'FG-001', name: 'Juan Pérez', rank: 'Capitán', firehouse: 'Estación 1', status: 'Active' },
-  { id: 'FG-002', name: 'Ana Gómez', rank: 'Teniente', firehouse: 'Estación 1', status: 'Active' },
-  { id: 'FG-003', name: 'Carlos Sánchez', rank: 'Bombero', firehouse: 'Estación 2', status: 'Active' },
-  { id: 'FG-004', name: 'Laura Fernández', rank: 'Bombero', firehouse: 'Estación 2', status: 'Inactive' },
-  { id: 'FG-005', name: 'Miguel Torres', rank: 'Jefe de Batallón', firehouse: 'Cuartel Central', status: 'Active' },
-  { id: 'FG-006', name: 'Patricia Ramírez', rank: 'Bombero', firehouse: 'Estación 3', status: 'Active' },
-  { id: 'FG-007', name: 'Roberto Díaz', rank: 'Teniente', firehouse: 'Estación 3', status: 'Active' },
+  { id: 'FG-001', name: 'Juan Pérez', rank: 'COMANDANTE', firehouse: 'Estación 1', status: 'Active' },
+  { id: 'FG-002', name: 'Ana Gómez', rank: 'OFICIAL PRINCIPAL', firehouse: 'Estación 1', status: 'Active' },
+  { id: 'FG-003', name: 'Carlos Sánchez', rank: 'BOMBERO', firehouse: 'Estación 2', status: 'Active' },
+  { id: 'FG-004', name: 'Laura Fernández', rank: 'BOMBERO', firehouse: 'Estación 2', status: 'Inactive' },
+  { id: 'FG-005', name: 'Miguel Torres', rank: 'COMANDANTE MAYOR', firehouse: 'Cuartel Central', status: 'Active' },
+  { id: 'FG-006', name: 'Patricia Ramírez', rank: 'CABO', firehouse: 'Estación 3', status: 'Active' },
+  { id: 'FG-007', name: 'Roberto Díaz', rank: 'SARGENTO', firehouse: 'Estación 3', status: 'Active' },
 ];
 
 export const sessions: Session[] = [

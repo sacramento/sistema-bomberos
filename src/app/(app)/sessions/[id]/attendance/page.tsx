@@ -10,6 +10,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { firefighters, sessions } from "@/lib/data";
 import { Download, Filter } from "lucide-react";
 
+const ranks = [
+    'BOMBERO',
+    'CABO',
+    'CABO PRIMERO',
+    'SARGENTO',
+    'SARGENTO PRIMERO',
+    'SUBOFICIAL PRINCIPAL',
+    'SUBOFICIAL MAYOR',
+    'OFICIAL AYUDANTE',
+    'OFICIAL INSPECTOR',
+    'OFICIAL PRINCIPAL',
+    'SUBCOMANDANTE',
+    'COMANDANTE',
+    'COMANDANTE MAYOR',
+    'COMANDANTE GENERAL'
+];
+
 export default function AttendancePage({ params }: { params: { id: string } }) {
     const session = sessions.find(s => s.id === params.id);
 
@@ -109,10 +126,9 @@ export default function AttendancePage({ params }: { params: { id: string } }) {
                                     <SelectValue placeholder="Todos los Rangos" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="firefighter">Bombero</SelectItem>
-                                  <SelectItem value="lieutenant">Teniente</SelectItem>
-                                  <SelectItem value="captain">Capitán</SelectItem>
-                                  <SelectItem value="battalion-chief">Jefe de Batallón</SelectItem>
+                                  {ranks.map(rank => (
+                                      <SelectItem key={rank} value={rank.toLowerCase().replace(/ /g, '-')}>{rank}</SelectItem>
+                                  ))}
                                 </SelectContent>
                                </Select>
                             </div>

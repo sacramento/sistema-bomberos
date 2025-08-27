@@ -16,6 +16,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 
+const ranks = [
+    'BOMBERO',
+    'CABO',
+    'CABO PRIMERO',
+    'SARGENTO',
+    'SARGENTO PRIMERO',
+    'SUBOFICIAL PRINCIPAL',
+    'SUBOFICIAL MAYOR',
+    'OFICIAL AYUDANTE',
+    'OFICIAL INSPECTOR',
+    'OFICIAL PRINCIPAL',
+    'SUBCOMANDANTE',
+    'COMANDANTE',
+    'COMANDANTE MAYOR',
+    'COMANDANTE GENERAL'
+];
+
 export default function AddFirefighterDialog({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -63,10 +80,9 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
                   <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="firefighter">Bombero</SelectItem>
-                  <SelectItem value="lieutenant">Teniente</SelectItem>
-                  <SelectItem value="captain">Capitán</SelectItem>
-                  <SelectItem value="battalion-chief">Jefe de Batallón</SelectItem>
+                  {ranks.map(rank => (
+                    <SelectItem key={rank} value={rank.toLowerCase().replace(/ /g, '-')}>{rank}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
