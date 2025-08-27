@@ -5,16 +5,8 @@ import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
 
-// Seed data - only for initial setup
-const initialUsers: User[] = [
-    { id: 'U-001', name: 'Usuario Admin', password: 'password', role: 'Administrador' },
-    { id: 'U-002', name: 'Usuario Operador', password: 'password', role: 'Operador' },
-    { id: 'U-003', name: 'Usuario Asistente', password: 'password', role: 'Asistente' },
-];
-
 export const getUsers = async (): Promise<User[]> => {
     try {
-        await seedUsers(initialUsers); // Ensure data exists for the demo
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
         const users: User[] = [];
         querySnapshot.forEach((doc) => {
@@ -41,13 +33,7 @@ export const getUserById = async (id: string): Promise<User | null> => {
         if (docSnap.exists()) {
             return { id: docSnap.id, ...docSnap.data() } as User;
         } else {
-            // Seed if user not found, useful for the first run
-            await seedUsers(initialUsers);
-            const seededDocSnap = await getDoc(docRef);
-            if (seededDocSnap.exists()) {
-                return { id: seededDocSnap.id, ...seededDocSnap.data() } as User;
-            }
-            console.log("No such user even after seeding!");
+            console.log("No such user!");
             return null;
         }
     } catch (error) {
