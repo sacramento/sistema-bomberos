@@ -11,28 +11,31 @@ import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
 
-const getStatusBadgeClass = (status: AttendanceStatus) => {
+const statusOptions: { value: AttendanceStatus; label: string }[] = [
+    { value: "present", label: "Presente" },
+    { value: "absent", label: "Ausente" },
+    { value: "tardy", label: "Tarde" },
+    { value: "excused", label: "Justificado" },
+];
+
+const getStatusClass = (status: AttendanceStatus) => {
     switch (status) {
-        case "present": return "bg-green-600 hover:bg-green-700";
-        case "absent": return "bg-red-600 hover:bg-red-700";
-        case "tardy": return "bg-yellow-500 hover:bg-yellow-600 text-black";
-        case "excused": return "bg-violet-600 hover:bg-violet-700";
+        case "present": return "bg-green-600 hover:bg-green-700 text-white border-green-600 focus:ring-green-500";
+        case "absent": return "bg-red-600 hover:bg-red-700 text-white border-red-600 focus:ring-red-500";
+        case "tardy": return "bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-500 focus:ring-yellow-500";
+        case "excused": return "bg-violet-600 hover:bg-violet-700 text-white border-violet-600 focus:ring-violet-500";
         default: return "";
     }
 }
 
 const getStatusLabel = (status: AttendanceStatus) => {
-    switch (status) {
-        case "present": return "Presente";
-        case "absent": return "Ausente";
-        case "tardy": return "Tarde";
-        case "excused": return "Justificado";
-        default: return "N/A";
-    }
+    return statusOptions.find(o => o.value === status)?.label || "N/A";
 }
+
 
 export default function AttendancePage() {
     const params = useParams();
@@ -45,6 +48,7 @@ export default function AttendancePage() {
         if (session) {
             const initialAttendance: Record<string, AttendanceStatus> = {};
             session.attendees.forEach(a => {
+                // Default all attendees to 'present' initially
                 initialAttendance[a.id] = 'present'; 
             });
             setAttendance(initialAttendance);
@@ -63,10 +67,10 @@ export default function AttendancePage() {
 
     if (!session) {
         return (
-          <>
+          <div className="flex flex-col items-center justify-center h-full text-center">
             <PageHeader title="Clase No Encontrada" />
             <p>No se pudo encontrar la clase solicitada.</p>
-          </>
+          </div>
         )
     }
     
@@ -115,7 +119,7 @@ export default function AttendancePage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Lista de Asistentes</CardTitle>
-                            <CardDescription>Marque el estado de cada bombero asignado a esta clase.</CardDescription>
+                            <CardDescription>Seleccione el estado de cada bombero asignado a esta clase.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
@@ -135,23 +139,22 @@ export default function AttendancePage() {
                                                     <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
                                                 </TableCell>
                                                 <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex justify-end gap-2 flex-wrap">
-                                                        {(['present', 'absent', 'tardy', 'excused'] as const).map((status) => (
-                                                            <Button
-                                                                key={status}
-                                                                variant={attendance[firefighter.id] === status ? "default" : "outline"}
-                                                                size="sm"
-                                                                onClick={() => handleStatusChange(firefighter.id, status)}
-                                                                className={cn(
-                                                                    "min-w-[100px]",
-                                                                    attendance[firefighter.id] === status ? getStatusBadgeClass(status) : ""
-                                                                )}
-                                                            >
-                                                                {getStatusLabel(status)}
-                                                            </Button>
-                                                        ))}
-                                                    </div>
+                                                <TableCell className="text-right">
+                                                     <Select 
+                                                        value={attendance[firefighter.id]} 
+                                                        onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
+                                                    >
+                                                        <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
+                                                            <SelectValue placeholder="Seleccionar..." />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {statusOptions.map((option) => (
+                                                                <SelectItem key={option.value} value={option.value}>
+                                                                    {option.label}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -190,7 +193,7 @@ export default function AttendancePage() {
                                                 <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
                                                 <TableCell className="hidden md:table-cell">{firefighter.firehouse}</TableCell>
                                                 <TableCell>
-                                                    <Badge className={cn("whitespace-nowrap", getStatusBadgeClass(attendance[firefighter.id]))}>
+                                                    <Badge className={cn("whitespace-nowrap", getStatusClass(attendance[firefighter.id]))}>
                                                         {getStatusLabel(attendance[firefighter.id])}
                                                     </Badge>
                                                 </TableCell>
