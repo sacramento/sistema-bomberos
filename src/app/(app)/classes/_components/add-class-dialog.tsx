@@ -18,7 +18,6 @@ import { useToast } from "@/hooks/use-toast";
 import { firefighters } from "@/lib/data";
 import { useState } from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 
 const specializations = ['General', 'MatPel', 'Médica', 'Rescate'];
 
@@ -67,7 +66,7 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                         </SelectContent>
                     </Select>
                 </div>
-                <div className="space-y-2 col-span-2">
+                <div className="space-y-2 col-span-1 md:col-span-2">
                     <Label htmlFor="description">Descripción</Label>
                     <Textarea id="description" placeholder="Describa brevemente la clase..." />
                 </div>
@@ -86,7 +85,7 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                         <SelectValue placeholder="Seleccione un instructor" />
                         </SelectTrigger>
                         <SelectContent>
-                        {firefighters.map(f => (
+                        {firefighters.filter(f => f.rank !== 'ASPIRANTE').map(f => (
                             <SelectItem key={f.id} value={f.id}>{f.rank} - {f.name}</SelectItem>
                         ))}
                         </SelectContent>
@@ -99,7 +98,7 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                         <SelectValue placeholder="Seleccione un ayudante (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                        {firefighters.map(f => (
+                        {firefighters.filter(f => f.rank !== 'ASPIRANTE').map(f => (
                             <SelectItem key={f.id} value={f.id}>{f.rank} - {f.name}</SelectItem>
                         ))}
                         </SelectContent>
@@ -110,7 +109,24 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
             {/* Attendee Selection */}
             <div className="space-y-4 pt-4 border-t">
                 <h4 className="font-medium text-lg font-headline">Asignar Asistentes</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                     <div className="space-y-3">
+                         <Label>Seleccionar por Jerarquía</Label>
+                        <RadioGroup defaultValue="all-ranks">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="all-ranks" id="j1" />
+                                <Label htmlFor="j1">Todos</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="bomberos" id="j2" />
+                                <Label htmlFor="j2">Solo Bomberos</Label>
+                            </div>
+                             <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="oficiales" id="j3" />
+                                <Label htmlFor="j3">Solo Suboficiales y Oficiales</Label>
+                            </div>
+                        </RadioGroup>
+                    </div>
                     <div className="space-y-3">
                         <Label>Seleccionar por Estación</Label>
                         <RadioGroup defaultValue="all-stations">
@@ -131,27 +147,6 @@ export default function AddClassDialog({ children }: { children: React.ReactNode
                                 <Label htmlFor="r4">Estación 3</Label>
                             </div>
                         </RadioGroup>
-                    </div>
-                     <div className="space-y-3">
-                         <Label>Seleccionar por Jerarquía</Label>
-                        <RadioGroup defaultValue="all-ranks">
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="all-ranks" id="j1" />
-                                <Label htmlFor="j1">Todos</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="bomberos" id="j2" />
-                                <Label htmlFor="j2">Solo Bomberos</Label>
-                            </div>
-                             <div className="flex items-center space-x-2">
-                                <RadioGroupItem value="oficiales" id="j3" />
-                                <Label htmlFor="j3">Solo Suboficiales y Oficiales</Label>
-                            </div>
-                        </RadioGroup>
-                         <div className="flex items-center space-x-2 pt-4">
-                            <Checkbox id="aspirantes" />
-                            <Label htmlFor="aspirantes">Incluir Aspirantes</Label>
-                        </div>
                     </div>
                 </div>
             </div>
