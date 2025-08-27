@@ -14,6 +14,15 @@ export default {
     'border-blue-500',
     'border-green-500',
     'border-gray-500',
+    'bg-green-600',
+    'hover:bg-green-700',
+    'bg-red-600',
+    'hover:bg-red-700',
+    'bg-yellow-500',
+    'hover:bg-yellow-600',
+    'text-black',
+    'bg-violet-600',
+    'hover:bg-violet-700',
   ],
   theme: {
     extend: {

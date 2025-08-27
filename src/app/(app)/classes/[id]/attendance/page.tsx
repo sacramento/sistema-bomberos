@@ -13,6 +13,7 @@ import { sessions } from "@/lib/data";
 import { Download, Filter, Eye, Edit } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const ranks = [
     'ASPIRANTE', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
@@ -36,9 +37,15 @@ const getStatusBadgeVariant = (status: AttendanceStatus) => {
             return "secondary";
     }
 };
+
 const getStatusBadgeClass = (status: AttendanceStatus) => {
-    if (status === 'present') return 'bg-green-600';
-    return '';
+    switch (status) {
+        case "present": return "bg-green-600 hover:bg-green-700";
+        case "absent": return "bg-red-600 hover:bg-red-700";
+        case "tardy": return "bg-yellow-500 hover:bg-yellow-600 text-black";
+        case "excused": return "bg-violet-600 hover:bg-violet-700";
+        default: return "";
+    }
 }
 
 const getStatusLabel = (status: AttendanceStatus) => {
@@ -64,6 +71,9 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         }
         return initialAttendance;
     });
+    const [filterStation, setFilterStation] = useState('all');
+    const [filterRank, setFilterRank] = useState('all');
+
 
     if (!session) {
         return (
@@ -78,12 +88,32 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         setAttendance(prev => ({...prev, [firefighterId]: status}));
     }
 
+    const filteredAttendees = useMemo(() => {
+        return session.attendees.filter(attendee => {
+            const stationMatch = filterStation === 'all' || attendee.firehouse === filterStation;
+            const rankMatch = filterRank === 'all' || attendee.rank === filterRank;
+            return stationMatch && rankMatch;
+        });
+    }, [session.attendees, filterStation, filterRank]);
+
     const summary = {
         present: Object.values(attendance).filter(s => s === 'present').length,
         absent: Object.values(attendance).filter(s => s === 'absent').length,
         tardy: Object.values(attendance).filter(s => s === 'tardy').length,
         excused: Object.values(attendance).filter(s => s === 'excused').length,
+        total: session.attendees.length
     };
+    
+    const firehouseOptions = useMemo(() => {
+        const houses = new Set(session.attendees.map(a => a.firehouse));
+        return ['all', ...Array.from(houses)];
+    }, [session.attendees]);
+
+    const rankOptions = useMemo(() => {
+        const rankSet = new Set(session.attendees.map(a => a.rank));
+        return ['all', ...Array.from(rankSet)];
+    }, [session.attendees]);
+
 
     return (
         <>
@@ -103,7 +133,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                 {/* TAB: REGISTER ATTENDANCE */}
                 <TabsContent value="register">
                      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-4">
-                        <div className="md:col-span-4">
+                        <div className="md:col-span-3">
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="font-headline">Registrar Asistencia</CardTitle>
@@ -115,44 +145,84 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                                             <TableRow>
                                                 <TableHead>Nombre</TableHead>
                                                 <TableHead>Rango</TableHead>
-                                                <TableHead>Cuartel</TableHead>
                                                 <TableHead className="text-right">Estado</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {session.attendees.map(firefighter => (
+                                            {filteredAttendees.map(firefighter => (
                                                 <TableRow key={firefighter.id}>
                                                     <TableCell className="font-medium">{firefighter.name}</TableCell>
                                                     <TableCell>{firefighter.rank}</TableCell>
-                                                    <TableCell>{firefighter.firehouse}</TableCell>
-                                                    <TableCell>
-                                                        <RadioGroup 
-                                                            value={attendance[firefighter.id]}
-                                                            onValueChange={(value) => handleStatusChange(firefighter.id, value as AttendanceStatus)}
-                                                            className="flex justify-end gap-4"
-                                                        >
-                                                            <div className="flex items-center space-x-2">
-                                                                <RadioGroupItem value="present" id={`r1-${firefighter.id}`} />
-                                                                <Label htmlFor={`r1-${firefighter.id}`}>Presente</Label>
-                                                            </div>
-                                                            <div className="flex items-center space-x-2">
-                                                                <RadioGroupItem value="absent" id={`r2-${firefighter.id}`} />
-                                                                <Label htmlFor={`r2-${firefighter.id}`}>Ausente</Label>
-                                                            </div>
-                                                            <div className="flex items-center space-x-2">
-                                                                <RadioGroupItem value="tardy" id={`r3-${firefighter.id}`} />
-                                                                <Label htmlFor={`r3-${firefighter.id}`}>Tarde</Label>
-                                                            </div>
-                                                            <div className="flex items-center space-x-2">
-                                                                <RadioGroupItem value="excused" id={`r4-${firefighter.id}`} />
-                                                                <Label htmlFor={`r4-${firefighter.id}`}>Justificado</Label>
-                                                            </div>
-                                                        </RadioGroup>
+                                                    <TableCell className="text-right">
+                                                         <div className="flex justify-end gap-2">
+                                                            {(['present', 'absent', 'tardy', 'excused'] as const).map((status) => (
+                                                                <Button
+                                                                    key={status}
+                                                                    variant={attendance[firefighter.id] === status ? "default" : "outline"}
+                                                                    size="sm"
+                                                                    onClick={() => handleStatusChange(firefighter.id, status)}
+                                                                    className={cn(
+                                                                        "w-28",
+                                                                        attendance[firefighter.id] === status ? getStatusBadgeClass(status) : ""
+                                                                    )}
+                                                                >
+                                                                    {getStatusLabel(status)}
+                                                                </Button>
+                                                            ))}
+                                                        </div>
                                                     </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="md:col-span-1">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline flex items-center gap-2">
+                                    <Filter className="h-5 w-5"/> Resumen y Filtros
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                     <div className="space-y-4">
+                                        <h4 className="font-medium">Resumen General ({summary.total})</h4>
+                                        <div className="flex justify-between items-center text-sm"><span>Presente:</span> <span className="font-bold">{summary.present}</span></div>
+                                        <div className="flex justify-between items-center text-sm"><span>Ausente:</span> <span className="font-bold">{summary.absent}</span></div>
+                                        <div className="flex justify-between items-center text-sm"><span>Tarde:</span> <span className="font-bold">{summary.tardy}</span></div>
+                                        <div className="flex justify-between items-center text-sm"><span>Justificado:</span> <span className="font-bold">{summary.excused}</span></div>
+                                    </div>
+                                    <div className="space-y-2 pt-6 border-t">
+                                        <Label>Filtrar por Cuartel</Label>
+                                        <Select value={filterStation} onValueChange={setFilterStation}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Todos los Cuarteles" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {firehouseOptions.map(house => (
+                                                    <SelectItem key={house} value={house}>
+                                                        {house === 'all' ? 'Todos los Cuarteles' : house}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Filtrar por Rango</Label>
+                                        <Select value={filterRank} onValueChange={setFilterRank}>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Todos los Rangos" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                            {rankOptions.map(rank => (
+                                                 <SelectItem key={rank} value={rank}>
+                                                    {rank === 'all' ? 'Todos los Rangos' : rank}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -179,7 +249,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {session.attendees.map(firefighter => (
+                                            {filteredAttendees.map(firefighter => (
                                                 <TableRow key={`view-${firefighter.id}`}>
                                                     <TableCell className="font-medium">{firefighter.name}</TableCell>
                                                     <TableCell>{firefighter.rank}</TableCell>
@@ -203,9 +273,9 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                                     <Filter className="h-5 w-5"/> Resumen y Filtros
                                     </CardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-6">
+                               <CardContent className="space-y-6">
                                      <div className="space-y-4">
-                                        <h4 className="font-medium">Resumen General</h4>
+                                        <h4 className="font-medium">Resumen General ({summary.total})</h4>
                                         <div className="flex justify-between items-center text-sm"><span>Presente:</span> <span className="font-bold">{summary.present}</span></div>
                                         <div className="flex justify-between items-center text-sm"><span>Ausente:</span> <span className="font-bold">{summary.absent}</span></div>
                                         <div className="flex justify-between items-center text-sm"><span>Tarde:</span> <span className="font-bold">{summary.tardy}</span></div>
@@ -213,26 +283,30 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                                     </div>
                                     <div className="space-y-2 pt-6 border-t">
                                         <Label>Filtrar por Cuartel</Label>
-                                        <Select>
+                                        <Select value={filterStation} onValueChange={setFilterStation}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Todos los Cuarteles" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="s1">Cuartel 1</SelectItem>
-                                                <SelectItem value="s2">Cuartel 2</SelectItem>
-                                                <SelectItem value="s3">Cuartel 3</SelectItem>
+                                                {firehouseOptions.map(house => (
+                                                    <SelectItem key={house} value={house}>
+                                                        {house === 'all' ? 'Todos los Cuarteles' : house}
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Filtrar por Rango</Label>
-                                        <Select>
+                                        <Select value={filterRank} onValueChange={setFilterRank}>
                                             <SelectTrigger>
                                                 <SelectValue placeholder="Todos los Rangos" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                            {ranks.map(rank => (
-                                                <SelectItem key={rank} value={rank.toLowerCase().replace(/ /g, '-')}>{rank}</SelectItem>
+                                            {rankOptions.map(rank => (
+                                                 <SelectItem key={rank} value={rank}>
+                                                    {rank === 'all' ? 'Todos los Rangos' : rank}
+                                                </SelectItem>
                                             ))}
                                             </SelectContent>
                                         </Select>
