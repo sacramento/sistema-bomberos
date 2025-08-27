@@ -1,4 +1,3 @@
-'use client';
 import { db } from '@/lib/firebase/firestore';
 import { User } from '@/lib/types';
 import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -17,7 +16,6 @@ export const getUsers = async (): Promise<User[]> => {
         return users;
     } catch (error) {
         console.error("Error fetching users: ", error);
-        // Devuelve un array vacío si la colección no existe o hay un error.
         return [];
     }
 };
@@ -41,7 +39,6 @@ export const getUserById = async (id: string): Promise<User | null> => {
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
     try {
-        // Usa el 'id' (legajo) proporcionado para crear o sobrescribir el documento.
         const userRef = doc(db, USERS_COLLECTION, id);
         await setDoc(userRef, userData);
     } catch (error) {
