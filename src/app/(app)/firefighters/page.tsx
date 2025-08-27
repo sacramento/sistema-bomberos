@@ -31,7 +31,7 @@ export default function FirefightersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Nombre</TableHead>
+                <TableHead>Nombre Completo</TableHead>
                 <TableHead>Rango</TableHead>
                 <TableHead>Estación</TableHead>
                 <TableHead>Estado</TableHead>

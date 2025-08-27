@@ -66,10 +66,16 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
               <Input id="id" defaultValue={`FG-00${Math.floor(Math.random()*100)}`} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
+              <Label htmlFor="firstName" className="text-right">
                 Nombre
               </Label>
-              <Input id="name" placeholder="e.g. Juan Pérez" className="col-span-3" />
+              <Input id="firstName" placeholder="e.g. Juan" className="col-span-3" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="lastName" className="text-right">
+                Apellido
+              </Label>
+              <Input id="lastName" placeholder="e.g. Pérez" className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="rank" className="text-right">
