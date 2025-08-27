@@ -1,7 +1,7 @@
 'use client';
 import { db } from '@/lib/firebase/firestore';
 import { Firefighter } from '@/lib/types';
-import { collection, getDocs, addDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 
 const FIREFIGHTERS_COLLECTION = 'firefighters';
 
@@ -19,10 +19,10 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
     }
 };
 
-export const addFirefighter = async (firefighter: Omit<Firefighter, 'id'>): Promise<string> => {
+export const addFirefighter = async (firefighter: Omit<Firefighter, 'id' | 'status'>, id: string): Promise<void> => {
     try {
-        const docRef = await addDoc(collection(db, FIREFIGHTERS_COLLECTION), firefighter);
-        return docRef.id;
+        const firefighterRef = doc(db, FIREFIGHTERS_COLLECTION, id);
+        await setDoc(firefighterRef, { ...firefighter, status: 'Active' });
     } catch (error) {
         console.error("Error adding firefighter: ", error);
         throw new Error('No se pudo agregar el bombero.');
@@ -37,7 +37,7 @@ export const seedFirefighters = async (initialFirefighters: Firefighter[]) => {
         console.log('No firefighters found, seeding initial data...');
         const promises = initialFirefighters.map(f => {
             const { id, ...data } = f;
-            return setDoc(doc(db, FIREFIGHTERS_COLLECTION, id), data);
+            return setDoc(doc(db, FIREFIGHTERS_COLlection, id), data);
         });
         await Promise.all(promises);
         console.log('Initial firefighter data seeded.');

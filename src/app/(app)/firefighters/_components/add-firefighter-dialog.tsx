@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
-import { addFirefighter } from "@/services/firefighters.service";
+import { addFirefighter, getFirefighters } from "@/services/firefighters.service";
 import { Firefighter } from "@/lib/types";
 
 const ranks = [
@@ -23,8 +23,6 @@ const ranks = [
     'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR',
     'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'
 ];
-
-const firehouses = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Cuartel Central'];
 
 export default function AddFirefighterDialog({ children, onFirefighterAdded }: { children: React.ReactNode; onFirefighterAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -34,7 +32,19 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   const [name, setName] = useState('');
   const [rank, setRank] = useState<Firefighter['rank'] | ''>('');
   const [firehouse, setFirehouse] = useState('');
+  const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    const fetchExistingFirehouses = async () => {
+        if (open) {
+            const firefighters = await getFirefighters();
+            const uniqueFirehouses = Array.from(new Set(firefighters.map(f => f.firehouse)));
+            setExistingFirehouses(uniqueFirehouses);
+        }
+    };
+    fetchExistingFirehouses();
+  }, [open]);
   
   const resetForm = () => {
     setId('');
@@ -57,14 +67,13 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
     setLoading(true);
 
     try {
-        const newFirefighter: Omit<Firefighter, 'id'> = {
+        const newFirefighter: Omit<Firefighter, 'id' | 'status'> = {
             name,
             rank: rank as Firefighter['rank'],
             firehouse,
-            status: 'Active',
         };
-        // We let firestore generate the ID, but we use the "legajo" as the document ID
-        await addFirefighter(newFirefighter);
+        
+        await addFirefighter(newFirefighter, id);
 
         toast({
             title: "¡Éxito!",
@@ -135,7 +144,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
                   <SelectValue placeholder="Seleccione un cuartel" />
                 </SelectTrigger>
                 <SelectContent>
-                  {firehouses.map(house => (
+                  {existingFirehouses.map(house => (
                     <SelectItem key={house} value={house}>{house}</SelectItem>
                   ))}
                 </SelectContent>

@@ -18,7 +18,7 @@ export type Firefighter = {
     | 'COMANDANTE MAYOR'
     | 'COMANDANTE GENERAL';
   firehouse: string;
-  status: 'Activo' | 'Inactivo';
+  status: 'Active' | 'Inactive';
 };
 
 export type Session = {

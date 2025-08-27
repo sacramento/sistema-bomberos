@@ -51,13 +51,14 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setLoading(true);
 
     try {
-        const newUser: Omit<User, 'id'> = {
+        const newUser: User = {
+            id,
             name,
             password,
             role: role as UserRole,
         };
         
-        await addUser(id, newUser);
+        await addUser(newUser);
 
         toast({
             title: "¡Éxito!",

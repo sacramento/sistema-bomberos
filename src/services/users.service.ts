@@ -10,13 +10,8 @@ export const getUsers = async (): Promise<User[]> => {
         const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
         const users: User[] = [];
         querySnapshot.forEach((doc) => {
-            const data = doc.data();
-            users.push({ 
-                id: doc.id,
-                name: data.name,
-                role: data.role,
-                password: data.password,
-             } as User);
+            // No need to destructure password here, just build the object
+            users.push({ id: doc.id, ...doc.data() } as User);
         });
         return users;
     } catch (error) {
@@ -42,10 +37,11 @@ export const getUserById = async (id: string): Promise<User | null> => {
     }
 }
 
-export const addUser = async (id: string, user: Omit<User, 'id'>): Promise<void> => {
+export const addUser = async (user: User): Promise<void> => {
     try {
+        const { id, ...userData } = user;
         const userRef = doc(db, USERS_COLLECTION, id);
-        await setDoc(userRef, user);
+        await setDoc(userRef, userData);
     } catch (error) {
         console.error("Error adding user: ", error);
         throw new Error('No se pudo agregar el usuario.');
