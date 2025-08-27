@@ -81,7 +81,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Próximas Sesiones
+              Próximas Clases
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
@@ -100,7 +100,7 @@ export default function DashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">92.5%</div>
             <p className="text-xs text-muted-foreground">
-              Promedio en todas las sesiones
+              Promedio en todas las clases
             </p>
           </CardContent>
         </Card>
@@ -150,16 +150,16 @@ export default function DashboardPage() {
         </Card>
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle className="font-headline">Próximas Sesiones</CardTitle>
+            <CardTitle className="font-headline">Próximas Clases</CardTitle>
             <CardDescription>
-              Estas son las próximas sesiones de capacitación programadas.
+              Estas son las próximas clases de capacitación programadas.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Sesión</TableHead>
+                  <TableHead>Clase</TableHead>
                   <TableHead>Especialidad</TableHead>
                   <TableHead>Fecha</TableHead>
                 </TableRow>
@@ -168,7 +168,7 @@ export default function DashboardPage() {
                 {sessions.slice(0, 4).map((session) => (
                   <TableRow key={session.id}>
                     <TableCell>
-                      <Link href={`/sessions/${session.id}/attendance`} className="font-medium hover:underline">
+                      <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
                         {session.title}
                       </Link>
                     </TableCell>

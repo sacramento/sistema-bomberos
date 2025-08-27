@@ -1,77 +1,187 @@
+'use client';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  BarChart,
+  Calendar,
+  ShieldCheck,
+  UserX,
+} from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { sessions } from '@/lib/data';
-import { PlusCircle, ArrowRight, User, Users } from 'lucide-react';
+import { sessions, firefighters } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Button } from '@/components/ui/button';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
-export default function SessionsPage() {
+const chartData = [
+  { month: "Enero", attendees: 186, absentees: 80 },
+  { month: "Febrero", attendees: 305, absentees: 200 },
+  { month: "Marzo", attendees: 237, absentees: 120 },
+  { month: "Abril", attendees: 73, absentees: 190 },
+  { month: "Mayo", attendees: 209, absentees: 130 },
+  { month: "Junio", attendees: 214, absentees: 140 },
+]
+
+const chartConfig = {
+  attendees: {
+    label: "Asistentes",
+    color: "hsl(var(--primary))",
+  },
+  absentees: {
+    label: "Ausentes",
+    color: "hsl(var(--muted-foreground))",
+  },
+}
+
+export default function DashboardPage() {
+  const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
+
   return (
     <>
-      <PageHeader title="Sesiones de Capacitación" description="Cree y gestione sesiones de capacitación.">
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Crear Sesión
-        </Button>
-      </PageHeader>
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {sessions.map((session) => (
-          <Card key={session.id} className="flex flex-col">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">{session.specialization}</Badge>
-                <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
-              </div>
-              <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-              <CardDescription>{session.description}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex-grow">
-               <div className="space-y-2">
-                 <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Instructor: {session.instructors.map(i => i.name).join(', ')}</span>
-                 </div>
-                 <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{session.attendees.length} Asistentes</span>
-                 </div>
-                 <div className="flex items-center gap-2 pt-2">
-                    <TooltipProvider>
-                    {session.attendees.slice(0, 5).map(attendee => (
-                        <Tooltip key={attendee.id}>
-                            <TooltipTrigger>
-                                <Avatar>
-                                    <AvatarImage src={`https://picsum.photos/seed/${attendee.id}/100`} alt={attendee.name} data-ai-hint="person avatar" />
-                                    <AvatarFallback>{attendee.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{attendee.name}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    ))}
-                    {session.attendees.length > 5 && (
-                         <Avatar>
-                            <AvatarFallback>+{session.attendees.length - 5}</AvatarFallback>
-                        </Avatar>
-                    )}
-                    </TooltipProvider>
-                 </div>
-               </div>
-            </CardContent>
-            <CardFooter>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/sessions/${session.id}/attendance`}>
-                  Registrar Asistencia
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
+      <PageHeader
+        title="Tablero"
+        description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
+      />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Bomberos Activos
+            </CardTitle>
+            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeFirefighters}</div>
+            <p className="text-xs text-muted-foreground">
+              Personal total de guardia
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Próximas Clases
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">+{sessions.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Programadas en los próximos 30 días
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Tasa de Asistencia</CardTitle>
+            <BarChart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">92.5%</div>
+            <p className="text-xs text-muted-foreground">
+              Promedio en todas las clases
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">De Licencia</CardTitle>
+            <UserX className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">3</div>
+            <p className="text-xs text-muted-foreground">
+              Bomberos actualmente de licencia
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
+        <Card className="lg:col-span-4">
+          <CardHeader>
+            <CardTitle className="font-headline">Asistencia Mensual</CardTitle>
+            <CardDescription>
+              Un resumen de la asistencia a capacitaciones en los últimos 6 meses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pl-2">
+             <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <RechartsBarChart accessibilityLayer data={chartData}>
+                <CartesianGrid vertical={false} />
+                <XAxis
+                  dataKey="month"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
+                  tickFormatter={(value) => value.slice(0, 3)}
+                />
+                 <YAxis />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent indicator="dot" />}
+                />
+                 <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="attendees" fill="var(--color-attendees)" radius={4} />
+                <Bar dataKey="absentees" fill="var(--color-absentees)" radius={4} />
+              </RechartsBarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle className="font-headline">Próximas Clases</CardTitle>
+            <CardDescription>
+              Estas son las próximas clases de capacitación programadas.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Clase</TableHead>
+                  <TableHead>Especialidad</TableHead>
+                  <TableHead>Fecha</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sessions.slice(0, 4).map((session) => (
+                  <TableRow key={session.id}>
+                    <TableCell>
+                      <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
+                        {session.title}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{session.specialization}</Badge>
+                    </TableCell>
+                    <TableCell>{session.date}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

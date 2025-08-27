@@ -1,7 +1,7 @@
 export type Firefighter = {
   id: string;
   name: string;
-  rank: 
+  rank:
     | 'ASPIRANTE'
     | 'BOMBERO'
     | 'CABO'
