@@ -163,7 +163,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                         <CardHeader>
                             <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
                             <CardDescription>Resumen de la asistencia registrada para esta clase.</CardDescription>
-                        </Header>
+                        </CardHeader>
                         <CardContent>
                                 <div className="overflow-x-auto">
                                 <Table>
