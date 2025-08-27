@@ -21,7 +21,7 @@ import {
   UserX,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { sessions, firefighters } from '@/lib/data';
+import { sessions } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,9 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useEffect, useState } from 'react';
+import { Firefighter } from '@/lib/types';
+import { getFirefighters } from '@/services/firefighters.service';
 
 const chartData = [
   { month: "Enero", attendees: 186, absentees: 80 },
@@ -55,7 +58,16 @@ const chartConfig = {
 }
 
 export default function DashboardPage() {
-  const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
+  const [activeFirefighters, setActiveFirefighters] = useState(0);
+
+  useEffect(() => {
+    const fetchActiveFirefighters = async () => {
+      const firefighters = await getFirefighters();
+      const activeCount = firefighters.filter(f => f.status === 'Active').length;
+      setActiveFirefighters(activeCount);
+    };
+    fetchActiveFirefighters();
+  }, []);
 
   return (
     <>

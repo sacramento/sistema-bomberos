@@ -15,14 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { firefighters } from "@/lib/data";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Firefighter, Session } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { getFirefighters } from "@/services/firefighters.service";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
@@ -41,11 +41,13 @@ const stationOptions = [
 const MultiSelectFirefighter = ({ 
     title, 
     selected, 
-    onSelectedChange 
+    onSelectedChange,
+    firefighters
 }: { 
     title: string;
     selected: Firefighter[]; 
     onSelectedChange: (selected: Firefighter[]) => void;
+    firefighters: Firefighter[];
 }) => {
     const [open, setOpen] = useState(false);
     // Exclude Aspirantes from being selected as instructors or assistants
@@ -189,6 +191,9 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   
+  // All firefighters from DB
+  const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
+  
   // Form state
   const [title, setTitle] = useState('');
   const [specialization, setSpecialization] = useState<Session['specialization'] | ''>('');
@@ -200,9 +205,19 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
   const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
 
+  useEffect(() => {
+    const fetchAllFirefighters = async () => {
+        if (open) { // Fetch only when dialog is open
+            const data = await getFirefighters();
+            setAllFirefighters(data);
+        }
+    };
+    fetchAllFirefighters();
+  }, [open]);
+
 
   const getAttendees = (): Firefighter[] => {
-    let filtered = firefighters;
+    let filtered = allFirefighters;
 
     // Filter by Hierarchy
     if (selectedHierarchies.length > 0) {
@@ -332,11 +347,11 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="instructor">Instructores</Label>
-                     <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} />
+                     <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
-                    <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} />
+                    <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} />
                 </div>
             </div>
 

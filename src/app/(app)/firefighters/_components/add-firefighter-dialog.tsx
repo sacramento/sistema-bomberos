@@ -14,42 +14,77 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { firefighters } from "@/lib/data";
+import { useEffect, useState } from "react";
+import { addFirefighter } from "@/services/firefighters.service";
+import { Firefighter } from "@/lib/types";
 
 const ranks = [
-    'ASPIRANTE',
-    'BOMBERO',
-    'CABO',
-    'CABO PRIMERO',
-    'SARGENTO',
-    'SARGENTO PRIMERO',
-    'SUBOFICIAL PRINCIPAL',
-    'SUBOFICIAL MAYOR',
-    'OFICIAL AYUDANTE',
-    'OFICIAL INSPECTOR',
-    'OFICIAL PRINCIPAL',
-    'SUBCOMANDANTE',
-    'COMANDANTE',
-    'COMANDANTE MAYOR',
-    'COMANDANTE GENERAL'
+    'ASPIRANTE', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
+    'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR',
+    'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'
 ];
 
-export default function AddFirefighterDialog({ children }: { children: React.ReactNode }) {
+const firehouses = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Cuartel Central'];
+
+export default function AddFirefighterDialog({ children, onFirefighterAdded }: { children: React.ReactNode; onFirefighterAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  
-  // Get unique firehouses from data inside the component
-  const firehouses = [...new Set(firefighters.map(f => f.firehouse))];
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const [id, setId] = useState('');
+  const [name, setName] = useState('');
+  const [rank, setRank] = useState<Firefighter['rank'] | ''>('');
+  const [firehouse, setFirehouse] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  const resetForm = () => {
+    setId('');
+    setName('');
+    setRank('');
+    setFirehouse('');
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Logic to add firefighter would go here
-    toast({
-        title: "¡Éxito!",
-        description: "El nuevo bombero ha sido agregado a la lista.",
-    });
-    setOpen(false);
+    if (!id || !name || !rank || !firehouse) {
+        toast({
+            title: "Error",
+            description: "Por favor, complete todos los campos.",
+            variant: "destructive",
+        });
+        return;
+    }
+    
+    setLoading(true);
+
+    try {
+        const newFirefighter: Omit<Firefighter, 'id'> = {
+            name,
+            rank: rank as Firefighter['rank'],
+            firehouse,
+            status: 'Active',
+        };
+        // We let firestore generate the ID, but we use the "legajo" as the document ID
+        await addFirefighter(newFirefighter);
+
+        toast({
+            title: "¡Éxito!",
+            description: "El nuevo bombero ha sido agregado a la lista.",
+        });
+        
+        onFirefighterAdded(); // Callback to refresh the list
+        resetForm();
+        setOpen(false);
+
+    } catch (error) {
+        console.error(error);
+        toast({
+            title: "Error",
+            description: "No se pudo agregar el bombero. Intente de nuevo.",
+            variant: "destructive",
+        });
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (
@@ -66,33 +101,27 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="id" className="text-right">
-                Número de ID
+                Legajo
               </Label>
-              <Input id="id" defaultValue={`FG-00${Math.floor(Math.random()*100)}`} className="col-span-3" />
+              <Input id="id" placeholder="Ej: FG-008" className="col-span-3" value={id} onChange={e => setId(e.target.value)} />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firstName" className="text-right">
+              <Label htmlFor="name" className="text-right">
                 Nombre
               </Label>
-              <Input id="firstName" placeholder="e.g. Juan" className="col-span-3" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastName" className="text-right">
-                Apellido
-              </Label>
-              <Input id="lastName" placeholder="e.g. Pérez" className="col-span-3" />
+              <Input id="name" placeholder="Ej: Juan Pérez" className="col-span-3" value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="rank" className="text-right">
                 Rango
               </Label>
-              <Select>
+              <Select onValueChange={(value) => setRank(value as Firefighter['rank'])} value={rank}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
                 <SelectContent>
                   {ranks.map(rank => (
-                    <SelectItem key={rank} value={rank.toLowerCase().replace(/ /g, '-')}>{rank}</SelectItem>
+                    <SelectItem key={rank} value={rank}>{rank}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -101,7 +130,7 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
               <Label htmlFor="firehouse" className="text-right">
                 Cuartel
               </Label>
-              <Select>
+              <Select onValueChange={setFirehouse} value={firehouse}>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un cuartel" />
                 </SelectTrigger>
@@ -114,7 +143,7 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Guardar Bombero</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Bombero'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
