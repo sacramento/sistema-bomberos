@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessions } from "@/lib/data";
 import { Download, Filter, Eye, Edit } from "lucide-react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 const ranks = [
@@ -52,14 +52,16 @@ const getStatusLabel = (status: AttendanceStatus) => {
 
 export default function AttendancePage({ params }: { params: { id: string } }) {
     const sessionId = params.id;
-    const session = sessions.find(s => s.id === sessionId);
     
-    // Mocked attendance data. In a real app, this would be fetched or managed in state.
+    const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
+
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
         const initialAttendance: Record<string, AttendanceStatus> = {};
-        session?.attendees.forEach(a => {
-            initialAttendance[a.id] = 'present'; // Default to present
-        });
+        if (session) {
+            session.attendees.forEach(a => {
+                initialAttendance[a.id] = 'present'; // Default to present
+            });
+        }
         return initialAttendance;
     });
 
