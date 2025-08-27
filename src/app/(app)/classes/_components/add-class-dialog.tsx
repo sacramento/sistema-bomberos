@@ -25,7 +25,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
-type HierarchySelection = "all-ranks" | "bomberos" | "oficiales";
+type HierarchySelection = "all" | "bomberos" | "suboficiales" | "oficiales";
 type StationSelection = "all-stations" | "station-1" | "station-2" | "station-3";
 
 
@@ -39,6 +39,7 @@ const MultiSelectFirefighter = ({
     onSelectedChange: (selected: Firefighter[]) => void;
 }) => {
     const [open, setOpen] = useState(false);
+    // Exclude Aspirantes from being selected as instructors or assistants
     const availableFirefighters = firefighters.filter(f => f.rank !== 'ASPIRANTE');
 
     const handleSelect = (firefighter: Firefighter) => {
@@ -112,19 +113,25 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
   const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
-  const [hierarchy, setHierarchy] = useState<HierarchySelection>('all-ranks');
+  const [hierarchy, setHierarchy] = useState<HierarchySelection>('all');
   const [station, setStation] = useState<StationSelection>('all-stations');
 
 
   const getAttendees = (): Firefighter[] => {
-    let filtered = firefighters.filter(f => f.rank !== 'ASPIRANTE'); // Exclude Aspirantes by default
+    // Exclude Aspirantes by default for all selections
+    let filtered = firefighters.filter(f => f.rank !== 'ASPIRANTE');
     
     // Filter by Hierarchy
     if (hierarchy === 'bomberos') {
-        filtered = filtered.filter(f => f.rank === 'BOMBERO' || f.rank === 'CABO' || f.rank === 'CABO PRIMERO');
+        filtered = filtered.filter(f => f.rank === 'BOMBERO');
+    } else if (hierarchy === 'suboficiales') {
+        const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+        filtered = filtered.filter(f => suboficialRanks.includes(f.rank));
     } else if (hierarchy === 'oficiales') {
-        filtered = filtered.filter(f => ['SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'].includes(f.rank));
+        const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+        filtered = filtered.filter(f => oficialRanks.includes(f.rank));
     }
+    // 'all' case already handled by initial filter
     
     // Filter by Station
     if (station === 'station-1') {
@@ -150,7 +157,7 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     setTime('');
     setInstructors([]);
     setAssistants([]);
-    setHierarchy('all-ranks');
+    setHierarchy('all');
     setStation('all-stations');
   };
 
@@ -253,9 +260,10 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
                                 <SelectValue placeholder="Seleccionar jerarquía" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all-ranks">Todos</SelectItem>
-                                <SelectItem value="bomberos">Solo Bomberos y Cabos</SelectItem>
-                                <SelectItem value="oficiales">Solo Suboficiales y Oficiales</SelectItem>
+                                <SelectItem value="all">Todos</SelectItem>
+                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
+                                <SelectItem value="suboficiales">Solo Suboficiales</SelectItem>
+                                <SelectItem value="oficiales">Solo Oficiales</SelectItem>
                             </SelectContent>
                          </Select>
                     </div>
@@ -284,3 +292,5 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     </Dialog>
   );
 }
+
+    

@@ -86,11 +86,16 @@ export default function ClassesPage() {
 
       let hierarchyMatch = true;
       if (filterHierarchy !== 'all') {
-          if (filterHierarchy === 'bomberos') {
-              hierarchyMatch = attendees.some(a => ['BOMBERO', 'CABO', 'CABO PRIMERO'].includes(a.rank));
-          } else if (filterHierarchy === 'oficiales') {
-              hierarchyMatch = attendees.some(a => ['SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'].includes(a.rank));
-          }
+        const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+        const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+        if (filterHierarchy === 'bomberos') {
+            hierarchyMatch = attendees.some(a => a.rank === 'BOMBERO');
+        } else if (filterHierarchy === 'suboficiales') {
+            hierarchyMatch = attendees.some(a => suboficialRanks.includes(a.rank));
+        } else if (filterHierarchy === 'oficiales') {
+            hierarchyMatch = attendees.some(a => oficialRanks.includes(a.rank));
+        }
       }
 
       return stationMatch && hierarchyMatch;
@@ -163,8 +168,9 @@ export default function ClassesPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="bomberos">Solo Bomberos y Cabos</SelectItem>
-                                <SelectItem value="oficiales">Solo Suboficiales y Oficiales</SelectItem>
+                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
+                                <SelectItem value="suboficiales">Solo Suboficiales</SelectItem>
+                                <SelectItem value="oficiales">Solo Oficiales</SelectItem>
                             </SelectContent>
                          </Select>
                     </div>
@@ -252,7 +258,7 @@ export default function ClassesPage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                         <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} className={buttonVariants({variant: 'destructive'})}>
+                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} variant="destructive">
                             Eliminar
                         </AlertDialogAction>
                         </AlertDialogFooter>
@@ -322,3 +328,5 @@ export default function ClassesPage() {
     </>
   );
 }
+
+    
