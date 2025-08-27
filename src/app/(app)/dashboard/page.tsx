@@ -24,7 +24,6 @@ import { PageHeader } from '@/components/page-header';
 import { sessions } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import {
   ChartContainer,
   ChartTooltip,
@@ -34,7 +33,6 @@ import {
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useEffect, useState } from 'react';
-import { Firefighter } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 
 const chartData = [

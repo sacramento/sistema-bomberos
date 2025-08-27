@@ -1,48 +1,33 @@
-import { db } from '@/lib/firebase/firestore';
 import { User } from '@/lib/types';
-import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { users as localUsers } from '@/lib/data';
 
-const USERS_COLLECTION = 'users';
+// Usaremos una variable en memoria para simular la base de datos
+let users: User[] = [...localUsers];
 
 export const getUsers = async (): Promise<User[]> => {
-    try {
-        const usersRef = collection(db, USERS_COLLECTION);
-        const querySnapshot = await getDocs(usersRef);
-
-        const users: User[] = [];
-        querySnapshot.forEach((doc) => {
-            users.push({ id: doc.id, ...doc.data() } as User);
-        });
-        return users;
-    } catch (error) {
-        console.error("Error fetching users: ", error);
-        return [];
-    }
+    // Simula una llamada asíncrona
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return users;
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-     try {
-        const docRef = doc(db, USERS_COLLECTION, id);
-        const docSnap = await getDoc(docRef);
-
-        if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() } as User;
-        } else {
-            console.log("No such user!");
-            return null;
-        }
-    } catch (error) {
-        console.error("Error fetching user by ID: ", error);
-        return null;
-    }
+    // Simula una llamada asíncrona
+    await new Promise(resolve => setTimeout(resolve, 100));
+    const user = users.find(u => u.id === id);
+    return user || null;
 }
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
-    try {
-        const userRef = doc(db, USERS_COLLECTION, id);
-        await setDoc(userRef, userData);
-    } catch (error) {
-        console.error("Error adding user: ", error);
-        throw new Error('No se pudo agregar el usuario.');
+    // Simula una llamada asíncrona
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const existing = users.find(u => u.id === id);
+    if (existing) {
+        // En un escenario real, podríamos decidir actualizar o lanzar un error.
+        // Aquí lo actualizaremos para evitar el error de "ya existe".
+        users = users.map(u => u.id === id ? { id, ...userData } : u);
+    } else {
+        const newUser: User = { id, ...userData };
+        users.push(newUser);
     }
 };
