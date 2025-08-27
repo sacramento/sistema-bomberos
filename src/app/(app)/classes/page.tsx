@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { sessions as initialSessions } from '@/lib/data';
-import { PlusCircle, ArrowRight, User, Users, CalendarIcon, Search } from 'lucide-react';
+import { PlusCircle, ArrowRight, User, Users, Calendar as CalendarIcon, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,24 +16,44 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
+import { DateRange } from 'react-day-picker';
+import { useAuth } from '@/context/auth-context';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
 export default function ClassesPage() {
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
+  const { user } = useAuth();
   
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSpecialization, setFilterSpecialization] = useState('all');
   const [filterStation, setFilterStation] = useState('all');
   const [filterHierarchy, setFilterHierarchy] = useState('all');
-  const [filterDate, setFilterDate] = useState<Date | undefined>();
+  const [filterDate, setFilterDate] = useState<DateRange | undefined>();
 
   const handleAddClass = (newClass: Session) => {
     setSessions(prevSessions => [newClass, ...prevSessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  };
+
+  const handleDeleteClass = (sessionId: string) => {
+    setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionId));
   };
 
   const filteredSessions = useMemo(() => {
@@ -48,9 +68,12 @@ export default function ClassesPage() {
         return false;
       }
 
-      // Filter by date
-      if (filterDate && format(new Date(session.date), 'yyyy-MM-dd') !== format(filterDate, 'yyyy-MM-dd')) {
-        return false;
+      // Filter by date range
+      if (filterDate?.from && filterDate?.to) {
+        const sessionDate = new Date(session.date);
+        if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to) })) {
+            return false;
+        }
       }
       
       // Filter by station and hierarchy (checks attendees)
@@ -146,10 +169,11 @@ export default function ClassesPage() {
                          </Select>
                     </div>
                   <div className="space-y-2">
-                      <Label>Fecha</Label>
+                      <Label>Rango de Fechas</Label>
                       <Popover>
                           <PopoverTrigger asChild>
                               <Button
+                                  id="date"
                                   variant={"outline"}
                                   className={cn(
                                       "w-full justify-start text-left font-normal",
@@ -157,15 +181,29 @@ export default function ClassesPage() {
                                   )}
                               >
                                   <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {filterDate ? format(filterDate, "PPP") : <span>Seleccionar fecha</span>}
+                                  {filterDate?.from ? (
+                                      filterDate.to ? (
+                                          <>
+                                              {format(filterDate.from, "LLL dd, y", { locale: es })} -{" "}
+                                              {format(filterDate.to, "LLL dd, y", { locale: es })}
+                                          </>
+                                      ) : (
+                                          format(filterDate.from, "LLL dd, y")
+                                      )
+                                  ) : (
+                                      <span>Seleccionar rango</span>
+                                  )}
                               </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0">
+                          <PopoverContent className="w-auto p-0" align="start">
                               <Calendar
-                                  mode="single"
+                                  initialFocus
+                                  mode="range"
+                                  defaultMonth={filterDate?.from}
                                   selected={filterDate}
                                   onSelect={setFilterDate}
-                                  initialFocus
+                                  numberOfMonths={2}
+                                  locale={es}
                               />
                           </PopoverContent>
                       </Popover>
@@ -178,9 +216,49 @@ export default function ClassesPage() {
         {filteredSessions.map((session) => (
           <Card key={session.id} className="flex flex-col">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">{session.specialization}</Badge>
-                <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+              <div className="flex items-start justify-between">
+                <div className="flex flex-col gap-2">
+                  <Badge variant="secondary">{session.specialization}</Badge>
+                  <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+                </div>
+                {user?.role === 'Administrador' && (
+                  <AlertDialog>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
+                            y sus datos asociados.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} className={cn(Button({variant: 'destructive'}))}>
+                            Eliminar
+                        </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
               <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
               <CardDescription>{session.description}</CardDescription>
@@ -244,3 +322,5 @@ export default function ClassesPage() {
     </>
   );
 }
+
+    
