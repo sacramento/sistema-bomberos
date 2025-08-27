@@ -7,6 +7,14 @@ export default {
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  safelist: [
+    'border-orange-500',
+    'border-red-500',
+    'border-yellow-500',
+    'border-blue-500',
+    'border-green-500',
+    'border-gray-500',
+  ],
   theme: {
     extend: {
       fontFamily: {

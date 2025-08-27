@@ -70,17 +70,17 @@ export default function ClassesPage() {
     const hasAspirantes = ranks.has('ASPIRANTE');
     const hasSuboficialesOficiales = session.attendees.some(a => [...suboficialRanks, ...oficialRanks].includes(a.rank));
 
-    if (hasAspirantes) return 'border-l-orange-500';
-    if (hasSuboficialesOficiales) return 'border-l-red-500';
+    if (hasAspirantes) return 'border-orange-500';
+    if (hasSuboficialesOficiales) return 'border-red-500';
 
     if (firehouses.size === 1) {
         const firehouse = firehouses.values().next().value;
-        if (firehouse === 'Cuartel 1') return 'border-l-yellow-500';
-        if (firehouse === 'Cuartel 2') return 'border-l-blue-500';
-        if (firehouse === 'Cuartel 3') return 'border-l-green-500';
+        if (firehouse === 'Cuartel 1') return 'border-yellow-500';
+        if (firehouse === 'Cuartel 2') return 'border-blue-500';
+        if (firehouse === 'Cuartel 3') return 'border-green-500';
     }
 
-    return 'border-l-gray-500'; // Default for "Todos" or mixed
+    return 'border-gray-500'; // Default for "Todos" or mixed
   };
 
 
