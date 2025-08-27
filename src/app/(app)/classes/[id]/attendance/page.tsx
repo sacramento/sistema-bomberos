@@ -4,39 +4,15 @@
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessions } from "@/lib/data";
-import { Download, Filter, Eye, Edit } from "lucide-react";
+import { Download, Filter, Eye, Edit, UserCheck, UserX, UserClock, ShieldAlert } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-const ranks = [
-    'ASPIRANTE', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
-    'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR',
-    'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'
-];
-
 type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
-
-const getStatusBadgeVariant = (status: AttendanceStatus) => {
-    switch (status) {
-        case "present":
-            return "default";
-        case "tardy":
-            return "secondary";
-        case "excused":
-             return "outline";
-        case "absent":
-            return "destructive";
-        default:
-            return "secondary";
-    }
-};
 
 const getStatusBadgeClass = (status: AttendanceStatus) => {
     switch (status) {
@@ -70,9 +46,14 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         }
         return initialAttendance;
     });
-    const [filterStation, setFilterStation] = useState('all');
-    const [filterRank, setFilterRank] = useState('all');
 
+    const summary = useMemo(() => ({
+        present: Object.values(attendance).filter(s => s === 'present').length,
+        absent: Object.values(attendance).filter(s => s === 'absent').length,
+        tardy: Object.values(attendance).filter(s => s === 'tardy').length,
+        excused: Object.values(attendance).filter(s => s === 'excused').length,
+        total: session?.attendees.length ?? 0
+    }), [attendance, session?.attendees.length]);
 
     if (!session) {
         return (
@@ -87,31 +68,12 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
         setAttendance(prev => ({...prev, [firefighterId]: status}));
     }
 
-    const filteredAttendees = useMemo(() => {
-        return session.attendees.filter(attendee => {
-            const stationMatch = filterStation === 'all' || attendee.firehouse === filterStation;
-            const rankMatch = filterRank === 'all' || attendee.rank === filterRank;
-            return stationMatch && rankMatch;
-        });
-    }, [session.attendees, filterStation, filterRank]);
-
-    const summary = useMemo(() => ({
-        present: Object.values(attendance).filter(s => s === 'present').length,
-        absent: Object.values(attendance).filter(s => s === 'absent').length,
-        tardy: Object.values(attendance).filter(s => s === 'tardy').length,
-        excused: Object.values(attendance).filter(s => s === 'excused').length,
-        total: session.attendees.length
-    }), [attendance, session.attendees.length]);
-    
-    const firehouseOptions = useMemo(() => {
-        const houses = new Set(session.attendees.map(a => a.firehouse));
-        return ['all', ...Array.from(houses)];
-    }, [session.attendees]);
-
-    const rankOptions = useMemo(() => {
-        const rankSet = new Set(session.attendees.map(a => a.rank));
-        return ['all', ...Array.from(rankSet)];
-    }, [session.attendees]);
+    const summaryCards = [
+        { title: "Presentes", value: summary.present, icon: UserCheck, color: "text-green-500" },
+        { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
+        { title: "Tardes", value: summary.tardy, icon: UserClock, color: "text-yellow-500" },
+        { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+    ];
 
 
     return (
@@ -123,206 +85,118 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
                 </Button>
             </PageHeader>
 
+            {/* Stylized Summary */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                 {summaryCards.map((card, index) => (
+                    <Card key={index}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                             <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">{card.value}</div>
+                            <p className="text-xs text-muted-foreground">de {summary.total} bomberos</p>
+                        </CardContent>
+                    </Card>
+                 ))}
+            </div>
+
             <Tabs defaultValue="register" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-md">
+                <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
                     <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>
                     <TabsTrigger value="view"><Eye className="mr-2 h-4 w-4"/>Ver Resumen</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="register">
-                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
-                        <div className="lg:col-span-3">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Registrar Asistencia</CardTitle>
-                                    <CardDescription>Marque el estado de cada bombero asignado a esta clase.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Nombre</TableHead>
-                                                    <TableHead className="hidden sm:table-cell">Rango</TableHead>
-                                                    <TableHead className="text-right">Estado</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredAttendees.map(firefighter => (
-                                                    <TableRow key={firefighter.id}>
-                                                        <TableCell className="font-medium">
-                                                            <div>{firefighter.name}</div>
-                                                            <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
-                                                        </TableCell>
-                                                        <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex justify-end gap-2 flex-wrap">
-                                                                {(['present', 'absent', 'tardy', 'excused'] as const).map((status) => (
-                                                                    <Button
-                                                                        key={status}
-                                                                        variant={attendance[firefighter.id] === status ? "default" : "outline"}
-                                                                        size="sm"
-                                                                        onClick={() => handleStatusChange(firefighter.id, status)}
-                                                                        className={cn(
-                                                                            "min-w-[100px]",
-                                                                            attendance[firefighter.id] === status ? getStatusBadgeClass(status) : ""
-                                                                        )}
-                                                                    >
-                                                                        {getStatusLabel(status)}
-                                                                    </Button>
-                                                                ))}
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div className="lg:col-span-1">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline flex items-center gap-2">
-                                    <Filter className="h-5 w-5"/> Resumen y Filtros
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                     <div className="space-y-4">
-                                        <h4 className="font-medium">Resumen General ({summary.total})</h4>
-                                        <div className="flex justify-between items-center text-sm"><span>Presente:</span> <span className="font-bold">{summary.present}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Ausente:</span> <span className="font-bold">{summary.absent}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Tarde:</span> <span className="font-bold">{summary.tardy}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Justificado:</span> <span className="font-bold">{summary.excused}</span></div>
-                                    </div>
-                                    <div className="space-y-2 pt-6 border-t">
-                                        <Label>Filtrar por Cuartel</Label>
-                                        <Select value={filterStation} onValueChange={setFilterStation}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Todos los Cuarteles" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {firehouseOptions.map(house => (
-                                                    <SelectItem key={house} value={house}>
-                                                        {house === 'all' ? 'Todos los Cuarteles' : house}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Rango</Label>
-                                        <Select value={filterRank} onValueChange={setFilterRank}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Todos los Rangos" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                            {rankOptions.map(rank => (
-                                                 <SelectItem key={rank} value={rank}>
-                                                    {rank === 'all' ? 'Todos los Rangos' : rank}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Lista de Asistentes</CardTitle>
+                            <CardDescription>Marque el estado de cada bombero asignado a esta clase.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nombre</TableHead>
+                                            <TableHead className="hidden sm:table-cell">Rango</TableHead>
+                                            <TableHead className="text-right">Estado</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {session.attendees.map(firefighter => (
+                                            <TableRow key={firefighter.id}>
+                                                <TableCell className="font-medium">
+                                                    <div>{firefighter.name}</div>
+                                                    <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
+                                                </TableCell>
+                                                <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex justify-end gap-2 flex-wrap">
+                                                        {(['present', 'absent', 'tardy', 'excused'] as const).map((status) => (
+                                                            <Button
+                                                                key={status}
+                                                                variant={attendance[firefighter.id] === status ? "default" : "outline"}
+                                                                size="sm"
+                                                                onClick={() => handleStatusChange(firefighter.id, status)}
+                                                                className={cn(
+                                                                    "min-w-[100px]",
+                                                                    attendance[firefighter.id] === status ? getStatusBadgeClass(status) : ""
+                                                                )}
+                                                            >
+                                                                {getStatusLabel(status)}
+                                                            </Button>
+                                                        ))}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
                 
                 <TabsContent value="view">
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mt-4">
-                        <div className="lg:col-span-3">
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
-                                    <CardDescription>Resumen de la asistencia registrada para esta clase.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                     <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Nombre</TableHead>
-                                                    <TableHead className="hidden sm:table-cell">Rango</TableHead>
-                                                    <TableHead className="hidden md:table-cell">Cuartel</TableHead>
-                                                    <TableHead>Estado</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredAttendees.map(firefighter => (
-                                                    <TableRow key={`view-${firefighter.id}`}>
-                                                        <TableCell className="font-medium">
-                                                            <div>{firefighter.name}</div>
-                                                            <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
-                                                            <div className="text-muted-foreground text-sm md:hidden">{firefighter.firehouse}</div>
-                                                        </TableCell>
-                                                        <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
-                                                        <TableCell className="hidden md:table-cell">{firefighter.firehouse}</TableCell>
-                                                        <TableCell>
-                                                            <Badge variant={getStatusBadgeVariant(attendance[firefighter.id])} className={cn("whitespace-nowrap", getStatusBadgeClass(attendance[firefighter.id]))}>
-                                                                {getStatusLabel(attendance[firefighter.id])}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                         <div className="lg:col-span-1">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline flex items-center gap-2">
-                                    <Filter className="h-5 w-5"/> Resumen y Filtros
-                                    </CardTitle>
-                                </CardHeader>
-                               <CardContent className="space-y-6">
-                                     <div className="space-y-4">
-                                        <h4 className="font-medium">Resumen General ({summary.total})</h4>
-                                        <div className="flex justify-between items-center text-sm"><span>Presente:</span> <span className="font-bold">{summary.present}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Ausente:</span> <span className="font-bold">{summary.absent}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Tarde:</span> <span className="font-bold">{summary.tardy}</span></div>
-                                        <div className="flex justify-between items-center text-sm"><span>Justificado:</span> <span className="font-bold">{summary.excused}</span></div>
-                                    </div>
-                                    <div className="space-y-2 pt-6 border-t">
-                                        <Label>Filtrar por Cuartel</Label>
-                                        <Select value={filterStation} onValueChange={setFilterStation}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Todos los Cuarteles" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {firehouseOptions.map(house => (
-                                                    <SelectItem key={house} value={house}>
-                                                        {house === 'all' ? 'Todos los Cuarteles' : house}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Rango</Label>
-                                        <Select value={filterRank} onValueChange={setFilterRank}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Todos los Rangos" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                            {rankOptions.map(rank => (
-                                                 <SelectItem key={rank} value={rank}>
-                                                    {rank === 'all' ? 'Todos los Rangos' : rank}
-                                                </SelectItem>
-                                            ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
+                            <CardDescription>Resumen de la asistencia registrada para esta clase.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                                <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Nombre</TableHead>
+                                            <TableHead className="hidden sm:table-cell">Rango</TableHead>
+                                            <TableHead className="hidden md:table-cell">Cuartel</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {session.attendees.map(firefighter => (
+                                            <TableRow key={`view-${firefighter.id}`}>
+                                                <TableCell className="font-medium">
+                                                    <div>{firefighter.name}</div>
+                                                    <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
+                                                    <div className="text-muted-foreground text-sm md:hidden">{firefighter.firehouse}</div>
+                                                </TableCell>
+                                                <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{firefighter.firehouse}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={cn("whitespace-nowrap", getStatusBadgeClass(attendance[firefighter.id]))}>
+                                                        {getStatusLabel(attendance[firefighter.id])}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </>
