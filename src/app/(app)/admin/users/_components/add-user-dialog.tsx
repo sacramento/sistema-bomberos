@@ -72,7 +72,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         console.error(error);
         toast({
             title: "Error",
-            description: "No se pudo agregar el usuario. Es posible que el legajo ya exista.",
+            description: "No se pudo agregar el usuario. Intente de nuevo.",
             variant: "destructive",
         });
     } finally {

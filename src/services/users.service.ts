@@ -1,7 +1,7 @@
 'use client';
 import { db } from '@/lib/firebase/firestore';
 import { User } from '@/lib/types';
-import { collection, getDocs, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
 
 const USERS_COLLECTION = 'users';
 
@@ -18,10 +18,13 @@ const initialUsers: User[] = [
 const seedUsers = async () => {
     try {
         console.log('Seeding initial user data...');
-        for (const user of initialUsers) {
+        const batch = writeBatch(db);
+        initialUsers.forEach((user) => {
             const { id, ...userData } = user;
-            await setDoc(doc(db, USERS_COLLECTION, id), userData);
-        }
+            const userRef = doc(db, USERS_COLLECTION, id);
+            batch.set(userRef, userData);
+        });
+        await batch.commit();
         console.log('Initial user data seeded successfully.');
     } catch (error) {
         console.error("Error seeding users: ", error);
@@ -31,11 +34,14 @@ const seedUsers = async () => {
 
 export const getUsers = async (): Promise<User[]> => {
     try {
-        const querySnapshot = await getDocs(collection(db, USERS_COLLECTION));
+        const usersRef = collection(db, USERS_COLLECTION);
+        const querySnapshot = await getDocs(usersRef);
         
         if (querySnapshot.empty) {
+            console.log('Users collection is empty. Seeding...');
             await seedUsers();
-            const seededSnapshot = await getDocs(collection(db, USERS_COLLECTION));
+            // After seeding, get the data again
+            const seededSnapshot = await getDocs(usersRef);
             const users: User[] = [];
             seededSnapshot.forEach((doc) => {
                 users.push({ id: doc.id, ...doc.data() } as User);
@@ -50,6 +56,7 @@ export const getUsers = async (): Promise<User[]> => {
         return users;
     } catch (error) {
         console.error("Error fetching users: ", error);
+        // Return an empty array in case of error, but seeding should handle creation.
         return [];
     }
 };
@@ -74,6 +81,8 @@ export const getUserById = async (id: string): Promise<User | null> => {
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
     try {
         const userRef = doc(db, USERS_COLLECTION, id);
+        // The setDoc will create the document if it doesn't exist, or overwrite it if it does.
+        // This is safe because legajo should be unique.
         await setDoc(userRef, userData);
     } catch (error) {
         console.error("Error adding user: ", error);

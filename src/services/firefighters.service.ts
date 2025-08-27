@@ -1,7 +1,7 @@
 'use client';
 import { db } from '@/lib/firebase/firestore';
 import { Firefighter } from '@/lib/types';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, writeBatch } from 'firebase/firestore';
 
 const FIREFIGHTERS_COLLECTION = 'firefighters';
 
@@ -22,10 +22,13 @@ const initialFirefighters: Firefighter[] = [
 const seedFirefighters = async () => {
     try {
         console.log('Seeding initial firefighter data...');
-        for (const firefighter of initialFirefighters) {
+        const batch = writeBatch(db);
+        initialFirefighters.forEach((firefighter) => {
             const { id, ...data } = firefighter;
-            await setDoc(doc(db, FIREFIGHTERS_COLLECTION, id), data);
-        }
+            const firefighterRef = doc(db, FIREFIGHTERS_COLLECTION, id);
+            batch.set(firefighterRef, data);
+        });
+        await batch.commit();
         console.log('Initial firefighter data seeded successfully.');
     } catch (error) {
         console.error("Error seeding firefighters: ", error);
@@ -35,11 +38,14 @@ const seedFirefighters = async () => {
 
 export const getFirefighters = async (): Promise<Firefighter[]> => {
     try {
-        const querySnapshot = await getDocs(collection(db, FIREFIGHTERS_COLLECTION));
+        const firefightersRef = collection(db, FIREFIGHTERS_COLLECTION);
+        const querySnapshot = await getDocs(firefightersRef);
         
         if (querySnapshot.empty) {
+            console.log('Firefighters collection is empty. Seeding...');
             await seedFirefighters();
-            const seededSnapshot = await getDocs(collection(db, FIREFIGHTERS_COLLECTION));
+            // After seeding, get the data again
+            const seededSnapshot = await getDocs(firefightersRef);
             const firefighters: Firefighter[] = [];
             seededSnapshot.forEach((doc) => {
                 firefighters.push({ id: doc.id, ...doc.data() } as Firefighter);
