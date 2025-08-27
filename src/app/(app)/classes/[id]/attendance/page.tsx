@@ -50,13 +50,16 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
     }, [session]);
 
 
-    const summary = useMemo(() => ({
-        present: Object.values(attendance).filter(s => s === 'present').length,
-        absent: Object.values(attendance).filter(s => s === 'absent').length,
-        tardy: Object.values(attendance).filter(s => s === 'tardy').length,
-        excused: Object.values(attendance).filter(s => s === 'excused').length,
-        total: session?.attendees.length ?? 0
-    }), [attendance, session?.attendees.length]);
+    const summary = useMemo(() => {
+        if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
+        return {
+            present: Object.values(attendance).filter(s => s === 'present').length,
+            absent: Object.values(attendance).filter(s => s === 'absent').length,
+            tardy: Object.values(attendance).filter(s => s === 'tardy').length,
+            excused: Object.values(attendance).filter(s => s === 'excused').length,
+            total: session.attendees.length
+        }
+    }, [attendance, session]);
 
     if (!session) {
         return (
