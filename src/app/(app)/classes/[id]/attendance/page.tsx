@@ -10,6 +10,7 @@ import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert } from "lucid
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { useParams } from "next/navigation";
 
 type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
 
@@ -33,7 +34,10 @@ const getStatusLabel = (status: AttendanceStatus) => {
     }
 }
 
-function AttendanceContent({ sessionId }: { sessionId: string }) {
+export default function AttendancePage() {
+    const params = useParams();
+    const sessionId = params.id as string;
+    
     const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
 
@@ -201,8 +205,4 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
             </Tabs>
         </>
     );
-}
-
-export default function AttendancePage({ params }: { params: { id: string } }) {
-    return <AttendanceContent sessionId={params.id} />;
 }
