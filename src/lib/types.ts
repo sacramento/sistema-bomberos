@@ -1,16 +1,16 @@
 export type Firefighter = {
   id: string;
   name: string;
-  rank: 'Firefighter' | 'Lieutenant' | 'Captain' | 'Battalion Chief';
+  rank: 'Bombero' | 'Teniente' | 'Capitán' | 'Jefe de Batallón';
   firehouse: string;
-  status: 'Active' | 'Inactive';
+  status: 'Activo' | 'Inactivo';
 };
 
 export type Session = {
   id: string;
   title: string;
   description: string;
-  specialization: 'HazMat' | 'Medical' | 'Rescue' | 'General';
+  specialization: 'MatPel' | 'Médica' | 'Rescate' | 'General';
   date: string;
   startTime: string;
   instructors: Firefighter[];
@@ -23,12 +23,12 @@ export type Leave = {
   firefighter: Firefighter;
   startDate: string;
   endDate: string;
-  type: 'Ordinary' | 'Extraordinary' | 'Sanction' | 'Illness' | 'Study';
+  type: 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio';
 };
 
 export type User = {
   id: string;
   name: string;
   email: string;
-  role: 'Administrator' | 'Operator' | 'Assistant';
+  role: 'Administrador' | 'Operador' | 'Asistente';
 };

@@ -11,10 +11,10 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export default function SessionsPage() {
   return (
     <>
-      <PageHeader title="Training Sessions" description="Create and manage training sessions.">
+      <PageHeader title="Sesiones de Capacitación" description="Cree y gestione sesiones de capacitación.">
         <Button>
           <PlusCircle className="mr-2 h-4 w-4" />
-          Create Session
+          Crear Sesión
         </Button>
       </PageHeader>
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -36,7 +36,7 @@ export default function SessionsPage() {
                  </div>
                  <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{session.attendees.length} Attendees</span>
+                    <span className="text-sm font-medium">{session.attendees.length} Asistentes</span>
                  </div>
                  <div className="flex items-center gap-2 pt-2">
                     <TooltipProvider>
@@ -65,7 +65,7 @@ export default function SessionsPage() {
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
                 <Link href={`/sessions/${session.id}/attendance`}>
-                  Track Attendance
+                  Registrar Asistencia
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

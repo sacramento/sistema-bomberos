@@ -14,29 +14,29 @@ import AddFirefighterDialog from './_components/add-firefighter-dialog';
 export default function FirefightersPage() {
   return (
     <>
-      <PageHeader title="Firefighter Roster" description="Manage your department's firefighters.">
+      <PageHeader title="Lista de Bomberos" description="Gestione los bomberos de su departamento.">
         <AddFirefighterDialog>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
-            Add Firefighter
+            Agregar Bombero
           </Button>
         </AddFirefighterDialog>
       </PageHeader>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">All Firefighters</CardTitle>
+          <CardTitle className="font-headline">Todos los Bomberos</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Rank</TableHead>
-                <TableHead>Firehouse</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead>Nombre</TableHead>
+                <TableHead>Rango</TableHead>
+                <TableHead>Estación</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead>
-                  <span className="sr-only">Actions</span>
+                  <span className="sr-only">Acciones</span>
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -49,7 +49,7 @@ export default function FirefightersPage() {
                   <TableCell>{firefighter.firehouse}</TableCell>
                   <TableCell>
                     <Badge variant={firefighter.status === 'Active' ? 'default' : 'destructive'} className={firefighter.status === 'Active' ? 'bg-green-600' : ''}>
-                      {firefighter.status}
+                      {firefighter.status === 'Active' ? 'Activo' : 'Inactivo'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -61,11 +61,11 @@ export default function FirefightersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Deactivate</DropdownMenuItem>
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Desactivar</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className='text-destructive focus:text-destructive'>Delete</DropdownMenuItem>
+                        <DropdownMenuItem className='text-destructive focus:text-destructive'>Eliminar</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

@@ -33,12 +33,12 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/firefighters', icon: Users, label: 'Firefighters' },
-  { href: '/sessions', icon: CalendarClock, label: 'Sessions' },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Leaves' },
-  { href: '/reports', icon: BarChart3, label: 'Reports' },
-  { href: '/admin/users', icon: Settings, label: 'User Admin' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero' },
+  { href: '/firefighters', icon: Users, label: 'Bomberos' },
+  { href: '/sessions', icon: CalendarClock, label: 'Sesiones' },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias' },
+  { href: '/reports', icon: BarChart3, label: 'Reportes' },
+  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios' },
 ];
 
 function AppSidebar() {
@@ -90,7 +90,7 @@ function AppSidebar() {
             <AvatarFallback>AU</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
-            <p className="text-sm font-medium text-sidebar-foreground">Admin User</p>
+            <p className="text-sm font-medium text-sidebar-foreground">Usuario Admin</p>
             <p className="text-xs text-muted-foreground">admin@fuego.com</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <AppHeader>
             <Button variant="ghost" size="icon">
                 <LogOut className="h-5 w-5"/>
-                <span className="sr-only">Logout</span>
+                <span className="sr-only">Cerrar Sesión</span>
             </Button>
         </AppHeader>
         <main className="flex-1 p-4 md:p-8">{children}</main>

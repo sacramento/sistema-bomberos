@@ -24,8 +24,8 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
     event.preventDefault();
     // Logic to add firefighter would go here
     toast({
-        title: "Success!",
-        description: "New firefighter has been added to the roster.",
+        title: "¡Éxito!",
+        description: "El nuevo bombero ha sido agregado a la lista.",
     });
     setOpen(false);
   }
@@ -36,49 +36,49 @@ export default function AddFirefighterDialog({ children }: { children: React.Rea
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="font-headline">Add New Firefighter</DialogTitle>
+            <DialogTitle className="font-headline">Agregar Nuevo Bombero</DialogTitle>
             <DialogDescription>
-              Enter the details for the new firefighter. Click save when you're done.
+              Ingrese los detalles del nuevo bombero. Haga clic en guardar cuando haya terminado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="id" className="text-right">
-                ID Number
+                Número de ID
               </Label>
               <Input id="id" defaultValue={`FG-00${Math.floor(Math.random()*100)}`} className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
-                Name
+                Nombre
               </Label>
-              <Input id="name" placeholder="e.g. John Doe" className="col-span-3" />
+              <Input id="name" placeholder="e.g. Juan Pérez" className="col-span-3" />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="rank" className="text-right">
-                Rank
+                Rango
               </Label>
               <Select>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select a rank" />
+                  <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="firefighter">Firefighter</SelectItem>
-                  <SelectItem value="lieutenant">Lieutenant</SelectItem>
-                  <SelectItem value="captain">Captain</SelectItem>
-                  <SelectItem value="battalion-chief">Battalion Chief</SelectItem>
+                  <SelectItem value="firefighter">Bombero</SelectItem>
+                  <SelectItem value="lieutenant">Teniente</SelectItem>
+                  <SelectItem value="captain">Capitán</SelectItem>
+                  <SelectItem value="battalion-chief">Jefe de Batallón</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firehouse" className="text-right">
-                Firehouse
+                Estación
               </Label>
-              <Input id="firehouse" placeholder="e.g. Station 1" className="col-span-3" />
+              <Input id="firehouse" placeholder="e.g. Estación 1" className="col-span-3" />
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Save Firefighter</Button>
+            <Button type="submit">Guardar Bombero</Button>
           </DialogFooter>
         </form>
       </DialogContent>

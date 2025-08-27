@@ -5,14 +5,14 @@ import { PlusCircle } from "lucide-react";
 export default function UsersPage() {
     return (
         <>
-            <PageHeader title="User Administration" description="Manage user accounts and roles.">
+            <PageHeader title="Administración de Usuarios" description="Gestionar cuentas de usuario y roles.">
                  <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Add User
+                    Agregar Usuario
                 </Button>
             </PageHeader>
             <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg">
-                <p className="text-muted-foreground">User management table will be displayed here.</p>
+                <p className="text-muted-foreground">La tabla de gestión de usuarios se mostrará aquí.</p>
             </div>
         </>
     )
