@@ -51,14 +51,15 @@ const getStatusLabel = (status: AttendanceStatus) => {
 }
 
 export default function AttendancePage({ params }: { params: { id: string } }) {
-    const sessionId = params.id;
+    const { id: sessionId } = params;
     
     const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
 
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>(() => {
         const initialAttendance: Record<string, AttendanceStatus> = {};
-        if (session) {
-            session.attendees.forEach(a => {
+        const currentSession = sessions.find(s => s.id === sessionId);
+        if (currentSession) {
+            currentSession.attendees.forEach(a => {
                 initialAttendance[a.id] = 'present'; // Default to present
             });
         }
