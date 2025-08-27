@@ -37,6 +37,12 @@ import {
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
+const hierarchyOptions = [
+    { value: 'bomberos', label: 'Bomberos' },
+    { value: 'suboficiales_oficiales', label: 'Suboficiales y Oficiales' },
+    { value: 'aspirantes', label: 'Aspirantes' }
+];
+
 export default function ClassesPage() {
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const { user } = useAuth();
@@ -93,6 +99,8 @@ export default function ClassesPage() {
             hierarchyMatch = attendees.some(a => a.rank === 'BOMBERO');
         } else if (filterHierarchy === 'suboficiales_oficiales') {
             hierarchyMatch = attendees.some(a => [...suboficialRanks, ...oficialRanks].includes(a.rank));
+        } else if (filterHierarchy === 'aspirantes') {
+            hierarchyMatch = attendees.some(a => a.rank === 'ASPIRANTE');
         }
       }
 
@@ -112,7 +120,6 @@ export default function ClassesPage() {
         </AddClassDialog>
       </PageHeader>
       
-      {/* Filters Section */}
       <Card className="mb-8">
           <CardHeader>
               <CardTitle className="font-headline">Filtros</CardTitle>
@@ -216,20 +223,20 @@ export default function ClassesPage() {
           </CardContent>
       </Card>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {filteredSessions.map((session) => (
           <Card key={session.id} className="flex flex-col">
-            <CardHeader>
+             <CardHeader>
               <div className="flex items-start justify-between">
-                <div className="flex flex-col gap-2">
-                  <Badge variant="secondary">{session.specialization}</Badge>
+                <div className="flex flex-col gap-2 flex-grow">
+                  <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
                   <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
                 </div>
                 {user?.role === 'Administrador' && (
                   <AlertDialog>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                           <MoreVertical className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -265,55 +272,22 @@ export default function ClassesPage() {
                 )}
               </div>
               <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-              <CardDescription>{session.description}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow">
-               <div className="space-y-2">
-                 <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">Instructor: {session.instructors.map(i => i.name).join(', ')}</span>
-                 </div>
-                  {session.assistants && session.assistants.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Ayudantes: {session.assistants.map(a => a.name).join(', ')}</span>
-                    </div>
-                  )}
-                 <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">{session.attendees.length} Asistentes</span>
-                 </div>
-                 <div className="flex items-center gap-2 pt-2">
-                    <TooltipProvider>
-                    {session.attendees.slice(0, 5).map(attendee => (
-                        <Tooltip key={attendee.id}>
-                            <TooltipTrigger>
-                                <Avatar>
-                                    <AvatarImage src={`https://picsum.photos/seed/${attendee.id}/100`} alt={attendee.name} data-ai-hint="person avatar" />
-                                    <AvatarFallback>{attendee.name.charAt(0)}</AvatarFallback>
-                                </Avatar>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>{attendee.name}</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    ))}
-                    {session.attendees.length > 5 && (
-                         <Avatar>
-                            <AvatarFallback>+{session.attendees.length - 5}</AvatarFallback>
-                        </Avatar>
+            <CardContent>
+                <div className="space-y-2 text-sm">
+                    <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => i.id).join(', ')}</span></div>
+                    {session.assistants && session.assistants.length > 0 && (
+                        <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => a.id).join(', ')}</span></div>
                     )}
-                    </TooltipProvider>
-                 </div>
-               </div>
+                </div>
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
-                <Link href={`/classes/${session.id}/attendance`}>
-                  Registrar Asistencia
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+                 <Button asChild variant="outline" className="w-full">
+                    <Link href={`/classes/${session.id}/attendance`}>
+                        Registrar Asistencia
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
             </CardFooter>
           </Card>
         ))}
