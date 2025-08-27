@@ -1,14 +1,12 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { sessions as initialSessions } from '@/lib/data';
-import { PlusCircle, ArrowRight, User, Users, Calendar as CalendarIcon, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import AddClassDialog from './_components/add-class-dialog';
 import { useState, useMemo } from 'react';
 import { Session } from '@/lib/types';
@@ -273,7 +271,7 @@ export default function ClassesPage() {
               </div>
               <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-grow">
                 <div className="space-y-2 text-sm">
                     <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => i.id).join(', ')}</span></div>
                     {session.assistants && session.assistants.length > 0 && (
@@ -282,9 +280,9 @@ export default function ClassesPage() {
                 </div>
             </CardContent>
             <CardFooter>
-                 <Button asChild variant="outline" className="w-full">
+                 <Button asChild className="w-full">
                     <Link href={`/classes/${session.id}/attendance`}>
-                        Registrar Asistencia
+                        Gestionar Asistencia
                         <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                 </Button>
@@ -300,3 +298,5 @@ export default function ClassesPage() {
     </>
   );
 }
+
+    
