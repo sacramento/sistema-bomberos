@@ -50,7 +50,8 @@ const getStatusLabel = (status: AttendanceStatus) => {
     }
 }
 
-export default function AttendancePage({ params: { id: sessionId } }: { params: { id: string } }) {
+export default function AttendancePage({ params }: { params: { id: string } }) {
+    const sessionId = params.id;
     const session = sessions.find(s => s.id === sessionId);
     
     // Mocked attendance data. In a real app, this would be fetched or managed in state.
