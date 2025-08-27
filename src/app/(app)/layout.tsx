@@ -24,27 +24,31 @@ import {
   ClipboardMinus,
   BarChart3,
   Settings,
-  UserCircle,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/auth-context';
 
 const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero' },
-  { href: '/firefighters', icon: Users, label: 'Bomberos' },
-  { href: '/sessions', icon: CalendarClock, label: 'Sesiones' },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias' },
-  { href: '/reports', icon: BarChart3, label: 'Reportes' },
-  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios' },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Operador', 'Asistente'] },
+  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador', 'Operador'] },
+  { href: '/sessions', icon: CalendarClock, label: 'Sesiones', roles: ['Administrador', 'Operador'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Operador'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador'] },
+  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
 
 function AppSidebar() {
   const pathname = usePathname();
   const { open } = useSidebar();
+  const { user } = useAuth();
+  
+  if (!user) return null;
+
+  const availableNavItems = navItems.filter(item => item.roles.includes(user.role));
 
   return (
     <Sidebar>
@@ -68,7 +72,7 @@ function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarMenu>
-          {navItems.map((item) => (
+          {availableNavItems.map((item) => (
             <SidebarMenuItem key={item.href}>
               <Link href={item.href}>
                 <SidebarMenuButton
@@ -87,12 +91,12 @@ function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
            <Avatar className="size-8">
-            <AvatarImage src="https://picsum.photos/100" alt="Admin" data-ai-hint="profile picture" />
-            <AvatarFallback>AU</AvatarFallback>
+            <AvatarImage src="https://picsum.photos/100" alt={user.name} data-ai-hint="profile picture" />
+            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
-            <p className="text-sm font-medium text-sidebar-foreground">Usuario Admin</p>
-            <p className="text-xs text-muted-foreground">admin@fuego.com</p>
+            <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
+            <p className="text-xs text-muted-foreground">{user.email}</p>
           </div>
         </div>
       </SidebarFooter>
@@ -102,12 +106,7 @@ function AppSidebar() {
 
 
 function AppHeader({children}: {children: React.ReactNode}) {
-  const router = useRouter();
-  
-  const handleLogout = () => {
-    // Aquí iría la lógica para limpiar la sesión (ej. borrar cookie)
-    router.push('/login');
-  }
+  const { logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
@@ -118,7 +117,7 @@ function AppHeader({children}: {children: React.ReactNode}) {
             {/* Can add breadcrumbs or page title here */}
         </div>
         {children}
-        <Button variant="ghost" size="icon" onClick={handleLogout}>
+        <Button variant="ghost" size="icon" onClick={logout}>
             <LogOut className="h-5 w-5"/>
             <span className="sr-only">Cerrar Sesión</span>
         </Button>
@@ -127,6 +126,16 @@ function AppHeader({children}: {children: React.ReactNode}) {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar />

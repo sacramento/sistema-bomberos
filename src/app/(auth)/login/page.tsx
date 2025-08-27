@@ -4,18 +4,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/auth-context";
 import { Flame } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
-  const router = useRouter();
+  const { login, loading, error } = useAuth();
+  const { toast } = useToast();
+  const [legajo, setLegajo] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Lógica de autenticación irá aquí
-    // Por ahora, solo redirigimos al tablero
-    router.push('/dashboard');
+    await login({ legajo, password });
   };
+  
+  useEffect(() => {
+    if (error) {
+       toast({
+        title: "Error de autenticación",
+        description: error,
+        variant: "destructive",
+      });
+    }
+  }, [error, toast]);
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -31,18 +47,43 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+             {error && !loading && (
+                 <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                        {error}
+                    </AlertDescription>
+                </Alert>
+             )}
             <div className="space-y-2">
               <Label htmlFor="legajo">Legajo</Label>
-              <Input id="legajo" type="text" placeholder="Tu número de legajo" required />
+              <Input 
+                id="legajo" 
+                type="text" 
+                placeholder="Tu número de legajo" 
+                required 
+                value={legajo}
+                onChange={(e) => setLegajo(e.target.value)}
+                disabled={loading}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input id="password" type="password" placeholder="Tu contraseña" required />
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="Tu contraseña" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              Ingresar
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
           </CardFooter>
         </form>

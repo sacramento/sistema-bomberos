@@ -32,3 +32,6 @@ export type User = {
   email: string;
   role: 'Administrador' | 'Operador' | 'Asistente';
 };
+
+// Tipo para el usuario logueado, puede ser nulo si no está autenticado
+export type LoggedInUser = User | null;
