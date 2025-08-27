@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { sessions } from "@/lib/data";
-import { Download, Eye, Edit, UserCheck, UserX, UserClock, ShieldAlert } from "lucide-react";
+import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -73,7 +73,7 @@ function AttendanceContent({ sessionId }: { sessionId: string }) {
     const summaryCards = [
         { title: "Presentes", value: summary.present, icon: UserCheck, color: "text-green-500" },
         { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
-        { title: "Tardes", value: summary.tardy, icon: UserClock, color: "text-yellow-500" },
+        { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
         { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
 
