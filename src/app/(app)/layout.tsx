@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -31,6 +31,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
+import { useEffect } from 'react';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Operador', 'Asistente'] },
@@ -159,5 +160,5 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppLayoutContent>{children}</AppLayoutContent>
+    return <AppLayoutContent>{children}</AppLayoutContent>
 }
