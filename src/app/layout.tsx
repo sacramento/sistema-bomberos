@@ -1,9 +1,9 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { AuthProvider } from '@/context/auth-context';
 import { Inter, Space_Grotesk } from 'next/font/google';
 import { cn } from '@/lib/utils';
+import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
   title: 'FuegoRegistro',
@@ -30,7 +30,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={cn("antialiased", fontBody.variable, fontHeadline.variable)}>
         <AuthProvider>
-            {children}
+          {children}
         </AuthProvider>
         <Toaster />
       </body>

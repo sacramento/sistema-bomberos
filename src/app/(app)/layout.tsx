@@ -125,9 +125,19 @@ function AppHeader({children}: {children: React.ReactNode}) {
   )
 }
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
-  
+  const router = useRouter();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (loading) return;
+
+    if (!user) {
+      router.push('/login');
+    }
+  }, [user, loading, pathname, router]);
+
   if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -145,4 +155,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </SidebarInset>
     </SidebarProvider>
   );
+}
+
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return <AppLayoutContent>{children}</AppLayoutContent>
 }

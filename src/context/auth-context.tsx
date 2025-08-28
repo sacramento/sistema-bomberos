@@ -1,6 +1,6 @@
 'use client';
 
-import { login } from '@/ai/auth-flow';
+import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
 import { LoggedInUser } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
@@ -31,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
+  // On initial load, check sessionStorage for a stored session
   useEffect(() => {
     try {
       const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -38,29 +39,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(JSON.parse(storedSession));
       }
     } catch (e) {
-      console.error('Error al parsear la sesión', e);
+      console.error('Error parsing stored session', e);
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }
     setLoading(false);
   }, []);
 
+  // Effect to handle redirection based on auth state
   useEffect(() => {
     if (loading) return;
-
+    
     const isAuthRoute = pathname === '/login';
-    if (!user && !isAuthRoute) {
-      router.push('/login');
-    } else if (user && isAuthRoute) {
+
+    // If user is logged in and tries to access login page, redirect to dashboard
+    if (user && isAuthRoute) {
       router.push('/dashboard');
     }
+    // If user is not logged in and not on login page, they should be redirected
+    // This logic is now handled in the AppLayout to avoid provider conflicts.
+    
   }, [user, loading, pathname, router]);
-
 
   const handleLogin = async (credentials: LoginInput) => {
     setLoading(true);
     setError(null);
     try {
-      const loggedInUser = await login(credentials);
+      const loggedInUser = await loginFlow(credentials);
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
@@ -88,15 +92,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: loading,
     error,
   };
-
-  if (loading && !user && pathname !== '/login') {
-      return (
-        <div className="flex min-h-screen items-center justify-center">
-            {/* O un componente de Spinner más elaborado */}
-            <p>Cargando...</p>
-        </div>
-      )
-  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
