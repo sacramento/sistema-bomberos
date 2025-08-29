@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Firefighter } from '@/lib/types';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import AddFirefighterDialog from './_components/add-firefighter-dialog';
 import { useEffect, useState } from 'react';
 import { getFirefighters } from '@/services/firefighters.service';
 import { Skeleton } from '@/components/ui/skeleton';
+import ImportCsvDialog from './_components/import-csv-dialog';
 
 export default function FirefightersPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
@@ -28,15 +29,21 @@ export default function FirefightersPage() {
     fetchFirefighters();
   }, []);
 
-  const handleFirefighterAdded = () => {
-    // Re-fetch firefighters after one is added
+  const handleDataChange = () => {
+    // Re-fetch firefighters after one is added or imported
     fetchFirefighters();
   };
 
   return (
     <>
       <PageHeader title="Lista de Bomberos" description="Gestione los bomberos de su departamento.">
-        <AddFirefighterDialog onFirefighterAdded={handleFirefighterAdded}>
+        <ImportCsvDialog onImportSuccess={handleDataChange}>
+            <Button variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              Importar CSV
+            </Button>
+        </ImportCsvDialog>
+        <AddFirefighterDialog onFirefighterAdded={handleDataChange}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Agregar Bombero

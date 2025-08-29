@@ -1,6 +1,6 @@
 import { Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -31,4 +31,29 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
     };
 
     await setDoc(docRef, newFirefighter);
+};
+
+export const batchAddFirefighters = async (firefighters: Firefighter[]): Promise<void> => {
+    if (!firefighters || firefighters.length === 0) {
+        return;
+    }
+
+    const batch = writeBatch(db);
+
+    for (const firefighter of firefighters) {
+        // We assume the ID is provided in the CSV and is the document ID.
+        const docRef = doc(db, 'firefighters', firefighter.id);
+        
+        // We set status to 'Active' by default for all imported firefighters
+        const firefighterData = {
+            ...firefighter,
+            status: 'Active' as const
+        };
+        // remove id from data object as it's used for the doc ref
+        delete (firefighterData as Partial<Firefighter>).id;
+
+        batch.set(docRef, firefighterData, { merge: true }); // Use merge: true to avoid overwriting existing data completely if needed, or create new.
+    }
+
+    await batch.commit();
 };
