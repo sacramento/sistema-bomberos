@@ -90,8 +90,8 @@ export default function FirefightersPage() {
               <TableRow>
                 <TableHead>Legajo</TableHead>
                 <TableHead>Nombre Completo</TableHead>
-                <TableHead>Rango</TableHead>
-                <TableHead>Cuartel</TableHead>
+                <TableHead className="hidden md:table-cell">Rango</TableHead>
+                <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
@@ -104,8 +104,8 @@ export default function FirefightersPage() {
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                   </TableRow>
@@ -115,8 +115,8 @@ export default function FirefightersPage() {
                   <TableRow key={firefighter.id}>
                     <TableCell className="font-medium">{firefighter.id}</TableCell>
                     <TableCell>{`${firefighter.firstName} ${firefighter.lastName}`}</TableCell>
-                    <TableCell>{firefighter.rank}</TableCell>
-                    <TableCell>{firefighter.firehouse}</TableCell>
+                    <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
                     <TableCell>
                       <Badge variant={firefighter.status === 'Active' ? 'default' : 'destructive'} className={firefighter.status === 'Active' ? 'bg-green-600' : ''}>
                         {firefighter.status === 'Active' ? 'Activo' : 'Inactivo'}
