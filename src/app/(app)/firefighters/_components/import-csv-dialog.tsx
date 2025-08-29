@@ -61,8 +61,9 @@ export default function ImportCsvDialog({
     Papa.parse<any>(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: header => header.toLowerCase().trim(),
       complete: async (results) => {
-        const headers = results.meta.fields?.map(h => h.trim().toLowerCase()) || [];
+        const headers = results.meta.fields || [];
         const missingHeaders = REQUIRED_HEADERS.filter(h => !headers?.includes(h));
 
         if (missingHeaders.length > 0) {
@@ -78,8 +79,8 @@ export default function ImportCsvDialog({
         // We can add more specific validation here if needed
         const firefightersToUpload = results.data.map(row => ({
           id: row.legajo.trim(),
-          firstName: row.firstName.trim(),
-          lastName: row.lastName.trim(),
+          firstName: row.firstname.trim(),
+          lastName: row.lastname.trim(),
           rank: row.rank.trim().toUpperCase(),
           firehouse: row.firehouse.trim(),
           status: 'Active' // Default status
@@ -146,7 +147,7 @@ export default function ImportCsvDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, firstName, lastName, rank, firehouse</strong>. La primera fila debe ser el encabezado.
+                    El archivo CSV debe contener las siguientes columnas en la primera fila: <strong>legajo, firstname, lastname, rank, firehouse</strong>.
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
