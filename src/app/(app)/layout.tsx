@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -32,12 +32,13 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Operador', 'Asistente'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador', 'Operador'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Operador'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador'] },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador'] },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
