@@ -1,7 +1,7 @@
 
-import { Session, Firefighter } from '@/lib/types';
+import { Session, Firefighter, AttendanceStatus } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy, updateDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -20,15 +20,16 @@ const docToSession = async (docSnap: any): Promise<Session> => {
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
     const getFirefighterObjects = (ids: string[]): Firefighter[] => {
+        if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
     return {
         id: docSnap.id,
         ...data,
-        instructors: getFirefighterObjects(data.instructorIds || []),
-        assistants: getFirefighterObjects(data.assistantIds || []),
-        attendees: getFirefighterObjects(data.attendeeIds || []),
+        instructors: getFirefighterObjects(data.instructorIds),
+        assistants: getFirefighterObjects(data.assistantIds),
+        attendees: getFirefighterObjects(data.attendeeIds),
     } as Session;
 }
 
@@ -55,7 +56,7 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
     return null;
 }
 
-export const addSession = async (sessionData: Omit<Session, 'id'>): Promise<string> => {
+export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>): Promise<string> => {
     // We only store the IDs in Firestore, not the full firefighter objects
     const sessionToStore = {
         title: sessionData.title,
@@ -66,6 +67,7 @@ export const addSession = async (sessionData: Omit<Session, 'id'>): Promise<stri
         instructorIds: sessionData.instructors.map(f => f.id),
         assistantIds: sessionData.assistants.map(f => f.id),
         attendeeIds: sessionData.attendees.map(f => f.id),
+        attendance: {}, // Initialize attendance as an empty object
     };
     
     const id = `S-${Date.now()}`;
@@ -79,4 +81,11 @@ export const addSession = async (sessionData: Omit<Session, 'id'>): Promise<stri
 export const deleteSession = async (id: string): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
     await deleteDoc(docRef);
+};
+
+export const updateSessionAttendance = async (id: string, attendance: Record<string, AttendanceStatus>): Promise<void> => {
+    const docRef = doc(db, 'sessions', id);
+    await updateDoc(docRef, {
+        attendance: attendance
+    });
 };

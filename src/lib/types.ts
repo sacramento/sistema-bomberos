@@ -22,6 +22,8 @@ export type Firefighter = {
   status: 'Active' | 'Inactive';
 };
 
+export type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
+
 export type Session = {
   id: string;
   title: string;
@@ -32,6 +34,7 @@ export type Session = {
   instructors: Firefighter[];
   assistants: Firefighter[];
   attendees: Firefighter[];
+  attendance?: Record<string, AttendanceStatus>; // Firefighter ID -> Status
 };
 
 export type Leave = {

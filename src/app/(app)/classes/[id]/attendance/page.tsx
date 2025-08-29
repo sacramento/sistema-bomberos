@@ -3,20 +3,19 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert } from "lucide-react";
+import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert, Save } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Firefighter, Session } from "@/lib/types";
-import { getSessionById } from "@/services/sessions.service";
+import { Firefighter, Session, AttendanceStatus } from "@/lib/types";
+import { getSessionById, updateSessionAttendance } from "@/services/sessions.service";
 import { Skeleton } from "@/components/ui/skeleton";
-
-type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
+import { useToast } from "@/hooks/use-toast";
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
     { value: "present", label: "Presente" },
@@ -43,29 +42,46 @@ const getStatusLabel = (status: AttendanceStatus) => {
 export default function AttendancePage() {
     const params = useParams();
     const sessionId = params.id as string;
+    const { toast } = useToast();
     
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
 
     useEffect(() => {
         const fetchSession = async () => {
             if (sessionId) {
                 setLoading(true);
-                const data = await getSessionById(sessionId);
-                setSession(data);
-                if (data) {
-                    const initialAttendance: Record<string, AttendanceStatus> = {};
-                    data.attendees.forEach(a => {
-                        initialAttendance[a.id] = 'present'; 
+                try {
+                    const data = await getSessionById(sessionId);
+                    setSession(data);
+                    if (data) {
+                        // If attendance data exists in Firestore, use it.
+                        // Otherwise, initialize everyone to 'present'.
+                        if (data.attendance && Object.keys(data.attendance).length > 0) {
+                            setAttendance(data.attendance);
+                        } else {
+                            const initialAttendance: Record<string, AttendanceStatus> = {};
+                            data.attendees.forEach(a => {
+                                initialAttendance[a.id] = 'present'; 
+                            });
+                            setAttendance(initialAttendance);
+                        }
+                    }
+                } catch (error) {
+                    toast({
+                        title: "Error",
+                        description: "No se pudo cargar la sesión.",
+                        variant: "destructive"
                     });
-                    setAttendance(initialAttendance);
+                } finally {
+                    setLoading(false);
                 }
-                setLoading(false);
             }
         };
         fetchSession();
-    }, [sessionId]);
+    }, [sessionId, toast]);
 
     const summary = useMemo(() => {
         if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
@@ -122,6 +138,25 @@ export default function AttendancePage() {
     const handleStatusChange = (firefighterId: string, status: AttendanceStatus) => {
         setAttendance(prev => ({...prev, [firefighterId]: status}));
     }
+
+    const handleSaveChanges = async () => {
+        setSaving(true);
+        try {
+            await updateSessionAttendance(sessionId, attendance);
+            toast({
+                title: "¡Éxito!",
+                description: "La asistencia ha sido guardada correctamente."
+            });
+        } catch (error) {
+             toast({
+                title: "Error",
+                description: "No se pudo guardar la asistencia.",
+                variant: "destructive"
+            });
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const summaryCards = [
         { title: "Presentes", value: summary.present, icon: UserCheck, color: "text-green-500" },
@@ -211,6 +246,12 @@ export default function AttendancePage() {
                                 </Table>
                             </div>
                         </CardContent>
+                        <CardFooter className="justify-end">
+                            <Button onClick={handleSaveChanges} disabled={saving}>
+                                <Save className="mr-2 h-4 w-4" />
+                                {saving ? 'Guardando...' : 'Guardar Cambios'}
+                            </Button>
+                        </CardFooter>
                     </Card>
                 </TabsContent>
                 
