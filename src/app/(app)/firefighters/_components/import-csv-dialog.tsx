@@ -21,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
 
 // Define the required headers for the CSV file
-const REQUIRED_HEADERS = ['id', 'name', 'rank', 'firehouse'];
+const REQUIRED_HEADERS = ['legajo', 'name', 'rank', 'firehouse'];
 
 export default function ImportCsvDialog({
   children,
@@ -62,7 +62,7 @@ export default function ImportCsvDialog({
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const headers = results.meta.fields;
+        const headers = results.meta.fields?.map(h => h.trim().toLowerCase()) || [];
         const missingHeaders = REQUIRED_HEADERS.filter(h => !headers?.includes(h));
 
         if (missingHeaders.length > 0) {
@@ -77,7 +77,7 @@ export default function ImportCsvDialog({
 
         // We can add more specific validation here if needed
         const firefightersToUpload = results.data.map(row => ({
-          id: row.id.trim(),
+          id: row.legajo.trim(),
           name: row.name.trim(),
           rank: row.rank.trim().toUpperCase(),
           firehouse: row.firehouse.trim(),
@@ -145,7 +145,7 @@ export default function ImportCsvDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas: <strong>id, name, rank, firehouse</strong>. La primera fila debe ser el encabezado.
+                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, name, rank, firehouse</strong>. La primera fila debe ser el encabezado.
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">

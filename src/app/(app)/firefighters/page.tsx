@@ -58,7 +58,7 @@ export default function FirefightersPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID</TableHead>
+                <TableHead>Legajo</TableHead>
                 <TableHead>Nombre Completo</TableHead>
                 <TableHead>Rango</TableHead>
                 <TableHead>Cuartel</TableHead>
