@@ -1,15 +1,15 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { sessions as initialSessions } from '@/lib/data';
 import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import AddClassDialog from './_components/add-class-dialog';
-import { useState, useMemo } from 'react';
-import { Session } from '@/lib/types';
+import { useState, useMemo, useEffect } from 'react';
+import { Firefighter, Session } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -31,7 +31,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { getSessions, deleteSession } from '@/services/sessions.service';
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
@@ -42,8 +45,10 @@ const hierarchyOptions = [
 ];
 
 export default function ClassesPage() {
-  const [sessions, setSessions] = useState<Session[]>(initialSessions);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  const { toast } = useToast();
   
   // State for filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -52,12 +57,46 @@ export default function ClassesPage() {
   const [filterHierarchy, setFilterHierarchy] = useState('all');
   const [filterDate, setFilterDate] = useState<DateRange | undefined>();
 
-  const handleAddClass = (newClass: Session) => {
-    setSessions(prevSessions => [newClass, ...prevSessions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+  const fetchSessions = async () => {
+    setLoading(true);
+    try {
+        const data = await getSessions();
+        setSessions(data);
+    } catch(error) {
+         toast({
+            title: "Error",
+            description: "No se pudieron cargar las clases.",
+            variant: "destructive"
+        })
+    } finally {
+        setLoading(false);
+    }
+  }
+  
+  useEffect(() => {
+    fetchSessions();
+  }, [])
+
+
+  const handleDataChange = () => {
+    fetchSessions();
   };
 
-  const handleDeleteClass = (sessionId: string) => {
-    setSessions(prevSessions => prevSessions.filter(s => s.id !== sessionId));
+  const handleDeleteClass = async (sessionId: string) => {
+    try {
+        await deleteSession(sessionId);
+        toast({
+            title: "Éxito",
+            description: "La clase ha sido eliminada."
+        });
+        fetchSessions();
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "No se pudo eliminar la clase.",
+            variant: "destructive"
+        });
+    }
   };
   
   const getCardBorderColor = (session: Session): string => {
@@ -135,7 +174,7 @@ export default function ClassesPage() {
   return (
     <>
       <PageHeader title="Clases de Capacitación" description="Cree, gestione y filtre clases de capacitación.">
-        <AddClassDialog onAddClass={handleAddClass}>
+        <AddClassDialog onClassAdded={handleDataChange}>
           <Button>
             <PlusCircle className="mr-2 h-4 w-4" />
             Crear Clase
@@ -246,76 +285,101 @@ export default function ClassesPage() {
           </CardContent>
       </Card>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {filteredSessions.map((session) => (
-          <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
-             <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="flex flex-col gap-2 flex-grow">
-                  <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
-                  <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+      {loading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <Card key={index} className="flex flex-col">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                    <div className="flex flex-col gap-2 flex-grow">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-4 w-32" />
+                    </div>
+                    <Skeleton className="h-8 w-8" />
                 </div>
-                {user?.role === 'Administrador' && (
-                  <AlertDialog>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem className="text-destructive focus:text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Eliminar
+                <Skeleton className="h-7 w-4/5 pt-2" />
+              </CardHeader>
+              <CardContent className="flex-grow">
+                <Skeleton className="h-5 w-full" />
+              </CardContent>
+              <CardFooter>
+                <Skeleton className="h-10 w-full" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredSessions.map((session) => (
+            <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
+               <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-2 flex-grow">
+                    <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
+                    <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+                  </div>
+                  {user?.role === 'Administrador' && (
+                    <AlertDialog>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
                           </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
-                            y sus datos asociados.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDeleteClass(session.id)} variant="destructive">
-                            Eliminar
-                        </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-              <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-grow">
-                <div className="space-y-2 text-sm">
-                    <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => i.id).join(', ')}</span></div>
-                    {session.assistants && session.assistants.length > 0 && (
-                        <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => a.id).join(', ')}</span></div>
-                    )}
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
+                              y sus datos asociados.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteClass(session.id)} variant="destructive">
+                              Eliminar
+                          </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
-            </CardContent>
-            <CardFooter>
-                 <Button asChild className="w-full">
-                    <Link href={`/classes/${session.id}/attendance`}>
-                        Gestionar Asistencia
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
-       {filteredSessions.length === 0 && (
+                <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                  <div className="space-y-2 text-sm">
+                      <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
+                      {session.assistants && session.assistants.length > 0 && (
+                          <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => `${a.firstName} ${a.lastName}`).join(', ')}</span></div>
+                      )}
+                  </div>
+              </CardContent>
+              <CardFooter>
+                   <Button asChild className="w-full">
+                      <Link href={`/classes/${session.id}/attendance`}>
+                          Gestionar Asistencia
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                  </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+       {filteredSessions.length === 0 && !loading && (
         <div className="text-center text-muted-foreground py-16">
             <p>No se encontraron clases con los filtros aplicados.</p>
         </div>

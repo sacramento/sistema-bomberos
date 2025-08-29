@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -5,14 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { sessions } from "@/lib/data";
 import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Firefighter } from "@/lib/types";
+import { Firefighter, Session } from "@/lib/types";
+import { getSessionById } from "@/services/sessions.service";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
 
@@ -42,19 +44,28 @@ export default function AttendancePage() {
     const params = useParams();
     const sessionId = params.id as string;
     
-    const session = useMemo(() => sessions.find(s => s.id === sessionId), [sessionId]);
+    const [session, setSession] = useState<Session | null>(null);
+    const [loading, setLoading] = useState(true);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
 
     useEffect(() => {
-        if (session) {
-            const initialAttendance: Record<string, AttendanceStatus> = {};
-            session.attendees.forEach(a => {
-                // Default all attendees to 'present' initially
-                initialAttendance[a.id] = 'present'; 
-            });
-            setAttendance(initialAttendance);
-        }
-    }, [session]);
+        const fetchSession = async () => {
+            if (sessionId) {
+                setLoading(true);
+                const data = await getSessionById(sessionId);
+                setSession(data);
+                if (data) {
+                    const initialAttendance: Record<string, AttendanceStatus> = {};
+                    data.attendees.forEach(a => {
+                        initialAttendance[a.id] = 'present'; 
+                    });
+                    setAttendance(initialAttendance);
+                }
+                setLoading(false);
+            }
+        };
+        fetchSession();
+    }, [sessionId]);
 
     const summary = useMemo(() => {
         if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
@@ -65,6 +76,39 @@ export default function AttendancePage() {
         const excused = Object.values(attendance).filter(s => s === 'excused').length;
         return { present, absent, tardy, excused, total };
     }, [attendance, session]);
+
+    if (loading) {
+         return (
+             <>
+                <PageHeader title="..." description="...">
+                    <Skeleton className="h-10 w-32" />
+                </PageHeader>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <Card key={index}>
+                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <Skeleton className="h-5 w-20" />
+                                <Skeleton className="h-4 w-4" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-8 w-12 mb-1" />
+                                <Skeleton className="h-4 w-28" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+                 <Card>
+                    <CardHeader>
+                        <Skeleton className="h-7 w-48" />
+                        <Skeleton className="h-4 w-64 mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                        <Skeleton className="h-40 w-full" />
+                    </CardContent>
+                 </Card>
+             </>
+         )
+    }
 
     if (!session) {
         return (

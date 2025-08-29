@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { getFirefighters } from "@/services/firefighters.service";
+import { addSession } from "@/services/sessions.service";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
@@ -187,9 +189,10 @@ const MultiSelectFilter = ({
 };
 
 
-export default function AddClassDialog({ children, onAddClass }: { children: React.ReactNode; onAddClass: (newClass: Session) => void; }) {
+export default function AddClassDialog({ children, onClassAdded }: { children: React.ReactNode; onClassAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
   
   // All firefighters from DB
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
@@ -208,12 +211,20 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
   useEffect(() => {
     const fetchAllFirefighters = async () => {
         if (open) { // Fetch only when dialog is open
-            const data = await getFirefighters();
-            setAllFirefighters(data);
+            try {
+                const data = await getFirefighters();
+                setAllFirefighters(data);
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "No se pudieron cargar los bomberos para la selección.",
+                    variant: "destructive"
+                });
+            }
         }
     };
     fetchAllFirefighters();
-  }, [open]);
+  }, [open, toast]);
 
 
   const getAttendees = (): Firefighter[] => {
@@ -256,8 +267,9 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
     setSelectedStations([]);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setLoading(true);
 
     if (!title || !specialization || !date || !time || instructors.length === 0) {
         toast({
@@ -265,6 +277,7 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
             description: "Por favor, complete todos los campos obligatorios.",
             variant: "destructive",
         });
+        setLoading(false);
         return;
     }
     
@@ -276,34 +289,50 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
             description: "No se encontraron bomberos que coincidan con los filtros de asignación. La clase no fue creada.",
             variant: "destructive",
         });
+        setLoading(false);
         return;
     }
-
-    const newClass: Session = {
-        id: `S-${Date.now()}`,
-        title,
-        specialization: specialization as Session['specialization'],
-        description,
-        date,
-        startTime: time,
-        instructors,
-        assistants,
-        attendees,
-    };
     
-    onAddClass(newClass);
+    try {
+        const newClassData: Omit<Session, 'id'> = {
+            title,
+            specialization: specialization as Session['specialization'],
+            description,
+            date,
+            startTime: time,
+            instructors,
+            assistants,
+            attendees,
+        };
+        
+        await addSession(newClassData);
 
-    toast({
-        title: "¡Éxito!",
-        description: `La nueva clase ha sido creada con ${attendees.length} asistentes.`,
-    });
-    
-    resetForm();
-    setOpen(false);
+        toast({
+            title: "¡Éxito!",
+            description: `La nueva clase ha sido creada con ${attendees.length} asistentes.`,
+        });
+        
+        onClassAdded();
+        resetForm();
+        setOpen(false);
+
+    } catch (error: any) {
+        console.error(error);
+        toast({
+            title: "Error",
+            description: error.message || "No se pudo crear la clase.",
+            variant: "destructive",
+        });
+    } finally {
+        setLoading(false);
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit}>
@@ -384,7 +413,7 @@ export default function AddClassDialog({ children, onAddClass }: { children: Rea
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit">Guardar Clase</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

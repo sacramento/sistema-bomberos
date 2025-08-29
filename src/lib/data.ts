@@ -1,4 +1,8 @@
+
 import type { Firefighter, Session, User } from '@/lib/types';
+
+// This file is now deprecated for production use, but kept for reference or testing.
+// All data is now fetched from and saved to Firebase Firestore.
 
 export const users: User[] = [
   { id: 'U-001', name: 'Usuario Admin', password: 'password', role: 'Administrador'},
@@ -7,13 +11,13 @@ export const users: User[] = [
 ];
 
 export const firefighters: Firefighter[] = [
-  { id: 'FG-001', name: 'Juan Pérez', rank: 'COMANDANTE', firehouse: 'Cuartel 1', status: 'Active' },
-  { id: 'FG-002', name: 'Ana Gómez', rank: 'OFICIAL PRINCIPAL', firehouse: 'Cuartel 1', status: 'Active' },
-  { id: 'FG-003', name: 'Carlos Sánchez', rank: 'BOMBERO', firehouse: 'Cuartel 2', status: 'Active' },
-  { id: 'FG-004', name: 'Laura Fernández', rank: 'BOMBERO', firehouse: 'Cuartel 2', status: 'Inactive' },
-  { id: 'FG-005', name: 'Miguel Torres', rank: 'COMANDANTE MAYOR', firehouse: 'Cuartel Central', status: 'Active' },
-  { id: 'FG-006', name: 'Patricia Ramírez', rank: 'CABO', firehouse: 'Cuartel 3', status: 'Active' },
-  { id: 'FG-007', name: 'Roberto Díaz', rank: 'SARGENTO', firehouse: 'Cuartel 3', status: 'Active' },
+  { id: 'FG-001', firstName: 'Juan', lastName: 'Perez', rank: 'COMANDANTE', firehouse: 'Cuartel 1', status: 'Active' },
+  { id: 'FG-002', firstName: 'Ana', lastName: 'Gomez', rank: 'OFICIAL PRINCIPAL', firehouse: 'Cuartel 1', status: 'Active' },
+  { id: 'FG-003', firstName: 'Carlos', lastName: 'Sanchez', rank: 'BOMBERO', firehouse: 'Cuartel 2', status: 'Active' },
+  { id: 'FG-004', firstName: 'Laura', lastName: 'Fernandez', rank: 'BOMBERO', firehouse: 'Cuartel 2', status: 'Inactive' },
+  { id: 'FG-005', firstName: 'Miguel', lastName: 'Torres', rank: 'COMANDANTE MAYOR', firehouse: 'Cuartel Central', status: 'Active' },
+  { id: 'FG-006', firstName: 'Patricia', lastName: 'Ramirez', rank: 'CABO', firehouse: 'Cuartel 3', status: 'Active' },
+  { id: 'FG-007', firstName: 'Roberto', lastName: 'Diaz', rank: 'SARGENTO', firehouse: 'Cuartel 3', status: 'Active' },
 ];
 
 export const sessions: Session[] = [

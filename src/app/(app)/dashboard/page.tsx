@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -21,7 +22,6 @@ import {
   UserX,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { sessions } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
@@ -34,6 +34,9 @@ import {
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { useEffect, useState } from 'react';
 import { getFirefighters } from '@/services/firefighters.service';
+import { getSessions } from '@/services/sessions.service';
+import { Session } from '@/lib/types';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const chartData = [
   { month: "Enero", attendees: 186, absentees: 80 },
@@ -57,14 +60,26 @@ const chartConfig = {
 
 export default function DashboardPage() {
   const [activeFirefighters, setActiveFirefighters] = useState(0);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchActiveFirefighters = async () => {
-      const firefighters = await getFirefighters();
-      const activeCount = firefighters.filter(f => f.status === 'Active').length;
-      setActiveFirefighters(activeCount);
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const firefighters = await getFirefighters();
+        const activeCount = firefighters.filter(f => f.status === 'Active').length;
+        setActiveFirefighters(activeCount);
+
+        const sessionData = await getSessions();
+        setSessions(sessionData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchActiveFirefighters();
+    fetchData();
   }, []);
 
   return (
@@ -82,7 +97,7 @@ export default function DashboardPage() {
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeFirefighters}</div>
+            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{activeFirefighters}</div>}
             <p className="text-xs text-muted-foreground">
               Personal total de guardia
             </p>
@@ -91,14 +106,14 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              Próximas Clases
+              Clases Programadas
             </CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{sessions.length}</div>
+            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">+{sessions.length}</div>}
             <p className="text-xs text-muted-foreground">
-              Programadas en los próximos 30 días
+              Total de clases en el sistema
             </p>
           </CardContent>
         </Card>
@@ -175,19 +190,29 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.slice(0, 4).map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell>
-                      <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
-                        {session.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{session.specialization}</Badge>
-                    </TableCell>
-                    <TableCell>{session.date}</TableCell>
-                  </TableRow>
-                ))}
+                {loading ? (
+                    Array.from({ length: 4 }).map((_, index) => (
+                        <TableRow key={index}>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        </TableRow>
+                    ))
+                ) : (
+                    sessions.slice(0, 4).map((session) => (
+                      <TableRow key={session.id}>
+                        <TableCell>
+                          <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
+                            {session.title}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{session.specialization}</Badge>
+                        </TableCell>
+                        <TableCell>{session.date}</TableCell>
+                      </TableRow>
+                    ))
+                )}
               </TableBody>
             </Table>
           </CardContent>
