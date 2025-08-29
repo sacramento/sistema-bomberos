@@ -127,6 +127,27 @@ function AppHeader({children}: {children: React.ReactNode}) {
   )
 }
 
+function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
+    const { isMobile } = useSidebar();
+    if (isMobile === undefined) {
+      return (
+        <div className="flex min-h-screen items-center justify-center">
+          <p>Cargando...</p>
+        </div>
+      );
+    }
+
+    return (
+        <>
+            <AppSidebar />
+            <SidebarInset>
+                <AppHeader />
+                <main className="flex-1 p-4 md:p-8">{children}</main>
+            </SidebarInset>
+        </>
+    )
+}
+
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -140,9 +161,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, pathname, router]);
   
-  const { isMobile } = useSidebar();
-
-  if (loading || !user || isMobile === undefined) {
+  if (loading || !user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Cargando...</p>
@@ -152,11 +171,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        <AppHeader />
-        <main className="flex-1 p-4 md:p-8">{children}</main>
-      </SidebarInset>
+        <MainLayoutWithSidebar>{children}</MainLayoutWithSidebar>
     </SidebarProvider>
   );
 }
