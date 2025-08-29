@@ -32,7 +32,7 @@ type SidebarContext = {
   setOpen: (open: boolean) => void
   openMobile: boolean
   setOpenMobile: (open: boolean) => void
-  isMobile: boolean
+  isMobile: boolean | undefined
   toggleSidebar: () => void
 }
 
@@ -190,6 +190,11 @@ const Sidebar = React.forwardRef<
           {children}
         </div>
       )
+    }
+    
+    // Handle the case where isMobile is still undefined during server-side rendering
+    if (isMobile === undefined) {
+      return null;
     }
 
     if (isMobile) {
@@ -583,7 +588,7 @@ const SidebarMenuButton = React.forwardRef<
         <TooltipContent
           side="right"
           align="center"
-          hidden={state !== "collapsed" || isMobile}
+          hidden={state !== "collapsed" || !!isMobile}
           {...tooltip}
         />
       </Tooltip>

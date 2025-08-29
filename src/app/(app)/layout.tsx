@@ -139,8 +139,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       router.push('/login');
     }
   }, [user, loading, pathname, router]);
+  
+  const { isMobile } = useSidebar();
 
-  if (loading || !user) {
+  if (loading || !user || isMobile === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Cargando...</p>
