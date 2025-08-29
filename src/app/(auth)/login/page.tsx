@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
-  const { login, loading, error } = useAuth();
+  const { user, login, loading, error } = useAuth();
   const { toast } = useToast();
   const [legajo, setLegajo] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +32,15 @@ export default function LoginPage() {
     }
   }, [error, toast]);
 
+  // Prevent rendering the form if auth state is loading or user is already logged in
+  // This avoids hydration errors caused by redirection logic in AuthProvider
+  if (loading || user) {
+    return (
+        <div className="flex min-h-screen items-center justify-center">
+            <p>Cargando...</p>
+        </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -47,7 +56,7 @@ export default function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-             {error && !loading && (
+             {error && (
                  <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Error</AlertTitle>
