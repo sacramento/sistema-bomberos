@@ -21,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
 
 // Define the required headers for the CSV file
-const REQUIRED_HEADERS = ['legajo', 'firstname', 'lastname', 'rank', 'firehouse'];
+const REQUIRED_HEADERS = ['legajo', 'firstname', 'lastname', 'rank', 'firehouse', 'status'];
 
 export default function ImportCsvDialog({
   children,
@@ -65,11 +65,16 @@ export default function ImportCsvDialog({
       complete: async (results) => {
         const headers = results.meta.fields || [];
         const missingHeaders = REQUIRED_HEADERS.filter(h => !headers?.includes(h));
+        
+        // We allow 'status' to be an optional header
+        const requiredHeadersWithoutOptional = REQUIRED_HEADERS.filter(h => h !== 'status');
+        const trulyMissingHeaders = requiredHeadersWithoutOptional.filter(h => !headers?.includes(h));
 
-        if (missingHeaders.length > 0) {
+
+        if (trulyMissingHeaders.length > 0) {
           toast({
             title: 'Error de formato',
-            description: `El archivo CSV no contiene las columnas requeridas: ${missingHeaders.join(', ')}.`,
+            description: `El archivo CSV no contiene las columnas requeridas: ${trulyMissingHeaders.join(', ')}.`,
             variant: 'destructive',
           });
           setLoading(false);
@@ -77,14 +82,19 @@ export default function ImportCsvDialog({
         }
 
         // We can add more specific validation here if needed
-        const firefightersToUpload = results.data.map(row => ({
-          id: row.legajo.trim(),
-          firstName: row.firstname.trim(),
-          lastName: row.lastname.trim(),
-          rank: row.rank.trim().toUpperCase(),
-          firehouse: row.firehouse.trim(),
-          status: 'Active' // Default status
-        })) as Firefighter[];
+        const firefightersToUpload = results.data.map(row => {
+            const statusValue = row.status?.trim() || '';
+            const isValidStatus = statusValue.toLowerCase() === 'active' || statusValue.toLowerCase() === 'inactive';
+            
+            return {
+                id: row.legajo.trim(),
+                firstName: row.firstname.trim(),
+                lastName: row.lastname.trim(),
+                rank: row.rank.trim().toUpperCase(),
+                firehouse: row.firehouse.trim(),
+                status: isValidStatus ? (statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase() as 'Active' | 'Inactive') : 'Active'
+            } as Firefighter
+        });
         
         if (firefightersToUpload.length === 0) {
              toast({
@@ -147,7 +157,7 @@ export default function ImportCsvDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas en la primera fila: <strong>legajo, firstname, lastname, rank, firehouse</strong>.
+                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, firstname, lastname, rank, firehouse, status</strong>. La columna `status` es opcional (los valores pueden ser `Active` o `Inactive`) y si se omite, el bombero se creará como `Active`.
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">

@@ -46,11 +46,8 @@ export const batchAddFirefighters = async (firefighters: Firefighter[]): Promise
         // We assume the ID is provided in the CSV and is the document ID.
         const docRef = doc(db, 'firefighters', firefighter.id);
         
-        // We set status to 'Active' by default for all imported firefighters
-        const { id, ...firefighterData } = {
-            ...firefighter,
-            status: 'Active' as const
-        };
+        // The status is now provided from the CSV, defaulting to Active if not specified
+        const { id, ...firefighterData } = firefighter;
 
         batch.set(docRef, firefighterData, { merge: true }); // Use merge: true to avoid overwriting existing data completely if needed, or create new.
     }
