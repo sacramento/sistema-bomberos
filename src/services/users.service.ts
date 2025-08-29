@@ -1,3 +1,4 @@
+
 import { User } from '@/lib/types';
 import { users as localUsers } from '@/lib/data';
 
@@ -39,12 +40,15 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
         throw new Error(`No se encontró al usuario con el legajo ${id}.`);
     }
 
+    // Guarda la contraseña original por si no viene una nueva
+    const originalPassword = users[userIndex].password;
+
     // Combina los datos existentes con los nuevos datos
     const updatedUser = { ...users[userIndex], ...userData };
     
-    // Si la contraseña viene vacía o nula en la actualización, mantenemos la anterior
+    // Si la contraseña en la actualización está vacía, nula o indefinida, mantenemos la original.
     if (!userData.password) {
-        updatedUser.password = users[userIndex].password;
+        updatedUser.password = originalPassword;
     }
     
     users[userIndex] = updatedUser;
