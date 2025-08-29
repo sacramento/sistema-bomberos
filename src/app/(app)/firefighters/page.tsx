@@ -6,23 +6,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Firefighter } from '@/lib/types';
-import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import AddFirefighterDialog from './_components/add-firefighter-dialog';
 import { useEffect, useState } from 'react';
-import { getFirefighters } from '@/services/firefighters.service';
+import { deleteFirefighter, getFirefighters } from '@/services/firefighters.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import ImportCsvDialog from './_components/import-csv-dialog';
+import EditFirefighterDialog from './_components/edit-firefighter-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function FirefightersPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const fetchFirefighters = async () => {
     setLoading(true);
-    const data = await getFirefighters();
-    setFirefighters(data);
-    setLoading(false);
+    try {
+      const data = await getFirefighters();
+      setFirefighters(data);
+    } catch (error) {
+       toast({
+        title: "Error",
+        description: "No se pudieron cargar los bomberos.",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -30,8 +43,25 @@ export default function FirefightersPage() {
   }, []);
 
   const handleDataChange = () => {
-    // Re-fetch firefighters after one is added or imported
+    // Re-fetch firefighters after one is added, imported, edited, or deleted
     fetchFirefighters();
+  };
+
+  const handleDelete = async (firefighterId: string) => {
+    try {
+        await deleteFirefighter(firefighterId);
+        toast({
+            title: "Éxito",
+            description: "El bombero ha sido eliminado."
+        });
+        fetchFirefighters();
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "No se pudo eliminar el bombero.",
+            variant: "destructive"
+        });
+    }
   };
 
   return (
@@ -93,21 +123,45 @@ export default function FirefightersPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem>Editar</DropdownMenuItem>
-                          <DropdownMenuItem>Desactivar</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className='text-destructive focus:text-destructive'>Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                       <AlertDialog>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <EditFirefighterDialog firefighter={firefighter} onFirefighterUpdated={handleDataChange}>
+                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                    Editar
+                                </DropdownMenuItem>
+                            </EditFirefighterDialog>
+                            <DropdownMenuSeparator />
+                            <AlertDialogTrigger asChild>
+                                <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Eliminar
+                                </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Esto eliminará permanentemente al bombero <span className="font-semibold">{`${firefighter.firstName} ${firefighter.lastName}`}</span>.
+                            </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDelete(firefighter.id)} variant="destructive">
+                                Eliminar
+                            </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </TableCell>
                   </TableRow>
                 ))
