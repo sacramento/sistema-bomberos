@@ -1,32 +1,34 @@
 import { Firefighter } from '@/lib/types';
-import { firefighters as localFirefighters } from '@/lib/data';
+import { db } from '@/lib/firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 
-// Usaremos una variable en memoria para simular la base de datos
-let firefighters: Firefighter[] = [...localFirefighters];
+if (!db) {
+    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
+}
 
+const firefightersCollection = collection(db, 'firefighters');
 
 export const getFirefighters = async (): Promise<Firefighter[]> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const querySnapshot = await getDocs(firefightersCollection);
+    const firefighters: Firefighter[] = [];
+    querySnapshot.forEach((doc) => {
+        firefighters.push({ id: doc.id, ...doc.data() } as Firefighter);
+    });
     return firefighters;
 };
 
 export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | 'status'>, id: string): Promise<void> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const docRef = doc(db, 'firefighters', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        throw new Error(`El bombero con el legajo ${id} ya existe.`);
+    }
     
-    const newFirefighter: Firefighter = { 
-        id, 
+    const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData, 
         status: 'Active' 
     };
 
-    const existingIndex = firefighters.findIndex(f => f.id === id);
-    if (existingIndex !== -1) {
-        // Actualiza si ya existe
-        firefighters[existingIndex] = newFirefighter;
-    } else {
-        // Agrega si es nuevo
-        firefighters.push(newFirefighter);
-    }
+    await setDoc(docRef, newFirefighter);
 };

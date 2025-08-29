@@ -38,9 +38,14 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   useEffect(() => {
     const fetchExistingFirehouses = async () => {
         if (open) {
+          try {
             const firefighters = await getFirefighters();
             const uniqueFirehouses = Array.from(new Set(firefighters.map(f => f.firehouse)));
             setExistingFirehouses(uniqueFirehouses);
+          } catch (error) {
+            console.error("Failed to fetch existing firehouses", error);
+            // Optionally set a default or show an error
+          }
         }
     };
     fetchExistingFirehouses();
@@ -67,13 +72,13 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
     setLoading(true);
 
     try {
-        const newFirefighter: Omit<Firefighter, 'id' | 'status'> = {
+        const newFirefighterData: Omit<Firefighter, 'id' | 'status'> = {
             name,
             rank: rank as Firefighter['rank'],
             firehouse,
         };
         
-        await addFirefighter(newFirefighter, id);
+        await addFirefighter(newFirefighterData, id);
 
         toast({
             title: "¡Éxito!",
@@ -84,11 +89,11 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
         resetForm();
         setOpen(false);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
         toast({
             title: "Error",
-            description: "No se pudo agregar el bombero. Intente de nuevo.",
+            description: error.message || "No se pudo agregar el bombero. Intente de nuevo.",
             variant: "destructive",
         });
     } finally {
@@ -112,19 +117,19 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Label htmlFor="id" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" placeholder="Ej: FG-008" className="col-span-3" value={id} onChange={e => setId(e.target.value)} />
+              <Input id="id" placeholder="Ej: FG-008" className="col-span-3" value={id} onChange={e => setId(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Nombre
               </Label>
-              <Input id="name" placeholder="Ej: Juan Pérez" className="col-span-3" value={name} onChange={e => setName(e.target.value)} />
+              <Input id="name" placeholder="Ej: Juan Pérez" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="rank" className="text-right">
                 Rango
               </Label>
-              <Select onValueChange={(value) => setRank(value as Firefighter['rank'])} value={rank}>
+              <Select onValueChange={(value) => setRank(value as Firefighter['rank'])} value={rank} required>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
@@ -139,12 +144,15 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Label htmlFor="firehouse" className="text-right">
                 Cuartel
               </Label>
-              <Select onValueChange={setFirehouse} value={firehouse}>
+              <Select onValueChange={setFirehouse} value={firehouse} required>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un cuartel" />
                 </SelectTrigger>
                 <SelectContent>
-                  {existingFirehouses.map(house => (
+                  <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
+                  <SelectItem value="Cuartel 2">Cuartel 2</SelectItem>
+                  <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
+                   {existingFirehouses.filter(h => !['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(h)).map(house => (
                     <SelectItem key={house} value={house}>{house}</SelectItem>
                   ))}
                 </SelectContent>

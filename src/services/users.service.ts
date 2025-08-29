@@ -1,67 +1,55 @@
-
 import { User } from '@/lib/types';
-import { users as localUsers } from '@/lib/data';
+import { db } from '@/lib/firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
-// Usaremos una variable en memoria para simular la base de datos
-let users: User[] = [...localUsers];
+if (!db) {
+    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
+}
+
+const usersCollection = collection(db, 'users');
 
 export const getUsers = async (): Promise<User[]> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const querySnapshot = await getDocs(usersCollection);
+    const users: User[] = [];
+    querySnapshot.forEach((doc) => {
+        users.push({ id: doc.id, ...doc.data() } as User);
+    });
     return users;
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 50));
-    const user = users.find(u => u.id === id);
-    return user || null;
+    const docRef = doc(db, 'users', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as User;
+    }
+    return null;
 }
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const existing = users.find(u => u.id === id);
-    if (existing) {
+    const docRef = doc(db, 'users', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
         throw new Error(`El usuario con el legajo ${id} ya existe.`);
     }
-    
-    const newUser: User = { id, ...userData };
-    users.push(newUser);
+
+    await setDoc(docRef, userData);
 };
 
 export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>): Promise<void> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const userIndex = users.findIndex(u => u.id === id);
-    if (userIndex === -1) {
+    const docRef = doc(db, 'users', id);
+    const docSnap = await getDoc(docRef);
+
+    if (!docSnap.exists()) {
         throw new Error(`No se encontró al usuario con el legajo ${id}.`);
     }
 
-    // Guarda la contraseña original por si no viene una nueva
-    const originalPassword = users[userIndex].password;
-
-    // Combina los datos existentes con los nuevos datos
-    const updatedUser = { ...users[userIndex], ...userData };
-    
-    // Si la contraseña en la actualización está vacía, nula o indefinida, mantenemos la original.
-    if (!userData.password) {
-        updatedUser.password = originalPassword;
-    }
-    
-    users[userIndex] = updatedUser;
+    await updateDoc(docRef, userData);
 };
 
 export const deleteUser = async (id: string): Promise<void> => {
-    // Simula una llamada asíncrona
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const initialLength = users.length;
-    users = users.filter(u => u.id !== id);
-    
-    if (users.length === initialLength) {
-        throw new Error(`No se encontró al usuario con el legajo ${id} para eliminar.`);
-    }
+    const docRef = doc(db, 'users', id);
+    await deleteDoc(docRef);
 };
