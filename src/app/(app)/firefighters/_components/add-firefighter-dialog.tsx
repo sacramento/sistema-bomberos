@@ -29,7 +29,8 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   const { toast } = useToast();
 
   const [id, setId] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [rank, setRank] = useState<Firefighter['rank'] | ''>('');
   const [firehouse, setFirehouse] = useState('');
   const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
@@ -53,14 +54,15 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   
   const resetForm = () => {
     setId('');
-    setName('');
+    setFirstName('');
+    setLastName('');
     setRank('');
     setFirehouse('');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id || !name || !rank || !firehouse) {
+    if (!id || !firstName || !lastName || !rank || !firehouse) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -73,7 +75,8 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
 
     try {
         const newFirefighterData: Omit<Firefighter, 'id' | 'status'> = {
-            name,
+            firstName,
+            lastName,
             rank: rank as Firefighter['rank'],
             firehouse,
         };
@@ -120,10 +123,16 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Input id="id" placeholder="Ej: FG-008" className="col-span-3" value={id} onChange={e => setId(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
+              <Label htmlFor="firstName" className="text-right">
                 Nombre
               </Label>
-              <Input id="name" placeholder="Ej: Juan Pérez" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required/>
+              <Input id="firstName" placeholder="Ej: Juan" className="col-span-3" value={firstName} onChange={e => setFirstName(e.target.value)} required/>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="lastName" className="text-right">
+                Apellido
+              </Label>
+              <Input id="lastName" placeholder="Ej: Pérez" className="col-span-3" value={lastName} onChange={e => setLastName(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="rank" className="text-right">

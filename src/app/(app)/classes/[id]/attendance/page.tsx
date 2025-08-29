@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useParams } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Firefighter } from "@/lib/types";
 
 type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
 
@@ -85,6 +86,10 @@ export default function AttendancePage() {
         { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
 
+    const renderFirefighterName = (firefighter: Firefighter) => {
+        return `${firefighter.firstName} ${firefighter.lastName}`;
+    }
+
     return (
         <>
             <PageHeader title={`Asistencia: ${session.title}`} description={`Clase del ${session.date} a las ${session.startTime}hs.`}>
@@ -135,7 +140,7 @@ export default function AttendancePage() {
                                         {session.attendees.map(firefighter => (
                                             <TableRow key={firefighter.id}>
                                                 <TableCell className="font-medium">
-                                                    <div>{firefighter.name}</div>
+                                                    <div>{renderFirefighterName(firefighter)}</div>
                                                     <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
                                                 </TableCell>
                                                 <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
@@ -186,7 +191,7 @@ export default function AttendancePage() {
                                         {session.attendees.map(firefighter => (
                                             <TableRow key={`view-${firefighter.id}`}>
                                                 <TableCell className="font-medium">
-                                                    <div>{firefighter.name}</div>
+                                                    <div>{renderFirefighterName(firefighter)}</div>
                                                     <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
                                                     <div className="text-muted-foreground text-sm md:hidden">{firefighter.firehouse}</div>
                                                 </TableCell>

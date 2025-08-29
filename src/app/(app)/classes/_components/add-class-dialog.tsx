@@ -73,7 +73,7 @@ const MultiSelectFirefighter = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.name}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{`${f.firstName} ${f.lastName}`}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -90,7 +90,7 @@ const MultiSelectFirefighter = ({
                             {availableFirefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={firefighter.name}
+                                    value={`${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => {
                                         handleSelect(firefighter);
                                     }}
@@ -101,7 +101,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {firefighter.rank} - {firefighter.name}
+                                    {firefighter.rank} - {`${firefighter.firstName} ${firefighter.lastName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

@@ -45,12 +45,10 @@ export const batchAddFirefighters = async (firefighters: Firefighter[]): Promise
         const docRef = doc(db, 'firefighters', firefighter.id);
         
         // We set status to 'Active' by default for all imported firefighters
-        const firefighterData = {
+        const { id, ...firefighterData } = {
             ...firefighter,
             status: 'Active' as const
         };
-        // remove id from data object as it's used for the doc ref
-        delete (firefighterData as Partial<Firefighter>).id;
 
         batch.set(docRef, firefighterData, { merge: true }); // Use merge: true to avoid overwriting existing data completely if needed, or create new.
     }
