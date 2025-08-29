@@ -16,33 +16,32 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { User, UserRole } from "@/lib/types";
-import { addUser } from "@/services/users.service";
+import { updateUser } from "@/services/users.service";
 
 const roles: UserRole[] = ['Administrador', 'Operador', 'Asistente'];
 
-export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
+export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const [id, setId] = useState(''); // This will be the legajo
-  const [name, setName] = useState('');
+  const [name, setName] = useState(user.name);
+  // La contraseña se deja vacía a propósito. Solo se actualiza si el usuario ingresa una nueva.
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole | ''>('');
+  const [role, setRole] = useState<UserRole>(user.role);
   const [loading, setLoading] = useState(false);
   
   const resetForm = () => {
-    setId('');
-    setName('');
+    setName(user.name);
     setPassword('');
-    setRole('');
+    setRole(user.role);
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id || !name || !password || !role) {
+    if (!name || !role) {
         toast({
             title: "Error",
-            description: "Por favor, complete todos los campos.",
+            description: "El nombre y el rol son obligatorios.",
             variant: "destructive",
         });
         return;
@@ -51,28 +50,31 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setLoading(true);
 
     try {
-        const newUser: Omit<User, 'id'> = {
+        const updatedData: Partial<Omit<User, 'id'>> = {
             name,
-            password,
-            role: role as UserRole,
+            role,
         };
+
+        // Solo incluir la contraseña en la actualización si se ha ingresado una nueva.
+        if (password) {
+            updatedData.password = password;
+        }
         
-        await addUser(id, newUser);
+        await updateUser(user.id, updatedData);
 
         toast({
             title: "¡Éxito!",
-            description: "El nuevo usuario ha sido agregado.",
+            description: "El usuario ha sido actualizado.",
         });
         
-        onUserAdded();
-        resetForm();
+        onUserUpdated();
         setOpen(false);
 
     } catch (error: any) {
         console.error(error);
         toast({
             title: "Error",
-            description: error.message || "No se pudo agregar el usuario. Intente de nuevo.",
+            description: error.message || "No se pudo actualizar el usuario. Intente de nuevo.",
             variant: "destructive",
         });
     } finally {
@@ -81,14 +83,17 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="font-headline">Agregar Nuevo Usuario</DialogTitle>
+            <DialogTitle className="font-headline">Editar Usuario</DialogTitle>
             <DialogDescription>
-              Ingrese los detalles del nuevo usuario. Haga clic en guardar cuando haya terminado.
+              Modifique los detalles del usuario. Haga clic en guardar cuando haya terminado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -96,19 +101,19 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
               <Label htmlFor="id" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" placeholder="Ej: U-004" className="col-span-3" value={id} onChange={e => setId(e.target.value)} required />
+              <Input id="id" className="col-span-3" value={user.id} disabled />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Nombre
               </Label>
-              <Input id="name" placeholder="Ej: María López" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
+              <Input id="name" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="password" className="text-right">
                 Contraseña
               </Label>
-              <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
+              <Input id="password" type="password" placeholder="Dejar en blanco para no cambiar" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="role" className="text-right">
@@ -127,7 +132,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Usuario'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
