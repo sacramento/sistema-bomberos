@@ -335,14 +335,14 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
+        <DialogHeader>
             <DialogTitle className="font-headline">Crear Nueva Clase</DialogTitle>
             <DialogDescription>
               Complete los detalles de la nueva clase de capacitación.
             </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-6 py-4">
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
+          <div className="grid gap-6 py-4 px-1 flex-grow overflow-y-auto">
             {/* Class Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -412,7 +412,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 </p>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="mt-4 flex-shrink-0">
             <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
           </DialogFooter>
         </form>
