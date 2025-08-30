@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, Users, BookOpen } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, Users, BookOpen, ChevronsUpDown, Check } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -79,6 +80,7 @@ export default function ReportsPage() {
 
     // PDF specific filter
     const [filterPdfFirefighter, setFilterPdfFirefighter] = useState('all');
+    const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -360,13 +362,57 @@ export default function ReportsPage() {
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
                      <div className="space-y-2">
                         <Label>Filtrar por Integrante (Opcional)</Label>
-                        <Select value={filterPdfFirefighter} onValueChange={setFilterPdfFirefighter}>
-                            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos los integrantes</SelectItem>
-                                {allFirefighters.map(f => <SelectItem key={f.id} value={f.id}>{`${f.firstName} ${f.lastName}`}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={openCombobox}
+                                className="w-full justify-between"
+                                >
+                                {filterPdfFirefighter !== 'all'
+                                    ? `${allFirefighters.find(f => f.id === filterPdfFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterPdfFirefighter)?.lastName}`
+                                    : "Seleccionar integrante..."}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0">
+                                <Command>
+                                <CommandInput placeholder="Buscar integrante..." />
+                                <CommandList>
+                                    <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                                    <CommandItem
+                                        value='all'
+                                        onSelect={() => {
+                                            setFilterPdfFirefighter('all');
+                                            setOpenCombobox(false);
+                                        }}
+                                        >
+                                         <Check className={cn("mr-2 h-4 w-4", filterPdfFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                        Todos los integrantes
+                                    </CommandItem>
+                                    {allFirefighters.map((firefighter) => (
+                                    <CommandItem
+                                        key={firefighter.id}
+                                        value={`${firefighter.firstName} ${firefighter.lastName}`}
+                                        onSelect={() => {
+                                            setFilterPdfFirefighter(firefighter.id);
+                                            setOpenCombobox(false);
+                                        }}
+                                    >
+                                        <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            filterPdfFirefighter === firefighter.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                        />
+                                        {`${firefighter.firstName} ${firefighter.lastName}`}
+                                    </CommandItem>
+                                    ))}
+                                </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
                     </div>
                     <Button disabled>
                         <Download className="mr-2 h-4 w-4" />
