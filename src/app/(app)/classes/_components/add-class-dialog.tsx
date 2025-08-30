@@ -448,7 +448,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                     </div>
                 </div>
                 
-                <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
                     <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
                 </DialogFooter>
             </form>
