@@ -44,16 +44,20 @@ const MultiSelectFirefighter = ({
     title, 
     selected, 
     onSelectedChange,
-    firefighters
+    firefighters,
+    excludeAspirantes = false
 }: { 
     title: string;
     selected: Firefighter[]; 
     onSelectedChange: (selected: Firefighter[]) => void;
     firefighters: Firefighter[];
+    excludeAspirantes?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
-    // Exclude Aspirantes from being selected as instructors or assistants
-    const availableFirefighters = firefighters.filter(f => f.rank !== 'ASPIRANTE');
+    
+    const availableFirefighters = excludeAspirantes 
+        ? firefighters.filter(f => f.rank !== 'ASPIRANTE') 
+        : firefighters;
 
     const handleSelect = (firefighter: Firefighter) => {
         const isSelected = selected.some(s => s.id === firefighter.id);
@@ -205,6 +209,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
+  const [manualAttendees, setManualAttendees] = useState<Firefighter[]>([]);
   const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
 
@@ -228,31 +233,48 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
 
 
   const getAttendees = (): Firefighter[] => {
-    let filtered = allFirefighters;
+    let filteredByGroup: Firefighter[] = [];
 
-    // Filter by Hierarchy
-    if (selectedHierarchies.length > 0) {
-        const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-        const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+    // If no filters selected, start with all firefighters. Otherwise, start with an empty list.
+    if (selectedHierarchies.length === 0 && selectedStations.length === 0) {
+        filteredByGroup = [...allFirefighters];
+    } else {
+        let filtered = allFirefighters;
+
+        // Filter by Hierarchy
+        if (selectedHierarchies.length > 0) {
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+            
+            filtered = filtered.filter(f => {
+                if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+                if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+                if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+                return false;
+            });
+        }
         
-        filtered = filtered.filter(f => {
-            if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
-            if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
-            if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
-            return false;
-        });
+        // Filter by Station
+        if (selectedStations.length > 0) {
+            filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
+        }
+        filteredByGroup = filtered;
     }
     
-    // Filter by Station
-    if (selectedStations.length > 0) {
-        filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
-    }
+    // Combine filtered list with manually added attendees
+    const combined = [...filteredByGroup, ...manualAttendees];
     
-    // Exclude instructors and assistants from attendees
+    // Remove duplicates
+    const uniqueAttendeesMap = new Map<string, Firefighter>();
+    combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
+
+    const finalAttendees = Array.from(uniqueAttendeesMap.values());
+    
+    // Exclude instructors and assistants from the final list
     const instructorIds = new Set(instructors.map(i => i.id));
     const assistantIds = new Set(assistants.map(a => a.id));
 
-    return filtered.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
+    return finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
   };
   
   const resetForm = () => {
@@ -263,6 +285,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     setTime('');
     setInstructors([]);
     setAssistants([]);
+    setManualAttendees([]);
     setSelectedHierarchies([]);
     setSelectedStations([]);
   };
@@ -376,11 +399,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="instructor">Instructores</Label>
-                     <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} />
+                     <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
-                    <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} />
+                    <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
                 </div>
             </div>
 
@@ -406,9 +429,18 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                             onSelectedChange={setSelectedStations}
                          />
                     </div>
+                    <div className="col-span-1 md:col-span-2 space-y-2">
+                         <Label>Agregar Integrantes Adicionales (Opcional)</Label>
+                        <MultiSelectFirefighter 
+                            title="integrantes" 
+                            selected={manualAttendees} 
+                            onSelectedChange={setManualAttendees} 
+                            firefighters={allFirefighters} 
+                        />
+                    </div>
                 </div>
                 <p className="text-xs text-muted-foreground pt-2">
-                    Si no se selecciona ninguna jerarquía o cuartel, se incluirán todos los bomberos por defecto (excluyendo instructores y ayudantes).
+                    Si no se selecciona ninguna jerarquía o cuartel, se incluirán todos los bomberos por defecto. Puede usar este formulario para añadir integrantes específicos que no coincidan con los filtros.
                 </p>
             </div>
           </div>
@@ -420,3 +452,5 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     </Dialog>
   );
 }
+
+    
