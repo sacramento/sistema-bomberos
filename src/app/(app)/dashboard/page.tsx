@@ -32,20 +32,12 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Session } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const chartData = [
-  { month: "Enero", attendees: 186, absentees: 80 },
-  { month: "Febrero", attendees: 305, absentees: 200 },
-  { month: "Marzo", attendees: 237, absentees: 120 },
-  { month: "Abril", attendees: 73, absentees: 190 },
-  { month: "Mayo", attendees: 209, absentees: 130 },
-  { month: "Junio", attendees: 214, absentees: 140 },
-]
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const chartConfig = {
   attendees: {
@@ -60,8 +52,9 @@ const chartConfig = {
 
 export default function DashboardPage() {
   const [activeFirefighters, setActiveFirefighters] = useState(0);
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [allSessions, setAllSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,7 +65,7 @@ export default function DashboardPage() {
         setActiveFirefighters(activeCount);
 
         const sessionData = await getSessions();
-        setSessions(sessionData);
+        setAllSessions(sessionData);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -81,13 +74,86 @@ export default function DashboardPage() {
     };
     fetchData();
   }, []);
+  
+  const availableYears = useMemo(() => {
+    const years = new Set(allSessions.map(s => new Date(s.date).getFullYear().toString()));
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [allSessions]);
+
+  const filteredData = useMemo(() => {
+    const sessions = allSessions.filter(session => {
+        if(filterYear === 'all') return true;
+        return new Date(session.date).getFullYear().toString() === filterYear;
+    });
+
+    const monthlyData: Record<string, { present: number, absent: number, tardy: number, excused: number, month: string }> = {};
+    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+    sessions.forEach(session => {
+        const monthIndex = new Date(session.date).getMonth();
+        const month = monthNames[monthIndex];
+        
+        if (!monthlyData[month]) {
+            monthlyData[month] = { present: 0, absent: 0, tardy: 0, excused: 0, month };
+        }
+        
+        if (session.attendance) {
+            Object.values(session.attendance).forEach(status => {
+                if (status === 'present') monthlyData[month].present++;
+                if (status === 'absent') monthlyData[month].absent++;
+                if (status === 'tardy') monthlyData[month].tardy++;
+                if (status === 'excused') monthlyData[month].excused++;
+            });
+        }
+    });
+    
+    const chartData = monthNames.map(month => {
+        const data = monthlyData[month];
+        if (!data) return { month, attendees: 0, absentees: 0 };
+        return {
+            month,
+            attendees: data.present + data.tardy + data.excused, // Contando todos como asistentes para el gráfico
+            absentees: data.absent
+        };
+    });
+
+    const totalAttendance = Object.values(monthlyData).reduce((acc, data) => acc + data.present, 0);
+    const totalTardy = Object.values(monthlyData).reduce((acc, data) => acc + data.tardy, 0);
+    const totalExcused = Object.values(monthlyData).reduce((acc, data) => acc + data.excused, 0);
+    const totalAbsent = Object.values(monthlyData).reduce((acc, data) => acc + data.absent, 0);
+    const totalPossible = totalAttendance + totalTardy + totalExcused + totalAbsent;
+    
+    // Consideramos presentes, tardes y justificados para el ratio de asistencia
+    const attendanceRate = totalPossible > 0 ? ((totalAttendance + totalTardy + totalExcused) / totalPossible) * 100 : 0;
+
+
+    return {
+        sessions,
+        chartData,
+        attendanceRate
+    };
+
+  }, [allSessions, filterYear]);
+
 
   return (
     <>
       <PageHeader
         title="Tablero"
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
-      />
+      >
+        <div className="w-48">
+            <Select value={filterYear} onValueChange={setFilterYear}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar año" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Ver Todos</SelectItem>
+                     {availableYears.map(year => <SelectItem key={year} value={year}>{`Año ${year}`}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+      </PageHeader>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -111,9 +177,9 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">+{sessions.length}</div>}
+            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">+{filteredData.sessions.length}</div>}
             <p className="text-xs text-muted-foreground">
-              Total de clases en el sistema
+              {filterYear === 'all' ? 'Total de clases en el sistema' : `Clases para el año ${filterYear}`}
             </p>
           </CardContent>
         </Card>
@@ -123,9 +189,9 @@ export default function DashboardPage() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92.5%</div>
+            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{filteredData.attendanceRate.toFixed(1)}%</div>}
             <p className="text-xs text-muted-foreground">
-              Promedio en todas las clases
+              Promedio para el período
             </p>
           </CardContent>
         </Card>
@@ -147,12 +213,12 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="font-headline">Asistencia Mensual</CardTitle>
             <CardDescription>
-              Un resumen de la asistencia a capacitaciones en los últimos 6 meses.
+              Resumen de asistencia a capacitaciones para el año {filterYear === 'all' ? 'general' : filterYear}.
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <RechartsBarChart accessibilityLayer data={chartData}>
+              <RechartsBarChart accessibilityLayer data={filteredData.chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
                   dataKey="month"
@@ -177,7 +243,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="font-headline">Próximas Clases</CardTitle>
             <CardDescription>
-              Estas son las próximas clases de capacitación programadas.
+              Próximas clases de capacitación programadas en el período.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -199,7 +265,7 @@ export default function DashboardPage() {
                         </TableRow>
                     ))
                 ) : (
-                    sessions.slice(0, 4).map((session) => (
+                    filteredData.sessions.slice(0, 5).map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>
                           <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
@@ -221,3 +287,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

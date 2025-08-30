@@ -4,21 +4,16 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import AddClassDialog from './_components/add-class-dialog';
 import { useState, useMemo, useEffect } from 'react';
-import { Firefighter, Session } from '@/lib/types';
+import { Session } from '@/lib/types';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
-import { DateRange } from 'react-day-picker';
 import { useAuth } from '@/context/auth-context';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -55,7 +50,8 @@ export default function ClassesPage() {
   const [filterSpecialization, setFilterSpecialization] = useState('all');
   const [filterStation, setFilterStation] = useState('all');
   const [filterHierarchy, setFilterHierarchy] = useState('all');
-  const [filterDate, setFilterDate] = useState<DateRange | undefined>();
+  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+
 
   const fetchSessions = async () => {
     setLoading(true);
@@ -123,6 +119,11 @@ export default function ClassesPage() {
     return 'border-gray-500'; // Default for "Todos" or mixed
   };
 
+  const availableYears = useMemo(() => {
+    const years = new Set(sessions.map(s => new Date(s.date).getFullYear().toString()));
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [sessions]);
+
 
   const filteredSessions = useMemo(() => {
     return sessions.filter(session => {
@@ -135,13 +136,11 @@ export default function ClassesPage() {
       if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) {
         return false;
       }
-
-      // Filter by date range
-      if (filterDate?.from && filterDate?.to) {
-        const sessionDate = new Date(session.date);
-        if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to) })) {
-            return false;
-        }
+      
+      // Filter by Year
+      if (filterYear !== 'all') {
+          const sessionYear = new Date(session.date).getFullYear().toString();
+          if(sessionYear !== filterYear) return false;
       }
       
       // Filter by station and hierarchy (checks attendees)
@@ -168,7 +167,7 @@ export default function ClassesPage() {
 
       return stationMatch && hierarchyMatch;
     });
-  }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterDate]);
+  }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
 
 
   return (
@@ -200,6 +199,18 @@ export default function ClassesPage() {
                               onChange={(e) => setSearchTerm(e.target.value)}
                           />
                       </div>
+                  </div>
+                  <div className="space-y-2">
+                      <Label>Año Lectivo</Label>
+                      <Select value={filterYear} onValueChange={setFilterYear}>
+                          <SelectTrigger>
+                              <SelectValue placeholder="Seleccionar año" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="all">Todos los Años</SelectItem>
+                              {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                          </SelectContent>
+                      </Select>
                   </div>
                   <div className="space-y-2">
                       <Label>Especialidad</Label>
@@ -241,46 +252,6 @@ export default function ClassesPage() {
                             </SelectContent>
                          </Select>
                     </div>
-                  <div className="space-y-2">
-                      <Label>Rango de Fechas</Label>
-                      <Popover>
-                          <PopoverTrigger asChild>
-                              <Button
-                                  id="date"
-                                  variant={"outline"}
-                                  className={cn(
-                                      "w-full justify-start text-left font-normal",
-                                      !filterDate && "text-muted-foreground"
-                                  )}
-                              >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {filterDate?.from ? (
-                                      filterDate.to ? (
-                                          <>
-                                              {format(filterDate.from, "LLL dd, y", { locale: es })} -{" "}
-                                              {format(filterDate.to, "LLL dd, y", { locale: es })}
-                                          </>
-                                      ) : (
-                                          format(filterDate.from, "LLL dd, y")
-                                      )
-                                  ) : (
-                                      <span>Seleccionar rango</span>
-                                  )}
-                              </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                  initialFocus
-                                  mode="range"
-                                  defaultMonth={filterDate?.from}
-                                  selected={filterDate}
-                                  onSelect={setFilterDate}
-                                  numberOfMonths={2}
-                                  locale={es}
-                              />
-                          </PopoverContent>
-                      </Popover>
-                  </div>
               </div>
           </CardContent>
       </Card>
@@ -327,6 +298,7 @@ export default function ClassesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                           <DropdownMenuItem>
                             <Edit className="mr-2 h-4 w-4" />
                             Editar
@@ -387,3 +359,5 @@ export default function ClassesPage() {
     </>
   );
 }
+
+    
