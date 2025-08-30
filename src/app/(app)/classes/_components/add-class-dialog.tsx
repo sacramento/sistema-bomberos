@@ -358,99 +358,101 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
         setOpen(isOpen);
         if (!isOpen) resetForm();
     }}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-            <DialogTitle className="font-headline">Crear Nueva Clase</DialogTitle>
-            <DialogDescription>
-              Complete los detalles de la nueva clase de capacitación.
-            </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-hidden">
-          <div className="pr-6 space-y-6 flex-grow overflow-y-auto">
-            {/* Class Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <Label htmlFor="title">Título</Label>
-                    <Input id="title" placeholder="Ej: RCP y Primeros Auxilios" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="specialization">Especialidad</Label>
-                    <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
-                        <SelectTrigger>
-                        <SelectValue placeholder="Seleccione una especialidad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                        {specializations.map(spec => (
-                            <SelectItem key={spec} value={spec}>{spec}</SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2 col-span-1 md:col-span-2">
-                    <Label htmlFor="description">Descripción</Label>
-                    <Textarea id="description" placeholder="Describa brevemente la clase..." value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required/>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="time">Hora de Inicio</Label>
-                    <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required/>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="instructor">Instructores</Label>
-                     <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
-                    <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
-                </div>
-            </div>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent className="sm:max-w-2xl">
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                 <DialogHeader>
+                    <DialogTitle className="font-headline">Crear Nueva Clase</DialogTitle>
+                    <DialogDescription>
+                    Complete los detalles de la nueva clase de capacitación.
+                    </DialogDescription>
+                </DialogHeader>
 
-            {/* Attendee Selection */}
-            <div className="space-y-4 pt-4 border-t">
-                <h4 className="font-medium text-lg font-headline">Asignar Asistentes</h4>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                     <div className="space-y-2">
-                        <Label>Seleccionar por Jerarquía</Label>
-                        <MultiSelectFilter
-                            title="Jerarquías"
-                            options={hierarchyOptions}
-                            selected={selectedHierarchies}
-                            onSelectedChange={setSelectedHierarchies}
-                         />
+                <div className="flex-grow overflow-y-auto pr-6 -mr-6 space-y-6 py-4">
+                    {/* Class Details */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="title">Título</Label>
+                            <Input id="title" placeholder="Ej: RCP y Primeros Auxilios" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="specialization">Especialidad</Label>
+                            <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Seleccione una especialidad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                {specializations.map(spec => (
+                                    <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2 col-span-1 md:col-span-2">
+                            <Label htmlFor="description">Descripción</Label>
+                            <Textarea id="description" placeholder="Describa brevemente la clase..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="date">Fecha</Label>
+                            <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="time">Hora de Inicio</Label>
+                            <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="instructor">Instructores</Label>
+                            <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
+                            <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
+                        </div>
                     </div>
-                    <div className="space-y-2">
-                         <Label>Seleccionar por Cuartel</Label>
-                         <MultiSelectFilter
-                            title="Cuarteles"
-                            options={stationOptions}
-                            selected={selectedStations}
-                            onSelectedChange={setSelectedStations}
-                         />
-                    </div>
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                         <Label>Agregar Integrantes Adicionales (Opcional)</Label>
-                        <MultiSelectFirefighter 
-                            title="integrantes" 
-                            selected={manualAttendees} 
-                            onSelectedChange={setManualAttendees} 
-                            firefighters={allFirefighters} 
-                        />
+
+                    {/* Attendee Selection */}
+                    <div className="space-y-4 pt-4 border-t">
+                        <h4 className="font-medium text-lg font-headline">Asignar Asistentes</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                            <div className="space-y-2">
+                                <Label>Seleccionar por Jerarquía</Label>
+                                <MultiSelectFilter
+                                    title="Jerarquías"
+                                    options={hierarchyOptions}
+                                    selected={selectedHierarchies}
+                                    onSelectedChange={setSelectedHierarchies}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Seleccionar por Cuartel</Label>
+                                <MultiSelectFilter
+                                    title="Cuarteles"
+                                    options={stationOptions}
+                                    selected={selectedStations}
+                                    onSelectedChange={setSelectedStations}
+                                />
+                            </div>
+                            <div className="col-span-1 md:col-span-2 space-y-2">
+                                <Label>Agregar Integrantes Adicionales (Opcional)</Label>
+                                <MultiSelectFirefighter 
+                                    title="integrantes" 
+                                    selected={manualAttendees} 
+                                    onSelectedChange={setManualAttendees} 
+                                    firefighters={allFirefighters} 
+                                />
+                            </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground pt-2">
+                            Si no se selecciona ninguna jerarquía o cuartel, se incluirán todos los bomberos por defecto. Puede usar este formulario para añadir integrantes específicos que no coincidan con los filtros.
+                        </p>
                     </div>
                 </div>
-                <p className="text-xs text-muted-foreground pt-2">
-                    Si no se selecciona ninguna jerarquía o cuartel, se incluirán todos los bomberos por defecto. Puede usar este formulario para añadir integrantes específicos que no coincidan con los filtros.
-                </p>
-            </div>
-          </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+                
+                <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                    <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
+                </DialogFooter>
+            </form>
+        </DialogContent>
     </Dialog>
   );
 }
