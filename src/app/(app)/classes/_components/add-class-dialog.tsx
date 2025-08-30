@@ -67,6 +67,8 @@ const MultiSelectFirefighter = ({
             onSelectedChange([...selected, firefighter]);
         }
     };
+    
+    const getDisplayText = (f: Firefighter) => `${f.id} - ${f.lastName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -79,7 +81,7 @@ const MultiSelectFirefighter = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{`${f.firstName} ${f.lastName}`}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{getDisplayText(f)}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -96,7 +98,7 @@ const MultiSelectFirefighter = ({
                             {availableFirefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.firstName} ${firefighter.lastName}`}
+                                    value={`${firefighter.id} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => {
                                         handleSelect(firefighter);
                                     }}
@@ -364,8 +366,8 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
               Complete los detalles de la nueva clase de capacitación.
             </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
-          <div className="grid gap-6 py-4 px-1 flex-grow overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 overflow-hidden">
+          <div className="pr-6 space-y-6 flex-grow overflow-y-auto">
             {/* Class Details */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -444,7 +446,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 </p>
             </div>
           </div>
-          <DialogFooter className="mt-4 flex-shrink-0">
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Clase'}</Button>
           </DialogFooter>
         </form>
