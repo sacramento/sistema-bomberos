@@ -266,7 +266,7 @@ export default function ReportsPage() {
             if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
             if (filterHierarchy !== 'all') {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDante MAYOR', 'COMANDANTE GENERAL'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
                 if (filterHierarchy === 'bomberos' && firefighter.rank !== 'BOMBERO') return false;
                 if (filterHierarchy === 'aspirantes' && firefighter.rank !== 'ASPIRANTE') return false;
@@ -312,13 +312,26 @@ export default function ReportsPage() {
     ];
     
     const RADIAN = Math.PI / 180;
-    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
+        if (percent === 0) return null;
+
         return (
-            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+            <text
+            x={x}
+            y={y}
+            fill="#fff"
+            textAnchor="middle"
+            dominantBaseline="central"
+            style={{
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textShadow: '0px 0px 3px rgba(0, 0, 0, 0.7)',
+            }}
+            >
             {`${(percent * 100).toFixed(0)}%`}
             </text>
         );
