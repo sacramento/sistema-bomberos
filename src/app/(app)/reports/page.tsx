@@ -74,7 +74,6 @@ export default function ReportsPage() {
     // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
-    const chartRef = useRef<HTMLDivElement>(null);
 
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -104,12 +103,11 @@ export default function ReportsPage() {
     
     const generatePdf = async () => {
         setGeneratingPdf(true);
-        const { default: html2canvas } = await import('html2canvas');
         const doc = new jsPDF();
         
         try {
             // Header
-            doc.setFillColor(220, 53, 69); // Primary red color
+            doc.setFillColor(220, 53, 69); // Primary red color from theme
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
@@ -119,7 +117,7 @@ export default function ReportsPage() {
             // Subtitle with date range
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125); // muted-foreground like color
-             doc.setFont('helvetica', 'normal');
+            doc.setFont('helvetica', 'normal');
             const dateText = filterDate?.from
                 ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`
                 : "Período: Todos los registros";
@@ -135,21 +133,47 @@ export default function ReportsPage() {
             doc.text(`Justificados: ${reportData.summary.excused}`, 80, statsY + 5);
             doc.text(`Total de Registros: ${reportData.total}`, 14, statsY + 12);
             
-
-            // Chart Image
+            // Bar Chart
             let chartYPosition = 80;
-            if (chartRef.current && reportData.total > 0) {
-                 await html2canvas(chartRef.current, { scale: 2, backgroundColor: null }).then(canvas => {
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgProps = doc.getImageProperties(imgData);
-                    const pdfWidth = 100;
-                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                    doc.addImage(imgData, 'PNG', (doc.internal.pageSize.getWidth() - pdfWidth) / 2, chartYPosition, pdfWidth, pdfHeight);
-                    chartYPosition += pdfHeight + 10;
+            if (reportData.total > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Distribución de Asistencia", 14, chartYPosition);
+                chartYPosition += 7;
+
+                const chartData = [
+                    { label: "Presentes", value: reportData.summary.present, color: PIE_CHART_COLORS.present },
+                    { label: "Ausentes", value: reportData.summary.absent, color: PIE_CHART_COLORS.absent },
+                    { label: "Tardes", value: reportData.summary.tardy, color: PIE_CHART_COLORS.tardy },
+                    { label: "Justificados", value: reportData.summary.excused, color: PIE_CHART_COLORS.excused },
+                ];
+
+                const maxBarWidth = 120;
+                const barHeight = 8;
+                const barMargin = 4;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+
+                chartData.forEach(item => {
+                    if (item.value > 0) {
+                        const barWidth = (item.value / reportData.total) * maxBarWidth;
+                        const label = `${item.label} (${item.value})`;
+
+                        doc.setTextColor(80, 80, 80);
+                        doc.text(label, 14, chartYPosition + barHeight / 2 + 2);
+                        
+                        // Set color for the bar
+                        const colorRgb = doc.extractColor(item.color);
+                        doc.setFillColor(colorRgb.r, colorRgb.g, colorRgb.b);
+                        doc.rect(60, chartYPosition, barWidth, barHeight, 'F');
+                        
+                        chartYPosition += barHeight + barMargin;
+                    }
                 });
-            } else {
-                 chartYPosition = 80;
+                chartYPosition += 10;
             }
+
 
             // Table of attendees
             if (reportData.details.length > 0) {
@@ -228,7 +252,7 @@ export default function ReportsPage() {
             if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
             if (filterHierarchy !== 'all') {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDante MAYOR', 'COMANDANTE GENERAL'];
 
                 if (filterHierarchy === 'bomberos' && firefighter.rank !== 'BOMBERO') return false;
                 if (filterHierarchy === 'aspirantes' && firefighter.rank !== 'ASPIRANTE') return false;
@@ -442,7 +466,7 @@ export default function ReportsPage() {
                                 <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div ref={chartRef}>
+                                <div>
                                     <ChartContainer config={{}} className="h-[250px] w-full">
                                          <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
@@ -538,3 +562,4 @@ export default function ReportsPage() {
         </>
     );
 }
+
