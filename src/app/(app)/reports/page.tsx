@@ -106,6 +106,16 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
+            // Fetch logo and convert to base64
+            const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
+            const response = await fetch(logoUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            const dataUrl = await new Promise(resolve => {
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+
             // Header
             doc.setFillColor(220, 53, 69); // Primary red color from theme
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
@@ -113,6 +123,10 @@ export default function ReportsPage() {
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
+
+            // Add logo to the header
+            doc.addImage(dataUrl as string, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+
 
             // Subtitle with date range
             doc.setFontSize(11);

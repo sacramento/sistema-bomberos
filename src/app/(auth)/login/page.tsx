@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   const { user, login, loading, error } = useAuth();
@@ -48,7 +49,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center">
             <div className="mb-4 flex justify-center">
-              <Flame className="text-primary size-10" />
+              <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
             </div>
             <CardTitle className="font-headline text-2xl">FuegoRegistro</CardTitle>
             <CardDescription>
