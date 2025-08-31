@@ -461,11 +461,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
 
-            <div className="py-4 min-h-[300px]">
+            <div className="py-4 flex-grow overflow-y-auto">
                 {renderStepContent()}
             </div>
             
-            <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
