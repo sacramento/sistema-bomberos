@@ -66,6 +66,22 @@ const getStatusLabel = (status: AttendanceStatus) => {
 }
 
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  if (percent === 0) return null;
+
+  return (
+    <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-bold">
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  );
+};
+
+
 export default function ReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -491,28 +507,14 @@ export default function ReportsPage() {
                                                     nameKey="name"
                                                     cx="50%"
                                                     cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    paddingAngle={5}
                                                     labelLine={false}
+                                                    label={renderCustomizedLabel}
+                                                    outerRadius={80}
+                                                    paddingAngle={2}
                                                 >
                                                     {reportData.pieData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                                     ))}
-                                                    <RechartsLabel
-                                                        value={reportData.total}
-                                                        position="center"
-                                                        fill="hsl(var(--foreground))"
-                                                        className="text-3xl font-bold"
-                                                        dy={0}
-                                                    />
-                                                    <RechartsLabel
-                                                        value="Registros"
-                                                        position="center"
-                                                        fill="hsl(var(--muted-foreground))"
-                                                        className="text-sm"
-                                                        dy={20}
-                                                    />
                                                 </Pie>
                                                 <Legend />
                                             </PieChart>
@@ -576,5 +578,3 @@ export default function ReportsPage() {
         </>
     );
 }
-
-    
