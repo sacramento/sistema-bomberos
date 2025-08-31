@@ -167,8 +167,12 @@ export default function ReportsPage() {
                     didDrawPage: (data: any) => {
                         // Footer
                         const pageCount = doc.internal.pages.length;
-                        doc.setFontSize(10);
-                        doc.text(`Página ${data.pageNumber} de ${pageCount - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+                        doc.setFontSize(8);
+                        doc.setTextColor(150); // Gray color
+                        const footerText = "Bomberos Voluntarios San Martín de los Andes";
+                        const creationDate = `Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
+                        doc.text(footerText, data.settings.margin.left, doc.internal.pageSize.height - 10);
+                        doc.text(creationDate, doc.internal.pageSize.width - data.settings.margin.right - doc.getStringUnitWidth(creationDate) * doc.getFontSize(), doc.internal.pageSize.height - 10);
                     }
                 });
             }
