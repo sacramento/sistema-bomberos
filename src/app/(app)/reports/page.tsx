@@ -158,7 +158,8 @@ export default function ReportsPage() {
                 chartData.forEach(item => {
                     if (item.value > 0) {
                         const barWidth = (item.value / reportData.total) * maxBarWidth;
-                        const label = `${item.label} (${item.value})`;
+                        const percentage = ((item.value / reportData.total) * 100).toFixed(1);
+                        const label = `${item.label} (${percentage}%)`;
 
                         doc.setTextColor(80, 80, 80);
                         doc.text(label, 14, chartYPosition + barHeight / 2 + 2);
@@ -562,4 +563,4 @@ export default function ReportsPage() {
     );
 }
 
-
+    
