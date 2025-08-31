@@ -487,5 +487,3 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     </Dialog>
   );
 }
-
-    
