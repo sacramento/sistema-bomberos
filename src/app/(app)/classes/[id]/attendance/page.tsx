@@ -1,6 +1,6 @@
 
 'use client';
-
+import React from "react";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,7 +195,7 @@ export default function AttendancePage() {
             {groupedAttendees.map(group => (
                 <React.Fragment key={group.title}>
                     <TableRow className="bg-muted hover:bg-muted">
-                        <TableCell colSpan={isSummaryView ? 4 : 3} className="font-bold text-muted-foreground text-center tracking-wider">
+                        <TableCell colSpan={isSummaryView ? 3 : 2} className="font-bold text-muted-foreground text-center tracking-wider">
                            --- {group.title} ---
                         </TableCell>
                     </TableRow>
