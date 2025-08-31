@@ -20,7 +20,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Label as RechartsLabel } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -310,6 +310,19 @@ export default function ReportsPage() {
         { title: "Tardes", value: reportData.summary.tardy, icon: Clock, color: "text-yellow-500" },
         { title: "Justificados", value: reportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
+    
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }: any) => {
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+            {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
 
     if (loading) {
         return (
@@ -442,7 +455,7 @@ export default function ReportsPage() {
                                             filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0"
                                         )}
                                         />
-                                        {`${firefighter.firstName} ${firefighter.lastName}`}
+                                        {`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}
                                     </CommandItem>
                                     ))}
                                 </CommandList>
@@ -491,7 +504,10 @@ export default function ReportsPage() {
                                                     nameKey="name"
                                                     cx="50%"
                                                     cy="50%"
+                                                    labelLine={false}
+                                                    label={renderCustomizedLabel}
                                                     outerRadius={80}
+                                                    innerRadius={60}
                                                 >
                                                     {reportData.pieData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={entry.fill} />
