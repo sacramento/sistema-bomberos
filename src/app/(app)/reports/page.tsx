@@ -20,7 +20,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Label as RechartsLabel } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -444,18 +444,37 @@ export default function ReportsPage() {
                             <CardContent>
                                 <div ref={chartRef}>
                                     <ChartContainer config={{}} className="h-[250px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                                <Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                                    const radius = innerRadius + (outerRadius - innerRadius) * 1.2;
-                                                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                                                    return <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs fill-foreground">{`${(percent * 100).toFixed(0)}%`}</text>;
-                                                }}>
+                                                <Pie
+                                                    data={reportData.pieData}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    cx="50%"
+                                                    cy="50%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
+                                                    paddingAngle={5}
+                                                    labelLine={false}
+                                                >
                                                     {reportData.pieData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                                     ))}
+                                                    <RechartsLabel
+                                                        value={reportData.total}
+                                                        position="center"
+                                                        fill="hsl(var(--foreground))"
+                                                        className="text-3xl font-bold"
+                                                        dy={0}
+                                                    />
+                                                    <RechartsLabel
+                                                        value="Registros"
+                                                        position="center"
+                                                        fill="hsl(var(--muted-foreground))"
+                                                        className="text-sm"
+                                                        dy={20}
+                                                    />
                                                 </Pie>
                                                 <Legend />
                                             </PieChart>
