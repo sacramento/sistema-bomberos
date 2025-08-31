@@ -28,6 +28,18 @@ import { Progress } from "@/components/ui/progress";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
+const hierarchyOptions = [
+    { value: 'aspirantes', label: 'Aspirantes' },
+    { value: 'bomberos', label: 'Bomberos' },
+    { value: 'suboficiales_oficiales', label: 'Suboficiales y Oficiales' }
+];
+
+const stationOptions = [
+    { value: 'Cuartel 1', label: 'Cuartel 1' },
+    { value: 'Cuartel 2', label: 'Cuartel 2' },
+    { value: 'Cuartel 3', label: 'Cuartel 3' },
+];
+
 const MultiSelectFirefighter = ({ 
     title, 
     selected, 
@@ -104,6 +116,80 @@ const MultiSelectFirefighter = ({
     );
 };
 
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto"
+                >
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 
 export default function EditClassDialog({ children, session, onClassUpdated }: { children: React.ReactNode; session: Session, onClassUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -122,7 +208,11 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const [time, setTime] = useState(session.startTime);
   const [instructors, setInstructors] = useState<Firefighter[]>(session.instructors);
   const [assistants, setAssistants] = useState<Firefighter[]>(session.assistants);
-  const [attendees, setAttendees] = useState<Firefighter[]>(session.attendees);
+  
+  // State for attendee selection
+  const [manualAttendees, setManualAttendees] = useState<Firefighter[]>(session.attendees);
+  const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
+  const [selectedStations, setSelectedStations] = useState<string[]>([]);
 
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
@@ -145,12 +235,43 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     fetchAllFirefighters();
   }, [open, toast]);
 
-  // Ensure attendees list doesn't include instructors or assistants
   const finalAttendees = useMemo(() => {
+    let filteredByGroup: Firefighter[] = [];
+
+    if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
+        let filtered = allFirefighters;
+        
+        if (selectedHierarchies.length > 0) {
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+            
+            filtered = filtered.filter(f => {
+                if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+                if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+                if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+                return false;
+            });
+        }
+        
+        if (selectedStations.length > 0) {
+            filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
+        }
+        filteredByGroup = filtered;
+    }
+    
+    // Combine manually selected/existing attendees with newly filtered ones
+    const combined = [...manualAttendees, ...filteredByGroup];
+    const uniqueAttendeesMap = new Map<string, Firefighter>();
+    combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
+
+    // Exclude instructors and assistants from the final list
     const instructorIds = new Set(instructors.map(i => i.id));
     const assistantIds = new Set(assistants.map(a => a.id));
-    return attendees.filter(a => !instructorIds.has(a.id) && !assistantIds.has(a.id));
-  }, [attendees, instructors, assistants]);
+    
+    const finalAttendeeList = Array.from(uniqueAttendeesMap.values());
+    return finalAttendeeList.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
+
+  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
   
   const resetForm = () => {
     setStep(1);
@@ -161,7 +282,9 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     setTime(session.startTime);
     setInstructors(session.instructors);
     setAssistants(session.assistants);
-    setAttendees(session.attendees);
+    setManualAttendees(session.attendees); // Reset manual list to the original attendees
+    setSelectedHierarchies([]); // Clear filters on reset
+    setSelectedStations([]);
   };
   
   const handleNext = () => {
@@ -258,34 +381,45 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
           </div>
         );
       case 2:
-         const attendeeIdsAsInstructors = new Set(attendees.map(a => a.id));
+         const currentAndFilteredAttendees = new Set(finalAttendees.map(a => a.id));
+         const availableForInstructor = allFirefighters.filter(f => !currentAndFilteredAttendees.has(f.id));
+         const availableForAssistant = allFirefighters.filter(f => !currentAndFilteredAttendees.has(f.id) && !instructors.some(i => i.id === f.id));
         return (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeIds={attendeeIdsAsInstructors}/>
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={availableForInstructor} />
             </div>
             <div className="space-y-2">
               <Label>Ayudantes (Opcional)</Label>
-               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeIds={new Set([...instructors.map(i => i.id), ...attendees.map(a => a.id)])}/>
+               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={availableForAssistant} />
             </div>
+            <p className="text-xs text-muted-foreground">Los asistentes no pueden ser seleccionados como instructores o ayudantes y viceversa.</p>
           </div>
         );
       case 3:
          const instructorAndAssistantIds = new Set([...instructors.map(i => i.id), ...assistants.map(a => a.id)]);
+         const availableForManualAdd = allFirefighters.filter(f => !instructorAndAssistantIds.has(f.id));
         return (
           <div className="space-y-4">
-             <div className="space-y-2">
-                <Label>Asistentes</Label>
-                 <MultiSelectFirefighter 
-                    title="Asistentes" 
-                    selected={attendees} 
-                    onSelectedChange={setAttendees} 
-                    firefighters={allFirefighters} 
-                    excludeIds={instructorAndAssistantIds}
-                />
-                <p className="text-sm text-muted-foreground">Modifique la lista de asistentes para esta clase.</p>
+            <p className="text-sm text-muted-foreground">Modifique la lista de asistentes. Use los filtros para añadir grupos o edite la lista manualmente.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+              <div className="space-y-2">
+                <Label>Añadir por Jerarquía</Label>
+                <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={selectedHierarchies} onSelectedChange={setSelectedHierarchies} />
               </div>
+              <div className="space-y-2">
+                <Label>Añadir por Cuartel</Label>
+                <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={selectedStations} onSelectedChange={setSelectedStations} />
+              </div>
+              <div className="col-span-1 md:col-span-2 space-y-2">
+                <Label>Editar Lista de Asistentes</Label>
+                <MultiSelectFirefighter title="asistentes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={availableForManualAdd} />
+              </div>
+            </div>
+             <p className="text-xs text-muted-foreground pt-2">
+                Al aplicar filtros, los bomberos se AÑADIRÁN a la lista de asistentes actual. Para quitar un bombero, quítelo de la lista "Editar Lista de Asistentes".
+            </p>
           </div>
         );
        case 4:
