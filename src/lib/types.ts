@@ -37,12 +37,15 @@ export type Session = {
   attendance?: Record<string, AttendanceStatus>; // Firefighter ID -> Status
 };
 
+export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio';
+
 export type Leave = {
   id: string;
-  firefighter: Firefighter;
+  firefighterId: string;
+  firefighterName: string; // Storing for easier display
   startDate: string;
   endDate: string;
-  type: 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio';
+  type: LeaveType;
 };
 
 export type UserRole = 'Administrador' | 'Operador' | 'Asistente';
