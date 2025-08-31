@@ -110,7 +110,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {getDisplayText(firefighter)}
+                                    {`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
