@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Session, Firefighter, AttendanceStatus } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -23,6 +23,8 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -42,8 +44,8 @@ const stationOptions = [
 ];
 
 const PIE_CHART_COLORS = {
-    present: "hsl(var(--chart-1))", // green-500
-    absent: "hsl(var(--destructive))", // red-500
+    present: "#22C55E", // green-500
+    absent: "#EF4444", // red-500
     tardy: "#FBBF24", // yellow-400
     excused: "#8B5CF6", // violet-500
 };
@@ -66,10 +68,12 @@ const getStatusLabel = (status: AttendanceStatus) => {
 export default function ReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
+    const chartRef = useRef<HTMLDivElement>(null);
 
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -96,6 +100,74 @@ export default function ReportsPage() {
         };
         fetchData();
     }, [toast]);
+    
+    const generatePdf = async () => {
+        setGeneratingPdf(true);
+        const { default: html2canvas } = await import('html2canvas');
+        const doc = new jsPDF();
+        
+        try {
+            // Title
+            doc.setFontSize(18);
+            doc.text("Reporte de Asistencia", 14, 22);
+
+            // Subtitle with date range
+            doc.setFontSize(11);
+            const dateText = filterDate?.from
+                ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`
+                : "Período: Todos los registros";
+            doc.text(dateText, 14, 30);
+
+            // Stats
+            doc.setFontSize(10);
+            doc.text(`Presentes: ${reportData.summary.present}`, 14, 40);
+            doc.text(`Ausentes: ${reportData.summary.absent}`, 50, 40);
+            doc.text(`Tardes: ${reportData.summary.tardy}`, 86, 40);
+            doc.text(`Justificados: ${reportData.summary.excused}`, 122, 40);
+            doc.text(`Total: ${reportData.total}`, 158, 40);
+
+
+            // Chart Image
+            if (chartRef.current && reportData.total > 0) {
+                 await html2canvas(chartRef.current, { scale: 2 }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    // Adjust width and height to fit, maintaining aspect ratio
+                    const imgProps = doc.getImageProperties(imgData);
+                    const pdfWidth = 180;
+                    const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                    doc.addImage(imgData, 'PNG', 14, 50, pdfWidth, pdfHeight);
+                });
+            }
+
+            // Table of attendees
+            if (reportData.details.length > 0) {
+                (doc as any).autoTable({
+                    startY: 120,
+                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
+                    body: reportData.details.map(item => [
+                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                        item.session.title,
+                        item.session.date,
+                        getStatusLabel(item.status)
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [22, 163, 74] },
+                });
+            }
+
+            doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({
+                title: "Error al generar PDF",
+                description: "Hubo un problema al crear el archivo PDF.",
+                variant: "destructive"
+            });
+            console.error(error);
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
 
     const reportData = useMemo(() => {
         let filteredAttendance: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
@@ -348,24 +420,26 @@ export default function ReportsPage() {
                                 <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <ChartContainer config={{}} className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                            <Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
-                                                const radius = innerRadius + (outerRadius - innerRadius) * 1.2;
-                                                const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                                                const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                                                return <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs fill-foreground">{`${(percent * 100).toFixed(0)}%`}</text>;
-                                            }}>
-                                                {reportData.pieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                ))}
-                                            </Pie>
-                                            <Legend />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </ChartContainer>
+                                <div ref={chartRef}>
+                                    <ChartContainer config={{}} className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                                <Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                                                    const radius = innerRadius + (outerRadius - innerRadius) * 1.2;
+                                                    const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                                                    const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                                                    return <text x={x} y={y} fill="currentColor" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs fill-foreground">{`${(percent * 100).toFixed(0)}%`}</text>;
+                                                }}>
+                                                    {reportData.pieData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                    ))}
+                                                </Pie>
+                                                <Legend />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </ChartContainer>
+                                </div>
                             </CardContent>
                         </Card>
 
@@ -413,9 +487,9 @@ export default function ReportsPage() {
                     <CardDescription>Genere un PDF con los datos filtrados actualmente en pantalla.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button disabled>
+                    <Button onClick={generatePdf} disabled={generatingPdf || reportData.total === 0}>
                         <Download className="mr-2 h-4 w-4" />
-                        Generar PDF (Próximamente)
+                        {generatingPdf ? "Generando..." : "Generar PDF"}
                     </Button>
                 </CardContent>
             </Card>
