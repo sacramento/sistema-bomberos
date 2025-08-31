@@ -77,7 +77,7 @@ export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>
     return id;
 };
 
-export const updateSession = async (id: string, sessionData: Partial<Omit<Session, 'id' | 'attendees'>>): Promise<void> => {
+export const updateSession = async (id: string, sessionData: Partial<Session>): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
     
     const sessionToUpdate: any = {
@@ -88,6 +88,7 @@ export const updateSession = async (id: string, sessionData: Partial<Omit<Sessio
         startTime: sessionData.startTime,
         instructorIds: sessionData.instructors?.map(f => f.id),
         assistantIds: sessionData.assistants?.map(f => f.id),
+        attendeeIds: sessionData.attendees?.map(f => f.id),
     };
 
     // Remove undefined fields so they don't overwrite existing data

@@ -15,37 +15,35 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Session } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, ArrowRight, ArrowLeft } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateSession } from "@/services/sessions.service";
+import { Progress } from "@/components/ui/progress";
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
-
 
 const MultiSelectFirefighter = ({ 
     title, 
     selected, 
     onSelectedChange,
     firefighters,
-    excludeAspirantes = false
+    excludeIds = new Set()
 }: { 
     title: string;
     selected: Firefighter[]; 
     onSelectedChange: (selected: Firefighter[]) => void;
     firefighters: Firefighter[];
-    excludeAspirantes?: boolean;
+    excludeIds?: Set<string>;
 }) => {
     const [open, setOpen] = useState(false);
     
-    const availableFirefighters = excludeAspirantes 
-        ? firefighters.filter(f => f.rank !== 'ASPIRANTE') 
-        : firefighters;
+    const availableFirefighters = firefighters.filter(f => !excludeIds.has(f.id));
 
     const handleSelect = (firefighter: Firefighter) => {
         const isSelected = selected.some(s => s.id === firefighter.id);
@@ -87,9 +85,7 @@ const MultiSelectFirefighter = ({
                                 <CommandItem
                                     key={firefighter.id}
                                     value={`${firefighter.id} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => {
-                                        handleSelect(firefighter);
-                                    }}
+                                    onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
                                         className={cn(
@@ -113,6 +109,7 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
   
   // All firefighters from DB
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
@@ -125,6 +122,10 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const [time, setTime] = useState(session.startTime);
   const [instructors, setInstructors] = useState<Firefighter[]>(session.instructors);
   const [assistants, setAssistants] = useState<Firefighter[]>(session.assistants);
+  const [attendees, setAttendees] = useState<Firefighter[]>(session.attendees);
+
+  const totalSteps = 4;
+  const progress = (step / totalSteps) * 100;
   
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -143,8 +144,16 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     };
     fetchAllFirefighters();
   }, [open, toast]);
+
+  // Ensure attendees list doesn't include instructors or assistants
+  const finalAttendees = useMemo(() => {
+    const instructorIds = new Set(instructors.map(i => i.id));
+    const assistantIds = new Set(assistants.map(a => a.id));
+    return attendees.filter(a => !instructorIds.has(a.id) && !assistantIds.has(a.id));
+  }, [attendees, instructors, assistants]);
   
   const resetForm = () => {
+    setStep(1);
     setTitle(session.title);
     setSpecialization(session.specialization);
     setDescription(session.description);
@@ -152,20 +161,38 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     setTime(session.startTime);
     setInstructors(session.instructors);
     setAssistants(session.assistants);
+    setAttendees(session.attendees);
   };
+  
+  const handleNext = () => {
+    if (step === 1 && (!title || !specialization || !date || !time)) {
+      toast({ title: "Campos incompletos", description: "Por favor, complete todos los detalles de la clase.", variant: "destructive" });
+      return;
+    }
+    if (step === 2 && instructors.length === 0) {
+      toast({ title: "Sin instructores", description: "Debe seleccionar al menos un instructor.", variant: "destructive" });
+      return;
+    }
+    setStep(s => Math.min(s + 1, totalSteps));
+  };
+  const handleBack = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+
+  const handleSubmit = async () => {
     setLoading(true);
     
-    if (!title || !specialization || !date || !time || instructors.length === 0) {
-       toast({ title: "Campos incompletos", description: "Por favor, complete todos los detalles de la clase.", variant: "destructive" });
-       setLoading(false);
-       return;
+    if (finalAttendees.length === 0) {
+        toast({
+            title: "Sin asistentes",
+            description: "No puede haber una clase sin asistentes.",
+            variant: "destructive",
+        });
+        setLoading(false);
+        return;
     }
     
     try {
-        const updatedData: Partial<Omit<Session, 'id' | 'attendees'>> = {
+        const updatedData: Partial<Session> = {
             title,
             specialization,
             description,
@@ -173,13 +200,14 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
             startTime: time,
             instructors,
             assistants,
+            attendees: finalAttendees,
         };
         
         await updateSession(session.id, updatedData);
 
         toast({
             title: "¡Éxito!",
-            description: "La clase ha sido actualizada.",
+            description: `La clase ha sido actualizada con ${finalAttendees.length} asistentes.`,
         });
         
         onClassUpdated();
@@ -197,61 +225,132 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     }
   }
 
+  const renderStepContent = () => {
+    switch (step) {
+      case 1:
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="title-edit">Título</Label>
+              <Input id="title-edit" value={title} onChange={(e) => setTitle(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="specialization-edit">Especialidad</Label>
+              <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
+                <SelectTrigger id="specialization-edit"><SelectValue placeholder="Seleccione una especialidad" /></SelectTrigger>
+                <SelectContent>
+                  {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2 col-span-1 md:col-span-2">
+              <Label htmlFor="description-edit">Descripción</Label>
+              <Textarea id="description-edit" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="date-edit">Fecha</Label>
+              <Input id="date-edit" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="time-edit">Hora de Inicio</Label>
+              <Input id="time-edit" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+          </div>
+        );
+      case 2:
+         const attendeeIdsAsInstructors = new Set(attendees.map(a => a.id));
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Instructores</Label>
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeIds={attendeeIdsAsInstructors}/>
+            </div>
+            <div className="space-y-2">
+              <Label>Ayudantes (Opcional)</Label>
+               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeIds={new Set([...instructors.map(i => i.id), ...attendees.map(a => a.id)])}/>
+            </div>
+          </div>
+        );
+      case 3:
+         const instructorAndAssistantIds = new Set([...instructors.map(i => i.id), ...assistants.map(a => a.id)]);
+        return (
+          <div className="space-y-4">
+             <div className="space-y-2">
+                <Label>Asistentes</Label>
+                 <MultiSelectFirefighter 
+                    title="Asistentes" 
+                    selected={attendees} 
+                    onSelectedChange={setAttendees} 
+                    firefighters={allFirefighters} 
+                    excludeIds={instructorAndAssistantIds}
+                />
+                <p className="text-sm text-muted-foreground">Modifique la lista de asistentes para esta clase.</p>
+              </div>
+          </div>
+        );
+       case 4:
+            return (
+                <div className="space-y-4 text-sm">
+                    <h4 className="font-bold text-base">Por favor, revise y confirme los cambios:</h4>
+                    <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                       <p><strong>Título:</strong> {title}</p>
+                       <p><strong>Especialidad:</strong> {specialization}</p>
+                       <p><strong>Fecha y Hora:</strong> {date} a las {time}hs</p>
+                       <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
+                       <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
+                       <div className="pt-2">
+                           <p className="font-semibold">Total de Asistentes Asignados: {finalAttendees.length}</p>
+                           {finalAttendees.length > 0 && (
+                               <div className="text-xs text-muted-foreground h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
+                                   {finalAttendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
+                               </div>
+                           )}
+                       </div>
+                    </div>
+                </div>
+            );
+      default:
+        return null;
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);
         if (!isOpen) resetForm();
     }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-xl">
-            <form onSubmit={handleSubmit}>
-                <DialogHeader>
-                    <DialogTitle className="font-headline">Editar Clase</DialogTitle>
-                    <DialogDescription>
-                        Modifique los detalles de la clase. No puede editar los asistentes desde aquí.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="title">Título</Label>
-                        <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="specialization">Especialidad</Label>
-                        <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
-                            <SelectTrigger><SelectValue placeholder="Seleccione una especialidad" /></SelectTrigger>
-                            <SelectContent>
-                            {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2 col-span-1 md:col-span-2">
-                        <Label htmlFor="description">Descripción</Label>
-                        <Textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="time">Hora de Inicio</Label>
-                        <Input id="time" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
-                    </div>
-                     <div className="col-span-1 md:col-span-2 space-y-2">
-                        <Label>Instructores</Label>
-                        <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
-                    </div>
-                    <div className="col-span-1 md:col-span-2 space-y-2">
-                        <Label>Ayudantes (Opcional)</Label>
-                        <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button type="submit" disabled={loading}>
-                        {loading ? 'Guardando...' : 'Guardar Cambios'}
+        <DialogContent className="sm:max-w-xl flex flex-col">
+             <DialogHeader>
+                <DialogTitle className="font-headline">Editar Clase</DialogTitle>
+                <DialogDescription>
+                  Paso {step} de {totalSteps} - Modifique los detalles de la clase.
+                </DialogDescription>
+                <Progress value={progress} className="mt-2" />
+            </DialogHeader>
+
+            <div className="flex-grow py-4 overflow-y-auto">
+                {renderStepContent()}
+            </div>
+            
+            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+                 <div className="flex justify-between w-full">
+                     <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Anterior
                     </Button>
-                </DialogFooter>
-            </form>
+                     {step < totalSteps ? (
+                        <Button onClick={handleNext} disabled={loading}>
+                            Siguiente
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <Button onClick={handleSubmit} disabled={loading}>
+                            {loading ? 'Guardando...' : 'Guardar Cambios'}
+                        </Button>
+                    )}
+                 </div>
+            </DialogFooter>
         </DialogContent>
     </Dialog>
   );
