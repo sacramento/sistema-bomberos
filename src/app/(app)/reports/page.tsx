@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -107,42 +108,53 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
-            // Title
-            doc.setFontSize(18);
+            // Header
+            doc.setFillColor(220, 53, 69); // Primary red color
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
 
             // Subtitle with date range
             doc.setFontSize(11);
+            doc.setTextColor(108, 117, 125); // muted-foreground like color
+             doc.setFont('helvetica', 'normal');
             const dateText = filterDate?.from
                 ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`
                 : "Período: Todos los registros";
-            doc.text(dateText, 14, 30);
+            doc.text(dateText, 14, 45);
 
-            // Stats
+            // Stats in two columns
             doc.setFontSize(10);
-            doc.text(`Presentes: ${reportData.summary.present}`, 14, 40);
-            doc.text(`Ausentes: ${reportData.summary.absent}`, 50, 40);
-            doc.text(`Tardes: ${reportData.summary.tardy}`, 86, 40);
-            doc.text(`Justificados: ${reportData.summary.excused}`, 122, 40);
-            doc.text(`Total: ${reportData.total}`, 158, 40);
-
+            doc.setTextColor(40, 40, 40);
+            const statsY = 55;
+            doc.text(`Presentes: ${reportData.summary.present}`, 14, statsY);
+            doc.text(`Ausentes: ${reportData.summary.absent}`, 14, statsY + 5);
+            doc.text(`Tardes: ${reportData.summary.tardy}`, 80, statsY);
+            doc.text(`Justificados: ${reportData.summary.excused}`, 80, statsY + 5);
+            doc.text(`Total de Registros: ${reportData.total}`, 14, statsY + 12);
+            
 
             // Chart Image
+            let chartYPosition = 80;
             if (chartRef.current && reportData.total > 0) {
-                 await html2canvas(chartRef.current, { scale: 2 }).then(canvas => {
+                 await html2canvas(chartRef.current, { scale: 2, backgroundColor: null }).then(canvas => {
                     const imgData = canvas.toDataURL('image/png');
-                    // Adjust width and height to fit, maintaining aspect ratio
                     const imgProps = doc.getImageProperties(imgData);
-                    const pdfWidth = 180;
+                    const pdfWidth = 100;
                     const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                    doc.addImage(imgData, 'PNG', 14, 50, pdfWidth, pdfHeight);
+                    doc.addImage(imgData, 'PNG', (doc.internal.pageSize.getWidth() - pdfWidth) / 2, chartYPosition, pdfWidth, pdfHeight);
+                    chartYPosition += pdfHeight + 10;
                 });
+            } else {
+                 chartYPosition = 80;
             }
 
             // Table of attendees
             if (reportData.details.length > 0) {
                 (doc as any).autoTable({
-                    startY: 120,
+                    startY: chartYPosition,
                     head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
                     body: reportData.details.map(item => [
                         `${item.firefighter.firstName} ${item.firefighter.lastName}`,
@@ -151,7 +163,13 @@ export default function ReportsPage() {
                         getStatusLabel(item.status)
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: [22, 163, 74] },
+                    headStyles: { fillColor: [220, 53, 69] }, // Primary red color
+                    didDrawPage: (data: any) => {
+                        // Footer
+                        const pageCount = doc.internal.pages.length;
+                        doc.setFontSize(10);
+                        doc.text(`Página ${data.pageNumber} de ${pageCount - 1}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+                    }
                 });
             }
 
