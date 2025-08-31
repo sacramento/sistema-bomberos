@@ -110,7 +110,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {firefighter.rank} - {`${firefighter.firstName} ${firefighter.lastName}`}
+                                    {getDisplayText(firefighter)}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -452,7 +452,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
         if (!isOpen) resetForm();
     }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-xl flex flex-col">
              <DialogHeader>
                 <DialogTitle className="font-headline">Crear Nueva Clase</DialogTitle>
                 <DialogDescription>
@@ -461,11 +461,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
 
-            <div className="py-4 flex-grow overflow-y-auto">
+            <div className="flex-grow overflow-y-auto -mx-6 px-6 py-4">
                 {renderStepContent()}
             </div>
             
-            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <DialogFooter className="flex-shrink-0 pt-4 border-t -mx-6 px-6">
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
