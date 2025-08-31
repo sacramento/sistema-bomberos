@@ -164,8 +164,7 @@ export default function ReportsPage() {
                         doc.text(label, 14, chartYPosition + barHeight / 2 + 2);
                         
                         // Set color for the bar
-                        const colorRgb = doc.extractColor(item.color);
-                        doc.setFillColor(colorRgb.r, colorRgb.g, colorRgb.b);
+                        doc.setFillColor(item.color);
                         doc.rect(60, chartYPosition, barWidth, barHeight, 'F');
                         
                         chartYPosition += barHeight + barMargin;
@@ -562,4 +561,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
