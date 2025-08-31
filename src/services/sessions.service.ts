@@ -77,6 +77,25 @@ export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>
     return id;
 };
 
+export const updateSession = async (id: string, sessionData: Partial<Omit<Session, 'id' | 'attendees'>>): Promise<void> => {
+    const docRef = doc(db, 'sessions', id);
+    
+    const sessionToUpdate: any = {
+        title: sessionData.title,
+        description: sessionData.description,
+        specialization: sessionData.specialization,
+        date: sessionData.date,
+        startTime: sessionData.startTime,
+        instructorIds: sessionData.instructors?.map(f => f.id),
+        assistantIds: sessionData.assistants?.map(f => f.id),
+    };
+
+    // Remove undefined fields so they don't overwrite existing data
+    Object.keys(sessionToUpdate).forEach(key => sessionToUpdate[key] === undefined && delete sessionToUpdate[key]);
+
+    await updateDoc(docRef, sessionToUpdate);
+};
+
 
 export const deleteSession = async (id: string): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
