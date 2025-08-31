@@ -57,8 +57,6 @@ export default function AttendancePage() {
                     const data = await getSessionById(sessionId);
                     setSession(data);
                     if (data) {
-                        // If attendance data exists in Firestore, use it.
-                        // Otherwise, initialize everyone to 'present'.
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
                             setAttendance(data.attendance);
                         } else {
@@ -82,6 +80,29 @@ export default function AttendancePage() {
         };
         fetchSession();
     }, [sessionId, toast]);
+
+    const groupedAttendees = useMemo(() => {
+        if (!session) return [];
+
+        const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+        const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+        const officials = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => a.id.localeCompare(b.id));
+        const c1Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 1').sort((a,b) => a.id.localeCompare(b.id));
+        const c2Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 2').sort((a,b) => a.id.localeCompare(b.id));
+        const c3Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 3').sort((a,b) => a.id.localeCompare(b.id));
+        const aspirantes = session.attendees.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => a.id.localeCompare(b.id));
+
+        const groups = [];
+        if (officials.length > 0) groups.push({ title: 'OFICIALES Y SUBOFICIALES', firefighters: officials });
+        if (c1Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 1', firefighters: c1Bombers });
+        if (c2Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 2', firefighters: c2Bombers });
+        if (c3Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 3', firefighters: c3Bombers });
+        if (aspirantes.length > 0) groups.push({ title: 'ASPIRANTES', firefighters: aspirantes });
+
+        return groups;
+    }, [session]);
+
 
     const summary = useMemo(() => {
         if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
@@ -168,6 +189,57 @@ export default function AttendancePage() {
     const renderFirefighterName = (firefighter: Firefighter) => {
         return `${firefighter.firstName} ${firefighter.lastName}`;
     }
+    
+    const renderTableBody = (isSummaryView: boolean) => (
+         <TableBody>
+            {groupedAttendees.map(group => (
+                <React.Fragment key={group.title}>
+                    <TableRow className="bg-muted hover:bg-muted">
+                        <TableCell colSpan={isSummaryView ? 4 : 3} className="font-bold text-muted-foreground text-center tracking-wider">
+                           --- {group.title} ---
+                        </TableCell>
+                    </TableRow>
+                    {group.firefighters.map(firefighter => (
+                        <TableRow key={firefighter.id}>
+                            <TableCell className="font-medium">
+                                <div>{`${firefighter.id} - ${renderFirefighterName(firefighter)}`}</div>
+                                {isSummaryView && <div className="text-muted-foreground text-sm sm:hidden">{firefighter.firehouse}</div>}
+                            </TableCell>
+                            {isSummaryView && (
+                                <>
+                                    <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
+                                    <TableCell>
+                                        <Badge className={cn("whitespace-nowrap", getStatusClass(attendance[firefighter.id]))}>
+                                            {getStatusLabel(attendance[firefighter.id])}
+                                        </Badge>
+                                    </TableCell>
+                                </>
+                            )}
+                            {!isSummaryView && (
+                                <TableCell className="text-right">
+                                        <Select 
+                                        value={attendance[firefighter.id]} 
+                                        onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
+                                    >
+                                        <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
+                                            <SelectValue placeholder="Seleccionar..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {statusOptions.map((option) => (
+                                                <SelectItem key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </TableCell>
+                            )}
+                        </TableRow>
+                    ))}
+                </React.Fragment>
+            ))}
+        </TableBody>
+    );
 
     return (
         <>
@@ -210,39 +282,11 @@ export default function AttendancePage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead className="hidden sm:table-cell">Rango</TableHead>
+                                            <TableHead>Legajo y Nombre</TableHead>
                                             <TableHead className="text-right">Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
-                                        {session.attendees.map(firefighter => (
-                                            <TableRow key={firefighter.id}>
-                                                <TableCell className="font-medium">
-                                                    <div>{renderFirefighterName(firefighter)}</div>
-                                                    <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
-                                                <TableCell className="text-right">
-                                                     <Select 
-                                                        value={attendance[firefighter.id]} 
-                                                        onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
-                                                    >
-                                                        <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
-                                                            <SelectValue placeholder="Seleccionar..." />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {statusOptions.map((option) => (
-                                                                <SelectItem key={option.value} value={option.value}>
-                                                                    {option.label}
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
+                                    {renderTableBody(false)}
                                 </Table>
                             </div>
                         </CardContent>
@@ -266,30 +310,12 @@ export default function AttendancePage() {
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead className="hidden sm:table-cell">Rango</TableHead>
-                                            <TableHead className="hidden md:table-cell">Cuartel</TableHead>
+                                            <TableHead>Legajo y Nombre</TableHead>
+                                            <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
                                             <TableHead>Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
-                                    <TableBody>
-                                        {session.attendees.map(firefighter => (
-                                            <TableRow key={`view-${firefighter.id}`}>
-                                                <TableCell className="font-medium">
-                                                    <div>{renderFirefighterName(firefighter)}</div>
-                                                    <div className="text-muted-foreground text-sm sm:hidden">{firefighter.rank}</div>
-                                                    <div className="text-muted-foreground text-sm md:hidden">{firefighter.firehouse}</div>
-                                                </TableCell>
-                                                <TableCell className="hidden sm:table-cell">{firefighter.rank}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{firefighter.firehouse}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn("whitespace-nowrap", getStatusClass(attendance[firefighter.id]))}>
-                                                        {getStatusLabel(attendance[firefighter.id])}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
+                                    {renderTableBody(true)}
                                 </Table>
                             </div>
                         </CardContent>
@@ -299,3 +325,4 @@ export default function AttendancePage() {
         </>
     );
 }
+
