@@ -163,47 +163,46 @@ export default function ClassesPage() {
       if (!attendees || attendees.length === 0) {
         // If no attendees, only show in "all" filters unless a specific filter is active
         if (filterStation !== 'all' || filterHierarchy !== 'all') return false;
-      }
+      } else { // This block will only run if there are attendees
+        if (filterStation !== 'all') {
+            const stationCounts: Record<string, number> = {};
+            attendees.forEach(a => {
+                stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
+            });
 
-      if (filterStation !== 'all' && attendees && attendees.length > 0) {
-        const stationCounts: Record<string, number> = {};
-        attendees.forEach(a => {
-            stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
-        });
-
-        let majorityStation = '';
-        let maxCount = 0;
-        for (const station in stationCounts) {
-            if (stationCounts[station] > maxCount) {
-                maxCount = stationCounts[station];
-                majorityStation = station;
+            let majorityStation = '';
+            let maxCount = 0;
+            for (const station in stationCounts) {
+                if (stationCounts[station] > maxCount) {
+                    maxCount = stationCounts[station];
+                    majorityStation = station;
+                }
+            }
+            
+            if(maxCount / attendees.length <= 0.5 || majorityStation !== filterStation) {
+                return false;
             }
         }
-        
-        if(maxCount / attendees.length <= 0.5 || majorityStation !== filterStation) {
-            return false;
+
+        if (filterHierarchy !== 'all') {
+          const totalAttendees = attendees.length;
+          const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+          const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+          if (filterHierarchy === 'bomberos') {
+              const count = attendees.filter(a => a.rank === 'BOMBERO').length;
+              if (count / totalAttendees <= 0.5) return false;
+          } else if (filterHierarchy === 'suboficiales_oficiales') {
+              const count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
+              if (count / totalAttendees <= 0.5) return false;
+          } else if (filterHierarchy === 'aspirantes') {
+              const count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
+              if (count / totalAttendees <= 0.5) return false;
+          }
         }
       }
 
-      let hierarchyMatch = true;
-      if (filterHierarchy !== 'all' && attendees && attendees.length > 0) {
-        const totalAttendees = attendees.length;
-        const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-        const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-
-        if (filterHierarchy === 'bomberos') {
-            const count = attendees.filter(a => a.rank === 'BOMBERO').length;
-            hierarchyMatch = count / totalAttendees > 0.5;
-        } else if (filterHierarchy === 'suboficiales_oficiales') {
-            const count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-            hierarchyMatch = count / totalAttendees > 0.5;
-        } else if (filterHierarchy === 'aspirantes') {
-            const count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
-            hierarchyMatch = count / totalAttendees > 0.5;
-        }
-      }
-
-      return hierarchyMatch;
+      return true;
     });
   }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
 
