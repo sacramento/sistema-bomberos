@@ -142,70 +142,52 @@ export default function ClassesPage() {
 
   const filteredSessions = useMemo(() => {
     return sessions.filter(session => {
-      // Filter by search term (title)
-      if (searchTerm && !session.title.toLowerCase().includes(searchTerm.toLowerCase())) {
-        return false;
-      }
-      
-      // Filter by specialization
-      if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) {
-        return false;
-      }
-      
-      // Filter by Year
-      if (filterYear !== 'all') {
-          // Adding timezone offset to avoid issues with date comparison
-          const sessionDate = new Date(session.date);
-          sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-          const sessionYear = sessionDate.getFullYear().toString();
-          if(sessionYear !== filterYear) return false;
-      }
-      
-      // Filter by station and hierarchy (checks attendees)
-      const attendees = session.attendees;
-      if (!attendees || attendees.length === 0) {
-        // If no attendees, only show in "all" filters unless a specific filter is active
-        if (filterStation !== 'all' || filterHierarchy !== 'all') return false;
-      } else { // This block will only run if there are attendees
+        if (searchTerm && !session.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+            return false;
+        }
+        if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) {
+            return false;
+        }
+        if (filterYear !== 'all') {
+            const sessionDate = new Date(session.date);
+            sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+            const sessionYear = sessionDate.getFullYear().toString();
+            if(sessionYear !== filterYear) return false;
+        }
+
+        const attendees = session.attendees;
+        if (!attendees || attendees.length === 0) {
+            return filterStation === 'all' && filterHierarchy === 'all';
+        }
+
         if (filterStation !== 'all') {
             const stationCounts: Record<string, number> = {};
             attendees.forEach(a => {
                 stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
             });
-
-            let majorityStation = '';
-            let maxCount = 0;
-            for (const station in stationCounts) {
-                if (stationCounts[station] > maxCount) {
-                    maxCount = stationCounts[station];
-                    majorityStation = station;
-                }
-            }
-            
-            if(maxCount / attendees.length <= 0.5 || majorityStation !== filterStation) {
+            const majorityStation = Object.keys(stationCounts).reduce((a, b) => stationCounts[a] > stationCounts[b] ? a : b);
+            if (stationCounts[majorityStation] / attendees.length <= 0.5 || majorityStation !== filterStation) {
                 return false;
             }
         }
 
         if (filterHierarchy !== 'all') {
-          const totalAttendees = attendees.length;
-          const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-          const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+            const totalAttendees = attendees.length;
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
-          if (filterHierarchy === 'bomberos') {
-              const count = attendees.filter(a => a.rank === 'BOMBERO').length;
-              if (count / totalAttendees <= 0.5) return false;
-          } else if (filterHierarchy === 'suboficiales_oficiales') {
-              const count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-              if (count / totalAttendees <= 0.5) return false;
-          } else if (filterHierarchy === 'aspirantes') {
-              const count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
-              if (count / totalAttendees <= 0.5) return false;
-          }
+            let count = 0;
+            if (filterHierarchy === 'bomberos') {
+                count = attendees.filter(a => a.rank === 'BOMBERO').length;
+            } else if (filterHierarchy === 'suboficiales_oficiales') {
+                count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
+            } else if (filterHierarchy === 'aspirantes') {
+                count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
+            }
+            if (count / totalAttendees <= 0.5) return false;
         }
-      }
 
-      return true;
+        return true;
     });
   }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
 
@@ -372,7 +354,7 @@ export default function ClassesPage() {
                   )}
                 </div>
                 <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-              </Header>
+              </CardHeader>
               <CardContent className="flex-grow">
                   <div className="space-y-2 text-sm">
                       <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
