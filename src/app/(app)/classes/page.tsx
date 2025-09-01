@@ -154,7 +154,10 @@ export default function ClassesPage() {
       
       // Filter by Year
       if (filterYear !== 'all') {
-          const sessionYear = new Date(session.date).getFullYear().toString();
+          // Adding timezone offset to avoid issues with date comparison
+          const sessionDate = new Date(session.date);
+          sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+          const sessionYear = sessionDate.getFullYear().toString();
           if(sessionYear !== filterYear) return false;
       }
       
