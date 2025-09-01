@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Search } from 'lucide-react';
+import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Search, CalendarClock, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import AddClassDialog from './_components/add-class-dialog';
@@ -31,6 +31,8 @@ import { getSessions, deleteSession } from '@/services/sessions.service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import EditClassDialog from './_components/edit-class-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
@@ -97,28 +99,28 @@ export default function ClassesPage() {
   };
   
   const getCardBorderColor = (session: Session): string => {
-    if (!session.attendees || session.attendees.length === 0) {
+    const attendees = session.attendees;
+    if (!attendees || attendees.length === 0) {
         return 'border-gray-500';
     }
-
-    const totalAttendees = session.attendees.length;
+    const totalAttendees = attendees.length;
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     
     // Rule 1: Aspirantes
-    const aspirantesCount = session.attendees.filter(a => a.rank === 'ASPIRANTE').length;
+    const aspirantesCount = attendees.filter(a => a.rank === 'ASPIRANTE').length;
     if (aspirantesCount / totalAttendees > 0.8) {
         return 'border-green-500'; // Verde para Aspirantes
     }
 
     // Rule 2: Suboficiales/Oficiales
-    const suboficialesOficialesCount = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
+    const suboficialesOficialesCount = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
     if (suboficialesOficialesCount / totalAttendees > 0.8) {
         return 'border-red-500'; // Rojo para Suboficiales/Oficiales
     }
-
+    
     const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
-    session.attendees.forEach(a => {
+    attendees.forEach(a => {
         if (firehouseCounts.hasOwnProperty(a.firehouse)) {
             firehouseCounts[a.firehouse]++;
         }
@@ -138,7 +140,6 @@ export default function ClassesPage() {
     if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'border-blue-500';
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'border-orange-500';
     
-    // Rule 5: Default for mixed classes
     return 'border-gray-500';
   };
 
@@ -148,8 +149,8 @@ export default function ClassesPage() {
   }, [sessions]);
 
 
-  const filteredSessions = useMemo(() => {
-    return sessions.filter(session => {
+  const { upcomingOrCurrentSessions, pastSessions } = useMemo(() => {
+    const filtered = sessions.filter(session => {
         if (searchTerm && !session.title.toLowerCase().includes(searchTerm.toLowerCase())) {
             return false;
         }
@@ -197,8 +198,138 @@ export default function ClassesPage() {
 
         return true;
     });
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const upcomingOrCurrent: Session[] = [];
+    const past: Session[] = [];
+
+    filtered.forEach(session => {
+        const sessionDate = new Date(session.date);
+        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+        if (sessionDate >= today) {
+            upcomingOrCurrent.push(session);
+        } else {
+            past.push(session);
+        }
+    });
+
+    return { upcomingOrCurrentSessions: upcomingOrCurrent, pastSessions: past };
   }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
 
+
+  const renderSessionCards = (sessionList: Session[]) => {
+      if (loading) {
+        return (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Card key={index} className="flex flex-col">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                      <div className="flex flex-col gap-2 flex-grow">
+                          <Skeleton className="h-5 w-24" />
+                          <Skeleton className="h-4 w-32" />
+                      </div>
+                      <Skeleton className="h-8 w-8" />
+                  </div>
+                  <Skeleton className="h-7 w-4/5 pt-2" />
+                </CardHeader>
+                <CardContent className="flex-grow">
+                  <Skeleton className="h-5 w-full" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-10 w-full" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        );
+      }
+      
+      if (sessionList.length === 0) {
+          return (
+              <div className="text-center text-muted-foreground py-16">
+                  <p>No se encontraron clases con los filtros aplicados.</p>
+              </div>
+          );
+      }
+      
+      return (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {sessionList.map((session) => (
+            <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
+               <CardHeader>
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-2 flex-grow">
+                    <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
+                    <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+                  </div>
+                  {user?.role === 'Administrador' && (
+                    <AlertDialog>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                          <EditClassDialog session={session} onClassUpdated={handleDataChange}>
+                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                          </EditClassDialog>
+                          <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </AlertDialogTrigger>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                          <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
+                              y sus datos asociados.
+                          </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteClass(session.id)} variant="destructive">
+                              Eliminar
+                          </AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
+                <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-grow">
+                  <div className="space-y-2 text-sm">
+                      <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
+                      {session.assistants && session.assistants.length > 0 && (
+                          <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => `${a.firstName} ${a.lastName}`).join(', ')}</span></div>
+                      )}
+                  </div>
+              </CardContent>
+              <CardFooter>
+                   <Button asChild className="w-full">
+                      <Link href={`/classes/${session.id}/attendance`}>
+                          Gestionar Asistencia
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                  </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      );
+  }
 
   return (
     <>
@@ -286,108 +417,20 @@ export default function ClassesPage() {
           </CardContent>
       </Card>
       
-      {loading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index} className="flex flex-col">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                    <div className="flex flex-col gap-2 flex-grow">
-                        <Skeleton className="h-5 w-24" />
-                        <Skeleton className="h-4 w-32" />
-                    </div>
-                    <Skeleton className="h-8 w-8" />
-                </div>
-                <Skeleton className="h-7 w-4/5 pt-2" />
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <Skeleton className="h-5 w-full" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-full" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredSessions.map((session) => (
-            <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
-               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex flex-col gap-2 flex-grow">
-                    <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
-                    <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
-                  </div>
-                  {user?.role === 'Administrador' && (
-                    <AlertDialog>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <EditClassDialog session={session} onClassUpdated={handleDataChange}>
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Editar
-                            </DropdownMenuItem>
-                          </EditClassDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <AlertDialogContent>
-                          <AlertDialogHeader>
-                          <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
-                              y sus datos asociados.
-                          </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteClass(session.id)} variant="destructive">
-                              Eliminar
-                          </AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
-                <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                  <div className="space-y-2 text-sm">
-                      <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
-                      {session.assistants && session.assistants.length > 0 && (
-                          <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => `${a.firstName} ${a.lastName}`).join(', ')}</span></div>
-                      )}
-                  </div>
-              </CardContent>
-              <CardFooter>
-                   <Button asChild className="w-full">
-                      <Link href={`/classes/${session.id}/attendance`}>
-                          Gestionar Asistencia
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
-                  </Button>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      )}
-       {filteredSessions.length === 0 && !loading && (
-        <div className="text-center text-muted-foreground py-16">
-            <p>No se encontraron clases con los filtros aplicados.</p>
-        </div>
-      )}
+        <Tabs defaultValue="current" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+                <TabsTrigger value="current"><CalendarClock className="mr-2 h-4 w-4"/>Actuales y Próximas</TabsTrigger>
+                <TabsTrigger value="past"><History className="mr-2 h-4 w-4"/>Pasadas</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="current">
+                {renderSessionCards(upcomingOrCurrentSessions)}
+            </TabsContent>
+            
+            <TabsContent value="past">
+                {renderSessionCards(pastSessions)}
+            </TabsContent>
+        </Tabs>
     </>
   );
 }
