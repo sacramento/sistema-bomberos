@@ -146,10 +146,30 @@ export default function ClassesPage() {
       
       // Filter by station and hierarchy (checks attendees)
       const attendees = session.attendees;
-      
-      let stationMatch = true;
+      if (!attendees || attendees.length === 0) {
+        // If no attendees, only show in "all" filters
+        return filterStation === 'all' && filterHierarchy === 'all';
+      }
+
       if (filterStation !== 'all') {
-          stationMatch = attendees.some(a => a.firehouse === filterStation);
+        const stationCounts: Record<string, number> = {};
+        attendees.forEach(a => {
+            stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
+        });
+
+        let majorityStation = '';
+        let maxCount = 0;
+        for (const station in stationCounts) {
+            if (stationCounts[station] > maxCount) {
+                maxCount = stationCounts[station];
+                majorityStation = station;
+            }
+        }
+        // If there's a tie, there's no clear majority, so it won't match any specific station
+        const ties = Object.values(stationCounts).filter(count => count === maxCount).length > 1;
+        if (ties || majorityStation !== filterStation) {
+            return false;
+        }
       }
 
       let hierarchyMatch = true;
@@ -166,7 +186,7 @@ export default function ClassesPage() {
         }
       }
 
-      return stationMatch && hierarchyMatch;
+      return hierarchyMatch;
     });
   }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
 
@@ -362,6 +382,8 @@ export default function ClassesPage() {
     </>
   );
 }
+
+    
 
     
 
