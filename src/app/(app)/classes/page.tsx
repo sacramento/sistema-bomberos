@@ -97,23 +97,25 @@ export default function ClassesPage() {
   };
   
   const getCardBorderColor = (session: Session): string => {
-    if (!session.attendees || session.attendees.length === 0) return 'border-gray-500';
-    
+    if (!session.attendees || session.attendees.length === 0) return 'border-gray-500'; // Default for no attendees
+
     const totalAttendees = session.attendees.length;
 
-    // Check for hierarchy majority first
+    // 1. Check for hierarchy majority first
     const aspirantesCount = session.attendees.filter(a => a.rank === 'ASPIRANTE').length;
-    if (aspirantesCount / totalAttendees > 0.5) return 'border-green-500';
+    if (aspirantesCount / totalAttendees > 0.5) return 'border-green-500'; // Verde para Aspirantes
 
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     const suboficialesOficialesCount = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-    if (suboficialesOficialesCount / totalAttendees > 0.5) return 'border-red-500';
-    
-    // Check for firehouse majority if no hierarchy majority
-    const firehouseCounts: Record<string, number> = {};
+    if (suboficialesOficialesCount / totalAttendees > 0.5) return 'border-red-500'; // Rojo para Suboficiales/Oficiales
+
+    // 2. Check for firehouse majority
+    const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
     session.attendees.forEach(a => {
-        firehouseCounts[a.firehouse] = (firehouseCounts[a.firehouse] || 0) + 1;
+        if (firehouseCounts.hasOwnProperty(a.firehouse)) {
+            firehouseCounts[a.firehouse]++;
+        }
     });
 
     let majorityStation = '';
@@ -124,15 +126,18 @@ export default function ClassesPage() {
             majorityStation = station;
         }
     }
-
+    
+    // Only assign a station color if there's a clear majority (e.g., > 50%)
     if (maxCount / totalAttendees > 0.5) {
-        if (majorityStation === 'Cuartel 1') return 'border-yellow-500';
-        if (majorityStation === 'Cuartel 2') return 'border-blue-500';
-        if (majorityStation === 'Cuartel 3') return 'border-orange-500';
+      if (majorityStation === 'Cuartel 1') return 'border-yellow-500'; // Amarillo para C1
+      if (majorityStation === 'Cuartel 2') return 'border-blue-500'; // Azul para C2
+      if (majorityStation === 'Cuartel 3') return 'border-orange-500'; // Naranja para C3
     }
     
-    return 'border-gray-500'; // Default for mixed or no majority
+    // 3. Default color for mixed classes or if no other rule applies
+    return 'border-gray-500'; 
   };
+
 
   const availableYears = useMemo(() => {
     const years = new Set(sessions.map(s => new Date(s.date).getFullYear().toString()));
@@ -157,20 +162,26 @@ export default function ClassesPage() {
 
         const attendees = session.attendees;
         if (!attendees || attendees.length === 0) {
+            // Show classes with no attendees only if no station/hierarchy filter is active
             return filterStation === 'all' && filterHierarchy === 'all';
         }
-
+        
+        // Logic for station filter based on majority
         if (filterStation !== 'all') {
             const stationCounts: Record<string, number> = {};
             attendees.forEach(a => {
                 stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
             });
-            const majorityStation = Object.keys(stationCounts).reduce((a, b) => stationCounts[a] > stationCounts[b] ? a : b);
-            if (stationCounts[majorityStation] / attendees.length <= 0.5 || majorityStation !== filterStation) {
+            
+            const majorityStation = Object.keys(stationCounts).reduce((a, b) => stationCounts[a] > stationCounts[b] ? a : b, '');
+
+            // The class belongs to the filtered station if that station has the majority
+            if (!majorityStation || majorityStation !== filterStation || (stationCounts[majorityStation] / attendees.length) <= 0.5) {
                 return false;
             }
         }
-
+        
+        // Logic for hierarchy filter based on majority
         if (filterHierarchy !== 'all') {
             const totalAttendees = attendees.length;
             const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
