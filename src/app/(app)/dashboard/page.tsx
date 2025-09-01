@@ -81,16 +81,21 @@ export default function DashboardPage() {
   }, [allSessions]);
 
   const filteredData = useMemo(() => {
-    const sessions = allSessions.filter(session => {
+    const sessionsInYear = allSessions.filter(session => {
         if(filterYear === 'all') return true;
-        return new Date(session.date).getFullYear().toString() === filterYear;
+        // Adding timezone offset to avoid issues with date comparison
+        const sessionDate = new Date(session.date);
+        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+        return sessionDate.getFullYear().toString() === filterYear;
     });
 
     const monthlyData: Record<string, { present: number, absent: number, tardy: number, excused: number, month: string }> = {};
     const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
-    sessions.forEach(session => {
-        const monthIndex = new Date(session.date).getMonth();
+    sessionsInYear.forEach(session => {
+        const sessionDate = new Date(session.date);
+        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+        const monthIndex = sessionDate.getMonth();
         const month = monthNames[monthIndex];
         
         if (!monthlyData[month]) {
@@ -125,10 +130,23 @@ export default function DashboardPage() {
     
     // Consideramos presentes, tardes y justificados para el ratio de asistencia
     const attendanceRate = totalPossible > 0 ? ((totalAttendance + totalTardy + totalExcused) / totalPossible) * 100 : 0;
+    
+    // Logic for upcoming classes
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Set to start of today for comparison
+
+    const upcomingSessions = allSessions
+      .filter(session => {
+        const sessionDate = new Date(session.date);
+        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+        return sessionDate >= today;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
 
     return {
-        sessions,
+        sessions: sessionsInYear,
+        upcomingSessions,
         chartData,
         attendanceRate
     };
@@ -243,7 +261,7 @@ export default function DashboardPage() {
           <CardHeader>
             <CardTitle className="font-headline">Próximas Clases</CardTitle>
             <CardDescription>
-              Próximas clases de capacitación programadas en el período.
+              Próximas clases de capacitación programadas en el sistema.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -265,7 +283,7 @@ export default function DashboardPage() {
                         </TableRow>
                     ))
                 ) : (
-                    filteredData.sessions.slice(0, 5).map((session) => (
+                    filteredData.upcomingSessions.slice(0, 5).map((session) => (
                       <TableRow key={session.id}>
                         <TableCell>
                           <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
@@ -279,6 +297,13 @@ export default function DashboardPage() {
                       </TableRow>
                     ))
                 )}
+                 { !loading && filteredData.upcomingSessions.length === 0 && (
+                    <TableRow>
+                        <TableCell colSpan={3} className="text-center text-muted-foreground">
+                            No hay clases programadas a futuro.
+                        </TableCell>
+                    </TableRow>
+                 )}
               </TableBody>
             </Table>
           </CardContent>
@@ -287,5 +312,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
