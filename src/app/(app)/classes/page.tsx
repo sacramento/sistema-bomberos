@@ -101,17 +101,16 @@ export default function ClassesPage() {
     
     const totalAttendees = session.attendees.length;
 
-    // Check for hierarchy majority
-    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-    
+    // Check for hierarchy majority first
     const aspirantesCount = session.attendees.filter(a => a.rank === 'ASPIRANTE').length;
     if (aspirantesCount / totalAttendees > 0.5) return 'border-green-500';
 
+    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     const suboficialesOficialesCount = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
     if (suboficialesOficialesCount / totalAttendees > 0.5) return 'border-red-500';
     
-    // Check for firehouse majority
+    // Check for firehouse majority if no hierarchy majority
     const firehouseCounts: Record<string, number> = {};
     session.attendees.forEach(a => {
         firehouseCounts[a.firehouse] = (firehouseCounts[a.firehouse] || 0) + 1;
@@ -162,11 +161,11 @@ export default function ClassesPage() {
       // Filter by station and hierarchy (checks attendees)
       const attendees = session.attendees;
       if (!attendees || attendees.length === 0) {
-        // If no attendees, only show in "all" filters
-        return filterStation === 'all' && filterHierarchy === 'all';
+        // If no attendees, only show in "all" filters unless a specific filter is active
+        if (filterStation !== 'all' || filterHierarchy !== 'all') return false;
       }
 
-      if (filterStation !== 'all') {
+      if (filterStation !== 'all' && attendees && attendees.length > 0) {
         const stationCounts: Record<string, number> = {};
         attendees.forEach(a => {
             stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
@@ -180,24 +179,27 @@ export default function ClassesPage() {
                 majorityStation = station;
             }
         }
-        // If there's a tie, there's no clear majority, so it won't match any specific station
-        const ties = Object.values(stationCounts).filter(count => count === maxCount).length > 1;
-        if (ties || majorityStation !== filterStation) {
+        
+        if(maxCount / attendees.length <= 0.5 || majorityStation !== filterStation) {
             return false;
         }
       }
 
       let hierarchyMatch = true;
-      if (filterHierarchy !== 'all') {
+      if (filterHierarchy !== 'all' && attendees && attendees.length > 0) {
+        const totalAttendees = attendees.length;
         const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
         if (filterHierarchy === 'bomberos') {
-            hierarchyMatch = attendees.some(a => a.rank === 'BOMBERO');
+            const count = attendees.filter(a => a.rank === 'BOMBERO').length;
+            hierarchyMatch = count / totalAttendees > 0.5;
         } else if (filterHierarchy === 'suboficiales_oficiales') {
-            hierarchyMatch = attendees.some(a => [...suboficialRanks, ...oficialRanks].includes(a.rank));
+            const count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
+            hierarchyMatch = count / totalAttendees > 0.5;
         } else if (filterHierarchy === 'aspirantes') {
-            hierarchyMatch = attendees.some(a => a.rank === 'ASPIRANTE');
+            const count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
+            hierarchyMatch = count / totalAttendees > 0.5;
         }
       }
 
@@ -397,9 +399,3 @@ export default function ClassesPage() {
     </>
   );
 }
-
-    
-
-    
-
-    
