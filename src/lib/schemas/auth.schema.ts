@@ -10,7 +10,7 @@ export const LoginOutputSchema = z.nullable(
   z.object({
     id: z.string(),
     name: z.string(),
-    role: z.enum(['Administrador', 'Operador', 'Asistente']),
+    role: z.enum(['Administrador', 'Operador', 'Ayudantía']),
   })
 );
 export type LoginOutput = z.infer<typeof LoginOutputSchema>;

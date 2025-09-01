@@ -18,7 +18,7 @@ import { useState } from "react";
 import { User, UserRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 
-const roles: UserRole[] = ['Administrador', 'Operador', 'Asistente'];
+const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía'];
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);

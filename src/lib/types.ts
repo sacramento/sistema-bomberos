@@ -48,7 +48,7 @@ export type Leave = {
   type: LeaveType;
 };
 
-export type UserRole = 'Administrador' | 'Operador' | 'Asistente';
+export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía';
 
 export type User = {
   id: string;
