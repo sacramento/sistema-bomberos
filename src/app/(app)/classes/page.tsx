@@ -99,25 +99,40 @@ export default function ClassesPage() {
   const getCardBorderColor = (session: Session): string => {
     if (!session.attendees || session.attendees.length === 0) return 'border-gray-500';
     
+    const totalAttendees = session.attendees.length;
+
+    // Check for hierarchy majority
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-    const suboficialesYOficialesRanks = [...suboficialRanks, ...oficialRanks];
+    
+    const aspirantesCount = session.attendees.filter(a => a.rank === 'ASPIRANTE').length;
+    if (aspirantesCount / totalAttendees > 0.5) return 'border-green-500';
 
-    const isOnlyAspirantes = session.attendees.every(a => a.rank === 'ASPIRANTE');
-    const isOnlySuboficialesYOficiales = session.attendees.every(a => suboficialesYOficialesRanks.includes(a.rank));
+    const suboficialesOficialesCount = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
+    if (suboficialesOficialesCount / totalAttendees > 0.5) return 'border-red-500';
+    
+    // Check for firehouse majority
+    const firehouseCounts: Record<string, number> = {};
+    session.attendees.forEach(a => {
+        firehouseCounts[a.firehouse] = (firehouseCounts[a.firehouse] || 0) + 1;
+    });
 
-    if (isOnlyAspirantes) return 'border-orange-500';
-    if (isOnlySuboficialesYOficiales) return 'border-red-500';
-
-    const firehouses = new Set(session.attendees.map(a => a.firehouse));
-    if (firehouses.size === 1) {
-        const firehouse = firehouses.values().next().value;
-        if (firehouse === 'Cuartel 1') return 'border-yellow-500';
-        if (firehouse === 'Cuartel 2') return 'border-blue-500';
-        if (firehouse === 'Cuartel 3') return 'border-green-500';
+    let majorityStation = '';
+    let maxCount = 0;
+    for (const station in firehouseCounts) {
+        if (firehouseCounts[station] > maxCount) {
+            maxCount = firehouseCounts[station];
+            majorityStation = station;
+        }
     }
 
-    return 'border-gray-500'; // Default for "Todos" or mixed
+    if (maxCount / totalAttendees > 0.5) {
+        if (majorityStation === 'Cuartel 1') return 'border-yellow-500';
+        if (majorityStation === 'Cuartel 2') return 'border-blue-500';
+        if (majorityStation === 'Cuartel 3') return 'border-orange-500';
+    }
+    
+    return 'border-gray-500'; // Default for mixed or no majority
   };
 
   const availableYears = useMemo(() => {
@@ -353,7 +368,7 @@ export default function ClassesPage() {
                   )}
                 </div>
                 <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
-              </CardHeader>
+              </Header>
               <CardContent className="flex-grow">
                   <div className="space-y-2 text-sm">
                       <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
