@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Leave } from '@/lib/types';
@@ -43,9 +44,11 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
         // Final check to be sure the session is in the interval. Firestore date queries can be tricky.
         if (isWithinInterval(sessionDate, { start: leaveStartDate, end: leaveEndDate })) {
             const attendeeIds = sessionData.attendeeIds || [];
+            const instructorIds = sessionData.instructorIds || [];
+            const assistantIds = sessionData.assistantIds || [];
             
-            // If the firefighter is an attendee in this session, update their attendance to 'excused'
-            if (attendeeIds.includes(leaveData.firefighterId)) {
+            // If the firefighter is an attendee, instructor, or assistant in this session, update their attendance to 'excused'
+            if (attendeeIds.includes(leaveData.firefighterId) || instructorIds.includes(leaveData.firefighterId) || assistantIds.includes(leaveData.firefighterId)) {
                 const attendancePath = `attendance.${leaveData.firefighterId}`;
                 batch.update(sessionDoc.ref, { [attendancePath]: 'excused' });
             }

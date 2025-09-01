@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert, Save } from "lucide-react";
+import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert, Save, UserCog } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -45,9 +45,13 @@ export default function AttendancePage() {
     const { toast } = useToast();
     
     const [session, setSession] = useState<Session | null>(null);
+    const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
+    
+    const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
+    const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -57,12 +61,21 @@ export default function AttendancePage() {
                     const data = await getSessionById(sessionId);
                     setSession(data);
                     if (data) {
+                        const uniqueParticipants = new Map<string, Firefighter>();
+                        [...data.instructors, ...data.assistants, ...data.attendees].forEach(p => {
+                            uniqueParticipants.set(p.id, p);
+                        });
+                        const participants = Array.from(uniqueParticipants.values());
+                        setAllParticipants(participants);
+
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
                             setAttendance(data.attendance);
                         } else {
+                            // If no attendance is saved, create a default one
                             const initialAttendance: Record<string, AttendanceStatus> = {};
-                            data.attendees.forEach(a => {
-                                initialAttendance[a.id] = 'present'; 
+                            participants.forEach(p => {
+                                // Default instructors and assistants to 'present'
+                                initialAttendance[p.id] = 'present';
                             });
                             setAttendance(initialAttendance);
                         }
@@ -82,16 +95,16 @@ export default function AttendancePage() {
     }, [sessionId, toast]);
 
     const groupedAttendees = useMemo(() => {
-        if (!session) return [];
+        if (!allParticipants) return [];
 
         const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
-        const officials = session.attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => a.id.localeCompare(b.id));
-        const c1Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 1').sort((a,b) => a.id.localeCompare(b.id));
-        const c2Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 2').sort((a,b) => a.id.localeCompare(b.id));
-        const c3Bombers = session.attendees.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 3').sort((a,b) => a.id.localeCompare(b.id));
-        const aspirantes = session.attendees.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => a.id.localeCompare(b.id));
+        const officials = allParticipants.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => a.id.localeCompare(b.id));
+        const c1Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 1').sort((a,b) => a.id.localeCompare(b.id));
+        const c2Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 2').sort((a,b) => a.id.localeCompare(b.id));
+        const c3Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 3').sort((a,b) => a.id.localeCompare(b.id));
+        const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => a.id.localeCompare(b.id));
 
         const groups = [];
         if (officials.length > 0) groups.push({ title: 'OFICIALES Y SUBOFICIALES', firefighters: officials });
@@ -101,18 +114,18 @@ export default function AttendancePage() {
         if (aspirantes.length > 0) groups.push({ title: 'ASPIRANTES', firefighters: aspirantes });
 
         return groups;
-    }, [session]);
+    }, [allParticipants]);
 
 
     const summary = useMemo(() => {
-        if (!session) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
-        const total = session.attendees.length;
+        if (!allParticipants) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
+        const total = allParticipants.length;
         const present = Object.values(attendance).filter(s => s === 'present').length;
         const absent = Object.values(attendance).filter(s => s === 'absent').length;
         const tardy = Object.values(attendance).filter(s => s === 'tardy').length;
         const excused = Object.values(attendance).filter(s => s === 'excused').length;
         return { present, absent, tardy, excused, total };
-    }, [attendance, session]);
+    }, [attendance, allParticipants]);
 
     if (loading) {
          return (
@@ -185,9 +198,18 @@ export default function AttendancePage() {
         { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
         { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
-
+    
     const renderFirefighterName = (firefighter: Firefighter) => {
-        return `${firefighter.firstName} ${firefighter.lastName}`;
+        const isInstructor = instructorIds.has(firefighter.id);
+        const isAssistant = assistantIds.has(firefighter.id);
+
+        return (
+            <div className="flex items-center gap-2">
+                <span>{`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}</span>
+                {isInstructor && <Badge variant="destructive">Instructor</Badge>}
+                {isAssistant && <Badge variant="secondary">Ayudante</Badge>}
+            </div>
+        );
     }
     
     const renderTableBody = (isSummaryView: boolean) => (
@@ -202,7 +224,7 @@ export default function AttendancePage() {
                     {group.firefighters.map(firefighter => (
                         <TableRow key={firefighter.id}>
                             <TableCell className="font-medium">
-                                <div>{`${firefighter.id} - ${renderFirefighterName(firefighter)}`}</div>
+                                <div>{renderFirefighterName(firefighter)}</div>
                                 {isSummaryView && <div className="text-muted-foreground text-sm sm:hidden">{firefighter.firehouse}</div>}
                             </TableCell>
                             {isSummaryView && (
@@ -259,7 +281,7 @@ export default function AttendancePage() {
                         </CardHeader>
                         <CardContent>
                             <div className="text-2xl font-bold">{card.value}</div>
-                            <p className="text-xs text-muted-foreground">de {summary.total} bomberos</p>
+                            <p className="text-xs text-muted-foreground">de {summary.total} participantes</p>
                         </CardContent>
                     </Card>
                  ))}
@@ -274,8 +296,8 @@ export default function AttendancePage() {
                 <TabsContent value="register">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Lista de Asistentes</CardTitle>
-                            <CardDescription>Seleccione el estado de cada bombero asignado a esta clase.</CardDescription>
+                            <CardTitle className="font-headline">Lista de Participantes</CardTitle>
+                            <CardDescription>Seleccione el estado de cada bombero, instructor y ayudante asignado a esta clase.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="overflow-x-auto">
