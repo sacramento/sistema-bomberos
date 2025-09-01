@@ -313,7 +313,7 @@ export default function ReportsPage() {
     
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -323,13 +323,17 @@ export default function ReportsPage() {
             <text
             x={x}
             y={y}
-            fill="#fff"
+            fill={'#333'}
             textAnchor="middle"
             dominantBaseline="central"
             style={{
                 fontSize: '14px',
                 fontWeight: 'bold',
-                textShadow: '0px 0px 3px rgba(0, 0, 0, 0.7)',
+                paintOrder: 'stroke',
+                stroke: '#fff',
+                strokeWidth: '3px',
+                strokeLinecap: 'butt',
+                strokeLinejoin: 'miter',
             }}
             >
             {`${(percent * 100).toFixed(0)}%`}
@@ -519,7 +523,7 @@ export default function ReportsPage() {
                                                     cy="50%"
                                                     labelLine={false}
                                                     label={renderCustomizedLabel}
-                                                    outerRadius={80}
+                                                    outerRadius={100}
                                                     innerRadius={60}
                                                 >
                                                     {reportData.pieData.map((entry, index) => (
