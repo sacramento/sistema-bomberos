@@ -106,7 +106,6 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
-            // Fetch logo and convert to base64
             const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
             const response = await fetch(logoUrl);
             const blob = await response.blob();
@@ -116,7 +115,6 @@ export default function ReportsPage() {
                 reader.readAsDataURL(blob);
             });
 
-            // Header
             doc.setFillColor(220, 53, 69); // Primary red color from theme
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
@@ -124,11 +122,8 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
 
-            // Add logo to the header
             doc.addImage(dataUrl as string, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
 
-
-            // Subtitle with date range
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125); // muted-foreground like color
             doc.setFont('helvetica', 'normal');
@@ -137,7 +132,6 @@ export default function ReportsPage() {
                 : "Período: Todos los registros";
             doc.text(dateText, 14, 45);
 
-            // Stats in two columns
             doc.setFontSize(10);
             doc.setTextColor(40, 40, 40);
             const statsY = 55;
@@ -147,7 +141,6 @@ export default function ReportsPage() {
             doc.text(`Justificados: ${reportData.summary.excused}`, 80, statsY + 5);
             doc.text(`Total de Registros: ${reportData.total}`, 14, statsY + 12);
             
-            // Bar Chart
             let chartYPosition = 80;
             if (reportData.total > 0) {
                 doc.setFontSize(12);
@@ -178,18 +171,15 @@ export default function ReportsPage() {
                         doc.setTextColor(80, 80, 80);
                         doc.text(label, 14, chartYPosition + barHeight / 2 + 2);
                         
-                        // Set color for the bar
                         doc.setFillColor(item.color);
                         doc.rect(60, chartYPosition, barWidth, barHeight, 'F');
                         
                         chartYPosition += barHeight + barMargin;
                     }
                 });
-                chartYPosition += 10;
+                chartYPosition += 5;
             }
 
-
-            // Table of attendees
             if (reportData.details.length > 0) {
                 (doc as any).autoTable({
                     startY: chartYPosition,
@@ -201,19 +191,46 @@ export default function ReportsPage() {
                         getStatusLabel(item.status)
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: [220, 53, 69] }, // Primary red color
+                    headStyles: { fillColor: [220, 53, 69] },
                     didDrawPage: (data: any) => {
-                        // Footer
-                        const pageCount = doc.internal.pages.length;
                         doc.setFontSize(8);
-                        doc.setTextColor(150); // Gray color
-                        const footerText = "Bomberos Voluntarios San Martín de los Andes";
+                        doc.setTextColor(150);
+                        const pageStr = `Página ${doc.internal.pages.length - 1} de ${doc.internal.pages.length - 1}`;
+                        doc.text(pageStr, data.settings.margin.left, doc.internal.pageSize.height - 10);
                         const creationDate = `Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
-                        doc.text(footerText, data.settings.margin.left, doc.internal.pageSize.height - 10);
                         doc.text(creationDate, doc.internal.pageSize.width - data.settings.margin.right - doc.getStringUnitWidth(creationDate) * doc.getFontSize(), doc.internal.pageSize.height - 10);
-                    }
+                    },
                 });
+
+                // Add Signature Lines
+                const finalY = (doc as any).lastAutoTable.finalY;
+                const signatureY = finalY + 25;
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const signatureLineLength = 60;
+                const signatureX = (pageWidth / 2) - (signatureLineLength / 2);
+
+                if (signatureY > doc.internal.pageSize.getHeight() - 30) {
+                    doc.addPage();
+                }
+                
+                doc.setFontSize(10);
+                doc.setTextColor(40, 40, 40);
+                doc.text("Firma:", signatureX, signatureY);
+                doc.line(signatureX + 15, signatureY, signatureX + signatureLineLength, signatureY);
+                doc.text("Aclaración:", signatureX, signatureY + 10);
+                 doc.line(signatureX + 22, signatureY + 10, signatureX + signatureLineLength, signatureY + 10);
             }
+            
+            // Set final page numbers
+            const pageCount = (doc as any).internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150);
+                const pageStr = `Página ${i} de ${pageCount}`;
+                doc.text(pageStr, 14, doc.internal.pageSize.height - 10);
+            }
+
 
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
