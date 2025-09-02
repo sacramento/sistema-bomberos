@@ -51,7 +51,7 @@ export default function LoginPage() {
             <div className="mb-4 flex justify-center">
               <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
             </div>
-            <CardTitle className="font-headline text-2xl">FuegoRegistro</CardTitle>
+            <CardTitle className="font-headline text-2xl">Asistencia SMA</CardTitle>
             <CardDescription>
               Iniciá sesión para acceder al sistema.
             </CardDescription>

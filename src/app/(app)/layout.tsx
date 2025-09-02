@@ -68,7 +68,7 @@ function AppSidebar() {
               open ? 'opacity-100' : 'opacity-0'
             )}
           >
-            FuegoRegistro
+            Asistencia SMA
           </span>
         </div>
       </SidebarHeader>

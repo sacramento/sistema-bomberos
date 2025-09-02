@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/context/auth-context';
 
 export const metadata: Metadata = {
-  title: 'FuegoRegistro',
+  title: 'Asistencia SMA',
   description: 'Gestión de Capacitación y Asistencia de Bomberos',
 };
 
