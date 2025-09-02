@@ -258,7 +258,7 @@ export default function ClassesPage() {
                     <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
                     <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
                   </div>
-                  {user?.role === 'Administrador' && (
+                  {(user?.role === 'Administrador' || user?.role === 'Operador') && (
                     <AlertDialog>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -328,7 +328,7 @@ export default function ClassesPage() {
   return (
     <>
       <PageHeader title="Clases de Capacitación" description="Cree, gestione y filtre clases de capacitación.">
-        {user?.role === 'Administrador' && (
+        {(user?.role === 'Administrador' || user?.role === 'Operador') && (
           <AddClassDialog onClassAdded={handleDataChange}>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -430,5 +430,3 @@ export default function ClassesPage() {
     </>
   );
 }
-
-    

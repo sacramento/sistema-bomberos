@@ -45,17 +45,19 @@ const MultiSelectFirefighter = ({
     selected, 
     onSelectedChange,
     firefighters,
-    excludeIds = new Set()
+    excludeAspirantes = false
 }: { 
     title: string;
     selected: Firefighter[]; 
     onSelectedChange: (selected: Firefighter[]) => void;
     firefighters: Firefighter[];
-    excludeIds?: Set<string>;
+    excludeAspirantes?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
     
-    const availableFirefighters = firefighters.filter(f => !excludeIds.has(f.id));
+    const availableFirefighters = excludeAspirantes 
+        ? firefighters.filter(f => f.rank !== 'ASPIRANTE') 
+        : firefighters;
 
     const handleSelect = (firefighter: Firefighter) => {
         const isSelected = selected.some(s => s.id === firefighter.id);
@@ -97,7 +99,9 @@ const MultiSelectFirefighter = ({
                                 <CommandItem
                                     key={firefighter.id}
                                     value={`${firefighter.id} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => handleSelect(firefighter)}
+                                    onSelect={() => {
+                                        handleSelect(firefighter);
+                                    }}
                                 >
                                     <Check
                                         className={cn(
@@ -381,18 +385,15 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
           </div>
         );
       case 2:
-         const currentAndFilteredAttendees = new Set(finalAttendees.map(a => a.id));
-         const availableForInstructor = allFirefighters.filter(f => !currentAndFilteredAttendees.has(f.id));
-         const availableForAssistant = allFirefighters.filter(f => !currentAndFilteredAttendees.has(f.id) && !instructors.some(i => i.id === f.id));
         return (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={availableForInstructor} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label>Ayudantes (Opcional)</Label>
-               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={availableForAssistant} />
+               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
             </div>
             <p className="text-xs text-muted-foreground">Los asistentes no pueden ser seleccionados como instructores o ayudantes y viceversa.</p>
           </div>
