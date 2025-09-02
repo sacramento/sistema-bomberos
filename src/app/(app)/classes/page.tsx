@@ -98,7 +98,7 @@ export default function ClassesPage() {
     }
   };
   
-  const getCardBorderColor = (session: Session): string => {
+ const getCardBorderColor = (session: Session): string => {
     const attendees = session.attendees;
     if (!attendees || attendees.length === 0) {
         return 'border-gray-500';
@@ -107,16 +107,14 @@ export default function ClassesPage() {
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     
-    // Rule 1: Aspirantes
     const aspirantesCount = attendees.filter(a => a.rank === 'ASPIRANTE').length;
     if (aspirantesCount / totalAttendees > 0.8) {
-        return 'border-green-500'; // Verde para Aspirantes
+        return 'border-green-500';
     }
 
-    // Rule 2: Suboficiales/Oficiales
     const suboficialesOficialesCount = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
     if (suboficialesOficialesCount / totalAttendees > 0.8) {
-        return 'border-red-500'; // Rojo para Suboficiales/Oficiales
+        return 'border-red-500';
     }
     
     const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
@@ -126,16 +124,14 @@ export default function ClassesPage() {
         }
     });
 
-    // Rule 3: General Class (representation from all 3 firehouses)
     const hasC1 = firehouseCounts['Cuartel 1'] > 0;
     const hasC2 = firehouseCounts['Cuartel 2'] > 0;
     const hasC3 = firehouseCounts['Cuartel 3'] > 0;
 
     if (hasC1 && hasC2 && hasC3) {
-        return 'border-gray-500'; // Gris/Default for "Todos"
+        return 'border-gray-500'; 
     }
 
-    // Rule 4: Firehouse Majority
     if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) return 'border-yellow-500';
     if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'border-blue-500';
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'border-orange-500';
@@ -222,7 +218,7 @@ export default function ClassesPage() {
   const renderSessionCards = (sessionList: Session[]) => {
       if (loading) {
         return (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
               <Card key={index} className="flex flex-col">
                 <CardHeader>
@@ -256,10 +252,10 @@ export default function ClassesPage() {
       }
       
       return (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sessionList.map((session) => (
             <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
-               <CardHeader>
+               <CardHeader className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2 flex-grow">
                     <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
@@ -307,17 +303,17 @@ export default function ClassesPage() {
                     </AlertDialog>
                   )}
                 </div>
-                <CardTitle className="font-headline pt-2">{session.title}</CardTitle>
+                <CardTitle className="font-headline text-lg md:text-xl pt-2">{session.title}</CardTitle>
               </CardHeader>
-              <CardContent className="flex-grow">
+              <CardContent className="flex-grow p-4 pt-0">
                   <div className="space-y-2 text-sm">
                       <div className="font-medium">Instructores: <span className="font-normal text-muted-foreground">{session.instructors.map(i => `${i.firstName} ${i.lastName}`).join(', ')}</span></div>
                       {session.assistants && session.assistants.length > 0 && (
-                          <div className="font-medium">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => `${a.firstName} ${a.lastName}`).join(', ')}</span></div>
+                          <div className="font-medium hidden md:block">Ayudantes: <span className="font-normal text-muted-foreground">{session.assistants.map(a => `${a.firstName} ${a.lastName}`).join(', ')}</span></div>
                       )}
                   </div>
               </CardContent>
-              <CardFooter>
+              <CardFooter className="p-4 pt-0">
                    <Button asChild className="w-full">
                       <Link href={`/classes/${session.id}/attendance`}>
                           Gestionar Asistencia
@@ -334,12 +330,14 @@ export default function ClassesPage() {
   return (
     <>
       <PageHeader title="Clases de Capacitación" description="Cree, gestione y filtre clases de capacitación.">
-        <AddClassDialog onClassAdded={handleDataChange}>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Crear Clase
-          </Button>
-        </AddClassDialog>
+        {user?.role === 'Administrador' && (
+          <AddClassDialog onClassAdded={handleDataChange}>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Clase
+            </Button>
+          </AddClassDialog>
+        )}
       </PageHeader>
       
       <Card className="mb-8">
