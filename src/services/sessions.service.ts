@@ -23,9 +23,9 @@ const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighte
     return {
         id: docSnap.id,
         ...data,
-        instructors: getFirefighterObjects(data.instructorIds),
-        assistants: getFirefighterObjects(data.assistantIds),
-        attendees: getFirefighterObjects(data.attendeeIds),
+        instructors: getFirefighterObjects(data.instructorIds || []),
+        assistants: getFirefighterObjects(data.assistantIds || []),
+        attendees: getFirefighterObjects(data.attendeeIds || []),
     } as Session;
 }
 
