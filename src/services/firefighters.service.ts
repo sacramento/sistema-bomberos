@@ -31,7 +31,7 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
     // Ensure status is always set to 'Active' on creation and legajo is included
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData, 
-        legajo: firefighterData.legajo, // Ensure legajo is explicitly part of the object
+        legajo: firefighterData.legajo, // This line is crucial
         status: 'Active'
     };
 
@@ -96,3 +96,4 @@ export const deleteFirefighter = async (id: string): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);
     await deleteDoc(docRef);
 };
+
