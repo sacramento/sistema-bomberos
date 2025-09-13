@@ -42,6 +42,8 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
+  const isAspirante = firefighter.rank === 'ASPIRANTE';
+
   useEffect(() => {
     // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
     if (open) {
@@ -97,7 +99,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
 
         const legajoChanged = newId !== firefighter.id;
 
-        if (legajoChanged) {
+        if (legajoChanged && isAspirante) {
             await updateFirefighterId(firefighter.id, newId, updatedData);
              toast({
                 title: "¡Éxito!",
@@ -138,10 +140,10 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-             {firefighter.rank === 'ASPIRANTE' && (
+             {isAspirante && (
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Atención: Cambio de Legajo</AlertTitle>
+                    <AlertTitle>Atención: Cambio de Legajo de Aspirante</AlertTitle>
                     <AlertDescription>
                         Al cambiar el legajo, se creará un nuevo registro y se eliminará el anterior. Las asistencias pasadas del legajo viejo NO se migrarán al nuevo.
                     </AlertDescription>
@@ -151,7 +153,14 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
               <Label htmlFor="id" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" className="col-span-3" value={newId} onChange={e => setNewId(e.target.value)} required />
+              <Input 
+                id="id" 
+                className="col-span-3" 
+                value={newId} 
+                onChange={e => setNewId(e.target.value)} 
+                required 
+                disabled={!isAspirante}
+              />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">
