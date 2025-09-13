@@ -128,15 +128,6 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-             {isAspirante && (
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Atención: Cambio de Legajo de Aspirante</AlertTitle>
-                    <AlertDescription>
-                        Al cambiar el legajo de un aspirante (ej. al ascender a Bombero), su historial de asistencia se mantendrá intacto.
-                    </AlertDescription>
-                </Alert>
-             )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="legajo" className="text-right">
                 Legajo
@@ -147,7 +138,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
                 value={legajo} 
                 onChange={e => setLegajo(e.target.value)} 
                 required 
-                disabled={!isAspirante}
+                disabled={!isAspirante && !!firefighter.legajo}
               />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
