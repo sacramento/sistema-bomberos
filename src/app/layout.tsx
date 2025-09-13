@@ -8,6 +8,7 @@ import { AuthProvider } from '@/context/auth-context';
 export const metadata: Metadata = {
   title: 'Asistencia SMA',
   description: 'Gestión de Capacitación y Asistencia de Bomberos',
+  manifest: '/manifest.json',
 };
 
 const fontBody = Inter({
