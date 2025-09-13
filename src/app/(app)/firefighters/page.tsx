@@ -43,7 +43,7 @@ export default function FirefightersPage() {
   }, []);
   
   const sortedFirefighters = useMemo(() => {
-    return [...firefighters].sort((a, b) => a.legajo.localeCompare(b.legajo));
+    return [...firefighters].sort((a, b) => (a.legajo || '').localeCompare(b.legajo || ''));
   }, [firefighters]);
 
   const handleDataChange = () => {
