@@ -72,9 +72,6 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
 
     // If legajo is being changed, check for uniqueness, but only if it's an aspirante
     if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
-        if(docSnap.data().rank !== 'ASPIRANTE') {
-            throw new Error('El legajo solo puede ser modificado para los aspirantes.');
-        }
         const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
