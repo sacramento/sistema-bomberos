@@ -28,7 +28,7 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
         throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
-    // Ensure status is always set
+    // Ensure status is always set to 'Active' on creation
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData, 
         status: 'Active'
@@ -47,7 +47,7 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
     const batch = writeBatch(db);
 
     for (const firefighter of firefighters) {
-        const docRef = doc(firefightersCollection); 
+        const docRef = doc(collection(db, 'firefighters')); // Create a new doc ref with a unique ID
         
         // Ensure status is always valid, default to 'Active'
         const firefighterWithDefaultStatus = {
