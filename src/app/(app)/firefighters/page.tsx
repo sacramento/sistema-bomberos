@@ -113,7 +113,7 @@ export default function FirefightersPage() {
               ) : (
                 firefighters.map((firefighter: Firefighter) => (
                   <TableRow key={firefighter.id}>
-                    <TableCell className="font-medium">{firefighter.id}</TableCell>
+                    <TableCell className="font-medium">{firefighter.legajo}</TableCell>
                     <TableCell>{`${firefighter.firstName} ${firefighter.lastName}`}</TableCell>
                     <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
                     <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>

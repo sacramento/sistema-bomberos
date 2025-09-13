@@ -1,6 +1,6 @@
 import { Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, addDoc, query, where } from 'firebase/firestore';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -14,16 +14,17 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
     querySnapshot.forEach((doc) => {
         firefighters.push({ id: doc.id, ...doc.data() } as Firefighter);
     });
-    // Sort by ID (legajo)
-    return firefighters.sort((a, b) => a.id.localeCompare(b.id));
+    // Sort by legajo
+    return firefighters.sort((a, b) => a.legajo.localeCompare(b.legajo));
 };
 
-export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | 'status'>, id: string): Promise<void> => {
-    const docRef = doc(db, 'firefighters', id);
-    const docSnap = await getDoc(docRef);
+export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | 'status'>): Promise<string> => {
+    // Check if legajo already exists
+    const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
+    const querySnapshot = await getDocs(q);
 
-    if (docSnap.exists()) {
-        throw new Error(`El bombero con el legajo ${id} ya existe.`);
+    if (!querySnapshot.empty) {
+        throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
     const newFirefighter: Omit<Firefighter, 'id'> = { 
@@ -31,11 +32,12 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
         status: 'Active' 
     };
 
-    await setDoc(docRef, newFirefighter);
+    const docRef = await addDoc(firefightersCollection, newFirefighter);
+    return docRef.id;
 };
 
 
-export const batchAddFirefighters = async (firefighters: Firefighter[]): Promise<void> => {
+export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>[]): Promise<void> => {
     if (!firefighters || firefighters.length === 0) {
         return;
     }
@@ -43,13 +45,15 @@ export const batchAddFirefighters = async (firefighters: Firefighter[]): Promise
     const batch = writeBatch(db);
 
     for (const firefighter of firefighters) {
-        // We assume the ID is provided in the CSV and is the document ID.
-        const docRef = doc(db, 'firefighters', firefighter.id);
+        // Since we are not using the legajo as ID, we create a new doc for each
+        const docRef = doc(firefightersCollection); // Firestore will generate a unique ID
         
-        // The status is now provided from the CSV, defaulting to Active if not specified
-        const { id, ...firefighterData } = firefighter;
+        const firefighterWithDefaultStatus = {
+            ...firefighter,
+            status: firefighter.status || 'Active'
+        }
 
-        batch.set(docRef, firefighterData, { merge: true }); // Use merge: true to avoid overwriting existing data completely if needed, or create new.
+        batch.set(docRef, firefighterWithDefaultStatus);
     }
 
     await batch.commit();
@@ -60,37 +64,22 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-        throw new Error(`No se encontró al bombero con el legajo ${id}.`);
+        throw new Error(`No se encontró al bombero.`);
     }
+
+    // If legajo is being changed, check for uniqueness
+    if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
+        const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            throw new Error(`El nuevo legajo ${firefighterData.legajo} ya está en uso.`);
+        }
+    }
+
 
     await updateDoc(docRef, firefighterData);
 };
 
-export const updateFirefighterId = async (oldId: string, newId: string, firefighterData: Omit<Firefighter, 'id'>): Promise<void> => {
-    // Check if the new ID already exists
-    const newDocRef = doc(db, 'firefighters', newId);
-    const newDocSnap = await getDoc(newDocRef);
-    if (newDocSnap.exists()) {
-        throw new Error(`El nuevo legajo ${newId} ya está en uso.`);
-    }
-    
-    // Changing a document ID requires creating a new one and deleting the old one.
-    // This is a simplified version. A complete solution would need to update all references
-    // to the old ID in other collections (e.g., sessions, leaves).
-    
-    const batch = writeBatch(db);
-
-    // 1. Create the new document
-    batch.set(newDocRef, firefighterData);
-    
-    // 2. Delete the old document
-    const oldDocRef = doc(db, 'firefighters', oldId);
-    batch.delete(oldDocRef);
-
-    await batch.commit();
-    
-    // TODO: Implement a migration to update references in 'sessions' and 'leaves' collections.
-};
 
 export const deleteFirefighter = async (id: string): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);

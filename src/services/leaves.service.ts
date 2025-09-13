@@ -3,7 +3,7 @@
 
 import { Leave } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, query, where, Timestamp, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, query, where, Timestamp, getDoc, addDoc } from 'firebase/firestore';
 import { isWithinInterval, parseISO } from 'date-fns';
 
 if (!db) {
@@ -26,8 +26,7 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
     const batch = writeBatch(db);
     
     // 1. Create a new leave document
-    const id = `L-${Date.now()}`;
-    const leaveDocRef = doc(db, 'leaves', id);
+    const leaveDocRef = doc(leavesCollection); // Let firestore create ID
     batch.set(leaveDocRef, leaveData);
 
     // 2. Find sessions within the leave date range
@@ -43,12 +42,12 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
         
         // Final check to be sure the session is in the interval. Firestore date queries can be tricky.
         if (isWithinInterval(sessionDate, { start: leaveStartDate, end: leaveEndDate })) {
-            const attendeeIds = sessionData.attendeeIds || [];
-            const instructorIds = sessionData.instructorIds || [];
-            const assistantIds = sessionData.assistantIds || [];
-            
-            // If the firefighter is an attendee, instructor, or assistant in this session, update their attendance to 'excused'
-            if (attendeeIds.includes(leaveData.firefighterId) || instructorIds.includes(leaveData.firefighterId) || assistantIds.includes(leaveData.firefighterId)) {
+            const isParticipant = 
+                sessionData.attendeeIds?.includes(leaveData.firefighterId) ||
+                sessionData.instructorIds?.includes(leaveData.firefighterId) ||
+                sessionData.assistantIds?.includes(leaveData.firefighterId);
+
+            if (isParticipant) {
                 const attendancePath = `attendance.${leaveData.firefighterId}`;
                 batch.update(sessionDoc.ref, { [attendancePath]: 'excused' });
             }
@@ -58,7 +57,7 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
     // 3. Commit all batched writes
     await batch.commit();
 
-    return id;
+    return leaveDocRef.id;
 };
 
 export const deleteLeave = async (id: string): Promise<void> => {

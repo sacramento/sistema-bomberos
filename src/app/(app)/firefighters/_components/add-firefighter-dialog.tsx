@@ -28,7 +28,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
-  const [id, setId] = useState('');
+  const [legajo, setLegajo] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [rank, setRank] = useState<Firefighter['rank'] | ''>('');
@@ -53,7 +53,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   }, [open]);
   
   const resetForm = () => {
-    setId('');
+    setLegajo('');
     setFirstName('');
     setLastName('');
     setRank('');
@@ -62,7 +62,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id || !firstName || !lastName || !rank || !firehouse) {
+    if (!legajo || !firstName || !lastName || !rank || !firehouse) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -75,13 +75,14 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
 
     try {
         const newFirefighterData: Omit<Firefighter, 'id' | 'status'> = {
+            legajo,
             firstName,
             lastName,
             rank: rank as Firefighter['rank'],
             firehouse,
         };
         
-        await addFirefighter(newFirefighterData, id);
+        await addFirefighter(newFirefighterData);
 
         toast({
             title: "¡Éxito!",
@@ -120,7 +121,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Label htmlFor="id" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" placeholder="Ej: FG-008" className="col-span-3" value={id} onChange={e => setId(e.target.value)} required/>
+              <Input id="id" placeholder="Ej: FG-008 o A-123" className="col-span-3" value={legajo} onChange={e => setLegajo(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">

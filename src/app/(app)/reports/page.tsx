@@ -193,17 +193,12 @@ export default function ReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: [220, 53, 69] },
                     didDrawPage: (data: any) => {
-                        doc.setFontSize(8);
-                        doc.setTextColor(150);
-                        const pageStr = `Página ${doc.internal.pages.length - 1} de ${doc.internal.pages.length - 1}`;
-                        doc.text(pageStr, data.settings.margin.left, doc.internal.pageSize.height - 10);
-                        const creationDate = `Generado el: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`;
-                        doc.text(creationDate, doc.internal.pageSize.width - data.settings.margin.right - doc.getStringUnitWidth(creationDate) * doc.getFontSize(), doc.internal.pageSize.height - 10);
+                        // This empty function is a placeholder for the final page numbering logic
                     },
                 });
 
                 // Add Signature Lines
-                const finalY = (doc as any).lastAutoTable.finalY;
+                let finalY = (doc as any).lastAutoTable.finalY;
                 const signatureY = finalY + 25;
                 const pageWidth = doc.internal.pageSize.getWidth();
                 const signatureLineLength = 60;
@@ -211,14 +206,15 @@ export default function ReportsPage() {
 
                 if (signatureY > doc.internal.pageSize.getHeight() - 30) {
                     doc.addPage();
+                    finalY = 10; // Reset Y position for new page
                 }
                 
                 doc.setFontSize(10);
                 doc.setTextColor(40, 40, 40);
-                doc.text("Firma:", signatureX, signatureY);
-                doc.line(signatureX + 15, signatureY, signatureX + signatureLineLength, signatureY);
-                doc.text("Aclaración:", signatureX, signatureY + 10);
-                 doc.line(signatureX + 22, signatureY + 10, signatureX + signatureLineLength, signatureY + 10);
+                doc.text("Firma:", signatureX, finalY + 25);
+                doc.line(signatureX + 15, finalY + 25, signatureX + signatureLineLength, finalY + 25);
+                doc.text("Aclaración:", signatureX, finalY + 35);
+                doc.line(signatureX + 22, finalY + 35, signatureX + signatureLineLength, finalY + 35);
             }
             
             // Set final page numbers
@@ -226,9 +222,9 @@ export default function ReportsPage() {
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
                 doc.setFontSize(8);
-                doc.setTextColor(150);
+                doc.setTextColor(150, 150, 150);
                 const pageStr = `Página ${i} de ${pageCount}`;
-                doc.text(pageStr, 14, doc.internal.pageSize.height - 10);
+                doc.text(pageStr, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.height - 10, { align: 'center' });
             }
 
 
@@ -489,7 +485,7 @@ export default function ReportsPage() {
                                             filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0"
                                         )}
                                         />
-                                        {`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                        {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
                                     </CommandItem>
                                     ))}
                                 </CommandList>

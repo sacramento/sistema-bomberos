@@ -148,7 +148,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                             {allFirefighters.map((firefighter) => (
                             <CommandItem
                                 key={firefighter.id}
-                                value={`${firefighter.id} ${firefighter.firstName} ${firefighter.lastName}`}
+                                value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                 onSelect={() => {
                                     setSelectedFirefighter(firefighter);
                                     setOpenCombobox(false);
@@ -160,7 +160,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                                     selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0"
                                 )}
                                 />
-                                {`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
                             </CommandItem>
                             ))}
                         </CommandList>

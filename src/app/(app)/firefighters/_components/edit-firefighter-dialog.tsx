@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { getFirefighters, updateFirefighter, updateFirefighterId } from "@/services/firefighters.service";
+import { getFirefighters, updateFirefighter } from "@/services/firefighters.service";
 import { Firefighter } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
@@ -32,7 +32,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   
-  const [newId, setNewId] = useState(firefighter.id);
+  const [legajo, setLegajo] = useState(firefighter.legajo);
   const [firstName, setFirstName] = useState(firefighter.firstName);
   const [lastName, setLastName] = useState(firefighter.lastName);
   const [rank, setRank] = useState<Firefighter['rank']>(firefighter.rank);
@@ -47,7 +47,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   useEffect(() => {
     // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
     if (open) {
-        setNewId(firefighter.id);
+        setLegajo(firefighter.legajo);
         setFirstName(firefighter.firstName);
         setLastName(firefighter.lastName);
         setRank(firefighter.rank);
@@ -70,14 +70,10 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
     };
     fetchExistingFirehouses();
   }, [open]);
-  
-  const resetForm = () => {
-    // State is reset via useEffect when 'open' or 'firefighter' changes.
-  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!newId || !firstName || !lastName || !rank || !firehouse || !status) {
+    if (!legajo || !firstName || !lastName || !rank || !firehouse || !status) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -89,29 +85,21 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
     setLoading(true);
 
     try {
-        const updatedData: Omit<Firefighter, 'id'> = {
+        const updatedData: Partial<Omit<Firefighter, 'id'>> = {
+            legajo,
             firstName,
             lastName,
             rank,
             firehouse,
             status,
         };
-
-        const legajoChanged = newId !== firefighter.id;
-
-        if (legajoChanged && isAspirante) {
-            await updateFirefighterId(firefighter.id, newId, updatedData);
-             toast({
-                title: "¡Éxito!",
-                description: `El legajo ha sido actualizado de ${firefighter.id} a ${newId}.`,
-            });
-        } else {
-            await updateFirefighter(firefighter.id, updatedData);
-            toast({
-                title: "¡Éxito!",
-                description: "El bombero ha sido actualizado.",
-            });
-        }
+        
+        await updateFirefighter(firefighter.id, updatedData);
+        
+        toast({
+            title: "¡Éxito!",
+            description: "El bombero ha sido actualizado.",
+        });
         
         onFirefighterUpdated();
         setOpen(false);
@@ -145,19 +133,19 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle>Atención: Cambio de Legajo de Aspirante</AlertTitle>
                     <AlertDescription>
-                        Al cambiar el legajo, se creará un nuevo registro y se eliminará el anterior. Las asistencias pasadas del legajo viejo NO se migrarán al nuevo.
+                        Al cambiar el legajo de un aspirante (ej. al ascender a Bombero), su historial de asistencia se mantendrá intacto.
                     </AlertDescription>
                 </Alert>
              )}
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="id" className="text-right">
+              <Label htmlFor="legajo" className="text-right">
                 Legajo
               </Label>
               <Input 
-                id="id" 
+                id="legajo" 
                 className="col-span-3" 
-                value={newId} 
-                onChange={e => setNewId(e.target.value)} 
+                value={legajo} 
+                onChange={e => setLegajo(e.target.value)} 
                 required 
                 disabled={!isAspirante}
               />

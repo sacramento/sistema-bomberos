@@ -69,7 +69,7 @@ const MultiSelectFirefighter = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.id} - ${f.lastName}`;
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -99,7 +99,7 @@ const MultiSelectFirefighter = ({
                             {availableFirefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.id} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => {
                                         handleSelect(firefighter);
                                     }}
@@ -110,7 +110,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
