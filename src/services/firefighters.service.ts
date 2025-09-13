@@ -28,9 +28,10 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
         throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
-    // Ensure status is always set to 'Active' on creation
+    // Ensure status is always set to 'Active' on creation and legajo is included
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData, 
+        legajo: firefighterData.legajo, // Ensure legajo is explicitly part of the object
         status: 'Active'
     };
 
@@ -47,11 +48,16 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
     const batch = writeBatch(db);
 
     for (const firefighter of firefighters) {
-        const docRef = doc(collection(db, 'firefighters')); // Create a new doc ref with a unique ID
+        const docRef = doc(collection(db, 'firefighters')); 
         
-        // Ensure status is always valid, default to 'Active'
+        // Ensure status is valid and all fields are present
         const firefighterWithDefaultStatus = {
             ...firefighter,
+            legajo: firefighter.legajo,
+            firstName: firefighter.firstName,
+            lastName: firefighter.lastName,
+            rank: firefighter.rank,
+            firehouse: firefighter.firehouse,
             status: firefighter.status === 'Active' || firefighter.status === 'Inactive' ? firefighter.status : 'Active'
         };
 
@@ -69,12 +75,16 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
         throw new Error(`No se encontró al bombero.`);
     }
 
-    // If legajo is being changed, check for uniqueness.
+    // If legajo is being changed, check for uniqueness (only for aspirantes, handled in component)
     if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
         const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) {
-            throw new Error(`El nuevo legajo ${firefighterData.legajo} ya está en uso.`);
+            // Find if the existing doc is the same we are editing, in case of race conditions or complex UI states.
+            const existingDoc = querySnapshot.docs[0];
+            if (existingDoc.id !== id) {
+                 throw new Error(`El nuevo legajo ${firefighterData.legajo} ya está en uso.`);
+            }
         }
     }
 
