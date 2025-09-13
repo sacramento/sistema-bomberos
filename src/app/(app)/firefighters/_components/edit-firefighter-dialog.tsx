@@ -15,8 +15,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { updateFirefighter, getFirefighters } from "@/services/firefighters.service";
+import { updateFirefighter, updateFirefighterId } from "@/services/firefighters.service";
 import { Firefighter } from "@/lib/types";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const ranks = [
     'ASPIRANTE', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
@@ -29,7 +31,8 @@ const statuses = ['Active', 'Inactive'];
 export default function EditFirefighterDialog({ children, firefighter, onFirefighterUpdated }: { children: React.ReactNode; firefighter: Firefighter; onFirefighterUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-
+  
+  const [newId, setNewId] = useState(firefighter.id);
   const [firstName, setFirstName] = useState(firefighter.firstName);
   const [lastName, setLastName] = useState(firefighter.lastName);
   const [rank, setRank] = useState<Firefighter['rank']>(firefighter.rank);
@@ -39,6 +42,18 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
+  useEffect(() => {
+    // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
+    if (open) {
+        setNewId(firefighter.id);
+        setFirstName(firefighter.firstName);
+        setLastName(firefighter.lastName);
+        setRank(firefighter.rank);
+        setFirehouse(firefighter.firehouse);
+        setStatus(firefighter.status);
+    }
+  }, [open, firefighter]);
+
   useEffect(() => {
     const fetchExistingFirehouses = async () => {
         if (open) {
@@ -55,16 +70,12 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   }, [open]);
   
   const resetForm = () => {
-    setFirstName(firefighter.firstName);
-    setLastName(firefighter.lastName);
-    setRank(firefighter.rank);
-    setFirehouse(firefighter.firehouse);
-    setStatus(firefighter.status);
+    // State is reset via useEffect when 'open' or 'firefighter' changes.
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firstName || !lastName || !rank || !firehouse || !status) {
+    if (!newId || !firstName || !lastName || !rank || !firehouse || !status) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -76,20 +87,29 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
     setLoading(true);
 
     try {
-        const updatedData: Partial<Omit<Firefighter, 'id'>> = {
+        const updatedData: Omit<Firefighter, 'id'> = {
             firstName,
             lastName,
             rank,
             firehouse,
             status,
         };
-        
-        await updateFirefighter(firefighter.id, updatedData);
 
-        toast({
-            title: "¡Éxito!",
-            description: "El bombero ha sido actualizado.",
-        });
+        const legajoChanged = newId !== firefighter.id;
+
+        if (legajoChanged) {
+            await updateFirefighterId(firefighter.id, newId, updatedData);
+             toast({
+                title: "¡Éxito!",
+                description: `El legajo ha sido actualizado de ${firefighter.id} a ${newId}.`,
+            });
+        } else {
+            await updateFirefighter(firefighter.id, updatedData);
+            toast({
+                title: "¡Éxito!",
+                description: "El bombero ha sido actualizado.",
+            });
+        }
         
         onFirefighterUpdated();
         setOpen(false);
@@ -107,12 +127,9 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="font-headline">Editar Bombero</DialogTitle>
@@ -121,11 +138,20 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+             {firefighter.rank === 'ASPIRANTE' && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Atención: Cambio de Legajo</AlertTitle>
+                    <AlertDescription>
+                        Al cambiar el legajo, se creará un nuevo registro y se eliminará el anterior. Las asistencias pasadas del legajo viejo NO se migrarán al nuevo.
+                    </AlertDescription>
+                </Alert>
+             )}
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="id" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" className="col-span-3" value={firefighter.id} disabled />
+              <Input id="id" className="col-span-3" value={newId} onChange={e => setNewId(e.target.value)} required />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">

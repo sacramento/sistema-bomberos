@@ -66,6 +66,32 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
     await updateDoc(docRef, firefighterData);
 };
 
+export const updateFirefighterId = async (oldId: string, newId: string, firefighterData: Omit<Firefighter, 'id'>): Promise<void> => {
+    // Check if the new ID already exists
+    const newDocRef = doc(db, 'firefighters', newId);
+    const newDocSnap = await getDoc(newDocRef);
+    if (newDocSnap.exists()) {
+        throw new Error(`El nuevo legajo ${newId} ya está en uso.`);
+    }
+    
+    // Changing a document ID requires creating a new one and deleting the old one.
+    // This is a simplified version. A complete solution would need to update all references
+    // to the old ID in other collections (e.g., sessions, leaves).
+    
+    const batch = writeBatch(db);
+
+    // 1. Create the new document
+    batch.set(newDocRef, firefighterData);
+    
+    // 2. Delete the old document
+    const oldDocRef = doc(db, 'firefighters', oldId);
+    batch.delete(oldDocRef);
+
+    await batch.commit();
+    
+    // TODO: Implement a migration to update references in 'sessions' and 'leaves' collections.
+};
+
 export const deleteFirefighter = async (id: string): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);
     await deleteDoc(docRef);
