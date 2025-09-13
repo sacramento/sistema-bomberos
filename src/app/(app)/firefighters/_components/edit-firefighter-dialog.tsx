@@ -41,8 +41,6 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   
   const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  const isAspirante = firefighter.rank === 'ASPIRANTE';
 
   useEffect(() => {
     // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
@@ -138,7 +136,6 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
                 value={legajo} 
                 onChange={e => setLegajo(e.target.value)} 
                 required 
-                disabled={!isAspirante && !!firefighter.legajo}
               />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
