@@ -9,7 +9,7 @@ import { Firefighter } from '@/lib/types';
 import { MoreHorizontal, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import AddFirefighterDialog from './_components/add-firefighter-dialog';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { deleteFirefighter, getFirefighters } from '@/services/firefighters.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import ImportCsvDialog from './_components/import-csv-dialog';
@@ -41,6 +41,10 @@ export default function FirefightersPage() {
   useEffect(() => {
     fetchFirefighters();
   }, []);
+  
+  const sortedFirefighters = useMemo(() => {
+    return [...firefighters].sort((a, b) => a.legajo.localeCompare(b.legajo));
+  }, [firefighters]);
 
   const handleDataChange = () => {
     // Re-fetch firefighters after one is added, imported, edited, or deleted
@@ -111,7 +115,7 @@ export default function FirefightersPage() {
                   </TableRow>
                 ))
               ) : (
-                firefighters.map((firefighter: Firefighter) => (
+                sortedFirefighters.map((firefighter: Firefighter) => (
                   <TableRow key={firefighter.id || firefighter.legajo}>
                     <TableCell className="font-medium">{firefighter.legajo}</TableCell>
                     <TableCell>{`${firefighter.firstName} ${firefighter.lastName}`}</TableCell>
