@@ -26,7 +26,7 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
     const batch = writeBatch(db);
     
     // 1. Create a new leave document
-    const leaveDocRef = doc(leavesCollection); // Let firestore create ID
+    const leaveDocRef = doc(collection(db, 'leaves'));
     batch.set(leaveDocRef, leaveData);
 
     // 2. Find sessions within the leave date range
@@ -42,12 +42,13 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
         
         // Final check to be sure the session is in the interval. Firestore date queries can be tricky.
         if (isWithinInterval(sessionDate, { start: leaveStartDate, end: leaveEndDate })) {
-            const isParticipant = 
-                sessionData.attendeeIds?.includes(leaveData.firefighterId) ||
-                sessionData.instructorIds?.includes(leaveData.firefighterId) ||
-                sessionData.assistantIds?.includes(leaveData.firefighterId);
-
-            if (isParticipant) {
+             const allParticipantIds = [
+                ...(sessionData.attendeeIds || []),
+                ...(sessionData.instructorIds || []),
+                ...(sessionData.assistantIds || [])
+            ];
+            
+            if (allParticipantIds.includes(leaveData.firefighterId)) {
                 const attendancePath = `attendance.${leaveData.firefighterId}`;
                 batch.update(sessionDoc.ref, { [attendancePath]: 'excused' });
             }
