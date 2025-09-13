@@ -60,8 +60,8 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
     const fetchExistingFirehouses = async () => {
         if (open) {
           try {
-            const firefighters = await getFirefighters();
-            const uniqueFirehouses = Array.from(new Set(firefighters.map(f => f.firehouse)));
+            const allFirefighters = await getFirefighters();
+            const uniqueFirehouses = Array.from(new Set(allFirefighters.map(f => f.firehouse)));
             setExistingFirehouses(uniqueFirehouses);
           } catch (error) {
             console.error("Failed to fetch existing firehouses", error);

@@ -21,7 +21,6 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
 
 
 export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | 'status'>): Promise<string> => {
-    // Check if legajo already exists
     const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
     const querySnapshot = await getDocs(q);
 
@@ -29,12 +28,12 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
         throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
+    // Ensure status is always set
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData, 
-        status: 'Active' 
+        status: 'Active'
     };
 
-    // Let Firestore generate the ID
     const docRef = await addDoc(firefightersCollection, newFirefighter);
     return docRef.id;
 };
@@ -48,13 +47,13 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
     const batch = writeBatch(db);
 
     for (const firefighter of firefighters) {
-        // We are not using the legajo as ID, so we create a new doc for each
-        const docRef = doc(firefightersCollection); // Firestore will generate a unique ID
+        const docRef = doc(firefightersCollection); 
         
+        // Ensure status is always valid, default to 'Active'
         const firefighterWithDefaultStatus = {
             ...firefighter,
-            status: firefighter.status || 'Active'
-        }
+            status: firefighter.status === 'Active' || firefighter.status === 'Inactive' ? firefighter.status : 'Active'
+        };
 
         batch.set(docRef, firefighterWithDefaultStatus);
     }
@@ -70,7 +69,7 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
         throw new Error(`No se encontró al bombero.`);
     }
 
-    // If legajo is being changed, check for uniqueness, but only if it's an aspirante
+    // If legajo is being changed, check for uniqueness.
     if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
         const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
         const querySnapshot = await getDocs(q);
