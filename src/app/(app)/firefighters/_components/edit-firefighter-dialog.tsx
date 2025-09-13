@@ -32,7 +32,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   
-  const [legajo, setLegajo] = useState(firefighter.legajo);
+  const [legajo, setLegajo] = useState(firefighter.legajo || '');
   const [firstName, setFirstName] = useState(firefighter.firstName);
   const [lastName, setLastName] = useState(firefighter.lastName);
   const [rank, setRank] = useState<Firefighter['rank']>(firefighter.rank);
@@ -47,7 +47,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   useEffect(() => {
     // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
     if (open) {
-        setLegajo(firefighter.legajo);
+        setLegajo(firefighter.legajo || '');
         setFirstName(firefighter.firstName);
         setLastName(firefighter.lastName);
         setRank(firefighter.rank);
