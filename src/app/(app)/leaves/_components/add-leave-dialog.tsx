@@ -26,7 +26,7 @@ import { DateRange } from "react-day-picker";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const leaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio'];
+const leaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
 
 export default function AddLeaveDialog({ children, onLeaveAdded }: { children: React.ReactNode; onLeaveAdded: () => void; }) {
   const [open, setOpen] = useState(false);

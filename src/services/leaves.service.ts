@@ -3,7 +3,7 @@
 
 import { Leave } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, query, where, Timestamp, getDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, writeBatch, query, where, Timestamp, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { isWithinInterval, parseISO } from 'date-fns';
 
 if (!db) {
@@ -14,11 +14,14 @@ const leavesCollection = collection(db, 'leaves');
 const sessionsCollection = collection(db, 'sessions');
 
 export const getLeaves = async (): Promise<Leave[]> => {
-    const querySnapshot = await getDocs(query(leavesCollection, where("endDate", ">=", new Date().toISOString().split('T')[0])));
+    // We get all leaves, and filter/sort on the client if needed.
+    // This simplifies the query and makes it more robust.
+    const querySnapshot = await getDocs(query(leavesCollection));
     const leaves: Leave[] = [];
     querySnapshot.forEach((doc) => {
         leaves.push({ id: doc.id, ...doc.data() } as Leave);
     });
+    // Sort by most recent start date
     return leaves.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
 };
 
@@ -60,6 +63,15 @@ export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> =>
 
     return leaveDocRef.id;
 };
+
+export const updateLeave = async (id: string, leaveData: Partial<Omit<Leave, 'id' | 'firefighterId' | 'firefighterName'>>): Promise<void> => {
+    const docRef = doc(db, 'leaves', id);
+    await updateDoc(docRef, leaveData);
+    // Note: This does not automatically re-evaluate attendance for the new date range.
+    // That would require a more complex logic to find previous dates, revert excused status, and apply new ones.
+    // For now, the user should manually adjust attendance if date ranges change significantly.
+};
+
 
 export const deleteLeave = async (id: string): Promise<void> => {
     // Note: This does not revert excused attendances. 

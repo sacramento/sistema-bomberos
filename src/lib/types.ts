@@ -38,7 +38,7 @@ export type Session = {
   attendance?: Record<string, AttendanceStatus>; // Firefighter ID -> Status
 };
 
-export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio';
+export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio' | 'Maternidad';
 
 export type Leave = {
   id: string;

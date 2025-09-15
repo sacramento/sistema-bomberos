@@ -35,9 +35,11 @@ import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "
 import { useEffect, useState, useMemo } from 'react';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
+import { getLeaves } from '@/services/leaves.service';
 import { Session } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { isWithinInterval, startOfToday, endOfToday } from 'date-fns';
 
 const chartConfig = {
   attendees: {
@@ -53,6 +55,7 @@ const chartConfig = {
 export default function DashboardPage() {
   const [activeFirefighters, setActiveFirefighters] = useState(0);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
+  const [activeLeavesCount, setActiveLeavesCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
@@ -66,6 +69,14 @@ export default function DashboardPage() {
 
         const sessionData = await getSessions();
         setAllSessions(sessionData);
+        
+        const leavesData = await getLeaves();
+        const today = new Date();
+        const currentLeaves = leavesData.filter(leave => 
+            isWithinInterval(today, { start: new Date(leave.startDate), end: new Date(leave.endDate) })
+        );
+        setActiveLeavesCount(new Set(currentLeaves.map(l => l.firefighterId)).size);
+
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -219,7 +230,7 @@ export default function DashboardPage() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+             {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{activeLeavesCount}</div>}
             <p className="text-xs text-muted-foreground">
               Bomberos actualmente de licencia
             </p>

@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Leave } from "@/lib/types";
 import { getLeaves, deleteLeave } from "@/services/leaves.service";
@@ -14,7 +14,8 @@ import AddLeaveDialog from "./_components/add-leave-dialog";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import EditLeaveDialog from "./_components/edit-leave-dialog";
 
 export default function LeavesPage() {
     const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -117,6 +118,13 @@ export default function LeavesPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        <EditLeaveDialog leave={leave} onLeaveUpdated={handleDataChange}>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                        </EditLeaveDialog>
+                                                        <DropdownMenuSeparator />
                                                         <AlertDialogTrigger asChild>
                                                             <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
                                                                 <Trash2 className="mr-2 h-4 w-4" />
