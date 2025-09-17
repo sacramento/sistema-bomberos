@@ -140,7 +140,20 @@ export default function ReportsPage() {
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            
+            // Add compressed image
+            const img = new Image();
+            img.src = logoDataUrl;
+            await new Promise(resolve => img.onload = resolve);
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0);
+            const compressedLogoDataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality JPEG
+            
+            doc.addImage(compressedLogoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             // --- SUBHEADER / FILTERS ---
             doc.setFontSize(11);
@@ -158,10 +171,8 @@ export default function ReportsPage() {
             const barStartX = 55;
 
             const summaryItems = [
-                { label: 'Presentes', value: reportData.summary.present, color: '#22C55E' },
-                { label: 'Ausentes', value: reportData.summary.absent, color: '#EF4444' },
-                { label: 'Tardes', value: reportData.summary.tardy, color: '#FBBF24' },
-                { label: 'Justificados', value: reportData.summary.excused, color: '#8B5CF6' }
+                { label: 'Asistentes', value: reportData.summary.present + reportData.summary.tardy, color: '#22C55E' },
+                { label: 'Ausentes', value: reportData.summary.absent + reportData.summary.excused, color: '#EF4444' }
             ];
 
             doc.setFontSize(10);
@@ -207,11 +218,10 @@ export default function ReportsPage() {
             doc.setTextColor(40, 40, 40);
             doc.setFont('helvetica', 'bold');
 
-            const attendeesDetails = reportData.details.filter(d => d.status !== 'absent');
-            const absenteesDetails = reportData.details.filter(d => d.status === 'absent');
+            const attendeesDetails = reportData.details;
             
             if(attendeesDetails.length > 0) {
-                doc.text("Detalle de Asistentes (Presentes, Tardes, Justificados)", 14, currentY);
+                doc.text("Detalle de Registros", 14, currentY);
                 currentY += 5;
                  (doc as any).autoTable({
                     startY: currentY,
@@ -223,33 +233,11 @@ export default function ReportsPage() {
                         getStatusLabel(item.status)
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: [76, 175, 80] }, // Greenish
+                    headStyles: { fillColor: [51, 51, 51] },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
-
-             if(absenteesDetails.length > 0) {
-                 if (currentY > doc.internal.pageSize.getHeight() - 40) {
-                    doc.addPage();
-                    currentY = 20;
-                }
-                 doc.text("Detalle de Ausentes", 14, currentY);
-                 currentY += 5;
-                 (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    body: absenteesDetails.map(item => [
-                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                        item.session.title,
-                        item.session.date,
-                        getStatusLabel(item.status)
-                    ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: [244, 67, 54] }, // Reddish
-                });
-                currentY = (doc as any).lastAutoTable.finalY + 10;
-            }
-
+            
 
             // --- SIGNATURE AND FOOTER ---
             if (currentY > doc.internal.pageSize.getHeight() - 40) {
@@ -597,8 +585,8 @@ export default function ReportsPage() {
 
                          <Card className="lg:col-span-3">
                             <CardHeader>
-                                <CardTitle className="font-headline">Detalle de Asistentes</CardTitle>
-                                <CardDescription>Incluye presentes, tardes y justificados.</CardDescription>
+                                <CardTitle className="font-headline">Detalle de Registros</CardTitle>
+                                <CardDescription>Todos los registros de asistencia para los filtros aplicados.</CardDescription>
                             </CardHeader>
                             <CardContent className="max-h-[300px] overflow-y-auto">
                                 <Table>
@@ -610,7 +598,7 @@ export default function ReportsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {reportData.details.filter(d => d.status !== 'absent').map((item, index) => (
+                                        {reportData.details.map((item, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
                                                 <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
@@ -626,32 +614,6 @@ export default function ReportsPage() {
                             </CardContent>
                         </Card>
                     </div>
-
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Detalle de Ausentes</CardTitle>
-                        </CardHeader>
-                        <CardContent className="max-h-[300px] overflow-y-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Bombero</TableHead>
-                                        <TableHead>Clase</TableHead>
-                                        <TableHead>Fecha</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                     {reportData.details.filter(d => d.status === 'absent').map((item, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                            <TableCell>{item.session.date}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
                 </div>
             ) : (
                  <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
