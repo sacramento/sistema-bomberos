@@ -142,18 +142,7 @@ export default function ReportsPage() {
             doc.text("Reporte de Asistencia", 14, 22);
             
             // Add compressed image
-            const img = new Image();
-            img.src = logoDataUrl;
-            await new Promise(resolve => img.onload = resolve);
-            
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx?.drawImage(img, 0, 0);
-            const compressedLogoDataUrl = canvas.toDataURL('image/jpeg', 0.7); // Compress to 70% quality JPEG
-            
-            doc.addImage(compressedLogoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             // --- SUBHEADER / FILTERS ---
             doc.setFontSize(11);
@@ -170,9 +159,13 @@ export default function ReportsPage() {
             const barWidth = 80;
             const barStartX = 55;
 
+            const totalCombined = reportData.total;
+            const attendeesCombined = reportData.summary.present + reportData.summary.tardy;
+            const absenteesCombined = reportData.summary.absent + reportData.summary.excused;
+
             const summaryItems = [
-                { label: 'Asistentes', value: reportData.summary.present + reportData.summary.tardy, color: '#22C55E' },
-                { label: 'Ausentes', value: reportData.summary.absent + reportData.summary.excused, color: '#EF4444' }
+                { label: 'Asistentes', value: attendeesCombined, color: '#22C55E' },
+                { label: 'Ausentes', value: absenteesCombined, color: '#EF4444' }
             ];
 
             doc.setFontSize(10);
@@ -182,7 +175,7 @@ export default function ReportsPage() {
                      doc.addPage();
                      currentY = 20;
                 }
-                const percentage = reportData.total > 0 ? (item.value / reportData.total) * 100 : 0;
+                const percentage = totalCombined > 0 ? (item.value / totalCombined) * 100 : 0;
                 const filledWidth = (percentage / 100) * barWidth;
 
                 // Label
