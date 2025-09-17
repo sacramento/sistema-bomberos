@@ -101,7 +101,6 @@ export default function ReportsPage() {
             }
         };
         const fetchLogo = async () => {
-             // Pre-load logo for PDF generation only once
              try {
                 const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
                 const response = await fetch(logoUrl);
@@ -134,17 +133,18 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
-            doc.setFillColor(220, 53, 69); // Primary red color from theme
+            doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
 
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+            // Add compressed image to reduce PDF size
+            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             doc.setFontSize(11);
-            doc.setTextColor(108, 117, 125); // muted-foreground like color
+            doc.setTextColor(108, 117, 125);
             doc.setFont('helvetica', 'normal');
             const dateText = filterDate?.from
                 ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`
@@ -162,51 +162,32 @@ export default function ReportsPage() {
             
             let currentY = 75;
             
-            const addTableToPdf = (title: string, headers: string[][], body: any[][]) => {
-                if (body.length > 0) {
-                    if (currentY + 20 > doc.internal.pageSize.getHeight() - 30) {
-                        doc.addPage();
-                        currentY = 20;
-                    }
-                    doc.setFontSize(12);
-                    doc.setTextColor(40, 40, 40);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text(title, 14, currentY);
-                    currentY += 5;
-
-                    (doc as any).autoTable({
-                        startY: currentY,
-                        head: headers,
-                        body: body,
-                        theme: 'striped',
-                        headStyles: { fillColor: [220, 53, 69] },
-                    });
-                    currentY = (doc as any).lastAutoTable.finalY + 10;
+            if (reportData.details.length > 0) {
+                if (currentY + 20 > doc.internal.pageSize.getHeight() - 30) {
+                    doc.addPage();
+                    currentY = 20;
                 }
-            };
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Detalle de Registros", 14, currentY);
+                currentY += 5;
 
-            addTableToPdf(
-                "Detalle de Asistentes",
-                [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                reportData.attendeeDetails.map(item => [
-                    `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                    item.session.title,
-                    item.session.date,
-                    getStatusLabel(item.status)
-                ])
-            );
-           
-            addTableToPdf(
-                "Detalle de Ausentes",
-                [['Bombero', 'Clase', 'Fecha']],
-                reportData.absenteeDetails.map(item => [
-                    `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                    item.session.title,
-                    item.session.date
-                ])
-            );
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
+                    body: reportData.details.map(item => [
+                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                        item.session.title,
+                        item.session.date,
+                        getStatusLabel(item.status)
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [220, 53, 69] },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+            }
 
-            // Add Signature Lines
             if (currentY > doc.internal.pageSize.getHeight() - 40) {
                 doc.addPage();
                 currentY = 20;
@@ -222,7 +203,6 @@ export default function ReportsPage() {
             doc.text("Aclaración:", signatureX, currentY + 35);
             doc.line(signatureX + 22, currentY + 35, signatureX + signatureLineLength, currentY + 35);
             
-            // Set final page numbers
             const pageCount = (doc as any).internal.getNumberOfPages();
             for (let i = 1; i <= pageCount; i++) {
                 doc.setPage(i);
@@ -306,15 +286,11 @@ export default function ReportsPage() {
                 fill: PIE_CHART_COLORS[name as keyof typeof PIE_CHART_COLORS],
             }));
             
-        const attendeeDetails = finalData.filter(item => item.status === 'present' || item.status === 'tardy' || item.status === 'excused');
-        const absenteeDetails = finalData.filter(item => item.status === 'absent');
-
         return {
             summary,
             total,
             pieData,
-            attendeeDetails,
-            absenteeDetails
+            details: finalData
         };
 
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
@@ -504,7 +480,6 @@ export default function ReportsPage() {
 
             {reportData.total > 0 ? (
                 <div className="space-y-8">
-                    {/* Summary Cards */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                          {summaryCards.map((card, index) => (
                             <Card key={index}>
@@ -522,7 +497,6 @@ export default function ReportsPage() {
                          ))}
                     </div>
                     
-                    {/* Chart and Details Table */}
                     <div className="grid gap-8 lg:grid-cols-5">
                         <Card className="lg:col-span-2">
                             <CardHeader>
@@ -557,65 +531,35 @@ export default function ReportsPage() {
                             </CardContent>
                         </Card>
 
-                        <div className="lg:col-span-3 space-y-8">
-                            {reportData.attendeeDetails.length > 0 && (
-                                <Card>
-                                     <CardHeader>
-                                        <CardTitle className="font-headline">Detalle de Asistentes</CardTitle>
-                                     </CardHeader>
-                                     <CardContent className="max-h-[300px] overflow-y-auto">
-                                         <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clase</TableHead>
-                                                    <TableHead>Estado</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reportData.attendeeDetails.map((item, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                        <TableCell>
-                                                            <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
-                                                                {getStatusLabel(item.status)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                         </Table>
-                                     </CardContent>
-                                </Card>
-                            )}
-
-                             {reportData.absenteeDetails.length > 0 && (
-                                <Card>
-                                     <CardHeader>
-                                        <CardTitle className="font-headline">Detalle de Ausentes</CardTitle>
-                                     </CardHeader>
-                                     <CardContent className="max-h-[300px] overflow-y-auto">
-                                         <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clase</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {reportData.absenteeDetails.map((item, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                         </Table>
-                                     </CardContent>
-                                </Card>
-                            )}
-                        </div>
+                        <Card className="lg:col-span-3">
+                             <CardHeader>
+                                <CardTitle className="font-headline">Detalle de Registros</CardTitle>
+                             </CardHeader>
+                             <CardContent className="max-h-[300px] overflow-y-auto">
+                                 <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Bombero</TableHead>
+                                            <TableHead>Clase</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {reportData.details.map((item, index) => (
+                                            <TableRow key={index}>
+                                                <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                <TableCell>
+                                                    <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
+                                                        {getStatusLabel(item.status)}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                 </Table>
+                             </CardContent>
+                        </Card>
                     </div>
                 </div>
             ) : (
@@ -624,7 +568,6 @@ export default function ReportsPage() {
                 </div>
             )}
 
-            {/* PDF Generation Section */}
             <Card className="mt-8">
                 <CardHeader>
                     <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
@@ -641,7 +584,5 @@ export default function ReportsPage() {
         </>
     );
 }
-
-    
 
     
