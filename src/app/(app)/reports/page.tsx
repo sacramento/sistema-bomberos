@@ -7,13 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, Users, BookOpen, ChevronsUpDown, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Session, Firefighter, AttendanceStatus } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -70,6 +70,7 @@ export default function ReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
@@ -92,6 +93,15 @@ export default function ReportsPage() {
                 const firefightersData = await getFirefighters();
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
+
+                // Pre-load logo for PDF generation
+                const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
+                const response = await fetch(logoUrl);
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onload = () => setLogoDataUrl(reader.result as string);
+                reader.readAsDataURL(blob);
+
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -102,19 +112,19 @@ export default function ReportsPage() {
     }, [toast]);
     
     const generatePdf = async () => {
+        if (!logoDataUrl) {
+             toast({
+                title: "Espere un momento",
+                description: "El logo para el PDF aún se está cargando. Intente de nuevo en unos segundos.",
+                variant: "destructive"
+            });
+            return;
+        }
+
         setGeneratingPdf(true);
         const doc = new jsPDF();
         
         try {
-            const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
-            const response = await fetch(logoUrl);
-            const blob = await response.blob();
-            const reader = new FileReader();
-            const dataUrl = await new Promise(resolve => {
-                reader.onload = () => resolve(reader.result);
-                reader.readAsDataURL(blob);
-            });
-
             doc.setFillColor(220, 53, 69); // Primary red color from theme
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
@@ -122,7 +132,7 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
 
-            doc.addImage(dataUrl as string, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
 
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125); // muted-foreground like color
@@ -141,81 +151,76 @@ export default function ReportsPage() {
             doc.text(`Justificados: ${reportData.summary.excused}`, 80, statsY + 5);
             doc.text(`Total de Registros: ${reportData.total}`, 14, statsY + 12);
             
-            let chartYPosition = 80;
-            if (reportData.total > 0) {
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Distribución de Asistencia", 14, chartYPosition);
-                chartYPosition += 7;
+            let currentY = 75;
+            
+            const addTableToPdf = (title: string, headers: string[][], body: any[][]) => {
+                if (body.length > 0) {
+                    (doc as any).autoTable({
+                        startY: currentY,
+                        head: headers,
+                        body: body,
+                        theme: 'striped',
+                        headStyles: { fillColor: [220, 53, 69] },
+                        didDrawPage: (data: any) => {
+                            // Header logic for subsequent pages
+                        },
+                    });
+                    currentY = (doc as any).lastAutoTable.finalY + 10;
+                }
+            };
 
-                const chartData = [
-                    { label: "Presentes", value: reportData.summary.present, color: PIE_CHART_COLORS.present },
-                    { label: "Ausentes", value: reportData.summary.absent, color: PIE_CHART_COLORS.absent },
-                    { label: "Tardes", value: reportData.summary.tardy, color: PIE_CHART_COLORS.tardy },
-                    { label: "Justificados", value: reportData.summary.excused, color: PIE_CHART_COLORS.excused },
-                ];
-
-                const maxBarWidth = 120;
-                const barHeight = 8;
-                const barMargin = 4;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-
-                chartData.forEach(item => {
-                    if (item.value > 0) {
-                        const barWidth = (item.value / reportData.total) * maxBarWidth;
-                        const percentage = ((item.value / reportData.total) * 100).toFixed(1);
-                        const label = `${item.label} (${percentage}%)`;
-
-                        doc.setTextColor(80, 80, 80);
-                        doc.text(label, 14, chartYPosition + barHeight / 2 + 2);
-                        
-                        doc.setFillColor(item.color);
-                        doc.rect(60, chartYPosition, barWidth, barHeight, 'F');
-                        
-                        chartYPosition += barHeight + barMargin;
-                    }
-                });
-                chartYPosition += 5;
-            }
-
-            if (reportData.details.length > 0) {
-                (doc as any).autoTable({
-                    startY: chartYPosition,
-                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    body: reportData.details.map(item => [
+            if (reportData.attendeeDetails.length > 0) {
+                 doc.setFontSize(12);
+                 doc.setTextColor(40, 40, 40);
+                 doc.setFont('helvetica', 'bold');
+                 doc.text("Detalle de Asistentes", 14, currentY);
+                 currentY += 5;
+                 addTableToPdf(
+                    "Asistentes",
+                    [['Bombero', 'Clase', 'Fecha', 'Estado']],
+                    reportData.attendeeDetails.map(item => [
                         `${item.firefighter.firstName} ${item.firefighter.lastName}`,
                         item.session.title,
                         item.session.date,
                         getStatusLabel(item.status)
-                    ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: [220, 53, 69] },
-                    didDrawPage: (data: any) => {
-                        // This empty function is a placeholder for the final page numbering logic
-                    },
-                });
-
-                // Add Signature Lines
-                let finalY = (doc as any).lastAutoTable.finalY;
-                const signatureY = finalY + 25;
-                const pageWidth = doc.internal.pageSize.getWidth();
-                const signatureLineLength = 60;
-                const signatureX = (pageWidth / 2) - (signatureLineLength / 2);
-
-                if (signatureY > doc.internal.pageSize.getHeight() - 30) {
-                    doc.addPage();
-                    finalY = 10; // Reset Y position for new page
-                }
-                
-                doc.setFontSize(10);
-                doc.setTextColor(40, 40, 40);
-                doc.text("Firma:", signatureX, finalY + 25);
-                doc.line(signatureX + 15, finalY + 25, signatureX + signatureLineLength, finalY + 25);
-                doc.text("Aclaración:", signatureX, finalY + 35);
-                doc.line(signatureX + 22, finalY + 35, signatureX + signatureLineLength, finalY + 35);
+                    ])
+                );
             }
+           
+            if (reportData.absenteeDetails.length > 0) {
+                 doc.setFontSize(12);
+                 doc.setTextColor(40, 40, 40);
+                 doc.setFont('helvetica', 'bold');
+                 doc.text("Detalle de Ausentes", 14, currentY);
+                 currentY += 5;
+                 addTableToPdf(
+                    "Ausentes",
+                    [['Bombero', 'Clase', 'Fecha']],
+                    reportData.absenteeDetails.map(item => [
+                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                        item.session.title,
+                        item.session.date
+                    ])
+                );
+            }
+
+            // Add Signature Lines
+            const signatureY = currentY + 15;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const signatureLineLength = 60;
+            const signatureX = (pageWidth / 2) - (signatureLineLength / 2);
+
+            if (signatureY > doc.internal.pageSize.getHeight() - 30) {
+                doc.addPage();
+                currentY = 20;
+            }
+            
+            doc.setFontSize(10);
+            doc.setTextColor(40, 40, 40);
+            doc.text("Firma:", signatureX, currentY + 25);
+            doc.line(signatureX + 15, currentY + 25, signatureX + signatureLineLength, currentY + 25);
+            doc.text("Aclaración:", signatureX, currentY + 35);
+            doc.line(signatureX + 22, currentY + 35, signatureX + signatureLineLength, currentY + 35);
             
             // Set final page numbers
             const pageCount = (doc as any).internal.getNumberOfPages();
@@ -226,7 +231,6 @@ export default function ReportsPage() {
                 const pageStr = `Página ${i} de ${pageCount}`;
                 doc.text(pageStr, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.height - 10, { align: 'center' });
             }
-
 
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
@@ -304,12 +308,16 @@ export default function ReportsPage() {
                 value,
                 fill: PIE_CHART_COLORS[name as keyof typeof PIE_CHART_COLORS],
             }));
+            
+        const attendeeDetails = finalData.filter(item => item.status === 'present' || item.status === 'tardy' || item.status === 'excused');
+        const absenteeDetails = finalData.filter(item => item.status === 'absent');
 
         return {
             summary,
             total,
             pieData,
-            details: finalData
+            attendeeDetails,
+            absenteeDetails
         };
 
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
@@ -385,7 +393,7 @@ export default function ReportsPage() {
                                   {filterDate?.from ? (
                                       filterDate.to ? (
                                           <>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>
-                                      ) : (format(filterDate.from, "LLL dd, y"))
+                                      ) : (format(filterDate.from, "LLL dd, y", { locale: es }))
                                   ) : (<span>Seleccionar rango</span>)}
                               </Button>
                           </PopoverTrigger>
@@ -518,8 +526,8 @@ export default function ReportsPage() {
                     </div>
                     
                     {/* Chart and Details Table */}
-                    <div className="grid gap-8 md:grid-cols-5">
-                        <Card className="md:col-span-2">
+                    <div className="grid gap-8 lg:grid-cols-5">
+                        <Card className="lg:col-span-2">
                             <CardHeader>
                                 <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
                             </CardHeader>
@@ -552,35 +560,65 @@ export default function ReportsPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="md:col-span-3">
-                             <CardHeader>
-                                <CardTitle className="font-headline">Detalle de Asistentes</CardTitle>
-                             </CardHeader>
-                             <CardContent className="max-h-[400px] overflow-y-auto">
-                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Bombero</TableHead>
-                                            <TableHead>Clase</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {reportData.details.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
-                                                        {getStatusLabel(item.status)}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                 </Table>
-                             </CardContent>
-                        </Card>
+                        <div className="lg:col-span-3 space-y-8">
+                            {reportData.attendeeDetails.length > 0 && (
+                                <Card>
+                                     <CardHeader>
+                                        <CardTitle className="font-headline">Detalle de Asistentes</CardTitle>
+                                     </CardHeader>
+                                     <CardContent className="max-h-[300px] overflow-y-auto">
+                                         <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Bombero</TableHead>
+                                                    <TableHead>Clase</TableHead>
+                                                    <TableHead>Estado</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {reportData.attendeeDetails.map((item, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                        <TableCell>
+                                                            <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
+                                                                {getStatusLabel(item.status)}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                         </Table>
+                                     </CardContent>
+                                </Card>
+                            )}
+
+                             {reportData.absenteeDetails.length > 0 && (
+                                <Card>
+                                     <CardHeader>
+                                        <CardTitle className="font-headline">Detalle de Ausentes</CardTitle>
+                                     </CardHeader>
+                                     <CardContent className="max-h-[300px] overflow-y-auto">
+                                         <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Bombero</TableHead>
+                                                    <TableHead>Clase</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {reportData.absenteeDetails.map((item, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                         </Table>
+                                     </CardContent>
+                                </Card>
+                            )}
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -606,5 +644,6 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
     
