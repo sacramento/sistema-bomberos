@@ -213,6 +213,9 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
+  const [attendees, setAttendees] = useState<Firefighter[]>([]);
+
+  // State for filters
   const [manualAttendees, setManualAttendees] = useState<Firefighter[]>([]);
   const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
   const [selectedStations, setSelectedStations] = useState<string[]>([]);
@@ -238,42 +241,45 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     fetchAllFirefighters();
   }, [open, toast]);
 
+  // This effect will run when moving to the final "review" step (step 4)
+  // It calculates the final list of attendees and "freezes" it in state.
+  useEffect(() => {
+    if (step === 4) {
+        let filteredByGroup: Firefighter[] = [];
 
-  const attendees = useMemo(() => {
-    let filteredByGroup: Firefighter[] = [];
-
-    if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-        let filtered = allFirefighters;
-        
-        if (selectedHierarchies.length > 0) {
-            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+        if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
+            let filtered = allFirefighters;
             
-            filtered = filtered.filter(f => {
-                if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
-                if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
-                if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
-                return false;
-            });
+            if (selectedHierarchies.length > 0) {
+                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+                
+                filtered = filtered.filter(f => {
+                    if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+                    if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+                    if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+                    return false;
+                });
+            }
+            
+            if (selectedStations.length > 0) {
+                filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
+            }
+            filteredByGroup = filtered;
         }
         
-        if (selectedStations.length > 0) {
-            filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
-        }
-        filteredByGroup = filtered;
+        const combined = [...filteredByGroup, ...manualAttendees];
+        const uniqueAttendeesMap = new Map<string, Firefighter>();
+        combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
+
+        const finalAttendees = Array.from(uniqueAttendeesMap.values());
+        
+        const instructorIds = new Set(instructors.map(i => i.id));
+        const assistantIds = new Set(assistants.map(a => a.id));
+
+        setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
     }
-    
-    const combined = [...filteredByGroup, ...manualAttendees];
-    const uniqueAttendeesMap = new Map<string, Firefighter>();
-    combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
-
-    const finalAttendees = Array.from(uniqueAttendeesMap.values());
-    
-    const instructorIds = new Set(instructors.map(i => i.id));
-    const assistantIds = new Set(assistants.map(a => a.id));
-
-    return finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
-  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [step, allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
   
   const resetForm = () => {
     setTitle('');
@@ -284,6 +290,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     setInstructors([]);
     setAssistants([]);
     setManualAttendees([]);
+    setAttendees([]);
     setSelectedHierarchies([]);
     setSelectedStations([]);
     setStep(1);

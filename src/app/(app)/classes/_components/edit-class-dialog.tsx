@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -212,7 +213,8 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const [time, setTime] = useState(session.startTime);
   const [instructors, setInstructors] = useState<Firefighter[]>(session.instructors);
   const [assistants, setAssistants] = useState<Firefighter[]>(session.assistants);
-  
+  const [attendees, setAttendees] = useState<Firefighter[]>(session.attendees);
+
   // State for attendee selection
   const [manualAttendees, setManualAttendees] = useState<Firefighter[]>(session.attendees);
   const [selectedHierarchies, setSelectedHierarchies] = useState<string[]>([]);
@@ -239,43 +241,43 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     fetchAllFirefighters();
   }, [open, toast]);
 
-  const finalAttendees = useMemo(() => {
-    let filteredByGroup: Firefighter[] = [];
+  useEffect(() => {
+    if (step === 4) {
+        let filteredByGroup: Firefighter[] = [];
 
-    if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-        let filtered = allFirefighters;
-        
-        if (selectedHierarchies.length > 0) {
-            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+        if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
+            let filtered = allFirefighters;
             
-            filtered = filtered.filter(f => {
-                if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
-                if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
-                if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
-                return false;
-            });
+            if (selectedHierarchies.length > 0) {
+                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+                
+                filtered = filtered.filter(f => {
+                    if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+                    if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+                    if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+                    return false;
+                });
+            }
+            
+            if (selectedStations.length > 0) {
+                filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
+            }
+            filteredByGroup = filtered;
         }
         
-        if (selectedStations.length > 0) {
-            filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
-        }
-        filteredByGroup = filtered;
+        const combined = [...manualAttendees, ...filteredByGroup];
+        const uniqueAttendeesMap = new Map<string, Firefighter>();
+        combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
+
+        const finalAttendees = Array.from(uniqueAttendeesMap.values());
+        
+        const instructorIds = new Set(instructors.map(i => i.id));
+        const assistantIds = new Set(assistants.map(a => a.id));
+
+        setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
     }
-    
-    // Combine manually selected/existing attendees with newly filtered ones
-    const combined = [...manualAttendees, ...filteredByGroup];
-    const uniqueAttendeesMap = new Map<string, Firefighter>();
-    combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
-
-    // Exclude instructors and assistants from the final list
-    const instructorIds = new Set(instructors.map(i => i.id));
-    const assistantIds = new Set(assistants.map(a => a.id));
-    
-    const finalAttendeeList = Array.from(uniqueAttendeesMap.values());
-    return finalAttendeeList.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id));
-
-  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [step, allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
   
   const resetForm = () => {
     setStep(1);
@@ -287,6 +289,7 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
     setInstructors(session.instructors);
     setAssistants(session.assistants);
     setManualAttendees(session.attendees); // Reset manual list to the original attendees
+    setAttendees(session.attendees);
     setSelectedHierarchies([]); // Clear filters on reset
     setSelectedStations([]);
   };
@@ -308,7 +311,7 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const handleSubmit = async () => {
     setLoading(true);
     
-    if (finalAttendees.length === 0) {
+    if (attendees.length === 0) {
         toast({
             title: "Sin asistentes",
             description: "No puede haber una clase sin asistentes.",
@@ -327,14 +330,14 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
             startTime: time,
             instructors,
             assistants,
-            attendees: finalAttendees,
+            attendees: attendees,
         };
         
         await updateSession(session.id, updatedData);
 
         toast({
             title: "¡Éxito!",
-            description: `La clase ha sido actualizada con ${finalAttendees.length} asistentes.`,
+            description: `La clase ha sido actualizada con ${attendees.length} asistentes.`,
         });
         
         onClassUpdated();
@@ -434,10 +437,10 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
                        <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
-                           <p className="font-semibold">Total de Asistentes Asignados: {finalAttendees.length}</p>
-                           {finalAttendees.length > 0 && (
+                           <p className="font-semibold">Total de Asistentes Asignados: {attendees.length}</p>
+                           {attendees.length > 0 && (
                                <div className="text-xs text-muted-foreground h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                                   {finalAttendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
+                                   {attendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
                                </div>
                            )}
                        </div>

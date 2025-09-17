@@ -68,7 +68,7 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
         throw new Error(`No se encontró al bombero.`);
     }
 
-    // Si el legajo cambia, verificar unicidad (solo relevante para aspirantes).
+    // Si el legajo cambia, verificar unicidad.
     if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
         const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
         const querySnapshot = await getDocs(q);
