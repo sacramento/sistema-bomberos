@@ -251,6 +251,7 @@ export default function ReportsPage() {
             if (filterClass !== 'all' && session.id !== filterClass) return false;
             if (filterDate?.from) {
                 const sessionDate = new Date(session.date);
+                sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
                 const toDate = filterDate.to ?? filterDate.from;
                 if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
             }
@@ -605,3 +606,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
