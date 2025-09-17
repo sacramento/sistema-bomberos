@@ -94,7 +94,15 @@ export default function ReportsPage() {
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
 
-                // Pre-load logo for PDF generation only once
+            } catch (error) {
+                toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        const fetchLogo = async () => {
+             // Pre-load logo for PDF generation only once
+             try {
                 const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
                 const response = await fetch(logoUrl);
                 const blob = await response.blob();
@@ -103,14 +111,13 @@ export default function ReportsPage() {
                     setLogoDataUrl(reader.result as string);
                 };
                 reader.readAsDataURL(blob);
-
-            } catch (error) {
-                toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
-            } finally {
-                setLoading(false);
-            }
-        };
+             } catch (error) {
+                 console.error("Failed to load logo for PDF", error);
+                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para los reportes en PDF.", variant: "default" });
+             }
+        }
         fetchData();
+        fetchLogo();
     }, [toast]);
     
     const generatePdf = async () => {
@@ -242,20 +249,18 @@ export default function ReportsPage() {
     const reportData = useMemo(() => {
         let filteredAttendance: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
 
-        // 1. Filter sessions based on date and specialization
         const filteredSessions = allSessions.filter(session => {
             if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
             if (filterClass !== 'all' && session.id !== filterClass) return false;
             if (filterDate?.from) {
-                const sessionDate = new Date(session.date);
-                sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-                const toDate = filterDate.to ?? filterDate.from;
-                if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
+                 const sessionDate = new Date(session.date);
+                 sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+                 const toDate = filterDate.to ?? filterDate.from;
+                 if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
             }
             return true;
         });
 
-        // 2. Collect all attendance records from the filtered sessions
         for (const session of filteredSessions) {
             if (session.attendance) {
                 for (const firefighterId in session.attendance) {
@@ -271,7 +276,6 @@ export default function ReportsPage() {
             }
         }
         
-        // 3. Filter attendance records based on firefighter properties
         const finalData = filteredAttendance.filter(({ firefighter }) => {
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
             if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
@@ -637,5 +641,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
 
     
