@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2 } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -133,16 +133,16 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
-            doc.setFillColor(220, 53, 69);
+            // --- HEADER ---
+            doc.setFillColor(220, 53, 69); // Red color for header
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
-            // Add compressed image to reduce PDF size
-            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
-
+            // --- SUBHEADER / FILTERS ---
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
             doc.setFont('helvetica', 'normal');
@@ -151,43 +151,107 @@ export default function ReportsPage() {
                 : "Período: Todos los registros";
             doc.text(dateText, 14, 45);
 
+            // --- SUMMARY BARS ---
+            let currentY = 55;
+            const barHeight = 6;
+            const barWidth = 80;
+            const barStartX = 55;
+
+            const summaryItems = [
+                { label: 'Presentes', value: reportData.summary.present, color: '#22C55E' },
+                { label: 'Ausentes', value: reportData.summary.absent, color: '#EF4444' },
+                { label: 'Tardes', value: reportData.summary.tardy, color: '#FBBF24' },
+                { label: 'Justificados', value: reportData.summary.excused, color: '#8B5CF6' }
+            ];
+
             doc.setFontSize(10);
-            doc.setTextColor(40, 40, 40);
-            const statsY = 55;
-            doc.text(`Presentes: ${reportData.summary.present}`, 14, statsY);
-            doc.text(`Ausentes: ${reportData.summary.absent}`, 14, statsY + 5);
-            doc.text(`Tardes: ${reportData.summary.tardy}`, 80, statsY);
-            doc.text(`Justificados: ${reportData.summary.excused}`, 80, statsY + 5);
-            doc.text(`Total de Registros: ${reportData.total}`, 14, statsY + 12);
-            
-            let currentY = 75;
-            
-            if (reportData.details.length > 0) {
-                if (currentY + 20 > doc.internal.pageSize.getHeight() - 30) {
-                    doc.addPage();
-                    currentY = 20;
+
+            summaryItems.forEach(item => {
+                if (currentY > doc.internal.pageSize.getHeight() - 30) {
+                     doc.addPage();
+                     currentY = 20;
                 }
-                doc.setFontSize(12);
+                const percentage = reportData.total > 0 ? (item.value / reportData.total) * 100 : 0;
+                const filledWidth = (percentage / 100) * barWidth;
+
+                // Label
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                doc.text("Detalle de Registros", 14, currentY);
-                currentY += 5;
+                doc.text(item.label, 14, currentY + barHeight - 1);
+                
+                // Background bar
+                doc.setFillColor(230, 230, 230);
+                doc.rect(barStartX, currentY, barWidth, barHeight, 'F');
+                
+                // Filled bar
+                doc.setFillColor(item.color);
+                doc.rect(barStartX, currentY, filledWidth, barHeight, 'F');
 
-                (doc as any).autoTable({
+                // Value text
+                doc.setTextColor(80, 80, 80);
+                doc.setFont('helvetica', 'normal');
+                const valueText = `${item.value} (${percentage.toFixed(1)}%)`;
+                doc.text(valueText, barStartX + barWidth + 5, currentY + barHeight - 1);
+
+                currentY += 12;
+            });
+            
+            currentY += 5;
+
+            // --- DETAILS TABLES ---
+            if (currentY > doc.internal.pageSize.getHeight() - 40) {
+                doc.addPage();
+                currentY = 20;
+            }
+            doc.setFontSize(12);
+            doc.setTextColor(40, 40, 40);
+            doc.setFont('helvetica', 'bold');
+
+            const attendeesDetails = reportData.details.filter(d => d.status !== 'absent');
+            const absenteesDetails = reportData.details.filter(d => d.status === 'absent');
+            
+            if(attendeesDetails.length > 0) {
+                doc.text("Detalle de Asistentes (Presentes, Tardes, Justificados)", 14, currentY);
+                currentY += 5;
+                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    body: reportData.details.map(item => [
+                    body: attendeesDetails.map(item => [
                         `${item.firefighter.firstName} ${item.firefighter.lastName}`,
                         item.session.title,
                         item.session.date,
                         getStatusLabel(item.status)
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: [220, 53, 69] },
+                    headStyles: { fillColor: [76, 175, 80] }, // Greenish
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
 
+             if(absenteesDetails.length > 0) {
+                 if (currentY > doc.internal.pageSize.getHeight() - 40) {
+                    doc.addPage();
+                    currentY = 20;
+                }
+                 doc.text("Detalle de Ausentes", 14, currentY);
+                 currentY += 5;
+                 (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
+                    body: absenteesDetails.map(item => [
+                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                        item.session.title,
+                        item.session.date,
+                        getStatusLabel(item.status)
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: [244, 67, 54] }, // Reddish
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+            }
+
+
+            // --- SIGNATURE AND FOOTER ---
             if (currentY > doc.internal.pageSize.getHeight() - 40) {
                 doc.addPage();
                 currentY = 20;
@@ -480,7 +544,7 @@ export default function ReportsPage() {
 
             {reportData.total > 0 ? (
                 <div className="space-y-8">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                          {summaryCards.map((card, index) => (
                             <Card key={index}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -496,7 +560,7 @@ export default function ReportsPage() {
                             </Card>
                          ))}
                     </div>
-                    
+
                     <div className="grid gap-8 lg:grid-cols-5">
                         <Card className="lg:col-span-2">
                             <CardHeader>
@@ -531,12 +595,13 @@ export default function ReportsPage() {
                             </CardContent>
                         </Card>
 
-                        <Card className="lg:col-span-3">
-                             <CardHeader>
-                                <CardTitle className="font-headline">Detalle de Registros</CardTitle>
-                             </CardHeader>
-                             <CardContent className="max-h-[300px] overflow-y-auto">
-                                 <Table>
+                         <Card className="lg:col-span-3">
+                            <CardHeader>
+                                <CardTitle className="font-headline">Detalle de Asistentes</CardTitle>
+                                <CardDescription>Incluye presentes, tardes y justificados.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="max-h-[300px] overflow-y-auto">
+                                <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Bombero</TableHead>
@@ -545,7 +610,7 @@ export default function ReportsPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {reportData.details.map((item, index) => (
+                                        {reportData.details.filter(d => d.status !== 'absent').map((item, index) => (
                                             <TableRow key={index}>
                                                 <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
                                                 <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
@@ -557,10 +622,36 @@ export default function ReportsPage() {
                                             </TableRow>
                                         ))}
                                     </TableBody>
-                                 </Table>
-                             </CardContent>
+                                </Table>
+                            </CardContent>
                         </Card>
                     </div>
+
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Detalle de Ausentes</CardTitle>
+                        </CardHeader>
+                        <CardContent className="max-h-[300px] overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Bombero</TableHead>
+                                        <TableHead>Clase</TableHead>
+                                        <TableHead>Fecha</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                     {reportData.details.filter(d => d.status === 'absent').map((item, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                            <TableCell>{item.session.date}</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
                 </div>
             ) : (
                  <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
@@ -575,7 +666,11 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                     <Button onClick={generatePdf} disabled={generatingPdf || reportData.total === 0}>
-                        <Download className="mr-2 h-4 w-4" />
+                        {generatingPdf ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                            <Download className="mr-2 h-4 w-4" />
+                        )}
                         {generatingPdf ? "Generando..." : "Generar PDF"}
                     </Button>
                 </CardContent>
