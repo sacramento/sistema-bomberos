@@ -94,12 +94,14 @@ export default function ReportsPage() {
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
 
-                // Pre-load logo for PDF generation
+                // Pre-load logo for PDF generation only once
                 const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
                 const response = await fetch(logoUrl);
                 const blob = await response.blob();
                 const reader = new FileReader();
-                reader.onload = () => setLogoDataUrl(reader.result as string);
+                reader.onloadend = () => {
+                    setLogoDataUrl(reader.result as string);
+                };
                 reader.readAsDataURL(blob);
 
             } catch (error) {
@@ -155,65 +157,56 @@ export default function ReportsPage() {
             
             const addTableToPdf = (title: string, headers: string[][], body: any[][]) => {
                 if (body.length > 0) {
+                    if (currentY + 20 > doc.internal.pageSize.getHeight() - 30) {
+                        doc.addPage();
+                        currentY = 20;
+                    }
+                    doc.setFontSize(12);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(title, 14, currentY);
+                    currentY += 5;
+
                     (doc as any).autoTable({
                         startY: currentY,
                         head: headers,
                         body: body,
                         theme: 'striped',
                         headStyles: { fillColor: [220, 53, 69] },
-                        didDrawPage: (data: any) => {
-                            // Header logic for subsequent pages
-                        },
                     });
                     currentY = (doc as any).lastAutoTable.finalY + 10;
                 }
             };
 
-            if (reportData.attendeeDetails.length > 0) {
-                 doc.setFontSize(12);
-                 doc.setTextColor(40, 40, 40);
-                 doc.setFont('helvetica', 'bold');
-                 doc.text("Detalle de Asistentes", 14, currentY);
-                 currentY += 5;
-                 addTableToPdf(
-                    "Asistentes",
-                    [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    reportData.attendeeDetails.map(item => [
-                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                        item.session.title,
-                        item.session.date,
-                        getStatusLabel(item.status)
-                    ])
-                );
-            }
+            addTableToPdf(
+                "Detalle de Asistentes",
+                [['Bombero', 'Clase', 'Fecha', 'Estado']],
+                reportData.attendeeDetails.map(item => [
+                    `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                    item.session.title,
+                    item.session.date,
+                    getStatusLabel(item.status)
+                ])
+            );
            
-            if (reportData.absenteeDetails.length > 0) {
-                 doc.setFontSize(12);
-                 doc.setTextColor(40, 40, 40);
-                 doc.setFont('helvetica', 'bold');
-                 doc.text("Detalle de Ausentes", 14, currentY);
-                 currentY += 5;
-                 addTableToPdf(
-                    "Ausentes",
-                    [['Bombero', 'Clase', 'Fecha']],
-                    reportData.absenteeDetails.map(item => [
-                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                        item.session.title,
-                        item.session.date
-                    ])
-                );
-            }
+            addTableToPdf(
+                "Detalle de Ausentes",
+                [['Bombero', 'Clase', 'Fecha']],
+                reportData.absenteeDetails.map(item => [
+                    `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                    item.session.title,
+                    item.session.date
+                ])
+            );
 
             // Add Signature Lines
-            const signatureY = currentY + 15;
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const signatureLineLength = 60;
-            const signatureX = (pageWidth / 2) - (signatureLineLength / 2);
-
-            if (signatureY > doc.internal.pageSize.getHeight() - 30) {
+            if (currentY > doc.internal.pageSize.getHeight() - 40) {
                 doc.addPage();
                 currentY = 20;
             }
+            
+            const signatureLineLength = 60;
+            const signatureX = (doc.internal.pageSize.getWidth() / 2) - (signatureLineLength / 2);
             
             doc.setFontSize(10);
             doc.setTextColor(40, 40, 40);
