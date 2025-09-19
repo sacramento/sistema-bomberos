@@ -25,7 +25,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,14 +34,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
 const hierarchyOptions = [
-    { value: 'all', label: 'Todas las Jerarquías' },
-    { value: 'aspirantes', label: 'Solo Aspirantes' },
-    { value: 'bomberos', label: 'Solo Bomberos' },
+    { value: 'aspirantes', label: 'Aspirantes' },
+    { value: 'bomberos', label: 'Bomberos' },
     { value: 'suboficiales_oficiales', label: 'Suboficiales y Oficiales' }
 ];
 
 const stationOptions = [
-    { value: 'all', label: 'Todos los Cuarteles' },
     { value: 'Cuartel 1', label: 'Cuartel 1' },
     { value: 'Cuartel 2', label: 'Cuartel 2' },
     { value: 'Cuartel 3', label: 'Cuartel 3' },
@@ -69,6 +67,82 @@ const getStatusLabel = (status: AttendanceStatus) => {
 }
 
 
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label).filter(Boolean);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto"
+                >
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+
+
 export default function ReportsPage() {
     const { toast } = useToast();
     const { user } = useAuth();
@@ -85,8 +159,8 @@ export default function ReportsPage() {
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
-    const [filterHierarchy, setFilterHierarchy] = useState('all');
-    const [filterStation, setFilterStation] = useState('all');
+    const [filterHierarchy, setFilterHierarchy] = useState<string[]>([]);
+    const [filterStation, setFilterStation] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
     const [activeTab, setActiveTab] = useState("attendance");
@@ -121,14 +195,14 @@ export default function ReportsPage() {
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
-                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para los reportes en PDF.", variant: "default" });
+                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
              }
         }
         fetchData();
         fetchLogo();
     }, [toast]);
     
-     const generatePdf = async () => {
+    const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
             return;
@@ -138,15 +212,16 @@ export default function ReportsPage() {
         const doc = new jsPDF();
         
         try {
+            // PDF Header
             doc.setFillColor(220, 53, 69); 
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
-            
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
+            // Date Filter Info
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
             doc.setFont('helvetica', 'normal');
@@ -158,15 +233,17 @@ export default function ReportsPage() {
             const barWidth = 80;
             const barStartX = 55;
 
+            // Summary bars logic
             const totalCombined = attendanceReportData.total;
             const attendeesCombined = attendanceReportData.summary.present + attendanceReportData.summary.tardy;
             const absenteesCombined = attendanceReportData.summary.absent + attendanceReportData.summary.excused;
 
-            const summaryItems = [
+             const summaryItems = [
                 { label: 'Presentes', value: attendeesCombined, color: '#22C55E' },
                 { label: 'Ausentes', value: absenteesCombined, color: '#EF4444' }
             ];
 
+            // Draw summary bars
             doc.setFontSize(10);
             summaryItems.forEach(item => {
                 const percentage = totalCombined > 0 ? (item.value / totalCombined) * 100 : 0;
@@ -185,6 +262,7 @@ export default function ReportsPage() {
             });
             currentY += 5;
 
+            // Details Table
             doc.setFontSize(12);
             doc.setTextColor(40, 40, 40);
             doc.setFont('helvetica', 'bold');
@@ -223,7 +301,7 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Licencias", 14, 22);
             
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
@@ -278,14 +356,18 @@ export default function ReportsPage() {
         
         const finalData = filteredAttendance.filter(({ firefighter }) => {
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
-            if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
-            if (filterHierarchy !== 'all') {
+            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
+            if (filterHierarchy.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
-                if (filterHierarchy === 'bomberos' && firefighter.rank !== 'BOMBERO') return false;
-                if (filterHierarchy === 'aspirantes' && firefighter.rank !== 'ASPIRANTE') return false;
-                if (filterHierarchy === 'suboficiales_oficiales' && ![...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return false;
+                const hierarchyMatch = filterHierarchy.some(h => {
+                    if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
+                    if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
+                    if (h === 'suboficiales_oficiales' && [...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return true;
+                    return false;
+                });
+                if (!hierarchyMatch) return false;
             }
             return true;
         });
@@ -311,13 +393,17 @@ export default function ReportsPage() {
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
 
             if (firefighter) {
-                if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
-                if (filterHierarchy !== 'all') {
+                if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
+                if (filterHierarchy.length > 0) {
                      const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-                    if (filterHierarchy === 'bomberos' && firefighter.rank !== 'BOMBERO') return false;
-                    if (filterHierarchy === 'aspirantes' && firefighter.rank !== 'ASPIRANTE') return false;
-                    if (filterHierarchy === 'suboficiales_oficiales' && ![...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return false;
+                    const hierarchyMatch = filterHierarchy.some(h => {
+                        if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
+                        if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
+                        if (h === 'suboficiales_oficiales' && [...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return true;
+                        return false;
+                    });
+                    if (!hierarchyMatch) return false;
                 }
             }
 
@@ -383,7 +469,7 @@ export default function ReportsPage() {
                     <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                            {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Seleccionar integrante..."}
+                            {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
@@ -433,21 +519,11 @@ export default function ReportsPage() {
                 )}
                 <div className="space-y-2">
                     <Label>Jerarquía</Label>
-                    <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
-                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                        <SelectContent>
-                            {hierarchyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
                 </div>
                 <div className="space-y-2">
                     <Label>Cuartel</Label>
-                    <Select value={filterStation} onValueChange={setFilterStation}>
-                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                        <SelectContent>
-                            {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
                 </div>
             </CardContent>
         </Card>
@@ -476,7 +552,7 @@ export default function ReportsPage() {
                     <CommonFilters />
                     {attendanceReportData.total > 0 ? (
                         <div className="space-y-8">
-                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                                  {summaryCards.map((card, index) => (
                                     <Card key={index}>
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -511,58 +587,31 @@ export default function ReportsPage() {
                                         </ChartContainer>
                                     </CardContent>
                                 </Card>
-                                 <div className="lg:col-span-3 space-y-4">
-                                    <Card>
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-lg text-green-600">Detalle de Asistentes</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="max-h-[200px] overflow-y-auto">
-                                            <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Bombero</TableHead>
-                                                        <TableHead>Clase</TableHead>
-                                                        <TableHead>Estado</TableHead>
+                                 <Card className="lg:col-span-3">
+                                     <CardHeader>
+                                        <CardTitle className="font-headline">Detalle de Registros</CardTitle>
+                                     </CardHeader>
+                                     <CardContent className="max-h-[300px] overflow-y-auto">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Bombero</TableHead>
+                                                    <TableHead>Clase</TableHead>
+                                                    <TableHead>Estado</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {attendanceReportData.details.map((item, index) => (
+                                                    <TableRow key={index}>
+                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                        <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
                                                     </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {attendanceReportData.details.filter(d => d.status === 'present' || d.status === 'tardy' || d.status === 'excused').map((item, index) => (
-                                                        <TableRow key={`present-${index}`}>
-                                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                            <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </CardContent>
-                                    </Card>
-                                     <Card>
-                                        <CardHeader>
-                                            <CardTitle className="font-headline text-lg text-red-600">Detalle de Ausentes</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="max-h-[200px] overflow-y-auto">
-                                             <Table>
-                                                <TableHeader>
-                                                    <TableRow>
-                                                        <TableHead>Bombero</TableHead>
-                                                        <TableHead>Clase</TableHead>
-                                                        <TableHead>Estado</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {attendanceReportData.details.filter(d => d.status === 'absent').map((item, index) => (
-                                                        <TableRow key={`absent-${index}`}>
-                                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                            <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
-                                        </CardContent>
-                                    </Card>
-                                </div>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                     </CardContent>
+                                 </Card>
                             </div>
                             <Card className="mt-8">
                                 <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription></CardHeader>
