@@ -24,13 +24,15 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/auth-context";
 
-const leaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
+const allLeaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
 
 export default function EditLeaveDialog({ children, leave, onLeaveUpdated }: { children: React.ReactNode; leave: Leave; onLeaveUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   
   const [leaveType, setLeaveType] = useState<LeaveType>(leave.type);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -38,6 +40,10 @@ export default function EditLeaveDialog({ children, leave, onLeaveUpdated }: { c
       to: parseISO(leave.endDate),
   });
   
+  const availableLeaveTypes = user?.role === 'Ayudantía'
+    ? allLeaveTypes.filter(t => t !== 'Sanción')
+    : allLeaveTypes;
+
   useEffect(() => {
     if (open) {
       setLeaveType(leave.type);
@@ -114,7 +120,7 @@ export default function EditLeaveDialog({ children, leave, onLeaveUpdated }: { c
                   <SelectValue placeholder="Seleccione un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {leaveTypes.map(type => (
+                  {availableLeaveTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>

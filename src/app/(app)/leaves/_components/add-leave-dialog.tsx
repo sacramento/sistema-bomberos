@@ -23,15 +23,17 @@ import { Check, ChevronsUpDown, Calendar as CalendarIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { format } from 'date-fns';
+import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from "@/context/auth-context";
 
-const leaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
+const allLeaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
 
 export default function AddLeaveDialog({ children, onLeaveAdded }: { children: React.ReactNode; onLeaveAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
   
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
@@ -39,6 +41,10 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const [openCombobox, setOpenCombobox] = useState(false);
+
+  const availableLeaveTypes = user?.role === 'Ayudantía'
+    ? allLeaveTypes.filter(t => t !== 'Sanción')
+    : allLeaveTypes;
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -109,6 +115,10 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
     }
   }
 
+  const leaveDays = dateRange?.from && dateRange.to
+    ? differenceInCalendarDays(dateRange.to, dateRange.from) + 1
+    : 0;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => {
         setOpen(isOpen);
@@ -175,7 +185,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                   <SelectValue placeholder="Seleccione un tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {leaveTypes.map(type => (
+                  {availableLeaveTypes.map(type => (
                     <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
@@ -217,6 +227,11 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                         />
                     </PopoverContent>
                 </Popover>
+                {user?.role === 'Ayudantía' && leaveDays > 0 && (
+                    <p className="text-sm text-muted-foreground mt-2 text-center">
+                        Total de días de licencia: <span className="font-bold">{leaveDays}</span>
+                    </p>
+                )}
             </div>
           </div>
           <DialogFooter>

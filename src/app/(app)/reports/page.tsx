@@ -7,17 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2, ClipboardMinus } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Session, Firefighter, AttendanceStatus } from "@/lib/types";
+import { Session, Firefighter, AttendanceStatus, Leave } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getFirefighters } from "@/services/firefighters.service";
+import { getLeaves } from "@/services/leaves.service";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
@@ -26,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -68,6 +71,7 @@ const getStatusLabel = (status: AttendanceStatus) => {
 
 export default function ReportsPage() {
     const { toast } = useToast();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -75,6 +79,7 @@ export default function ReportsPage() {
     // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
+    const [allLeaves, setAllLeaves] = useState<Leave[]>([]);
 
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -89,10 +94,14 @@ export default function ReportsPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const sessionsData = await getSessions();
-                const firefightersData = await getFirefighters();
+                const [sessionsData, firefightersData, leavesData] = await Promise.all([
+                    getSessions(),
+                    getFirefighters(),
+                    getLeaves()
+                ]);
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
+                setAllLeaves(leavesData);
 
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
@@ -102,8 +111,7 @@ export default function ReportsPage() {
         };
         const fetchLogo = async () => {
              try {
-                const logoUrl = 'https://i.ibb.co/yF0SYDNF/logo.png';
-                const response = await fetch(logoUrl);
+                const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
                 const blob = await response.blob();
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -119,161 +127,130 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
-    const generatePdf = async () => {
+    const generateAttendancePdf = async () => {
         if (!logoDataUrl) {
-             toast({
-                title: "Espere un momento",
-                description: "El logo para el PDF aún se está cargando. Intente de nuevo en unos segundos.",
-                variant: "destructive"
-            });
-            return;
+             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
         }
 
         setGeneratingPdf(true);
         const doc = new jsPDF();
         
         try {
-            // --- HEADER ---
-            doc.setFillColor(220, 53, 69); // Red color for header
+            doc.setFillColor(220, 53, 69); 
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
             
-            // Add compressed image
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
-            // --- SUBHEADER / FILTERS ---
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
             doc.setFont('helvetica', 'normal');
-            const dateText = filterDate?.from
-                ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`
-                : "Período: Todos los registros";
+            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
             doc.text(dateText, 14, 45);
 
-            // --- SUMMARY BARS ---
             let currentY = 55;
             const barHeight = 6;
             const barWidth = 80;
             const barStartX = 55;
 
-            const totalCombined = reportData.total;
-            const attendeesCombined = reportData.summary.present + reportData.summary.tardy;
-            const absenteesCombined = reportData.summary.absent + reportData.summary.excused;
+            const totalCombined = attendanceReportData.total;
+            const attendeesCombined = attendanceReportData.summary.present + attendanceReportData.summary.tardy;
+            const absenteesCombined = attendanceReportData.summary.absent + attendanceReportData.summary.excused;
 
             const summaryItems = [
-                { label: 'Asistentes', value: attendeesCombined, color: '#22C55E' },
+                { label: 'Presentes', value: attendeesCombined, color: '#22C55E' },
                 { label: 'Ausentes', value: absenteesCombined, color: '#EF4444' }
             ];
 
             doc.setFontSize(10);
-
             summaryItems.forEach(item => {
-                if (currentY > doc.internal.pageSize.getHeight() - 30) {
-                     doc.addPage();
-                     currentY = 20;
-                }
                 const percentage = totalCombined > 0 ? (item.value / totalCombined) * 100 : 0;
                 const filledWidth = (percentage / 100) * barWidth;
-
-                // Label
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
                 doc.text(item.label, 14, currentY + barHeight - 1);
-                
-                // Background bar
                 doc.setFillColor(230, 230, 230);
                 doc.rect(barStartX, currentY, barWidth, barHeight, 'F');
-                
-                // Filled bar
                 doc.setFillColor(item.color);
                 doc.rect(barStartX, currentY, filledWidth, barHeight, 'F');
-
-                // Value text
                 doc.setTextColor(80, 80, 80);
                 doc.setFont('helvetica', 'normal');
-                const valueText = `${item.value} (${percentage.toFixed(1)}%)`;
-                doc.text(valueText, barStartX + barWidth + 5, currentY + barHeight - 1);
-
+                doc.text(`${item.value} (${percentage.toFixed(1)}%)`, barStartX + barWidth + 5, currentY + barHeight - 1);
                 currentY += 12;
             });
-            
             currentY += 5;
 
-            // --- DETAILS TABLES ---
-            if (currentY > doc.internal.pageSize.getHeight() - 40) {
-                doc.addPage();
-                currentY = 20;
-            }
             doc.setFontSize(12);
             doc.setTextColor(40, 40, 40);
             doc.setFont('helvetica', 'bold');
-
-            const attendeesDetails = reportData.details;
-            
-            if(attendeesDetails.length > 0) {
+            if(attendanceReportData.details.length > 0) {
                 doc.text("Detalle de Registros", 14, currentY);
                 currentY += 5;
                  (doc as any).autoTable({
                     startY: currentY,
                     head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    body: attendeesDetails.map(item => [
-                        `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                        item.session.title,
-                        item.session.date,
-                        getStatusLabel(item.status)
-                    ]),
+                    body: attendanceReportData.details.map(item => [`${item.firefighter.firstName} ${item.firefighter.lastName}`, item.session.title, item.session.date, getStatusLabel(item.status)]),
                     theme: 'striped',
-                    headStyles: { fillColor: [51, 51, 51] },
+                    headStyles: { fillColor: '#333333' },
                 });
-                currentY = (doc as any).lastAutoTable.finalY + 10;
             }
-            
-
-            // --- SIGNATURE AND FOOTER ---
-            if (currentY > doc.internal.pageSize.getHeight() - 40) {
-                doc.addPage();
-                currentY = 20;
-            }
-            
-            const signatureLineLength = 60;
-            const signatureX = (doc.internal.pageSize.getWidth() / 2) - (signatureLineLength / 2);
-            
-            doc.setFontSize(10);
-            doc.setTextColor(40, 40, 40);
-            doc.text("Firma:", signatureX, currentY + 25);
-            doc.line(signatureX + 15, currentY + 25, signatureX + signatureLineLength, currentY + 25);
-            doc.text("Aclaración:", signatureX, currentY + 35);
-            doc.line(signatureX + 22, currentY + 35, signatureX + signatureLineLength, currentY + 35);
-            
-            const pageCount = (doc as any).internal.getNumberOfPages();
-            for (let i = 1; i <= pageCount; i++) {
-                doc.setPage(i);
-                doc.setFontSize(8);
-                doc.setTextColor(150, 150, 150);
-                const pageStr = `Página ${i} de ${pageCount}`;
-                doc.text(pageStr, doc.internal.pageSize.getWidth() / 2, doc.internal.pageSize.height - 10, { align: 'center' });
-            }
-
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
-            toast({
-                title: "Error al generar PDF",
-                description: "Hubo un problema al crear el archivo PDF.",
-                variant: "destructive"
-            });
-            console.error(error);
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
             setGeneratingPdf(false);
         }
     };
+    
+    const generateLeavesPdf = async () => {
+         if (!logoDataUrl) {
+             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
+        }
+
+        setGeneratingPdf(true);
+        const doc = new jsPDF();
+        
+        try {
+            doc.setFillColor(220, 53, 69); 
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Reporte de Licencias", 14, 22);
+            
+            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+
+            doc.setFontSize(11);
+            doc.setTextColor(108, 117, 125);
+            doc.setFont('helvetica', 'normal');
+            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+            doc.text(dateText, 14, 45);
+
+            let currentY = 55;
+            
+            if(leavesReportData.length > 0) {
+                 (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Bombero', 'Tipo', 'Desde', 'Hasta']],
+                    body: leavesReportData.map(item => [item.firefighterName, item.type, format(new Date(item.startDate), "PPP", { locale: es }), format(new Date(item.endDate), "PPP", { locale: es })]),
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333333' },
+                });
+            }
+            doc.save(`reporte-licencias-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+        } finally {
+            setGeneratingPdf(false);
+        }
+    }
 
 
-    const reportData = useMemo(() => {
+    const attendanceReportData = useMemo(() => {
         let filteredAttendance: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
-
         const filteredSessions = allSessions.filter(session => {
             if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
             if (filterClass !== 'all' && session.id !== filterClass) return false;
@@ -291,11 +268,7 @@ export default function ReportsPage() {
                 for (const firefighterId in session.attendance) {
                     const firefighter = allFirefighters.find(f => f.id === firefighterId);
                     if (firefighter) {
-                        filteredAttendance.push({
-                            firefighter,
-                            status: session.attendance[firefighterId],
-                            session,
-                        });
+                        filteredAttendance.push({ firefighter, status: session.attendance[firefighterId], session });
                     }
                 }
             }
@@ -325,30 +298,35 @@ export default function ReportsPage() {
 
         const pieData = Object.entries(summary)
             .filter(([, value]) => value > 0)
-            .map(([name, value]) => ({
-                name: getStatusLabel(name as AttendanceStatus),
-                value,
-                fill: PIE_CHART_COLORS[name as keyof typeof PIE_CHART_COLORS],
-            }));
+            .map(([name, value]) => ({ name: getStatusLabel(name as AttendanceStatus), value, fill: PIE_CHART_COLORS[name as keyof typeof PIE_CHART_COLORS] }));
             
-        return {
-            summary,
-            total,
-            pieData,
-            details: finalData
-        };
-
+        return { summary, total, pieData, details: finalData };
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
+
+    const leavesReportData = useMemo(() => {
+        return allLeaves.filter(leave => {
+            if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
+            if (filterDate?.from) {
+                const leaveStartDate = startOfDay(new Date(leave.startDate));
+                const leaveEndDate = endOfDay(new Date(leave.endDate));
+                const filterStartDate = startOfDay(filterDate.from);
+                const filterEndDate = endOfDay(filterDate.to ?? filterDate.from);
+                // Check for overlap
+                if (leaveStartDate > filterEndDate || leaveEndDate < filterStartDate) return false;
+            }
+            return true;
+        });
+    }, [allLeaves, filterFirefighter, filterDate]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
     }, [allSessions]);
     
     const summaryCards = [
-        { title: "Presentes", value: reportData.summary.present, icon: UserCheck, color: "text-green-500" },
-        { title: "Ausentes", value: reportData.summary.absent, icon: UserX, color: "text-red-500" },
-        { title: "Tardes", value: reportData.summary.tardy, icon: Clock, color: "text-yellow-500" },
-        { title: "Justificados", value: reportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+        { title: "Presentes", value: attendanceReportData.summary.present, icon: UserCheck, color: "text-green-500" },
+        { title: "Ausentes", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
+        { title: "Tardes", value: attendanceReportData.summary.tardy, icon: Clock, color: "text-yellow-500" },
+        { title: "Justificados", value: attendanceReportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
     
     const RADIAN = Math.PI / 180;
@@ -360,26 +338,106 @@ export default function ReportsPage() {
         if (percent === 0) return null;
 
         return (
-            <text
-            x={x}
-            y={y}
-            fill={'#333'}
-            textAnchor="middle"
-            dominantBaseline="central"
-            style={{
-                fontSize: '14px',
-                fontWeight: 'bold',
-                paintOrder: 'stroke',
-                stroke: '#fff',
-                strokeWidth: '3px',
-                strokeLinecap: 'butt',
-                strokeLinejoin: 'miter',
-            }}
-            >
-            {`${(percent * 100).toFixed(0)}%`}
+            <text x={x} y={y} fill={'#333'} textAnchor="middle" dominantBaseline="central" style={{ fontSize: '14px', fontWeight: 'bold', paintOrder: 'stroke', stroke: '#fff', strokeWidth: '3px', strokeLinecap: 'butt', strokeLinejoin: 'miter' }}>
+                {`${(percent * 100).toFixed(0)}%`}
             </text>
         );
     };
+    
+    const CommonFilters = () => (
+         <Card className="mb-8">
+            <CardHeader>
+                <CardTitle className="font-headline">Filtros de Reporte</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="space-y-2">
+                  <Label>Rango de Fechas</Label>
+                  <Popover>
+                      <PopoverTrigger asChild>
+                          <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
+                          </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} />
+                      </PopoverContent>
+                  </Popover>
+                </div>
+                 <div className="space-y-2">
+                    <Label>Integrante Específico</Label>
+                    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
+                            {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Seleccionar integrante..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                            <Command>
+                            <CommandInput placeholder="Buscar integrante..." />
+                            <CommandList>
+                                <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                                <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
+                                     <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                    Todos los integrantes
+                                </CommandItem>
+                                {allFirefighters.map((firefighter) => (
+                                <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                    <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                </CommandItem>
+                                ))}
+                            </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                {user?.role !== 'Ayudantía' && (
+                    <>
+                        <div className="space-y-2">
+                            <Label>Especialidad</Label>
+                            <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las especialidades</SelectItem>
+                                    {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Clase Específica</Label>
+                            <Select value={filterClass} onValueChange={setFilterClass}>
+                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las clases</SelectItem>
+                                    {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Jerarquía</Label>
+                            <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
+                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent>
+                                    {hierarchyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Cuartel</Label>
+                            <Select value={filterStation} onValueChange={setFilterStation}>
+                                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                                <SelectContent>
+                                    {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </>
+                )}
+            </CardContent>
+        </Card>
+    );
 
     if (loading) {
         return (
@@ -392,245 +450,90 @@ export default function ReportsPage() {
 
     return (
         <>
-            <PageHeader title="Reportes" description="Filtre y analice los datos de asistencia a las capacitaciones." />
+            <PageHeader title="Reportes" description="Filtre y analice los datos de asistencia y licencias." />
             
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle className="font-headline">Filtros de Reporte</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                     <div className="space-y-2">
-                      <Label>Rango de Fechas</Label>
-                      <Popover>
-                          <PopoverTrigger asChild>
-                              <Button
-                                  variant={"outline"}
-                                  className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}
-                              >
-                                  <CalendarIcon className="mr-2 h-4 w-4" />
-                                  {filterDate?.from ? (
-                                      filterDate.to ? (
-                                          <>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>
-                                      ) : (format(filterDate.from, "LLL dd, y", { locale: es }))
-                                  ) : (<span>Seleccionar rango</span>)}
-                              </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                              <Calendar
-                                  initialFocus
-                                  mode="range"
-                                  defaultMonth={filterDate?.from}
-                                  selected={filterDate}
-                                  onSelect={setFilterDate}
-                                  numberOfMonths={2}
-                                  locale={es}
-                              />
-                          </PopoverContent>
-                      </Popover>
-                    </div>
-                     <div className="space-y-2">
-                      <Label>Especialidad</Label>
-                      <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                          <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                          <SelectContent>
-                              <SelectItem value="all">Todas las especialidades</SelectItem>
-                              {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                          </SelectContent>
-                      </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Clase Específica</Label>
-                        <Select value={filterClass} onValueChange={setFilterClass}>
-                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las clases</SelectItem>
-                                {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Jerarquía</Label>
-                         <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
-                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                            <SelectContent>
-                                {hierarchyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                            </SelectContent>
-                         </Select>
-                    </div>
-                     <div className="space-y-2">
-                       <Label>Cuartel</Label>
-                        <Select value={filterStation} onValueChange={setFilterStation}>
-                            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                            <SelectContent>
-                                {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Integrante Específico</Label>
-                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild>
-                                <Button
-                                variant="outline"
-                                role="combobox"
-                                aria-expanded={openCombobox}
-                                className="w-full justify-between"
-                                >
-                                {filterFirefighter !== 'all'
-                                    ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}`
-                                    : "Seleccionar integrante..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                <CommandInput placeholder="Buscar integrante..." />
-                                <CommandList>
-                                    <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                                    <CommandItem
-                                        value='all'
-                                        onSelect={() => {
-                                            setFilterFirefighter('all');
-                                            setOpenCombobox(false);
-                                        }}
-                                        >
-                                         <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
-                                        Todos los integrantes
-                                    </CommandItem>
-                                    {allFirefighters.map((firefighter) => (
-                                    <CommandItem
-                                        key={firefighter.id}
-                                        value={`${firefighter.firstName} ${firefighter.lastName}`}
-                                        onSelect={() => {
-                                            setFilterFirefighter(firefighter.id);
-                                            setOpenCombobox(false);
-                                        }}
-                                    >
-                                        <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0"
-                                        )}
-                                        />
-                                        {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
-                                    </CommandItem>
-                                    ))}
-                                </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {reportData.total > 0 ? (
-                <div className="space-y-8">
-                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                         {summaryCards.map((card, index) => (
-                            <Card key={index}>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                                     <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">{card.value}</div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {reportData.total > 0 ? `${((card.value / reportData.total) * 100).toFixed(1)}% del total` : ''}
-                                    </p>
-                                </CardContent>
+            <Tabs defaultValue="attendance" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+                    <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
+                    {user?.role === 'Ayudantía' && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
+                </TabsList>
+                
+                <TabsContent value="attendance">
+                    <CommonFilters />
+                    {attendanceReportData.total > 0 ? (
+                        <div className="space-y-8">
+                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                 {summaryCards.map((card, index) => (
+                                    <Card key={index}>
+                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                                             <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                                        </CardHeader>
+                                        <CardContent>
+                                            <div className="text-2xl font-bold">{card.value}</div>
+                                            <p className="text-xs text-muted-foreground">
+                                                {attendanceReportData.total > 0 ? `${((card.value / attendanceReportData.total) * 100).toFixed(1)}% del total` : ''}
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                 ))}
+                            </div>
+                            <div className="grid gap-8 lg:grid-cols-5">
+                                <Card className="lg:col-span-2">
+                                    <CardHeader>
+                                        <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <ChartContainer config={{}} className="h-[250px] w-full">
+                                             <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                                    <Pie data={attendanceReportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
+                                                        {attendanceReportData.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                                                    </Pie>
+                                                    <Legend />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </ChartContainer>
+                                    </CardContent>
+                                </Card>
+                                <Card className="lg:col-span-3">
+                                    <CardHeader><CardTitle className="font-headline">Detalle de Registros</CardTitle><CardDescription>Todos los registros de asistencia para los filtros aplicados.</CardDescription></CardHeader>
+                                    <CardContent className="max-h-[300px] overflow-y-auto">
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Bombero</TableHead><TableHead>Clase</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader>
+                                            <TableBody>{attendanceReportData.details.map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell><TableCell className="text-muted-foreground">{item.session.title}</TableCell><TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell></TableRow>))}</TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            <Card className="mt-8">
+                                <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription></CardHeader>
+                                <CardContent><Button onClick={generateAttendancePdf} disabled={generatingPdf || attendanceReportData.total === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}</Button></CardContent>
                             </Card>
-                         ))}
-                    </div>
-
-                    <div className="grid gap-8 lg:grid-cols-5">
-                        <Card className="lg:col-span-2">
-                            <CardHeader>
-                                <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div>
-                                    <ChartContainer config={{}} className="h-[250px] w-full">
-                                         <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                                <Pie
-                                                    data={reportData.pieData}
-                                                    dataKey="value"
-                                                    nameKey="name"
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    labelLine={false}
-                                                    label={renderCustomizedLabel}
-                                                    outerRadius={100}
-                                                    innerRadius={60}
-                                                >
-                                                    {reportData.pieData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                                    ))}
-                                                </Pie>
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </ChartContainer>
-                                </div>
-                            </CardContent>
-                        </Card>
-
-                         <Card className="lg:col-span-3">
-                            <CardHeader>
-                                <CardTitle className="font-headline">Detalle de Registros</CardTitle>
-                                <CardDescription>Todos los registros de asistencia para los filtros aplicados.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="max-h-[300px] overflow-y-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Bombero</TableHead>
-                                            <TableHead>Clase</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {reportData.details.map((item, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                <TableCell>
-                                                    <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
-                                                        {getStatusLabel(item.status)}
-                                                    </Badge>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            ) : (
-                 <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p>
-                </div>
-            )}
-
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
-                    <CardDescription>Genere un PDF con los datos filtrados actualmente en pantalla.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button onClick={generatePdf} disabled={generatingPdf || reportData.total === 0}>
-                        {generatingPdf ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <Download className="mr-2 h-4 w-4" />
-                        )}
-                        {generatingPdf ? "Generando..." : "Generar PDF"}
-                    </Button>
-                </CardContent>
-            </Card>
-
+                        </div>
+                    ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
+                </TabsContent>
+                
+                {user?.role === 'Ayudantía' && (
+                    <TabsContent value="leaves">
+                        <CommonFilters />
+                        {leavesReportData.length > 0 ? (
+                             <Card>
+                                <CardHeader><CardTitle className="font-headline">Detalle de Licencias</CardTitle><CardDescription>Todas las licencias registradas para los filtros aplicados.</CardDescription></CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader><TableRow><TableHead>Bombero</TableHead><TableHead>Tipo</TableHead><TableHead>Desde</TableHead><TableHead>Hasta</TableHead></TableRow></TableHeader>
+                                        <TableBody>{leavesReportData.map((leave) => (<TableRow key={leave.id}><TableCell className="font-medium">{leave.firefighterName}</TableCell><TableCell>{leave.type}</TableCell><TableCell>{format(new Date(leave.startDate), "PPP", { locale: es })}</TableCell><TableCell>{format(new Date(leave.endDate), "PPP", { locale: es })}</TableCell></TableRow>))}</TableBody>
+                                    </Table>
+                                </CardContent>
+                                <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de licencias filtrados actualmente.</CardDescription></CardHeader>
+                                <CardContent><Button onClick={generateLeavesPdf} disabled={generatingPdf || leavesReportData.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Licencias"}</Button></CardContent>
+                            </Card>
+                        ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de licencias para los filtros seleccionados.</p></div> )}
+                    </TabsContent>
+                )}
+            </Tabs>
         </>
     );
 }
