@@ -89,6 +89,7 @@ export default function ReportsPage() {
     const [filterStation, setFilterStation] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
+    const [activeTab, setActiveTab] = useState("attendance");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -127,9 +128,10 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
-    const generateAttendancePdf = async () => {
+     const generatePdf = async () => {
         if (!logoDataUrl) {
-             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
         }
 
         setGeneratingPdf(true);
@@ -143,7 +145,7 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
             
-            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
@@ -221,7 +223,7 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Licencias", 14, 22);
             
-            doc.addImage(logoDataUrl, 'JPEG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
@@ -305,18 +307,30 @@ export default function ReportsPage() {
 
     const leavesReportData = useMemo(() => {
         return allLeaves.filter(leave => {
+            const firefighter = allFirefighters.find(f => f.id === leave.firefighterId);
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
+
+            if (firefighter) {
+                if (filterStation !== 'all' && firefighter.firehouse !== filterStation) return false;
+                if (filterHierarchy !== 'all') {
+                     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+                    if (filterHierarchy === 'bomberos' && firefighter.rank !== 'BOMBERO') return false;
+                    if (filterHierarchy === 'aspirantes' && firefighter.rank !== 'ASPIRANTE') return false;
+                    if (filterHierarchy === 'suboficiales_oficiales' && ![...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return false;
+                }
+            }
+
             if (filterDate?.from) {
                 const leaveStartDate = startOfDay(new Date(leave.startDate));
                 const leaveEndDate = endOfDay(new Date(leave.endDate));
                 const filterStartDate = startOfDay(filterDate.from);
                 const filterEndDate = endOfDay(filterDate.to ?? filterDate.from);
-                // Check for overlap
                 if (leaveStartDate > filterEndDate || leaveEndDate < filterStartDate) return false;
             }
             return true;
         });
-    }, [allLeaves, filterFirefighter, filterDate]);
+    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
@@ -393,48 +407,48 @@ export default function ReportsPage() {
                         </PopoverContent>
                     </Popover>
                 </div>
-                {user?.role !== 'Ayudantía' && (
-                    <>
-                        <div className="space-y-2">
-                            <Label>Especialidad</Label>
-                            <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las especialidades</SelectItem>
-                                    {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Clase Específica</Label>
-                            <Select value={filterClass} onValueChange={setFilterClass}>
-                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las clases</SelectItem>
-                                    {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Jerarquía</Label>
-                            <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
-                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                                <SelectContent>
-                                    {hierarchyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Cuartel</Label>
-                            <Select value={filterStation} onValueChange={setFilterStation}>
-                                <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
-                                <SelectContent>
-                                    {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </>
+                {activeTab === 'attendance' && (
+                    <div className="space-y-2">
+                        <Label>Especialidad</Label>
+                        <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las especialidades</SelectItem>
+                                {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 )}
+                {activeTab === 'attendance' && (
+                    <div className="space-y-2">
+                        <Label>Clase Específica</Label>
+                        <Select value={filterClass} onValueChange={setFilterClass}>
+                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las clases</SelectItem>
+                                {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                )}
+                <div className="space-y-2">
+                    <Label>Jerarquía</Label>
+                    <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
+                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectContent>
+                            {hierarchyOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Cuartel</Label>
+                    <Select value={filterStation} onValueChange={setFilterStation}>
+                        <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                            {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </CardContent>
         </Card>
     );
@@ -452,7 +466,7 @@ export default function ReportsPage() {
         <>
             <PageHeader title="Reportes" description="Filtre y analice los datos de asistencia y licencias." />
             
-            <Tabs defaultValue="attendance" className="w-full">
+            <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
                 <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
                     <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
                     {user?.role === 'Ayudantía' && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
@@ -497,19 +511,62 @@ export default function ReportsPage() {
                                         </ChartContainer>
                                     </CardContent>
                                 </Card>
-                                <Card className="lg:col-span-3">
-                                    <CardHeader><CardTitle className="font-headline">Detalle de Registros</CardTitle><CardDescription>Todos los registros de asistencia para los filtros aplicados.</CardDescription></CardHeader>
-                                    <CardContent className="max-h-[300px] overflow-y-auto">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Bombero</TableHead><TableHead>Clase</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader>
-                                            <TableBody>{attendanceReportData.details.map((item, index) => (<TableRow key={index}><TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell><TableCell className="text-muted-foreground">{item.session.title}</TableCell><TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell></TableRow>))}</TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
+                                 <div className="lg:col-span-3 space-y-4">
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-lg text-green-600">Detalle de Asistentes</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="max-h-[200px] overflow-y-auto">
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Bombero</TableHead>
+                                                        <TableHead>Clase</TableHead>
+                                                        <TableHead>Estado</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {attendanceReportData.details.filter(d => d.status === 'present' || d.status === 'tardy' || d.status === 'excused').map((item, index) => (
+                                                        <TableRow key={`present-${index}`}>
+                                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                            <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                     <Card>
+                                        <CardHeader>
+                                            <CardTitle className="font-headline text-lg text-red-600">Detalle de Ausentes</CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="max-h-[200px] overflow-y-auto">
+                                             <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Bombero</TableHead>
+                                                        <TableHead>Clase</TableHead>
+                                                        <TableHead>Estado</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {attendanceReportData.details.filter(d => d.status === 'absent').map((item, index) => (
+                                                        <TableRow key={`absent-${index}`}>
+                                                            <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                            <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
+                                                            <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </CardContent>
+                                    </Card>
+                                </div>
                             </div>
                             <Card className="mt-8">
                                 <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription></CardHeader>
-                                <CardContent><Button onClick={generateAttendancePdf} disabled={generatingPdf || attendanceReportData.total === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}</Button></CardContent>
+                                <CardContent><Button onClick={generatePdf} disabled={generatingPdf || attendanceReportData.total === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}</Button></CardContent>
                             </Card>
                         </div>
                     ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
