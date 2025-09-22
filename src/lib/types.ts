@@ -49,6 +49,18 @@ export type Leave = {
   type: LeaveType;
 };
 
+export type Course = {
+  id: string;
+  firefighterId: string;
+  firefighterName: string;
+  firefighterLegajo: string;
+  specialization: Session['specialization'];
+  title: string;
+  location: string;
+  startDate: string;
+  endDate: string;
+}
+
 export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía';
 
 export type User = {
