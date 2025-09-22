@@ -87,7 +87,7 @@ export default function CourseReport() {
         
         try {
             // PDF Header
-            doc.setFillColor(40, 40, 40); 
+            doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
@@ -272,3 +272,5 @@ export default function CourseReport() {
         </div>
     );
 }
+
+    
