@@ -1,50 +1,65 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Función para obtener el rol del usuario que hace la solicitud.
+    // Función para verificar el rol del usuario autenticado
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
+
+    function isAdministrator() {
+      return isSignedIn() && getUserRole() == 'Administrador';
+    }
+
+    function isOperator() {
+      return isSignedIn() && getUserRole() == 'Operador';
+    }
     
-    // Función para verificar si el usuario está autenticado.
-    function isSignedIn() {
-      return request.auth != null;
+    function isAyudantia() {
+      return isSignedIn() && getUserRole() == 'Ayudantía';
     }
 
     // Reglas para la colección 'users'
     match /users/{userId} {
-      // PERMITIR LOGIN: Cualquiera puede leer un documento de usuario específico para el proceso de login.
-      // Esto es seguro porque solo se obtiene el doc si se conoce el ID (legajo). La contraseña se valida en el backend.
+      // PERMITE el inicio de sesión. Cualquiera puede intentar obtener un usuario por su ID (legajo).
+      // Esto es seguro porque la contraseña se verifica en el backend (genkit flow).
       allow get: if true;
+      
+      // SOLO los administradores pueden listar, crear, editar o eliminar usuarios.
+      allow list, create, update, delete: if isAdministrator();
+    }
 
-      // SOLO ADMINS: Listar, crear, actualizar y borrar usuarios.
-      allow list, create, update, delete: if isSignedIn() && getUserRole() == 'Administrador';
+    // Reglas para la colección 'firefighters'
+    match /firefighters/{firefighterId} {
+      // Administradores tienen acceso total.
+      allow read, write: if isAdministrator();
+      
+      // Operadores y Ayudantía solo pueden leer la información de los bomberos.
+      allow read: if isOperator() || isAyudantia();
+    }
+
+    // Reglas para la colección 'sessions' (clases)
+    match /sessions/{sessionId} {
+      // Administradores y Operadores tienen acceso total para gestionar clases.
+      allow read, write: if isAdministrator() || isOperator();
     }
     
-    // Reglas para 'firefighters'
-    match /firefighters/{docId} {
-      // SOLO ADMINS: Pueden realizar todas las operaciones (CRUD).
-      allow read, write: if isSignedIn() && getUserRole() == 'Administrador';
+    // Reglas para la colección 'leaves' (licencias)
+    match /leaves/{leaveId} {
+        // Administradores y Ayudantía pueden gestionar licencias.
+        allow read, write: if isAdministrator() || isAyudantia();
     }
-
-    // Reglas para 'sessions' (Clases)
-    match /sessions/{docId} {
-      // ADMINS Y OPERADORES: Pueden leer, crear, actualizar y borrar clases.
-      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Operador');
-    }
-
-    // Reglas para 'leaves' (Licencias)
-    match /leaves/{docId} {
-      // ADMINS Y AYUDANTÍA: Pueden leer, crear, actualizar y borrar licencias.
-      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Ayudantía');
-    }
-
-    // Reglas para 'courses' (Cursos Externos)
-    match /courses/{docId} {
-      // ADMINS Y AYUDANTÍA: Pueden leer, crear, actualizar y borrar cursos.
-      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Ayudantía');
+    
+    // Reglas para la colección 'courses' (cursos externos)
+    match /courses/{courseId} {
+       // Administradores y Ayudantía pueden gestionar los cursos.
+       allow read, write: if isAdministrator() || isAyudantia();
     }
   }
 }
