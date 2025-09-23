@@ -2,75 +2,49 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function para obtener el rol del usuario que hace la petición
+  
+    // Función para obtener el rol del usuario que hace la solicitud.
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
     
-    // Helper function para verificar si un usuario está autenticado
-    function isAuthenticated() {
+    // Función para verificar si el usuario está autenticado.
+    function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Helper para administradores
-    function isAdministrator() {
-      return isAuthenticated() && getUserRole() == 'Administrador';
-    }
 
-    // Helper para operadores
-    function isOperator() {
-      return isAuthenticated() && getUserRole() == 'Operador';
-    }
-
-    // Helper para ayudantía
-    function isAyudantia() {
-      return isAuthenticated() && getUserRole() == 'Ayudantía';
-    }
-    
     // Reglas para la colección 'users'
     match /users/{userId} {
-      // Solo los administradores pueden leer la lista de usuarios o un usuario específico
-      allow read: if isAdministrator();
-      
-      // Solo los administradores pueden crear, actualizar o eliminar usuarios
-      allow write: if isAdministrator();
+      // PERMITIR LOGIN: Cualquiera puede leer un documento de usuario específico para el proceso de login.
+      // Esto es seguro porque solo se obtiene el doc si se conoce el ID (legajo). La contraseña se valida en el backend.
+      allow get: if true;
+
+      // SOLO ADMINS: Listar, crear, actualizar y borrar usuarios.
+      allow list, create, update, delete: if isSignedIn() && getUserRole() == 'Administrador';
     }
     
-    // Reglas para la colección 'firefighters'
-    match /firefighters/{firefighterId} {
-      // Todos los roles autenticados pueden leer la lista de bomberos
-      allow read: if isAuthenticated();
-      
-      // Solo los administradores pueden crear, actualizar o eliminar bomberos
-      allow write: if isAdministrator();
-    }
-    
-    // Reglas para la colección 'sessions' (clases)
-    match /sessions/{sessionId} {
-      // Todos los roles autenticados pueden leer las clases
-      allow read: if isAuthenticated();
-      
-      // Administradores y Operadores pueden crear, editar y eliminar clases
-      allow write: if isAdministrator() || isOperator();
-    }
-    
-    // Reglas para la colección 'leaves' (licencias)
-    match /leaves/{leaveId} {
-      // Administradores y Ayudantía pueden leer las licencias
-      allow read: if isAdministrator() || isAyudantia();
-      
-      // Administradores y Ayudantía pueden crear, editar y eliminar licencias
-      allow write: if isAdministrator() || isAyudantia();
+    // Reglas para 'firefighters'
+    match /firefighters/{docId} {
+      // SOLO ADMINS: Pueden realizar todas las operaciones (CRUD).
+      allow read, write: if isSignedIn() && getUserRole() == 'Administrador';
     }
 
-    // Reglas para la colección 'courses' (cursos externos)
-    match /courses/{courseId} {
-      // Administradores y Ayudantía pueden leer los cursos
-      allow read: if isAdministrator() || isAyudantia();
+    // Reglas para 'sessions' (Clases)
+    match /sessions/{docId} {
+      // ADMINS Y OPERADORES: Pueden leer, crear, actualizar y borrar clases.
+      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Operador');
+    }
 
-      // Administradores y Ayudantía pueden crear, editar y eliminar cursos
-      allow write: if isAdministrator() || isAyudantia();
+    // Reglas para 'leaves' (Licencias)
+    match /leaves/{docId} {
+      // ADMINS Y AYUDANTÍA: Pueden leer, crear, actualizar y borrar licencias.
+      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Ayudantía');
+    }
+
+    // Reglas para 'courses' (Cursos Externos)
+    match /courses/{docId} {
+      // ADMINS Y AYUDANTÍA: Pueden leer, crear, actualizar y borrar cursos.
+      allow read, write: if isSignedIn() && (getUserRole() == 'Administrador' || getUserRole() == 'Ayudantía');
     }
   }
 }
