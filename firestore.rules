@@ -1,65 +1,63 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if a user is authenticated.
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to get the role of the currently signed-in user.
+
+    // Helper function to get the role of the requesting user.
     function getUserRole() {
-      // The user's role is stored in the 'users' collection with their UID as the document ID.
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
-    
-    // Helper function to check if the user is an Administrator.
+
+    // Helper function to check if the user is an Admin.
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'Administrador';
+      return getUserRole() == 'Administrador';
     }
-    
+
     // Helper function to check if the user is an Operator.
     function isOperator() {
-      return isAuthenticated() && getUserRole() == 'Operador';
+      return getUserRole() == 'Operador';
     }
-
-    // Helper function to check if the user is an Ayudantia.
+    
+    // Helper function to check if the user is an Ayudantía.
     function isAyudantia() {
-      return isAuthenticated() && getUserRole() == 'Ayudantía';
+        return getUserRole() == 'Ayudantía';
     }
 
-    // Users Collection: Only Admins can manage users.
+    // Users can only be read by Admins. A user can read their own data.
+    // Users can only be created, updated, or deleted by Admins.
     match /users/{userId} {
-      allow read, write: if isAdmin();
+      allow read: if request.auth.uid == userId || isAdmin();
+      allow write: if isAdmin();
     }
 
-    // Firefighters Collection: Admins can manage firefighters. Other authenticated users can read the list.
-    match /firefighters/{firefighterId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+    // Firefighters can be read by any authenticated user.
+    // Firefighters can only be created, updated, or deleted by Admins.
+    match /firefighters/{docId} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
     }
     
-    // Sessions (Classes) Collection: 
-    // Admins/Operators can manage sessions. 
-    // Authenticated users can read session data.
-    match /sessions/{sessionId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin() || isOperator();
+    // Sessions (classes) can be read by Admins and Operators.
+    // Sessions can be written by Admins and Operators.
+    match /sessions/{docId} {
+        allow read: if isAdmin() || isOperator();
+        allow write: if isAdmin() || isOperator();
     }
-    
-    // Leaves (Licencias) Collection: 
-    // Admins/Ayudantia can manage leaves.
-    // Other roles can't access this data directly.
-    match /leaves/{leaveId} {
-      allow read, create, update, delete: if isAdmin() || isAyudantia();
+
+    // Leaves can be read and written by Admins and Ayudantía.
+    match /leaves/{docId} {
+        allow read, write: if isAdmin() || isAyudantia();
     }
-    
-    // Courses Collection:
-    // Admins/Ayudantia can manage courses.
-    // Other roles can't access this data directly.
-    match /courses/{courseId} {
-       allow read, create, update, delete: if isAdmin() || isAyudantia();
+
+    // Courses can be read and written by Admins and Ayudantía.
+    match /courses/{docId} {
+        allow read, write: if isAdmin() || isAyudantia();
+    }
+
+    // Default deny all other paths.
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
