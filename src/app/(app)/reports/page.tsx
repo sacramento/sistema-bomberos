@@ -271,8 +271,8 @@ export default function ReportsPage() {
                 currentY += 5;
                  (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Bombero', 'Clase', 'Fecha', 'Estado']],
-                    body: attendanceReportData.details.map(item => [`${item.firefighter.firstName} ${item.firefighter.lastName}`, item.session.title, item.session.date, getStatusLabel(item.status)]),
+                    head: [['Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
+                    body: attendanceReportData.details.map(item => [`${item.firefighter.firstName} ${item.firefighter.lastName}`, item.session.title, item.session.specialization, item.session.date, getStatusLabel(item.status)]),
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
