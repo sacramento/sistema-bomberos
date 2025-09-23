@@ -1,63 +1,76 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to get the role of the requesting user.
+    // Helper function para obtener el rol del usuario que hace la petición
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
-
-    // Helper function to check if the user is an Admin.
-    function isAdmin() {
-      return getUserRole() == 'Administrador';
+    
+    // Helper function para verificar si un usuario está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper para administradores
+    function isAdministrator() {
+      return isAuthenticated() && getUserRole() == 'Administrador';
     }
 
-    // Helper function to check if the user is an Operator.
+    // Helper para operadores
     function isOperator() {
-      return getUserRole() == 'Operador';
+      return isAuthenticated() && getUserRole() == 'Operador';
     }
-    
-    // Helper function to check if the user is an Ayudantía.
+
+    // Helper para ayudantía
     function isAyudantia() {
-        return getUserRole() == 'Ayudantía';
-    }
-
-    // Users can only be read by Admins. A user can read their own data.
-    // Users can only be created, updated, or deleted by Admins.
-    match /users/{userId} {
-      allow read: if request.auth.uid == userId || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    // Firefighters can be read by any authenticated user.
-    // Firefighters can only be created, updated, or deleted by Admins.
-    match /firefighters/{docId} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+      return isAuthenticated() && getUserRole() == 'Ayudantía';
     }
     
-    // Sessions (classes) can be read by Admins and Operators.
-    // Sessions can be written by Admins and Operators.
-    match /sessions/{docId} {
-        allow read: if isAdmin() || isOperator();
-        allow write: if isAdmin() || isOperator();
+    // Reglas para la colección 'users'
+    match /users/{userId} {
+      // Solo los administradores pueden leer la lista de usuarios o un usuario específico
+      allow read: if isAdministrator();
+      
+      // Solo los administradores pueden crear, actualizar o eliminar usuarios
+      allow write: if isAdministrator();
+    }
+    
+    // Reglas para la colección 'firefighters'
+    match /firefighters/{firefighterId} {
+      // Todos los roles autenticados pueden leer la lista de bomberos
+      allow read: if isAuthenticated();
+      
+      // Solo los administradores pueden crear, actualizar o eliminar bomberos
+      allow write: if isAdministrator();
+    }
+    
+    // Reglas para la colección 'sessions' (clases)
+    match /sessions/{sessionId} {
+      // Todos los roles autenticados pueden leer las clases
+      allow read: if isAuthenticated();
+      
+      // Administradores y Operadores pueden crear, editar y eliminar clases
+      allow write: if isAdministrator() || isOperator();
+    }
+    
+    // Reglas para la colección 'leaves' (licencias)
+    match /leaves/{leaveId} {
+      // Administradores y Ayudantía pueden leer las licencias
+      allow read: if isAdministrator() || isAyudantia();
+      
+      // Administradores y Ayudantía pueden crear, editar y eliminar licencias
+      allow write: if isAdministrator() || isAyudantia();
     }
 
-    // Leaves can be read and written by Admins and Ayudantía.
-    match /leaves/{docId} {
-        allow read, write: if isAdmin() || isAyudantia();
-    }
+    // Reglas para la colección 'courses' (cursos externos)
+    match /courses/{courseId} {
+      // Administradores y Ayudantía pueden leer los cursos
+      allow read: if isAdministrator() || isAyudantia();
 
-    // Courses can be read and written by Admins and Ayudantía.
-    match /courses/{docId} {
-        allow read, write: if isAdmin() || isAyudantia();
-    }
-
-    // Default deny all other paths.
-    match /{document=**} {
-      allow read, write: if false;
+      // Administradores y Ayudantía pueden crear, editar y eliminar cursos
+      allow write: if isAdministrator() || isAyudantia();
     }
   }
 }
