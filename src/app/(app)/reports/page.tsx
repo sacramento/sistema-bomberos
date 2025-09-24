@@ -273,13 +273,13 @@ export default function ReportsPage() {
                     
                     return [
                         `${firefighter.firstName} ${firefighter.lastName}`,
-                        totalRecords,
+                        totalRecords.toString(),
                         `${presentPercentage.toFixed(0)}%`,
                         `${absentPercentage.toFixed(0)}%`,
                         `${tardyPercentage.toFixed(0)}%`,
                         `${excusedPercentage.toFixed(0)}%`,
                     ];
-                }).filter(Boolean);
+                }).filter((row): row is string[] => row !== null);
 
 
                  (doc as any).autoTable({
@@ -406,7 +406,7 @@ export default function ReportsPage() {
             return true;
         });
 
-        const summary = {
+        const statusCounts = {
             present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
             tardy: finalData.filter(item => item.status === 'tardy').length,
@@ -415,18 +415,18 @@ export default function ReportsPage() {
         };
         
         const totalRecords = finalData.length;
-        const effectivePresents = summary.present + summary.recupero;
-        const netAbsents = Math.max(0, summary.absent - summary.recupero);
+        const effectivePresents = statusCounts.present + statusCounts.recupero;
+        const netAbsents = Math.max(0, statusCounts.absent - statusCounts.recupero);
 
         const pieData = [
             { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
             { name: getStatusLabel('absent'), value: netAbsents, fill: PIE_CHART_COLORS.absent },
-            { name: getStatusLabel('tardy'), value: summary.tardy, fill: PIE_CHART_COLORS.tardy },
-            { name: getStatusLabel('excused'), value: summary.excused, fill: PIE_CHART_COLORS.excused },
+            { name: getStatusLabel('tardy'), value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
+            { name: getStatusLabel('excused'), value: statusCounts.excused, fill: PIE_CHART_COLORS.excused },
         ].filter(item => item.value > 0);
             
         return { 
-            summary: { ...summary, present: effectivePresents, absent: netAbsents },
+            summary: { ...statusCounts, present: effectivePresents, absent: netAbsents },
             total: totalRecords, 
             pieData, 
             details: finalData
