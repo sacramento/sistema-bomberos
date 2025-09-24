@@ -246,16 +246,14 @@ export default function ReportsPage() {
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
 
-                const filteredFirefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
+                const firefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
 
-                const summaryTableBody = Array.from(filteredFirefighterIds).map(firefighterId => {
+                const summaryTableBody = Array.from(firefighterIds).map(firefighterId => {
                     const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
                     const records = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
                     
                     if (records.length === 0) return null;
 
-                    const totalRecords = records.length;
-                    
                     const statusCounts = {
                         present: records.filter(d => d.status === 'present').length,
                         absent: records.filter(d => d.status === 'absent').length,
@@ -264,17 +262,22 @@ export default function ReportsPage() {
                         recupero: records.filter(d => d.status === 'recupero').length,
                     };
                     
-                    const effectivePresents = statusCounts.present + statusCounts.recupero;
-                    const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
+                    const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
+                    const totalRecordsForPercentage = records.length - compensatedAbsences;
+                    
+                    if (totalRecordsForPercentage === 0) return null;
 
-                    const presentPercentage = totalRecords > 0 ? (effectivePresents / totalRecords) * 100 : 0;
-                    const absentPercentage = totalRecords > 0 ? (netAbsences / totalRecords) * 100 : 0;
-                    const tardyPercentage = totalRecords > 0 ? (statusCounts.tardy / totalRecords) * 100 : 0;
-                    const excusedPercentage = totalRecords > 0 ? (statusCounts.excused / totalRecords) * 100 : 0;
+                    const effectivePresents = statusCounts.present + statusCounts.recupero;
+                    const netAbsences = statusCounts.absent - statusCounts.recupero;
+
+                    const presentPercentage = (effectivePresents / totalRecordsForPercentage) * 100;
+                    const absentPercentage = (netAbsences / totalRecordsForPercentage) * 100;
+                    const tardyPercentage = (statusCounts.tardy / totalRecordsForPercentage) * 100;
+                    const excusedPercentage = (statusCounts.excused / totalRecordsForPercentage) * 100;
                     
                     return [
                         `${firefighter.firstName} ${firefighter.lastName}`,
-                        totalRecords.toString(),
+                        totalRecordsForPercentage.toString(),
                         `${presentPercentage.toFixed(0)}%`,
                         `${absentPercentage.toFixed(0)}%`,
                         `${tardyPercentage.toFixed(0)}%`,
@@ -412,8 +415,6 @@ export default function ReportsPage() {
             return true;
         });
 
-        const totalRecords = finalData.length;
-
         const statusCounts = {
             present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
@@ -422,8 +423,11 @@ export default function ReportsPage() {
             recupero: finalData.filter(item => item.status === 'recupero').length,
         };
         
+        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
+        const totalRecordsForPercentage = finalData.length - compensatedAbsences;
+
         const effectivePresents = statusCounts.present + statusCounts.recupero;
-        const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
+        const netAbsences = statusCounts.absent - statusCounts.recupero;
 
         const pieData = [
             { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
@@ -434,12 +438,60 @@ export default function ReportsPage() {
             
         return { 
             summary: { ...statusCounts, present: effectivePresents, absent: netAbsences },
-            total: totalRecords,
+            total: totalRecordsForPercentage,
             pieData, 
             details: finalData
         };
 
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
+    
+    const summaryTableBody = useMemo(() => {
+        if (attendanceReportData.details.length === 0) return [];
+        
+        const firefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
+
+        return Array.from(firefighterIds).map(firefighterId => {
+            const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
+            const records = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
+            
+            if (records.length === 0) return null;
+            
+            const statusCounts = {
+                present: records.filter(d => d.status === 'present').length,
+                absent: records.filter(d => d.status === 'absent').length,
+                tardy: records.filter(d => d.status === 'tardy').length,
+                excused: records.filter(d => d.status === 'excused').length,
+                recupero: records.filter(d => d.status === 'recupero').length,
+            };
+
+            const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
+            const totalRecordsForPercentage = records.length - compensatedAbsences;
+
+            if (totalRecordsForPercentage === 0) {
+                 return {
+                    firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                    totalClasses: 0,
+                    presentPercentage: '100%',
+                    absentPercentage: '0%',
+                    tardyPercentage: '0%',
+                    excusedPercentage: '0%'
+                };
+            }
+
+            const effectivePresents = statusCounts.present + statusCounts.recupero;
+            const netAbsences = statusCounts.absent - statusCounts.recupero;
+
+            return {
+                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                totalClasses: totalRecordsForPercentage,
+                presentPercentage: `${((effectivePresents / totalRecordsForPercentage) * 100).toFixed(0)}%`,
+                absentPercentage: `${((netAbsences / totalRecordsForPercentage) * 100).toFixed(0)}%`,
+                tardyPercentage: `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`,
+                excusedPercentage: `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`
+            };
+        }).filter(item => item !== null);
+    }, [attendanceReportData.details, allFirefighters]);
+
 
     const leavesReportData = useMemo(() => {
         return allLeaves.filter(leave => {
@@ -643,23 +695,23 @@ export default function ReportsPage() {
                                 </Card>
                                  <Card className="lg:col-span-3">
                                      <CardHeader>
-                                        <CardTitle className="font-headline">Detalle de Registros</CardTitle>
+                                        <CardTitle className="font-headline">Resumen por Bombero</CardTitle>
                                      </CardHeader>
                                      <CardContent className="max-h-[300px] overflow-y-auto">
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clase</TableHead>
-                                                    <TableHead>Estado</TableHead>
+                                                    <TableHead>Clases</TableHead>
+                                                    <TableHead>% Presente</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {attendanceReportData.details.map((item, index) => (
+                                                {summaryTableBody.map((item, index) => (
                                                     <TableRow key={index}>
-                                                        <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
-                                                        <TableCell className="text-muted-foreground">{item.session.title}</TableCell>
-                                                        <TableCell><Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>{getStatusLabel(item.status)}</Badge></TableCell>
+                                                        <TableCell className="font-medium">{item.firefighter}</TableCell>
+                                                        <TableCell>{item.totalClasses}</TableCell>
+                                                        <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
