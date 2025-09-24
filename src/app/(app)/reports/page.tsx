@@ -240,32 +240,33 @@ export default function ReportsPage() {
 
             // Optional Summary Table
             if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
-                 doc.setFontSize(12);
+                doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
-                
+
                 const filteredFirefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
 
                 const summaryTableBody = Array.from(filteredFirefighterIds).map(firefighterId => {
                     const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
+                    const records = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
                     
-                    const attendanceRecords = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
-                    if (attendanceRecords.length === 0) return null;
-                    
-                     const statusCounts = {
-                        present: attendanceRecords.filter(d => d.status === 'present').length,
-                        absent: attendanceRecords.filter(d => d.status === 'absent').length,
-                        tardy: attendanceRecords.filter(d => d.status === 'tardy').length,
-                        excused: attendanceRecords.filter(d => d.status === 'excused').length,
-                        recupero: attendanceRecords.filter(d => d.status === 'recupero').length,
-                    };
+                    if (records.length === 0) return null;
 
-                    const totalRecords = attendanceRecords.length;
-                    const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
-                    const effectivePresents = statusCounts.present + statusCounts.recupero;
+                    const totalRecords = records.length;
                     
+                    const statusCounts = {
+                        present: records.filter(d => d.status === 'present').length,
+                        absent: records.filter(d => d.status === 'absent').length,
+                        tardy: records.filter(d => d.status === 'tardy').length,
+                        excused: records.filter(d => d.status === 'excused').length,
+                        recupero: records.filter(d => d.status === 'recupero').length,
+                    };
+                    
+                    const effectivePresents = statusCounts.present + statusCounts.recupero;
+                    const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
+
                     const presentPercentage = totalRecords > 0 ? (effectivePresents / totalRecords) * 100 : 0;
                     const absentPercentage = totalRecords > 0 ? (netAbsences / totalRecords) * 100 : 0;
                     const tardyPercentage = totalRecords > 0 ? (statusCounts.tardy / totalRecords) * 100 : 0;
@@ -292,6 +293,7 @@ export default function ReportsPage() {
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
 
+
             // Optional Details Table
             if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
                 doc.setFontSize(12);
@@ -306,7 +308,11 @@ export default function ReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
-            } else if (!includeSummaryInPdf && !includeDetailsInPdf) {
+            } else if (includeDetailsInPdf && attendanceReportData.details.length === 0) {
+                doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
+            }
+            
+            if (!includeSummaryInPdf && !includeDetailsInPdf) {
                  doc.text("No se seleccionó ningún contenido para incluir en el reporte.", 14, currentY);
             }
 
@@ -406,6 +412,8 @@ export default function ReportsPage() {
             return true;
         });
 
+        const totalRecords = finalData.length;
+
         const statusCounts = {
             present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
@@ -414,20 +422,19 @@ export default function ReportsPage() {
             recupero: finalData.filter(item => item.status === 'recupero').length,
         };
         
-        const totalRecords = finalData.length;
         const effectivePresents = statusCounts.present + statusCounts.recupero;
-        const netAbsents = Math.max(0, statusCounts.absent - statusCounts.recupero);
+        const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
 
         const pieData = [
             { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
-            { name: getStatusLabel('absent'), value: netAbsents, fill: PIE_CHART_COLORS.absent },
+            { name: getStatusLabel('absent'), value: netAbsences, fill: PIE_CHART_COLORS.absent },
             { name: getStatusLabel('tardy'), value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
             { name: getStatusLabel('excused'), value: statusCounts.excused, fill: PIE_CHART_COLORS.excused },
         ].filter(item => item.value > 0);
             
         return { 
-            summary: { ...statusCounts, present: effectivePresents, absent: netAbsents },
-            total: totalRecords, 
+            summary: { ...statusCounts, present: effectivePresents, absent: netAbsences },
+            total: totalRecords,
             pieData, 
             details: finalData
         };
@@ -443,7 +450,7 @@ export default function ReportsPage() {
                 if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
                 if (filterHierarchy.length > 0) {
                      const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDante GENERAL'];
+                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
                     const hierarchyMatch = filterHierarchy.some(h => {
                         if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
                         if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
