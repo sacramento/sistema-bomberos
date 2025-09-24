@@ -13,7 +13,7 @@ import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
-import { format, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
 import { Session, Firefighter, AttendanceStatus, Leave } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
@@ -254,28 +254,26 @@ export default function ReportsPage() {
                     const attendanceRecords = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
                     if (attendanceRecords.length === 0) return null;
                     
-                    const statusCounts = {
+                     const statusCounts = {
                         present: attendanceRecords.filter(d => d.status === 'present').length,
                         absent: attendanceRecords.filter(d => d.status === 'absent').length,
                         tardy: attendanceRecords.filter(d => d.status === 'tardy').length,
                         excused: attendanceRecords.filter(d => d.status === 'excused').length,
                         recupero: attendanceRecords.filter(d => d.status === 'recupero').length,
                     };
-                    
+
                     const totalRecords = attendanceRecords.length;
-                    const assignedClassesCount = totalRecords; // Base total is the number of filtered records
-                    
                     const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
                     const effectivePresents = statusCounts.present + statusCounts.recupero;
-
-                    const presentPercentage = assignedClassesCount > 0 ? (effectivePresents / assignedClassesCount) * 100 : 0;
-                    const absentPercentage = assignedClassesCount > 0 ? (netAbsences / assignedClassesCount) * 100 : 0;
-                    const tardyPercentage = assignedClassesCount > 0 ? (statusCounts.tardy / assignedClassesCount) * 100 : 0;
-                    const excusedPercentage = assignedClassesCount > 0 ? (statusCounts.excused / assignedClassesCount) * 100 : 0;
+                    
+                    const presentPercentage = totalRecords > 0 ? (effectivePresents / totalRecords) * 100 : 0;
+                    const absentPercentage = totalRecords > 0 ? (netAbsences / totalRecords) * 100 : 0;
+                    const tardyPercentage = totalRecords > 0 ? (statusCounts.tardy / totalRecords) * 100 : 0;
+                    const excusedPercentage = totalRecords > 0 ? (statusCounts.excused / totalRecords) * 100 : 0;
                     
                     return [
                         `${firefighter.firstName} ${firefighter.lastName}`,
-                        assignedClassesCount,
+                        totalRecords,
                         `${presentPercentage.toFixed(0)}%`,
                         `${absentPercentage.toFixed(0)}%`,
                         `${tardyPercentage.toFixed(0)}%`,
@@ -417,7 +415,6 @@ export default function ReportsPage() {
         };
         
         const totalRecords = finalData.length;
-        const totalForPercentage = totalRecords > 0 ? totalRecords - summary.recupero : 0;
         const effectivePresents = summary.present + summary.recupero;
         const netAbsents = Math.max(0, summary.absent - summary.recupero);
 
@@ -430,7 +427,7 @@ export default function ReportsPage() {
             
         return { 
             summary: { ...summary, present: effectivePresents, absent: netAbsents },
-            total: totalForPercentage, 
+            total: totalRecords, 
             pieData, 
             details: finalData
         };
