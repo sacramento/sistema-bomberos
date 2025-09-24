@@ -165,7 +165,10 @@ export default function ReportsPage() {
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
     const [activeTab, setActiveTab] = useState("attendance");
-    const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(false);
+    
+    // PDF Content Switches
+    const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
+    const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -275,13 +278,12 @@ export default function ReportsPage() {
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
 
-
-            // Details Table
-            doc.setFontSize(12);
-            doc.setTextColor(40, 40, 40);
-            doc.setFont('helvetica', 'bold');
-            if(attendanceReportData.details.length > 0) {
-                doc.text("Detalle de Registros", 14, currentY);
+            // Optional Details Table
+            if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Detalle de Registros de Asistencia", 14, currentY);
                 currentY += 8;
                  (doc as any).autoTable({
                     startY: currentY,
@@ -290,9 +292,10 @@ export default function ReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
-            } else {
-                 doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
+            } else if (!includeSummaryInPdf) {
+                 doc.text("No se seleccionó ningún contenido para incluir en el reporte.", 14, currentY);
             }
+
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
@@ -632,18 +635,28 @@ export default function ReportsPage() {
                             <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
-                                    <CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription>
+                                    <CardDescription>Seleccione qué contenido incluir en la exportación del PDF.</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="flex items-center space-x-2 mb-4">
-                                        <Switch
-                                            id="include-summary-pdf"
-                                            checked={includeSummaryInPdf}
-                                            onCheckedChange={setIncludeSummaryInPdf}
-                                        />
-                                        <Label htmlFor="include-summary-pdf">Incluir resumen por bombero en el PDF</Label>
+                                    <div className="flex flex-col space-y-4 mb-4">
+                                        <div className="flex items-center space-x-2">
+                                            <Switch
+                                                id="include-summary-pdf"
+                                                checked={includeSummaryInPdf}
+                                                onCheckedChange={setIncludeSummaryInPdf}
+                                            />
+                                            <Label htmlFor="include-summary-pdf">Incluir resumen por porcentaje</Label>
+                                        </div>
+                                         <div className="flex items-center space-x-2">
+                                            <Switch
+                                                id="include-details-pdf"
+                                                checked={includeDetailsInPdf}
+                                                onCheckedChange={setIncludeDetailsInPdf}
+                                            />
+                                            <Label htmlFor="include-details-pdf">Incluir detalle de asistencia por clase</Label>
+                                        </div>
                                     </div>
-                                    <Button onClick={generatePdf} disabled={generatingPdf || attendanceReportData.total === 0}>
+                                    <Button onClick={generatePdf} disabled={generatingPdf || (!includeSummaryInPdf && !includeDetailsInPdf)}>
                                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                         {generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}
                                     </Button>
@@ -675,3 +688,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
