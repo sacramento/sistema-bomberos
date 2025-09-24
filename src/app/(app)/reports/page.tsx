@@ -29,6 +29,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -164,6 +165,7 @@ export default function ReportsPage() {
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
     const [activeTab, setActiveTab] = useState("attendance");
+    const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -229,38 +231,50 @@ export default function ReportsPage() {
             doc.text(dateText, 14, 45);
 
             let currentY = 55;
-            const barHeight = 6;
-            const barWidth = 80;
-            const barStartX = 55;
 
-            // Summary bars logic
-            const totalCombined = attendanceReportData.total;
-            const attendeesCombined = attendanceReportData.summary.present + attendanceReportData.summary.tardy;
-            const absenteesCombined = attendanceReportData.summary.absent + attendanceReportData.summary.excused;
-
-             const summaryItems = [
-                { label: 'Presentes', value: attendeesCombined, color: '#22C55E' },
-                { label: 'Ausentes', value: absenteesCombined, color: '#EF4444' }
-            ];
-
-            // Draw summary bars
-            doc.setFontSize(10);
-            summaryItems.forEach(item => {
-                const percentage = totalCombined > 0 ? (item.value / totalCombined) * 100 : 0;
-                const filledWidth = (percentage / 100) * barWidth;
+            // Optional Summary Table
+            if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
+                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                doc.text(item.label, 14, currentY + barHeight - 1);
-                doc.setFillColor(230, 230, 230);
-                doc.rect(barStartX, currentY, barWidth, barHeight, 'F');
-                doc.setFillColor(item.color);
-                doc.rect(barStartX, currentY, filledWidth, barHeight, 'F');
-                doc.setTextColor(80, 80, 80);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`${item.value} (${percentage.toFixed(1)}%)`, barStartX + barWidth + 5, currentY + barHeight - 1);
-                currentY += 12;
-            });
-            currentY += 5;
+                doc.text("Resumen de Asistencia por Bombero", 14, currentY);
+                currentY += 8;
+
+                const summaryByUser: Record<string, {name: string, counts: Record<AttendanceStatus, number>, total: number}> = {};
+                attendanceReportData.details.forEach(item => {
+                    if (!summaryByUser[item.firefighter.id]) {
+                        summaryByUser[item.firefighter.id] = {
+                            name: `${item.firefighter.firstName} ${item.firefighter.lastName}`,
+                            counts: { present: 0, absent: 0, tardy: 0, excused: 0 },
+                            total: 0,
+                        };
+                    }
+                    summaryByUser[item.firefighter.id].counts[item.status]++;
+                    summaryByUser[item.firefighter.id].total++;
+                });
+
+                const summaryTableBody = Object.values(summaryByUser).map(summary => {
+                    const total = summary.total;
+                    return [
+                        summary.name,
+                        summary.total,
+                        `${((summary.counts.present / total) * 100).toFixed(0)}%`,
+                        `${((summary.counts.absent / total) * 100).toFixed(0)}%`,
+                        `${((summary.counts.tardy / total) * 100).toFixed(0)}%`,
+                        `${((summary.counts.excused / total) * 100).toFixed(0)}%`,
+                    ];
+                });
+
+                 (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Bombero', 'Clases', '% Presente', '% Ausente', '% Tarde', '% Justificado']],
+                    body: summaryTableBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333333' },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+            }
+
 
             // Details Table
             doc.setFontSize(12);
@@ -268,7 +282,7 @@ export default function ReportsPage() {
             doc.setFont('helvetica', 'bold');
             if(attendanceReportData.details.length > 0) {
                 doc.text("Detalle de Registros", 14, currentY);
-                currentY += 5;
+                currentY += 8;
                  (doc as any).autoTable({
                     startY: currentY,
                     head: [['Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
@@ -276,6 +290,8 @@ export default function ReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
+            } else {
+                 doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
             }
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
@@ -614,8 +630,24 @@ export default function ReportsPage() {
                                  </Card>
                             </div>
                             <Card className="mt-8">
-                                <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription></CardHeader>
-                                <CardContent><Button onClick={generatePdf} disabled={generatingPdf || attendanceReportData.total === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}</Button></CardContent>
+                                <CardHeader>
+                                    <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
+                                    <CardDescription>Genere un PDF con los datos de asistencia filtrados actualmente.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="flex items-center space-x-2 mb-4">
+                                        <Switch
+                                            id="include-summary-pdf"
+                                            checked={includeSummaryInPdf}
+                                            onCheckedChange={setIncludeSummaryInPdf}
+                                        />
+                                        <Label htmlFor="include-summary-pdf">Incluir resumen por bombero en el PDF</Label>
+                                    </div>
+                                    <Button onClick={generatePdf} disabled={generatingPdf || attendanceReportData.total === 0}>
+                                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                        {generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}
+                                    </Button>
+                                </CardContent>
                             </Card>
                         </div>
                     ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
@@ -643,5 +675,3 @@ export default function ReportsPage() {
         </>
     );
 }
-
-    
