@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
     { value: "present", label: "Presente" },
+    { value: "recupero", label: "Recuperó" },
     { value: "absent", label: "Ausente" },
     { value: "tardy", label: "Tarde" },
     { value: "excused", label: "Justificado" },
@@ -30,6 +31,7 @@ const getStatusClass = (status: AttendanceStatus) => {
         case "absent": return "bg-red-600 hover:bg-red-700 text-white border-red-600 focus:ring-red-500";
         case "tardy": return "bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-500 focus:ring-yellow-500";
         case "excused": return "bg-violet-600 hover:bg-violet-700 text-white border-violet-600 focus:ring-violet-500";
+        case "recupero": return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600 focus:ring-blue-500";
         default: return "";
     }
 }
@@ -118,13 +120,14 @@ export default function AttendancePage() {
 
 
     const summary = useMemo(() => {
-        if (!allParticipants) return { present: 0, absent: 0, tardy: 0, excused: 0, total: 0 };
+        if (!allParticipants) return { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, total: 0 };
         const total = allParticipants.length;
         const present = Object.values(attendance).filter(s => s === 'present').length;
         const absent = Object.values(attendance).filter(s => s === 'absent').length;
         const tardy = Object.values(attendance).filter(s => s === 'tardy').length;
         const excused = Object.values(attendance).filter(s => s === 'excused').length;
-        return { present, absent, tardy, excused, total };
+        const recupero = Object.values(attendance).filter(s => s === 'recupero').length;
+        return { present, absent, tardy, excused, recupero, total };
     }, [attendance, allParticipants]);
 
     if (loading) {
@@ -193,7 +196,7 @@ export default function AttendancePage() {
     };
 
     const summaryCards = [
-        { title: "Presentes", value: summary.present, icon: UserCheck, color: "text-green-500" },
+        { title: "Presentes", value: summary.present + summary.recupero, icon: UserCheck, color: "text-green-500" },
         { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
         { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
         { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },

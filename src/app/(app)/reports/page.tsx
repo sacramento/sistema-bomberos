@@ -51,6 +51,7 @@ const PIE_CHART_COLORS = {
     absent: "#EF4444", // red-500
     tardy: "#FBBF24", // yellow-400
     excused: "#8B5CF6", // violet-500
+    recupero: "#3B82F6", // blue-500
 };
 
 const getStatusClass = (status: AttendanceStatus) => {
@@ -59,11 +60,12 @@ const getStatusClass = (status: AttendanceStatus) => {
         case "absent": return "bg-red-600 hover:bg-red-700 text-white border-red-600";
         case "tardy": return "bg-yellow-500 hover:bg-yellow-600 text-black border-yellow-500";
         case "excused": return "bg-violet-600 hover:bg-violet-700 text-white border-violet-600";
+        case "recupero": return "bg-blue-600 hover:bg-blue-700 text-white border-blue-600";
         default: return "";
     }
 }
 const getStatusLabel = (status: AttendanceStatus) => {
-    const labels: Record<AttendanceStatus, string> = { present: "Presente", absent: "Ausente", tardy: "Tarde", excused: "Justificado" };
+    const labels: Record<AttendanceStatus, string> = { present: "Presente", absent: "Ausente", tardy: "Tarde", excused: "Justificado", recupero: "Recuperó" };
     return labels[status] || "N/A";
 }
 
@@ -248,7 +250,7 @@ export default function ReportsPage() {
                     if (!summaryByUser[item.firefighter.id]) {
                         summaryByUser[item.firefighter.id] = {
                             name: `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                            counts: { present: 0, absent: 0, tardy: 0, excused: 0 },
+                            counts: { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 },
                             total: 0,
                         };
                     }
@@ -258,10 +260,11 @@ export default function ReportsPage() {
 
                 const summaryTableBody = Object.values(summaryByUser).map(summary => {
                     const total = summary.total;
+                    const presentCount = summary.counts.present + summary.counts.recupero;
                     return [
                         summary.name,
                         summary.total,
-                        `${((summary.counts.present / total) * 100).toFixed(0)}%`,
+                        `${((presentCount / total) * 100).toFixed(0)}%`,
                         `${((summary.counts.absent / total) * 100).toFixed(0)}%`,
                         `${((summary.counts.tardy / total) * 100).toFixed(0)}%`,
                         `${((summary.counts.excused / total) * 100).toFixed(0)}%`,
@@ -392,7 +395,7 @@ export default function ReportsPage() {
         });
 
         const summary = {
-            present: finalData.filter(item => item.status === 'present').length,
+            present: finalData.filter(item => item.status === 'present' || item.status === 'recupero').length,
             absent: finalData.filter(item => item.status === 'absent').length,
             tardy: finalData.filter(item => item.status === 'tardy').length,
             excused: finalData.filter(item => item.status === 'excused').length,

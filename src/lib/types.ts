@@ -23,7 +23,7 @@ export type Firefighter = {
   status: 'Active' | 'Inactive';
 };
 
-export type AttendanceStatus = "present" | "absent" | "tardy" | "excused";
+export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";
 
 export type Session = {
   id: string;

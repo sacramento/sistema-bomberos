@@ -33,6 +33,10 @@ export default {
     'hover:bg-violet-700',
     'border-violet-600',
     'focus:ring-violet-500',
+    'bg-blue-600',
+    'hover:bg-blue-700',
+    'border-blue-600',
+    'focus:ring-blue-500',
   ],
   theme: {
     extend: {
