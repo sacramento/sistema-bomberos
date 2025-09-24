@@ -263,15 +263,14 @@ export default function ReportsPage() {
                     };
                     
                     const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-                    const totalRecordsForPercentage = records.length - compensatedAbsences;
+                    const totalRecordsForPercentage = records.length - compensatedAbsences - statusCounts.recupero;
                     
                     if (totalRecordsForPercentage === 0) return null;
 
                     const effectivePresents = statusCounts.present + statusCounts.recupero;
-                    const netAbsences = statusCounts.absent - statusCounts.recupero;
-
+                    
                     const presentPercentage = (effectivePresents / totalRecordsForPercentage) * 100;
-                    const absentPercentage = (netAbsences / totalRecordsForPercentage) * 100;
+                    const absentPercentage = ((statusCounts.absent - compensatedAbsences) / totalRecordsForPercentage) * 100;
                     const tardyPercentage = (statusCounts.tardy / totalRecordsForPercentage) * 100;
                     const excusedPercentage = (statusCounts.excused / totalRecordsForPercentage) * 100;
                     
@@ -424,10 +423,10 @@ export default function ReportsPage() {
         };
         
         const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-        const totalRecordsForPercentage = finalData.length - compensatedAbsences;
+        const totalRecordsForPercentage = finalData.length - compensatedAbsences - statusCounts.recupero;
 
         const effectivePresents = statusCounts.present + statusCounts.recupero;
-        const netAbsences = statusCounts.absent - statusCounts.recupero;
+        const netAbsences = statusCounts.absent - compensatedAbsences;
 
         const pieData = [
             { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
@@ -465,29 +464,24 @@ export default function ReportsPage() {
             };
 
             const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-            const totalRecordsForPercentage = records.length - compensatedAbsences;
+            const totalRecordsForPercentage = records.length - compensatedAbsences - statusCounts.recupero;
 
-            if (totalRecordsForPercentage === 0) {
+            if (totalRecordsForPercentage <= 0) {
                  return {
+                    firefighterId: firefighter.id,
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     totalClasses: 0,
-                    presentPercentage: '100%',
-                    absentPercentage: '0%',
-                    tardyPercentage: '0%',
-                    excusedPercentage: '0%'
+                    presentPercentage: 'N/A',
                 };
             }
 
             const effectivePresents = statusCounts.present + statusCounts.recupero;
-            const netAbsences = statusCounts.absent - statusCounts.recupero;
 
             return {
+                firefighterId: firefighter.id,
                 firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                 totalClasses: totalRecordsForPercentage,
                 presentPercentage: `${((effectivePresents / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                absentPercentage: `${((netAbsences / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                tardyPercentage: `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                excusedPercentage: `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`
             };
         }).filter(item => item !== null);
     }, [attendanceReportData.details, allFirefighters]);
@@ -529,8 +523,8 @@ export default function ReportsPage() {
     }, [allSessions]);
     
     const summaryCards = [
-        { title: "Presentes", value: attendanceReportData.summary.present, icon: UserCheck, color: "text-green-500" },
-        { title: "Ausentes", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
+        { title: "Presentes (inc. recuperos)", value: attendanceReportData.summary.present, icon: UserCheck, color: "text-green-500" },
+        { title: "Ausentes Netos", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
         { title: "Tardes", value: attendanceReportData.summary.tardy, icon: Clock, color: "text-yellow-500" },
         { title: "Justificados", value: attendanceReportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
     ];
@@ -677,7 +671,7 @@ export default function ReportsPage() {
                             <div className="grid gap-8 lg:grid-cols-5">
                                 <Card className="lg:col-span-2">
                                     <CardHeader>
-                                        <CardTitle className="font-headline">Distribución de Asistencia</CardTitle>
+                                        <CardTitle className="font-headline">Distribución General</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <ChartContainer config={{}} className="h-[250px] w-full">
@@ -708,10 +702,10 @@ export default function ReportsPage() {
                                             </TableHeader>
                                             <TableBody>
                                                 {summaryTableBody.map((item, index) => (
-                                                    <TableRow key={index}>
-                                                        <TableCell className="font-medium">{item.firefighter}</TableCell>
-                                                        <TableCell>{item.totalClasses}</TableCell>
-                                                        <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
+                                                    <TableRow key={item?.firefighterId || index}>
+                                                        <TableCell className="font-medium">{item?.firefighter}</TableCell>
+                                                        <TableCell>{item?.totalClasses}</TableCell>
+                                                        <TableCell className="font-semibold">{item?.presentPercentage}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -719,6 +713,43 @@ export default function ReportsPage() {
                                      </CardContent>
                                  </Card>
                             </div>
+
+                             <Card className="mt-8">
+                                <CardHeader>
+                                    <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
+                                    <CardDescription>
+                                        Todos los registros individuales que coinciden con los filtros aplicados.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="max-h-96 overflow-y-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Bombero</TableHead>
+                                                <TableHead>Clase</TableHead>
+                                                <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {attendanceReportData.details.map((item, index) => (
+                                                <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
+                                                    <TableCell className="font-medium">{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</TableCell>
+                                                    <TableCell>{item.session.title}</TableCell>
+                                                    <TableCell className="hidden sm:table-cell">{item.session.date}</TableCell>
+                                                    <TableCell>
+                                                         <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
+                                                            {getStatusLabel(item.status)}
+                                                        </Badge>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+
+
                             <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
