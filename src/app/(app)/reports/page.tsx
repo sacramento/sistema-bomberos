@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -250,29 +251,9 @@ export default function ReportsPage() {
                 const summaryTableBody = Array.from(filteredFirefighterIds).map(firefighterId => {
                     const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
                     
-                    const sessionsForFirefighter = allSessions.filter(session => {
-                        const allP = [...session.attendees, ...session.instructors, ...session.assistants];
-                        return allP.some(p => p.id === firefighterId);
-                    });
-
-                    const filteredSessionsForFirefighter = sessionsForFirefighter.filter(session => {
-                        if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
-                        if (filterClass !== 'all' && session.id !== filterClass) return false;
-                        if (filterDate?.from) {
-                            const sessionDate = new Date(session.date);
-                            sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-                            const toDate = filterDate.to ?? filterDate.from;
-                            return isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) });
-                        }
-                        return true;
-                    });
-                    
-                    const assignedClassesCount = filteredSessionsForFirefighter.length;
-
-                    if (assignedClassesCount === 0) return null;
-
                     const attendanceRecords = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
-
+                    if (attendanceRecords.length === 0) return null;
+                    
                     const statusCounts = {
                         present: attendanceRecords.filter(d => d.status === 'present').length,
                         absent: attendanceRecords.filter(d => d.status === 'absent').length,
@@ -281,10 +262,13 @@ export default function ReportsPage() {
                         recupero: attendanceRecords.filter(d => d.status === 'recupero').length,
                     };
                     
+                    const totalRecords = attendanceRecords.length;
+                    const assignedClassesCount = totalRecords; // Base total is the number of filtered records
+                    
                     const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
-                    const effectivePresents = assignedClassesCount - netAbsences - statusCounts.tardy - statusCounts.excused;
+                    const effectivePresents = statusCounts.present + statusCounts.recupero;
 
-                    const presentPercentage = assignedClassesCount > 0 ? ((effectivePresents + statusCounts.recupero) / assignedClassesCount) * 100 : 0;
+                    const presentPercentage = assignedClassesCount > 0 ? (effectivePresents / assignedClassesCount) * 100 : 0;
                     const absentPercentage = assignedClassesCount > 0 ? (netAbsences / assignedClassesCount) * 100 : 0;
                     const tardyPercentage = assignedClassesCount > 0 ? (statusCounts.tardy / assignedClassesCount) * 100 : 0;
                     const excusedPercentage = assignedClassesCount > 0 ? (statusCounts.excused / assignedClassesCount) * 100 : 0;
@@ -432,18 +416,25 @@ export default function ReportsPage() {
             recupero: finalData.filter(item => item.status === 'recupero').length,
         };
         
-        const totalWithRecupero = Object.values(summary).reduce((a, b) => a + b, 0);
-        const totalForPercentage = totalWithRecupero - summary.recupero;
-        const presentForPercentage = summary.present + summary.recupero;
+        const totalRecords = finalData.length;
+        const totalForPercentage = totalRecords > 0 ? totalRecords - summary.recupero : 0;
+        const effectivePresents = summary.present + summary.recupero;
+        const netAbsents = Math.max(0, summary.absent - summary.recupero);
 
         const pieData = [
-            { name: getStatusLabel('present'), value: presentForPercentage, fill: PIE_CHART_COLORS.present },
-            { name: getStatusLabel('absent'), value: summary.absent, fill: PIE_CHART_COLORS.absent },
+            { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
+            { name: getStatusLabel('absent'), value: netAbsents, fill: PIE_CHART_COLORS.absent },
             { name: getStatusLabel('tardy'), value: summary.tardy, fill: PIE_CHART_COLORS.tardy },
             { name: getStatusLabel('excused'), value: summary.excused, fill: PIE_CHART_COLORS.excused },
         ].filter(item => item.value > 0);
             
-        return { summary: { ...summary, present: presentForPercentage }, total: totalForPercentage, pieData, details: finalData };
+        return { 
+            summary: { ...summary, present: effectivePresents, absent: netAbsents },
+            total: totalForPercentage, 
+            pieData, 
+            details: finalData
+        };
+
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
 
     const leavesReportData = useMemo(() => {
@@ -455,7 +446,7 @@ export default function ReportsPage() {
                 if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
                 if (filterHierarchy.length > 0) {
                      const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDante GENERAL'];
                     const hierarchyMatch = filterHierarchy.some(h => {
                         if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
                         if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
@@ -609,7 +600,7 @@ export default function ReportsPage() {
                 
                 <TabsContent value="attendance">
                     <CommonFilters />
-                    {attendanceReportData.total > 0 ? (
+                    {attendanceReportData.details.length > 0 ? (
                         <div className="space-y-8">
                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                                  {summaryCards.map((card, index) => (
@@ -728,7 +719,3 @@ export default function ReportsPage() {
         </>
     );
 }
-
-    
-
-    
