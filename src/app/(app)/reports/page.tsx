@@ -244,32 +244,61 @@ export default function ReportsPage() {
                 doc.setFont('helvetica', 'bold');
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
+                
+                const filteredFirefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
 
-                const summaryByUser: Record<string, {name: string, counts: Record<AttendanceStatus, number>, total: number}> = {};
-                attendanceReportData.details.forEach(item => {
-                    if (!summaryByUser[item.firefighter.id]) {
-                        summaryByUser[item.firefighter.id] = {
-                            name: `${item.firefighter.firstName} ${item.firefighter.lastName}`,
-                            counts: { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 },
-                            total: 0,
-                        };
-                    }
-                    summaryByUser[item.firefighter.id].counts[item.status]++;
-                    summaryByUser[item.firefighter.id].total++;
-                });
+                const summaryTableBody = Array.from(filteredFirefighterIds).map(firefighterId => {
+                    const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
+                    
+                    const sessionsForFirefighter = allSessions.filter(session => {
+                        const allP = [...session.attendees, ...session.instructors, ...session.assistants];
+                        return allP.some(p => p.id === firefighterId);
+                    });
 
-                const summaryTableBody = Object.values(summaryByUser).map(summary => {
-                    const total = summary.total;
-                    const presentCount = summary.counts.present + summary.counts.recupero;
+                    const filteredSessionsForFirefighter = sessionsForFirefighter.filter(session => {
+                        if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
+                        if (filterClass !== 'all' && session.id !== filterClass) return false;
+                        if (filterDate?.from) {
+                            const sessionDate = new Date(session.date);
+                            sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+                            const toDate = filterDate.to ?? filterDate.from;
+                            return isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) });
+                        }
+                        return true;
+                    });
+                    
+                    const assignedClassesCount = filteredSessionsForFirefighter.length;
+
+                    if (assignedClassesCount === 0) return null;
+
+                    const attendanceRecords = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
+
+                    const statusCounts = {
+                        present: attendanceRecords.filter(d => d.status === 'present').length,
+                        absent: attendanceRecords.filter(d => d.status === 'absent').length,
+                        tardy: attendanceRecords.filter(d => d.status === 'tardy').length,
+                        excused: attendanceRecords.filter(d => d.status === 'excused').length,
+                        recupero: attendanceRecords.filter(d => d.status === 'recupero').length,
+                    };
+                    
+                    const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
+                    const effectivePresents = assignedClassesCount - netAbsences - statusCounts.tardy - statusCounts.excused;
+
+                    const presentPercentage = assignedClassesCount > 0 ? ((effectivePresents + statusCounts.recupero) / assignedClassesCount) * 100 : 0;
+                    const absentPercentage = assignedClassesCount > 0 ? (netAbsences / assignedClassesCount) * 100 : 0;
+                    const tardyPercentage = assignedClassesCount > 0 ? (statusCounts.tardy / assignedClassesCount) * 100 : 0;
+                    const excusedPercentage = assignedClassesCount > 0 ? (statusCounts.excused / assignedClassesCount) * 100 : 0;
+                    
                     return [
-                        summary.name,
-                        summary.total,
-                        `${((presentCount / total) * 100).toFixed(0)}%`,
-                        `${((summary.counts.absent / total) * 100).toFixed(0)}%`,
-                        `${((summary.counts.tardy / total) * 100).toFixed(0)}%`,
-                        `${((summary.counts.excused / total) * 100).toFixed(0)}%`,
+                        `${firefighter.firstName} ${firefighter.lastName}`,
+                        assignedClassesCount,
+                        `${presentPercentage.toFixed(0)}%`,
+                        `${absentPercentage.toFixed(0)}%`,
+                        `${tardyPercentage.toFixed(0)}%`,
+                        `${excusedPercentage.toFixed(0)}%`,
                     ];
-                });
+                }).filter(Boolean);
+
 
                  (doc as any).autoTable({
                     startY: currentY,
@@ -295,12 +324,13 @@ export default function ReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
-            } else if (!includeSummaryInPdf) {
+            } else if (!includeSummaryInPdf && !includeDetailsInPdf) {
                  doc.text("No se seleccionó ningún contenido para incluir en el reporte.", 14, currentY);
             }
 
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
+            console.error("PDF Generation Error: ", error);
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
             setGeneratingPdf(false);
@@ -395,18 +425,25 @@ export default function ReportsPage() {
         });
 
         const summary = {
-            present: finalData.filter(item => item.status === 'present' || item.status === 'recupero').length,
+            present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
             tardy: finalData.filter(item => item.status === 'tardy').length,
             excused: finalData.filter(item => item.status === 'excused').length,
+            recupero: finalData.filter(item => item.status === 'recupero').length,
         };
-        const total = Object.values(summary).reduce((a, b) => a + b, 0);
+        
+        const totalWithRecupero = Object.values(summary).reduce((a, b) => a + b, 0);
+        const totalForPercentage = totalWithRecupero - summary.recupero;
+        const presentForPercentage = summary.present + summary.recupero;
 
-        const pieData = Object.entries(summary)
-            .filter(([, value]) => value > 0)
-            .map(([name, value]) => ({ name: getStatusLabel(name as AttendanceStatus), value, fill: PIE_CHART_COLORS[name as keyof typeof PIE_CHART_COLORS] }));
+        const pieData = [
+            { name: getStatusLabel('present'), value: presentForPercentage, fill: PIE_CHART_COLORS.present },
+            { name: getStatusLabel('absent'), value: summary.absent, fill: PIE_CHART_COLORS.absent },
+            { name: getStatusLabel('tardy'), value: summary.tardy, fill: PIE_CHART_COLORS.tardy },
+            { name: getStatusLabel('excused'), value: summary.excused, fill: PIE_CHART_COLORS.excused },
+        ].filter(item => item.value > 0);
             
-        return { summary, total, pieData, details: finalData };
+        return { summary: { ...summary, present: presentForPercentage }, total: totalForPercentage, pieData, details: finalData };
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
 
     const leavesReportData = useMemo(() => {
@@ -691,5 +728,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
+    
 
     
