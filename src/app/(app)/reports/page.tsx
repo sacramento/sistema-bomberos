@@ -213,67 +213,82 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
-const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
-    return new Promise((resolve) => {
-        const canvas = document.createElement('canvas');
-        canvas.width = 400; 
-        canvas.height = 200;
-        const ctx = canvas.getContext('2d');
-        
-        if (!ctx) {
-            return resolve('');
+const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 200;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) {
+        return '';
+    }
+
+    const total = data.present + data.absent + data.tardy + data.excused;
+    const chartData = {
+        labels: ["Presente", "Ausente", "Tarde", "Justificado"],
+        datasets: [{
+            data: [data.present, data.absent, data.tardy, data.excused],
+            backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+            barPercentage: 0.6,
+        }],
+    };
+
+    const whiteBackgroundPlugin = {
+        id: 'whiteBackground',
+        beforeDraw: (chart: Chart) => {
+            const ctx = chart.canvas.getContext('2d');
+            if (ctx) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, chart.width, chart.height);
+                ctx.restore();
+            }
         }
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        const total = data.present + data.absent + data.tardy + data.excused;
-        const chartData = {
-            labels: ["Presente", "Ausente", "Tarde", "Justificado"],
-            datasets: [{
-                data: [data.present, data.absent, data.tardy, data.excused],
-                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                barPercentage: 0.6,
-            }],
-        };
-
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: chartData,
-            plugins: [ChartDataLabels],
-            options: {
-                animation: false,
-                responsive: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false },
-                    datalabels: {
-                        anchor: 'end',
-                        align: 'end',
-                        formatter: (value) => {
-                            if (total === 0) return '0%';
-                            const percentage = (value / total) * 100;
-                            return `${percentage.toFixed(0)}%`;
-                        },
-                        color: '#333',
-                        font: {
-                            weight: 'bold',
-                            size: 10,
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: Math.max(...chartData.datasets[0].data) > 10 ? undefined : 1 }
-                    }
-                },
+    };
+    
+    const chart = new Chart(ctx, {
+        type: 'bar',
+        data: chartData,
+        plugins: [ChartDataLabels, whiteBackgroundPlugin],
+        options: {
+            animation: {
+                duration: 0
             },
-        });
-        
-        resolve(chart.toBase64Image('image/jpeg', 0.8));
-        chart.destroy();
+            responsive: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'end',
+                    formatter: (value) => {
+                        if (total === 0) return '0%';
+                        const percentage = (value / total) * 100;
+                        return `${percentage.toFixed(0)}%`;
+                    },
+                    color: '#333',
+                    font: {
+                        weight: 'bold',
+                        size: 10,
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { 
+                        stepSize: Math.max(...chartData.datasets[0].data) > 10 ? undefined : 1,
+                        precision: 0 
+                    }
+                }
+            },
+        },
     });
+    
+    const image = chart.toBase64Image('image/jpeg', 0.8);
+    chart.destroy();
+    return image;
 };
     
     const generatePdf = async () => {
@@ -305,15 +320,16 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
             let currentY = 55;
     
             if (attendanceReportData.details.length > 0) {
-                 doc.setFontSize(12);
-                 doc.setTextColor(40, 40, 40);
-                 doc.setFont('helvetica', 'bold');
-                 doc.text("Resumen Gráfico de Asistencia", 14, currentY);
-                 currentY += 5;
-                 
-                 const chartImage = await generateChartImage(attendanceReportData.summary);
-                 doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); 
-                 currentY += 80;
+                 const chartImage = generateChartImage(attendanceReportData.summary);
+                 if (chartImage) {
+                    doc.setFontSize(12);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("Resumen Gráfico de Asistencia", 14, currentY);
+                    currentY += 5;
+                    doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); 
+                    currentY += 80;
+                 }
             }
             
             // Summary Table
@@ -883,6 +899,3 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
         </>
     );
 }
-
-
-
