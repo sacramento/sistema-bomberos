@@ -244,13 +244,17 @@ export default function ReportsPage() {
                 doc.text("Resumen General de Asistencia", 14, currentY);
                 currentY += 5;
     
-                const barChartCanvas = document.createElement('canvas');
-                barChartCanvas.width = 500;
-                barChartCanvas.height = 250;
-                const barChartCtx = barChartCanvas.getContext('2d');
-                
-                if (barChartCtx) {
-                    const chart = new Chart(barChartCtx, {
+                const generateChartImage = () => new Promise<string>((resolve, reject) => {
+                    const barChartCanvas = document.createElement('canvas');
+                    barChartCanvas.width = 500;
+                    barChartCanvas.height = 250;
+                    const barChartCtx = barChartCanvas.getContext('2d');
+    
+                    if (!barChartCtx) {
+                        return reject(new Error("Failed to get canvas context"));
+                    }
+    
+                    new Chart(barChartCtx, {
                         type: 'bar',
                         data: {
                             labels: summaryCards.map(c => c.title),
@@ -260,24 +264,27 @@ export default function ReportsPage() {
                             }],
                         },
                         options: {
-                            responsive: true,
+                            responsive: false,
                             animation: {
-                                duration: 0
+                                onComplete: (animation) => {
+                                    resolve(animation.chart.toBase64Image());
+                                }
                             },
                             plugins: { legend: { display: false } },
                             scales: { y: { beginAtZero: true, grace: '5%' } }
                         }
                     });
-                     await new Promise(resolve => setTimeout(resolve, 50)); // Brief wait for canvas to render
-                     doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
-                     chart.destroy();
-                }
+                });
+    
+                const chartImage = await generateChartImage();
+                doc.addImage(chartImage, 'PNG', 14, currentY, 180, 80);
                 currentY += 90;
             }
     
             if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
                  const summaryTableBody = summaryTableData.map(item => {
-                    const { firefighter, totalClasses, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage } = item!;
+                    if (!item) return [];
+                    const { firefighter, totalClasses, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage } = item;
                      return [firefighter, totalClasses.toString(), presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
                  });
                 
@@ -467,9 +474,10 @@ export default function ReportsPage() {
                 excused: records.filter(d => d.status === 'excused').length,
                 recupero: records.filter(d => d.status === 'recupero').length,
             };
-
+            
             const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
             const totalRecordsForPercentage = records.length - compensatedAbsences;
+
             if (totalRecordsForPercentage <= 0) {
                  return {
                     firefighterId: firefighter.id,
@@ -727,7 +735,7 @@ export default function ReportsPage() {
                                         Todos los registros individuales que coinciden con los filtros aplicados.
                                     </CardDescription>
                                 </CardHeader>
-                                <CardContent className="max-h-96 overflow-y-auto">
+                                <CardContent className="max-h-[400px] overflow-y-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -820,6 +828,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
 
 
