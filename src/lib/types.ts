@@ -71,7 +71,7 @@ export type User = {
   name: string;
   password: string;
   role: UserRole;
-  photoURL?: string;
+  // photoURL is no longer a property on the user
 };
 
 // Tipo para el usuario logueado, puede ser nulo si no está autenticado

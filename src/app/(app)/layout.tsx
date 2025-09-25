@@ -60,6 +60,8 @@ function AppSidebar() {
       }
       return item.label;
   }
+  
+  const userImage = `https://picsum.photos/seed/${user.id}/200`
 
   return (
     <Sidebar>
@@ -102,7 +104,7 @@ function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
            <Avatar className="size-8">
-            <AvatarImage src={user.photoURL || undefined} alt={user.name} className="object-cover" />
+            <AvatarImage src={userImage} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>

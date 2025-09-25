@@ -48,7 +48,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center">
-            <div className="mb-4 flex justify-center">
+             <div className="mb-4 flex justify-center">
               <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
             </div>
             <CardTitle className="font-headline text-2xl">Asistencia SMA</CardTitle>

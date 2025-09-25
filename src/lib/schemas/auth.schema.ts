@@ -11,7 +11,7 @@ export const LoginOutputSchema = z.nullable(
     id: z.string(),
     name: z.string(),
     role: z.enum(['Administrador', 'Operador', 'Ayudantía', 'Bombero']),
-    photoURL: z.string().optional(),
+    // photoURL is no longer part of the login output
   })
 );
 export type LoginOutput = z.infer<typeof LoginOutputSchema>;
