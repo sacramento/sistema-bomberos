@@ -14,9 +14,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { User, UserRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
+import { uploadProfileImage } from "@/services/storage.service";
+import Image from "next/image";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero'];
 
@@ -25,16 +28,34 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const { toast } = useToast();
 
   const [name, setName] = useState(user.name);
-  // La contraseña se deja vacía a propósito. Solo se actualiza si el usuario ingresa una nueva.
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(user.role);
   const [loading, setLoading] = useState(false);
   
-  const resetForm = () => {
-    setName(user.name);
-    setPassword('');
-    setRole(user.role);
-  }
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(user.photoURL || null);
+
+  useEffect(() => {
+    if (open) {
+      setName(user.name);
+      setPassword('');
+      setRole(user.role);
+      setImageFile(null);
+      setImagePreview(user.photoURL || null);
+    }
+  }, [open, user]);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,9 +76,13 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             role,
         };
 
-        // Solo incluir la contraseña en la actualización si se ha ingresado una nueva.
         if (password) {
             updatedData.password = password;
+        }
+
+        if (imageFile) {
+            const photoURL = await uploadProfileImage(user.id, imageFile);
+            updatedData.photoURL = photoURL;
         }
         
         await updateUser(user.id, updatedData);
@@ -83,10 +108,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
@@ -97,6 +119,13 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+             <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-24 w-24">
+                <AvatarImage src={imagePreview || undefined} alt={user.name} />
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+              <Input id="picture" type="file" accept="image/*" onChange={handleImageChange} className="text-sm"/>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="id" className="text-right">
                 Legajo

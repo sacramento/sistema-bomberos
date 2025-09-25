@@ -67,10 +67,11 @@ export type Course = {
 export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero';
 
 export type User = {
-  id: string;
+  id: string; // This is the user's legajo
   name: string;
   password: string;
   role: UserRole;
+  photoURL?: string;
 };
 
 // Tipo para el usuario logueado, puede ser nulo si no está autenticado

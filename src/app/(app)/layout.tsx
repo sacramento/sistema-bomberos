@@ -102,7 +102,7 @@ function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
            <Avatar className="size-8">
-            <AvatarImage src="https://picsum.photos/100" alt={user.name} data-ai-hint="profile picture" />
+            <AvatarImage src={user.photoURL || undefined} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
