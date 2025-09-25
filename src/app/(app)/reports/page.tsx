@@ -214,19 +214,29 @@ export default function ReportsPage() {
     const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
         return new Promise((resolve) => {
             const canvas = document.createElement('canvas');
-            canvas.width = 500;
-            canvas.height = 250;
+            canvas.width = 400; // Smaller width
+            canvas.height = 200; // Smaller height
 
             const total = data.present + data.absent + data.tardy + data.excused;
             if (total === 0) {
-                resolve(''); // Resuelve con cadena vacía si no hay datos
+                resolve('');
                 return;
             }
-
+            
             const chartData = [data.present, data.absent, data.tardy, data.excused];
-            const percentages = chartData.map(value => ((value / total) * 100).toFixed(0) + '%');
+            const percentages = chartData.map(value => ((value / total) * 100));
 
-            new Chart(canvas, {
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                resolve('');
+                return;
+            }
+            
+            // Fill background with white
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ["Presente", "Ausente", "Tarde", "Justificado"],
@@ -239,25 +249,24 @@ export default function ReportsPage() {
                 options: {
                     responsive: false,
                     animation: {
-                        duration: 0, // Sin animación
-                        onComplete: (animation) => {
-                            const chartInstance = animation.chart;
-                            const ctx = chartInstance.ctx;
-                            ctx.font = '10px Arial';
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            chartInstance.data.datasets.forEach((dataset, i) => {
-                                const meta = chartInstance.getDatasetMeta(i);
-                                meta.data.forEach((bar, index) => {
-                                    const data = percentages[index];
-                                    ctx.fillText(data, bar.x, bar.y - 5);
-                                });
-                            });
-                             // Resuelve la promesa con la imagen en formato JPEG
-                            resolve(chartInstance.toBase64Image('image/jpeg', 0.8));
+                        duration: 0,
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false },
+                        datalabels: { // Using a datalabels plugin if available, otherwise would need custom drawing
+                           anchor: 'end',
+                           align: 'end',
+                           formatter: (value, context) => {
+                               const percentage = percentages[context.dataIndex];
+                               return percentage > 5 ? `${percentage.toFixed(0)}%` : '';
+                           },
+                           color: '#333',
+                           font: {
+                               weight: 'bold'
+                           }
                         }
                     },
-                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
                     scales: {
                         y: {
                             beginAtZero: true,
@@ -266,6 +275,12 @@ export default function ReportsPage() {
                     }
                 }
             });
+            
+            // This is a trick to wait for the chart to be rendered.
+            setTimeout(() => {
+                resolve(chart.toBase64Image('image/jpeg', 0.9));
+                chart.destroy();
+            }, 50);
         });
     };
     
@@ -297,16 +312,16 @@ export default function ReportsPage() {
     
             let currentY = 55;
     
-            // Chart
+            // Chart - Always included
             if (attendanceReportData.details.length > 0) {
-                const chartImage = await generateChartImage(attendanceReportData.summary);
+                 const chartImage = await generateChartImage(attendanceReportData.summary);
                 if (chartImage) {
                     doc.setFontSize(12);
                     doc.setTextColor(40, 40, 40);
                     doc.setFont('helvetica', 'bold');
-                    doc.text("Resumen General de Asistencia", 14, currentY);
-                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 180, 90);
-                    currentY += 105;
+                    doc.text("Resumen Gráfico de Asistencia", 14, currentY);
+                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 120, 60); // Smaller chart
+                    currentY += 75;
                 }
             }
             
@@ -319,10 +334,33 @@ export default function ReportsPage() {
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
     
-                (doc as any).autoTable({
+                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Bombero', 'Clases', '% Presente', '% Ausente', '% Tarde', '% Justificado']],
-                    body: summaryTableData.map(item => [item.firefighter, item.totalClasses, item.presentPercentage, item.absentPercentage, item.tardyPercentage, item.excusedPercentage]),
+                    body: summaryTableData.map(item => {
+                        const records = attendanceReportData.details.filter(d => d.firefighter.id === item.firefighterId);
+                        const statusCounts = {
+                            present: records.filter(d => d.status === 'present').length,
+                            absent: records.filter(d => d.status === 'absent').length,
+                            tardy: records.filter(d => d.status === 'tardy').length,
+                            excused: records.filter(d => d.status === 'excused').length,
+                            recupero: records.filter(d => d.status === 'recupero').length,
+                        };
+                        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
+                        const totalRecordsForPercentage = records.length - compensatedAbsences;
+
+                        if (totalRecordsForPercentage <= 0) {
+                            return [item.firefighter, 0, '0%', '0%', '0%', '0%'];
+                        }
+
+                        const effectivePresents = statusCounts.present + statusCounts.recupero;
+                        const presentPercentage = `${((effectivePresents / totalRecordsForPercentage) * 100).toFixed(0)}%`;
+                        const absentPercentage = `${(((statusCounts.absent - compensatedAbsences) / totalRecordsForPercentage) * 100).toFixed(0)}%`;
+                        const tardyPercentage = `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`;
+                        const excusedPercentage = `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`;
+
+                        return [item.firefighter, totalRecordsForPercentage, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
+                    }),
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
@@ -750,6 +788,7 @@ export default function ReportsPage() {
                                      </CardContent>
                                  </Card>
                             </div>
+                            
                             <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
@@ -850,6 +889,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
 
 
