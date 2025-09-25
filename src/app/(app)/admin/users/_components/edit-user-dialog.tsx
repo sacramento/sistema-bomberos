@@ -71,18 +71,33 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
     setLoading(true);
 
     try {
+        let photoURL = user.photoURL;
+
+        // Step 1: Upload image if a new one is selected
+        if (imageFile) {
+            try {
+                 photoURL = await uploadProfileImage(user.id, imageFile);
+            } catch (uploadError: any) {
+                console.error("Image upload failed:", uploadError);
+                toast({
+                    title: "Error de Subida",
+                    description: "No se pudo subir la imagen. Verifique las reglas de Storage y la conexión.",
+                    variant: "destructive",
+                });
+                setLoading(false); // Stop loading and exit
+                return;
+            }
+        }
+        
+        // Step 2: Update user data in Firestore
         const updatedData: Partial<Omit<User, 'id'>> = {
             name,
             role,
+            photoURL: photoURL || null,
         };
 
         if (password) {
             updatedData.password = password;
-        }
-
-        if (imageFile) {
-            const photoURL = await uploadProfileImage(user.id, imageFile);
-            updatedData.photoURL = photoURL;
         }
         
         await updateUser(user.id, updatedData);
@@ -96,7 +111,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
         setOpen(false);
 
     } catch (error: any) {
-        console.error(error);
+        console.error("Error updating user:", error);
         toast({
             title: "Error",
             description: error.message || "No se pudo actualizar el usuario. Intente de nuevo.",
