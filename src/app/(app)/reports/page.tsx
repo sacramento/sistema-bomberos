@@ -225,8 +225,8 @@ export default function ReportsPage() {
     
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
-    canvas.width = 400; // Reduced size
-    canvas.height = 200; // Reduced size
+    canvas.width = 400;
+    canvas.height = 200;
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return '';
@@ -246,13 +246,15 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     };
 
     return new Promise((resolve) => {
-         const total = data.present + data.absent + data.tardy + data.excused;
-         new Chart(ctx, {
+        const chartData = [data.present, data.absent, data.tardy, data.excused];
+        const total = chartData.reduce((a, b) => a + b, 0);
+
+        const chart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ["Presente", "Ausente", "Tarde", "Justificado"],
                 datasets: [{
-                    data: [data.present, data.absent, data.tardy, data.excused],
+                    data: chartData,
                     backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
                     barPercentage: 0.5,
                 }],
@@ -260,7 +262,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             plugins: [ChartDataLabels, whiteBackgroundPlugin],
             options: {
                 responsive: false,
-                 animation: {
+                animation: {
                     duration: 0,
                     onComplete: (context) => {
                         resolve(context.chart.toBase64Image('image/jpeg', 0.8));
@@ -272,13 +274,21 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     tooltip: { enabled: false },
                     datalabels: {
                         anchor: 'end',
-                        align: 'end',
+                        align: (context) => {
+                            const value = context.dataset.data[context.dataIndex] as number;
+                            const maxValue = Math.max(...(context.dataset.data as number[]));
+                            return value > maxValue * 0.85 ? 'start' : 'end';
+                        },
                         formatter: (value) => {
                             if (total === 0) return '0%';
                             const percentage = (value / total) * 100;
                             return `${percentage.toFixed(0)}%`;
                         },
-                        color: '#333',
+                        color: (context) => {
+                            const value = context.dataset.data[context.dataIndex] as number;
+                            const maxValue = Math.max(...(context.dataset.data as number[]));
+                            return value > maxValue * 0.85 ? '#ffffff' : '#333333';
+                        },
                         font: {
                             weight: 'bold',
                             size: 10,
@@ -289,7 +299,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     y: {
                         beginAtZero: true,
                         ticks: { 
-                            stepSize: Math.max(...[data.present, data.absent, data.tardy, data.excused]) > 10 ? undefined : 1,
                             precision: 0 
                         }
                     }
