@@ -41,7 +41,7 @@ const navItems = [
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador'] },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Operador', 'Ayudantía'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero'] },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
 
@@ -53,6 +53,13 @@ function AppSidebar() {
   if (!user) return null;
 
   const availableNavItems = navItems.filter(item => item.roles.includes(user.role));
+  
+  const getLabel = (item: typeof navItems[0]) => {
+      if (item.href === '/reports' && user.role === 'Bombero') {
+          return 'Mi Reporte';
+      }
+      return item.label;
+  }
 
   return (
     <Sidebar>
@@ -81,10 +88,10 @@ function AppSidebar() {
               <Link href={item.href}>
                 <SidebarMenuButton
                   isActive={pathname.startsWith(item.href)}
-                  tooltip={item.label}
+                  tooltip={getLabel(item)}
                 >
                   <item.icon />
-                  <span>{item.label}</span>
+                  <span>{getLabel(item)}</span>
                 </SidebarMenuButton>
               </Link>
             </SidebarMenuItem>
@@ -160,7 +167,22 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
     if (!user) {
       router.push('/login');
+      return;
     }
+    
+    // Redirect if user tries to access a route they don't have permission for
+    const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
+    if(currentNavItem && !currentNavItem.roles.includes(user.role)) {
+       // Redirect to the first available page for their role
+       const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
+       if (firstAvailablePage) {
+           router.push(firstAvailablePage.href);
+       } else {
+            router.push('/login'); // Fallback if no pages are available for role
+       }
+    }
+
+
   }, [user, loading, pathname, router]);
   
   if (loading || !user) {

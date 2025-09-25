@@ -189,6 +189,16 @@ export default function ReportsPage() {
                 setAllFirefighters(firefightersData);
                 setAllLeaves(leavesData);
 
+                if (user?.role === 'Bombero') {
+                    const firefighterUser = firefightersData.find(f => f.legajo === user.id);
+                    if(firefighterUser) {
+                        setFilterFirefighter(firefighterUser.id);
+                    } else {
+                        // User is a 'Bombero' but not in the firefighters list, show no data.
+                        setFilterFirefighter('__NOT_FOUND__');
+                    }
+                }
+
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -211,28 +221,16 @@ export default function ReportsPage() {
         }
         fetchData();
         fetchLogo();
-    }, [toast]);
+    }, [toast, user]);
     
-const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): string => {
+const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 200;
+    canvas.width = 500; // Increased resolution for better quality
+    canvas.height = 250;
     const ctx = canvas.getContext('2d');
     
-    if (!ctx) {
-        return '';
-    }
-
-    const total = data.present + data.absent + data.tardy + data.excused;
-    const chartData = {
-        labels: ["Presente", "Ausente", "Tarde", "Justificado"],
-        datasets: [{
-            data: [data.present, data.absent, data.tardy, data.excused],
-            backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-            barPercentage: 0.6,
-        }],
-    };
-
+    if (!ctx) return '';
+    
     const whiteBackgroundPlugin = {
         id: 'whiteBackground',
         beforeDraw: (chart: Chart) => {
@@ -246,49 +244,59 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
             }
         }
     };
-    
-    const chart = new Chart(ctx, {
-        type: 'bar',
-        data: chartData,
-        plugins: [ChartDataLabels, whiteBackgroundPlugin],
-        options: {
-            animation: {
-                duration: 0
+
+    return new Promise((resolve) => {
+         const total = data.present + data.absent + data.tardy + data.excused;
+         const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["Presente", "Ausente", "Tarde", "Justificado"],
+                datasets: [{
+                    data: [data.present, data.absent, data.tardy, data.excused],
+                    backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                    barPercentage: 0.6,
+                }],
             },
-            responsive: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'end',
-                    formatter: (value) => {
-                        if (total === 0) return '0%';
-                        const percentage = (value / total) * 100;
-                        return `${percentage.toFixed(0)}%`;
-                    },
-                    color: '#333',
-                    font: {
-                        weight: 'bold',
-                        size: 10,
+            plugins: [ChartDataLabels, whiteBackgroundPlugin],
+            options: {
+                responsive: false,
+                 animation: {
+                    duration: 0,
+                    onComplete: () => {
+                        resolve(chart.toBase64Image('image/jpeg', 0.8));
+                        chart.destroy();
                     }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { 
-                        stepSize: Math.max(...chartData.datasets[0].data) > 10 ? undefined : 1,
-                        precision: 0 
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => {
+                            if (total === 0) return '0%';
+                            const percentage = (value / total) * 100;
+                            return `${percentage.toFixed(0)}%`;
+                        },
+                        color: '#333',
+                        font: {
+                            weight: 'bold',
+                            size: 12,
+                        }
                     }
-                }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            stepSize: Math.max(...[data.present, data.absent, data.tardy, data.excused]) > 10 ? undefined : 1,
+                            precision: 0 
+                        }
+                    }
+                },
             },
-        },
+        });
     });
-    
-    const image = chart.toBase64Image('image/jpeg', 0.8);
-    chart.destroy();
-    return image;
 };
     
     const generatePdf = async () => {
@@ -320,7 +328,7 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
             let currentY = 55;
     
             if (attendanceReportData.details.length > 0) {
-                 const chartImage = generateChartImage(attendanceReportData.summary);
+                 const chartImage = await generateChartImage(attendanceReportData.summary);
                  if (chartImage) {
                     doc.setFontSize(12);
                     doc.setTextColor(40, 40, 40);
@@ -576,6 +584,10 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
     const leavesReportData = useMemo(() => {
         return allLeaves.filter(leave => {
             const firefighter = allFirefighters.find(f => f.id === leave.firefighterId);
+            
+            // For 'Bombero' role, they can't see this tab anyway, but as a safeguard:
+            if (user?.role === 'Bombero') return false;
+
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
 
             if (firefighter) {
@@ -602,7 +614,7 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
             }
             return true;
         });
-    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation]);
+    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, user?.role]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
@@ -650,67 +662,72 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
                       </PopoverContent>
                   </Popover>
                 </div>
-                 <div className="space-y-2">
-                    <Label>Integrante Específico</Label>
-                    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                            {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
-                            <Command>
-                            <CommandInput placeholder="Buscar integrante..." />
-                            <CommandList>
-                                <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                                <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
-                                     <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
-                                    Todos los integrantes
-                                </CommandItem>
-                                {allFirefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
-                                    <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
-                                </CommandItem>
-                                ))}
-                            </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                {activeTab === 'attendance' && (
-                    <div className="space-y-2">
-                        <Label>Especialidad</Label>
-                        <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las especialidades</SelectItem>
-                                {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                { user?.role !== 'Bombero' && (
+                    <>
+                         <div className="space-y-2">
+                            <Label>Integrante Específico</Label>
+                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
+                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                    <Command>
+                                    <CommandInput placeholder="Buscar integrante..." />
+                                    <CommandList>
+                                        <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                                        <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
+                                            <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                            Todos los integrantes
+                                        </CommandItem>
+                                        {allFirefighters.map((firefighter) => (
+                                        <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                            <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                            {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                        </CommandItem>
+                                        ))}
+                                    </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Jerarquía</Label>
+                            <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Cuartel</Label>
+                            <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
+                        </div>
+                    </>
                 )}
                 {activeTab === 'attendance' && (
-                    <div className="space-y-2">
-                        <Label>Clase Específica</Label>
-                        <Select value={filterClass} onValueChange={setFilterClass}>
-                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todas las clases</SelectItem>
-                                {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    <>
+                        <div className="space-y-2">
+                            <Label>Especialidad</Label>
+                            <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las especialidades</SelectItem>
+                                    {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Clase Específica</Label>
+                            <Select value={filterClass} onValueChange={setFilterClass}>
+                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las clases</SelectItem>
+                                    {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </>
                 )}
-                <div className="space-y-2">
-                    <Label>Jerarquía</Label>
-                    <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
-                </div>
-                <div className="space-y-2">
-                    <Label>Cuartel</Label>
-                    <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
-                </div>
+                
             </CardContent>
         </Card>
     );
@@ -718,7 +735,7 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
     if (loading) {
         return (
             <>
-                <PageHeader title="Reportes" description="Genere y exporte reportes de asistencia y actividad." />
+                <PageHeader title={user?.role === 'Bombero' ? 'Mi Reporte' : 'Reportes'} description="Genere y exporte reportes de asistencia y actividad." />
                 <Skeleton className="w-full h-96" />
             </>
         )
@@ -726,13 +743,15 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
 
     return (
         <>
-            <PageHeader title="Reportes" description="Filtre y analice los datos de asistencia y licencias." />
+            <PageHeader title={user?.role === 'Bombero' ? 'Mi Reporte' : 'Reportes'} description={user?.role === 'Bombero' ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia y licencias.'} />
             
             <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
-                    <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
-                    {user?.role === 'Ayudantía' && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
-                </TabsList>
+                 {user?.role !== 'Bombero' && (
+                    <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+                        <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
+                        {(user?.role === 'Ayudantía' || user?.role === 'Administrador') && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
+                    </TabsList>
+                 )}
                 
                 <TabsContent value="attendance">
                     <CommonFilters />
@@ -877,7 +896,7 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
                     ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
                 </TabsContent>
                 
-                {user?.role === 'Ayudantía' && (
+                {(user?.role === 'Ayudantía' || user?.role === 'Administrador') && (
                     <TabsContent value="leaves">
                         <CommonFilters />
                         {leavesReportData.length > 0 ? (
