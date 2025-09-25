@@ -245,35 +245,32 @@ export default function ReportsPage() {
                 currentY += 5;
     
                 const barChartCanvas = document.createElement('canvas');
-                barChartCanvas.width = 500; // Increased resolution
+                barChartCanvas.width = 500;
                 barChartCanvas.height = 250;
                 const barChartCtx = barChartCanvas.getContext('2d');
+                
                 if (barChartCtx) {
-                    await new Promise<void>(resolve => {
-                        const chart = new Chart(barChartCtx, {
-                            type: 'bar',
-                            data: {
-                                labels: summaryCards.map(c => c.title),
-                                datasets: [{
-                                    data: summaryCards.map(c => c.value),
-                                    backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                                }],
+                    const chart = new Chart(barChartCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: summaryCards.map(c => c.title),
+                            datasets: [{
+                                data: summaryCards.map(c => c.value),
+                                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                            }],
+                        },
+                        options: {
+                            responsive: true,
+                            animation: {
+                                duration: 0
                             },
-                            options: {
-                                responsive: true,
-                                animation: {
-                                    duration: 0,
-                                    onComplete: () => {
-                                        doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
-                                        chart.destroy();
-                                        resolve();
-                                    }
-                                },
-                                plugins: { legend: { display: false } },
-                                scales: { y: { beginAtZero: true, grace: '5%' } }
-                            }
-                        });
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, grace: '5%' } }
+                        }
                     });
+                     await new Promise(resolve => setTimeout(resolve, 50)); // Brief wait for canvas to render
+                     doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
+                     chart.destroy();
                 }
                 currentY += 90;
             }
@@ -284,8 +281,7 @@ export default function ReportsPage() {
                      return [firefighter, totalClasses.toString(), presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
                  });
                 
-                doc.addPage();
-                currentY = 20;
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
 
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
@@ -304,7 +300,7 @@ export default function ReportsPage() {
             }
     
             if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
-                 if (currentY > 250 || includeSummaryInPdf) { doc.addPage(); currentY = 20; }
+                 if (currentY > 250 || (includeSummaryInPdf && summaryTableData.length > 10)) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
@@ -824,6 +820,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
 
 
