@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Chart } from 'chart.js/auto';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 
@@ -220,7 +221,6 @@ export default function ReportsPage() {
         const doc = new jsPDF();
     
         try {
-            // 1. PDF Header
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
@@ -237,7 +237,6 @@ export default function ReportsPage() {
     
             let currentY = 55;
     
-            // 2. Summary Chart (Always included)
             if (attendanceReportData.details.length > 0) {
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
@@ -246,42 +245,53 @@ export default function ReportsPage() {
                 currentY += 5;
     
                 const barChartCanvas = document.createElement('canvas');
+                barChartCanvas.width = 500; // Increased resolution
+                barChartCanvas.height = 250;
                 const barChartCtx = barChartCanvas.getContext('2d');
                 if (barChartCtx) {
-                    const chart = new (await import('chart.js')).Chart(barChartCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: summaryCards.map(c => c.title),
-                            datasets: [{
-                                data: summaryCards.map(c => c.value),
-                                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                            }],
-                        },
-                        options: {
-                             animation: false,
-                             plugins: { legend: { display: false } },
-                             scales: { y: { beginAtZero: true, grace: '5%' } }
-                        }
+                    await new Promise<void>(resolve => {
+                        const chart = new Chart(barChartCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: summaryCards.map(c => c.title),
+                                datasets: [{
+                                    data: summaryCards.map(c => c.value),
+                                    backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                                }],
+                            },
+                            options: {
+                                responsive: true,
+                                animation: {
+                                    duration: 0,
+                                    onComplete: () => {
+                                        doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
+                                        chart.destroy();
+                                        resolve();
+                                    }
+                                },
+                                plugins: { legend: { display: false } },
+                                scales: { y: { beginAtZero: true, grace: '5%' } }
+                            }
+                        });
                     });
-                     doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
-                     chart.destroy();
                 }
                 currentY += 90;
             }
     
-            // 3. Optional Summary Table
             if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
+                 const summaryTableBody = summaryTableData.map(item => {
+                    const { firefighter, totalClasses, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage } = item!;
+                     return [firefighter, totalClasses.toString(), presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
+                 });
+                
+                doc.addPage();
+                currentY = 20;
+
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                if (currentY > 250) { doc.addPage(); currentY = 20; }
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
-    
-                const summaryTableBody = summaryTableData.map(item => {
-                    const { firefighter, totalClasses, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage } = item!;
-                    return [firefighter, totalClasses.toString(), presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
-                });
     
                 (doc as any).autoTable({
                     startY: currentY,
@@ -293,12 +303,11 @@ export default function ReportsPage() {
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
     
-            // 4. Optional Details Table
             if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
+                 if (currentY > 250 || includeSummaryInPdf) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                 if (currentY > 250) { doc.addPage(); currentY = 20; }
                 doc.text("Detalle de Registros de Asistencia", 14, currentY);
                 currentY += 8;
     
@@ -331,7 +340,7 @@ export default function ReportsPage() {
         }
     };
     
-    const generateLeavesPdf = async () => {
+     const generateLeavesPdf = async () => {
          if (!logoDataUrl) {
              toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
         }
@@ -425,10 +434,8 @@ export default function ReportsPage() {
             recupero: finalData.filter(item => item.status === 'recupero').length,
         };
         
-        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-        const totalRecordsForPercentage = finalData.length - compensatedAbsences - statusCounts.recupero;
-
         const effectivePresents = statusCounts.present + statusCounts.recupero;
+        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
         const netAbsences = statusCounts.absent - compensatedAbsences;
 
         const pieData = [
@@ -439,8 +446,7 @@ export default function ReportsPage() {
         ].filter(item => item.value > 0);
             
         return { 
-            summary: { ...statusCounts, present: effectivePresents, absent: netAbsences },
-            total: totalRecordsForPercentage,
+            summary: { present: effectivePresents, absent: netAbsences, tardy: statusCounts.tardy, excused: statusCounts.excused },
             pieData, 
             details: finalData
         };
@@ -467,8 +473,7 @@ export default function ReportsPage() {
             };
 
             const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-            const totalRecordsForPercentage = records.length - compensatedAbsences - statusCounts.recupero;
-
+            const totalRecordsForPercentage = records.length - compensatedAbsences;
             if (totalRecordsForPercentage <= 0) {
                  return {
                     firefighterId: firefighter.id,
@@ -492,7 +497,7 @@ export default function ReportsPage() {
                 tardyPercentage: `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`,
                 excusedPercentage: `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`,
             };
-        }).filter(item => item !== null);
+        }).filter(item => item !== null).sort((a, b) => a!.firefighter.localeCompare(b!.firefighter));
     }, [attendanceReportData.details, allFirefighters]);
 
 
@@ -670,9 +675,6 @@ export default function ReportsPage() {
                                         </CardHeader>
                                         <CardContent>
                                             <div className="text-2xl font-bold">{card.value}</div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {attendanceReportData.total > 0 ? `${((card.value / attendanceReportData.total) * 100).toFixed(1)}% del total` : ''}
-                                            </p>
                                         </CardContent>
                                     </Card>
                                  ))}
@@ -722,7 +724,7 @@ export default function ReportsPage() {
                                      </CardContent>
                                  </Card>
                             </div>
-                             <Card className="mt-8">
+                            <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
                                     <CardDescription>
@@ -822,5 +824,6 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
 
