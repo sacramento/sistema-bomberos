@@ -3,7 +3,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Leave } from "@/lib/types";
 import { getLeaves, deleteLeave } from "@/services/leaves.service";
 import { useToast } from "@/hooks/use-toast";
@@ -16,11 +16,15 @@ import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import EditLeaveDialog from "./_components/edit-leave-dialog";
+import { useAuth } from "@/context/auth-context";
 
 export default function LeavesPage() {
     const [leaves, setLeaves] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const { user } = useAuth();
+    
+    const canEdit = useMemo(() => user?.role === 'Administrador' || user?.role === 'Ayudantía', [user]);
 
     const fetchLeaves = async () => {
         setLoading(true);
@@ -67,12 +71,14 @@ export default function LeavesPage() {
     return (
         <>
             <PageHeader title="Gestión de Licencias" description="Registre y gestione las licencias de los bomberos.">
-                <AddLeaveDialog onLeaveAdded={handleDataChange}>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Registrar Licencia
-                    </Button>
-                </AddLeaveDialog>
+                {canEdit && (
+                    <AddLeaveDialog onLeaveAdded={handleDataChange}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Registrar Licencia
+                        </Button>
+                    </AddLeaveDialog>
+                )}
             </PageHeader>
             <Card>
                 <CardHeader>
@@ -86,7 +92,7 @@ export default function LeavesPage() {
                                 <TableHead>Tipo de Licencia</TableHead>
                                 <TableHead>Desde</TableHead>
                                 <TableHead>Hasta</TableHead>
-                                <TableHead><span className="sr-only">Acciones</span></TableHead>
+                                {canEdit && <TableHead><span className="sr-only">Acciones</span></TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -97,7 +103,7 @@ export default function LeavesPage() {
                                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                                    {canEdit && <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>}
                                 </TableRow>
                                 ))
                             ) : (
@@ -107,49 +113,51 @@ export default function LeavesPage() {
                                         <TableCell>{leave.type}</TableCell>
                                         <TableCell>{format(new Date(leave.startDate), "PPP", { locale: es })}</TableCell>
                                         <TableCell>{format(new Date(leave.endDate), "PPP", { locale: es })}</TableCell>
-                                        <TableCell>
-                                             <AlertDialog>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                            <MoreHorizontal className="h-4 w-4" />
-                                                            <span className="sr-only">Toggle menu</span>
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <EditLeaveDialog leave={leave} onLeaveUpdated={handleDataChange}>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                                <Edit className="mr-2 h-4 w-4" />
-                                                                Editar
-                                                            </DropdownMenuItem>
-                                                        </EditLeaveDialog>
-                                                        <DropdownMenuSeparator />
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
-                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                        {canEdit && (
+                                            <TableCell>
+                                                 <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                                <MoreHorizontal className="h-4 w-4" />
+                                                                <span className="sr-only">Toggle menu</span>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                            <EditLeaveDialog leave={leave} onLeaveUpdated={handleDataChange}>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                    <Edit className="mr-2 h-4 w-4" />
+                                                                    Editar
+                                                                </DropdownMenuItem>
+                                                            </EditLeaveDialog>
+                                                            <DropdownMenuSeparator />
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
+                                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                                    Eliminar
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                Esta acción no se puede deshacer. Esto eliminará permanentemente la licencia para <span className="font-semibold">{leave.firefighterName}</span>. 
+                                                                Esta acción NO revierte las justificaciones de asistencia ya realizadas.
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(leave.id)} variant="destructive">
                                                                 Eliminar
-                                                            </DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente la licencia para <span className="font-semibold">{leave.firefighterName}</span>. 
-                                                            Esta acción NO revierte las justificaciones de asistencia ya realizadas.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(leave.id)} variant="destructive">
-                                                            Eliminar
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             )}

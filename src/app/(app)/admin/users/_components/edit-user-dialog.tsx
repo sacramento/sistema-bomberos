@@ -19,7 +19,7 @@ import { User, UserRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero'];
+const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'];
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -99,8 +99,8 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
           </DialogHeader>
           <div className="grid gap-4 py-4">
              <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-24 w-24">
-                <AvatarImage src={imagePreview} alt={user.name} />
+              <Avatar className="h-24 w-24 object-cover">
+                <AvatarImage src={imagePreview} alt={user.name} className="object-cover"/>
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
               </Avatar>
             </div>

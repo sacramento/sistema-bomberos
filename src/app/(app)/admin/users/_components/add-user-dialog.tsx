@@ -18,7 +18,7 @@ import { useState } from "react";
 import { User, UserRole } from "@/lib/types";
 import { addUser } from "@/services/users.service";
 
-const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero'];
+const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'];
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
   const [open, setOpen] = useState(false);

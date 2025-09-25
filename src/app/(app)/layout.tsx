@@ -39,9 +39,9 @@ const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Ayudantía'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero'] },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía', 'Oficial'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
 
@@ -104,7 +104,7 @@ function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
            <Avatar className="size-8">
-            <AvatarImage src={userImage} alt={user.name} />
+            <AvatarImage src={userImage} alt={user.name} className="object-cover"/>
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>

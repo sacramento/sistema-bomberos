@@ -64,7 +64,7 @@ export type Course = {
   endDate: string;
 }
 
-export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero';
+export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial';
 
 export type User = {
   id: string; // This is the user's legajo

@@ -10,7 +10,7 @@ export const LoginOutputSchema = z.nullable(
   z.object({
     id: z.string(),
     name: z.string(),
-    role: z.enum(['Administrador', 'Operador', 'Ayudantía', 'Bombero']),
+    role: z.enum(['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial']),
     // photoURL is no longer part of the login output
   })
 );

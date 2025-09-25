@@ -17,6 +17,7 @@ import { Firefighter, Session, AttendanceStatus } from "@/lib/types";
 import { getSessionById, updateSessionAttendance } from "@/services/sessions.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
     { value: "present", label: "Presente" },
@@ -46,6 +47,7 @@ export default function AttendancePage() {
     const params = useParams();
     const sessionId = params.id as string;
     const { toast } = useToast();
+    const { user } = useAuth();
     
     const [session, setSession] = useState<Session | null>(null);
     const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
@@ -55,6 +57,8 @@ export default function AttendancePage() {
     
     const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
     const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
+
+    const canEdit = useMemo(() => user?.role === 'Administrador' || user?.role === 'Operador', [user]);
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -246,6 +250,7 @@ export default function AttendancePage() {
                                         <Select 
                                         value={attendance[firefighter.id]} 
                                         onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
+                                        disabled={!canEdit}
                                     >
                                         <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
                                             <SelectValue placeholder="Seleccionar..." />
@@ -291,39 +296,41 @@ export default function AttendancePage() {
                  ))}
             </div>
 
-            <Tabs defaultValue="register" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
-                    <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>
+            <Tabs defaultValue={canEdit ? "register" : "view"} className="w-full">
+                <TabsList className={cn("grid w-full mb-4", canEdit ? "grid-cols-2 max-w-md" : "grid-cols-1 max-w-[200px]")}>
+                    {canEdit && <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>}
                     <TabsTrigger value="view"><Eye className="mr-2 h-4 w-4"/>Ver Resumen</TabsTrigger>
                 </TabsList>
                 
-                <TabsContent value="register">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Lista de Participantes</CardTitle>
-                            <CardDescription>Seleccione el estado de cada bombero, instructor y ayudante asignado a esta clase.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Legajo y Nombre</TableHead>
-                                            <TableHead className="text-right">Estado</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    {renderTableBody(false)}
-                                </Table>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="justify-end">
-                            <Button onClick={handleSaveChanges} disabled={saving}>
-                                <Save className="mr-2 h-4 w-4" />
-                                {saving ? 'Guardando...' : 'Guardar Cambios'}
-                            </Button>
-                        </CardFooter>
-                    </Card>
-                </TabsContent>
+                {canEdit && (
+                    <TabsContent value="register">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="font-headline">Lista de Participantes</CardTitle>
+                                <CardDescription>Seleccione el estado de cada bombero, instructor y ayudante asignado a esta clase.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Legajo y Nombre</TableHead>
+                                                <TableHead className="text-right">Estado</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        {renderTableBody(false)}
+                                    </Table>
+                                </div>
+                            </CardContent>
+                            <CardFooter className="justify-end">
+                                <Button onClick={handleSaveChanges} disabled={saving}>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    {saving ? 'Guardando...' : 'Guardar Cambios'}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    </TabsContent>
+                )}
                 
                 <TabsContent value="view">
                     <Card>
