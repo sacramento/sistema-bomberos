@@ -1,4 +1,5 @@
 
+
 'use client';
 import React from "react";
 import { PageHeader } from "@/components/page-header";
@@ -209,8 +210,8 @@ export default function AttendancePage() {
         return (
             <div className="flex items-center gap-2">
                 <span>{`${firefighter.id} - ${firefighter.firstName} ${firefighter.lastName}`}</span>
-                {isInstructor && <Badge variant="destructive">Instructor</Badge>}
-                {isAssistant && <Badge variant="secondary">Ayudante</Badge>}
+                {isInstructor && <Badge variant="destructive">I</Badge>}
+                {isAssistant && <Badge variant="secondary">A</Badge>}
             </div>
         );
     }
@@ -350,4 +351,5 @@ export default function AttendancePage() {
         </>
     );
 }
+
 

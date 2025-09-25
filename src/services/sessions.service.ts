@@ -1,4 +1,5 @@
 
+
 import { Session, Firefighter, AttendanceStatus } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy, updateDoc, addDoc } from 'firebase/firestore';
@@ -26,6 +27,9 @@ const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighte
         instructors: getFirefighterObjects(data.instructorIds || []),
         assistants: getFirefighterObjects(data.assistantIds || []),
         attendees: getFirefighterObjects(data.attendeeIds || []),
+        instructorIds: data.instructorIds || [],
+        assistantIds: data.assistantIds || [],
+        attendeeIds: data.attendeeIds || [],
     } as Session;
 }
 
@@ -108,3 +112,4 @@ export const updateSessionAttendance = async (id: string, attendance: Record<str
         attendance: attendance
     });
 };
+

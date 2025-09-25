@@ -35,6 +35,9 @@ export type Session = {
   instructors: Firefighter[];
   assistants: Firefighter[];
   attendees: Firefighter[];
+  instructorIds?: string[];
+  assistantIds?: string[];
+  attendeeIds?: string[];
   attendance?: Record<string, AttendanceStatus>; // Firefighter ID -> Status
 };
 
