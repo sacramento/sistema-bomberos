@@ -23,7 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -254,15 +254,15 @@ export default function ReportsPage() {
                             labels: summaryCards.map(c => c.title),
                             datasets: [{
                                 data: summaryCards.map(c => c.value),
-                                backgroundColor: summaryCards.map(c => c.color.replace('text-', '').replace('-500', '')),
+                                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
                             }],
                         },
                         options: {
+                             animation: false,
                              plugins: { legend: { display: false } },
                              scales: { y: { beginAtZero: true, grace: '5%' } }
                         }
                     });
-                     await new Promise(resolve => setTimeout(resolve, 500)); // wait for chart to render
                      doc.addImage(chart.toBase64Image(), 'PNG', 14, currentY, 180, 80);
                      chart.destroy();
                 }
@@ -722,7 +722,7 @@ export default function ReportsPage() {
                                      </CardContent>
                                  </Card>
                             </div>
-                            <Card className="mt-8">
+                             <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
                                     <CardDescription>
@@ -822,4 +822,5 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
