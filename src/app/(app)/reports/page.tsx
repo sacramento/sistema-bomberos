@@ -225,8 +225,8 @@ export default function ReportsPage() {
     
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
-    canvas.width = 500; // Increased resolution for better quality
-    canvas.height = 250;
+    canvas.width = 400; // Reduced size
+    canvas.height = 200; // Reduced size
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return '';
@@ -247,14 +247,14 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
     return new Promise((resolve) => {
          const total = data.present + data.absent + data.tardy + data.excused;
-         const chart = new Chart(ctx, {
+         new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: ["Presente", "Ausente", "Tarde", "Justificado"],
                 datasets: [{
                     data: [data.present, data.absent, data.tardy, data.excused],
                     backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                    barPercentage: 0.6,
+                    barPercentage: 0.5,
                 }],
             },
             plugins: [ChartDataLabels, whiteBackgroundPlugin],
@@ -262,9 +262,9 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 responsive: false,
                  animation: {
                     duration: 0,
-                    onComplete: () => {
-                        resolve(chart.toBase64Image('image/jpeg', 0.8));
-                        chart.destroy();
+                    onComplete: (context) => {
+                        resolve(context.chart.toBase64Image('image/jpeg', 0.8));
+                        context.chart.destroy();
                     }
                 },
                 plugins: {
@@ -281,7 +281,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                         color: '#333',
                         font: {
                             weight: 'bold',
-                            size: 12,
+                            size: 10,
                         }
                     }
                 },
@@ -918,3 +918,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
+
+    
