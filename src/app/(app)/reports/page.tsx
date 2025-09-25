@@ -216,15 +216,14 @@ export default function ReportsPage() {
 const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
-        canvas.width = 400; // smaller width
-        canvas.height = 200; // smaller height
+        canvas.width = 400; 
+        canvas.height = 200;
         const ctx = canvas.getContext('2d');
         
         if (!ctx) {
             return resolve('');
         }
 
-        // Fill background with white
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -272,9 +271,8 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
             },
         });
         
-        // This should be synchronous now with animation: false
         resolve(chart.toBase64Image('image/jpeg', 0.8));
-        chart.destroy(); // Clean up chart instance
+        chart.destroy();
     });
 };
     
@@ -306,7 +304,6 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
     
             let currentY = 55;
     
-            // Chart
             if (attendanceReportData.details.length > 0) {
                  doc.setFontSize(12);
                  doc.setTextColor(40, 40, 40);
@@ -315,7 +312,7 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
                  currentY += 5;
                  
                  const chartImage = await generateChartImage(attendanceReportData.summary);
-                 doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); // Adjusted size
+                 doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); 
                  currentY += 80;
             }
             
@@ -886,5 +883,6 @@ const generateChartImage = (data: { present: number; absent: number; tardy: numb
         </>
     );
 }
+
 
 
