@@ -211,6 +211,64 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
+    const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 500;
+            canvas.height = 250;
+
+            const total = data.present + data.absent + data.tardy + data.excused;
+            if (total === 0) {
+                resolve(''); // Resuelve con cadena vacía si no hay datos
+                return;
+            }
+
+            const chartData = [data.present, data.absent, data.tardy, data.excused];
+            const percentages = chartData.map(value => ((value / total) * 100).toFixed(0) + '%');
+
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: ["Presente", "Ausente", "Tarde", "Justificado"],
+                    datasets: [{
+                        data: chartData,
+                        backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                        barPercentage: 0.5,
+                    }],
+                },
+                options: {
+                    responsive: false,
+                    animation: {
+                        duration: 0, // Sin animación
+                        onComplete: (animation) => {
+                            const chartInstance = animation.chart;
+                            const ctx = chartInstance.ctx;
+                            ctx.font = '10px Arial';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'bottom';
+                            chartInstance.data.datasets.forEach((dataset, i) => {
+                                const meta = chartInstance.getDatasetMeta(i);
+                                meta.data.forEach((bar, index) => {
+                                    const data = percentages[index];
+                                    ctx.fillText(data, bar.x, bar.y - 5);
+                                });
+                            });
+                             // Resuelve la promesa con la imagen en formato JPEG
+                            resolve(chartInstance.toBase64Image('image/jpeg', 0.8));
+                        }
+                    },
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: Math.max(...chartData) > 10 ? undefined : 1 }
+                        }
+                    }
+                }
+            });
+        });
+    };
+    
     const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
@@ -221,14 +279,16 @@ export default function ReportsPage() {
         const doc = new jsPDF();
     
         try {
+            // Header
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Asistencia", 14, 22);
-            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
     
+            // Subheader
             doc.setFontSize(11);
             doc.setTextColor(108, 117, 125);
             doc.setFont('helvetica', 'normal');
@@ -237,59 +297,22 @@ export default function ReportsPage() {
     
             let currentY = 55;
     
+            // Chart
             if (attendanceReportData.details.length > 0) {
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Resumen General de Asistencia", 14, currentY);
-                currentY += 5;
-    
-                const generateChartImage = () => new Promise<string>((resolve, reject) => {
-                    const barChartCanvas = document.createElement('canvas');
-                    barChartCanvas.width = 500;
-                    barChartCanvas.height = 250;
-                    const barChartCtx = barChartCanvas.getContext('2d');
-    
-                    if (!barChartCtx) {
-                        return reject(new Error("Failed to get canvas context"));
-                    }
-    
-                    new Chart(barChartCtx, {
-                        type: 'bar',
-                        data: {
-                            labels: summaryCards.map(c => c.title),
-                            datasets: [{
-                                data: summaryCards.map(c => c.value),
-                                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                            }],
-                        },
-                        options: {
-                            responsive: false,
-                            animation: {
-                                onComplete: (animation) => {
-                                    resolve(animation.chart.toBase64Image());
-                                }
-                            },
-                            plugins: { legend: { display: false } },
-                            scales: { y: { beginAtZero: true, grace: '5%' } }
-                        }
-                    });
-                });
-    
-                const chartImage = await generateChartImage();
-                doc.addImage(chartImage, 'PNG', 14, currentY, 180, 80);
-                currentY += 90;
+                const chartImage = await generateChartImage(attendanceReportData.summary);
+                if (chartImage) {
+                    doc.setFontSize(12);
+                    doc.setTextColor(40, 40, 40);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text("Resumen General de Asistencia", 14, currentY);
+                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 180, 90);
+                    currentY += 105;
+                }
             }
-    
-            if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
-                 const summaryTableBody = summaryTableData.map(item => {
-                    if (!item) return [];
-                    const { firefighter, totalClasses, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage } = item;
-                     return [firefighter, totalClasses.toString(), presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
-                 });
-                
+            
+            // Summary Table
+            if (includeSummaryInPdf && summaryTableData.length > 0) {
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
-
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
@@ -299,15 +322,16 @@ export default function ReportsPage() {
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Bombero', 'Clases', '% Presente', '% Ausente', '% Tarde', '% Justificado']],
-                    body: summaryTableBody,
+                    body: summaryTableData.map(item => [item.firefighter, item.totalClasses, item.presentPercentage, item.absentPercentage, item.tardyPercentage, item.excusedPercentage]),
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
             }
     
+            // Details Table
             if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
-                 if (currentY > 250 || (includeSummaryInPdf && summaryTableData.length > 10)) { doc.addPage(); currentY = 20; }
+                if (currentY > 250) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
@@ -318,11 +342,9 @@ export default function ReportsPage() {
                     startY: currentY,
                     head: [['Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
                     body: attendanceReportData.details.map(item => {
-                        const isInstructor = item.session.instructorIds?.includes(item.firefighter.id);
-                        const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
                         let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
-                        if (isInstructor) name += ' (I)';
-                        if (isAssistant) name += ' (A)';
+                        if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
+                        else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
                         return [name, item.session.title, item.session.specialization, item.session.date, getStatusLabel(item.status)];
                     }),
                     theme: 'striped',
@@ -459,9 +481,9 @@ export default function ReportsPage() {
      const summaryTableData = useMemo(() => {
         if (attendanceReportData.details.length === 0) return [];
         
-        const firefighterIds = new Set(attendanceReportData.details.map(d => d.firefighter.id));
+        const firefighterIdsInFilter = new Set(attendanceReportData.details.map(d => d.firefighter.id));
 
-        return Array.from(firefighterIds).map(firefighterId => {
+        return Array.from(firefighterIdsInFilter).map(firefighterId => {
             const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
             const records = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
             
@@ -483,10 +505,10 @@ export default function ReportsPage() {
                     firefighterId: firefighter.id,
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     totalClasses: 0,
-                    presentPercentage: 'N/A',
-                    absentPercentage: 'N/A',
-                    tardyPercentage: 'N/A',
-                    excusedPercentage: 'N/A'
+                    presentPercentage: '0%',
+                    absentPercentage: '0%',
+                    tardyPercentage: '0%',
+                    excusedPercentage: '0%'
                 };
             }
 
@@ -501,7 +523,7 @@ export default function ReportsPage() {
                 tardyPercentage: `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`,
                 excusedPercentage: `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`,
             };
-        }).filter(item => item !== null).sort((a, b) => a!.firefighter.localeCompare(b!.firefighter));
+        }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
     }, [attendanceReportData.details, allFirefighters]);
 
 
@@ -716,11 +738,11 @@ export default function ReportsPage() {
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {summaryTableData.map((item, index) => (
-                                                    <TableRow key={item?.firefighterId || index}>
-                                                        <TableCell className="font-medium">{item?.firefighter}</TableCell>
-                                                        <TableCell>{item?.totalClasses}</TableCell>
-                                                        <TableCell className="font-semibold">{item?.presentPercentage}</TableCell>
+                                                {summaryTableData.map((item) => (
+                                                    <TableRow key={item.firefighterId}>
+                                                        <TableCell className="font-medium">{item.firefighter}</TableCell>
+                                                        <TableCell>{item.totalClasses}</TableCell>
+                                                        <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
                                                     </TableRow>
                                                 ))}
                                             </TableBody>
@@ -828,6 +850,7 @@ export default function ReportsPage() {
         </>
     );
 }
+
 
 
 
