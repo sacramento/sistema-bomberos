@@ -29,7 +29,8 @@ import { Badge } from "@/components/ui/badge";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { Chart } from 'chart.js/auto';
+import Chart from 'chart.js/auto';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 
@@ -211,78 +212,76 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
-    const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
-        return new Promise((resolve) => {
-            const canvas = document.createElement('canvas');
-            canvas.width = 400; // Smaller width
-            canvas.height = 200; // Smaller height
+const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 450;
+        canvas.height = 225;
 
-            const total = data.present + data.absent + data.tardy + data.excused;
-            if (total === 0) {
-                resolve('');
-                return;
-            }
-            
-            const chartData = [data.present, data.absent, data.tardy, data.excused];
-            const percentages = chartData.map(value => ((value / total) * 100));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+            return resolve('');
+        }
 
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                resolve('');
-                return;
-            }
-            
-            // Fill background with white
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Fill background with white
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const chart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ["Presente", "Ausente", "Tarde", "Justificado"],
-                    datasets: [{
-                        data: chartData,
-                        backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                        barPercentage: 0.5,
-                    }],
+        const chartData = {
+            labels: ["Presente", "Ausente", "Tarde", "Justificado"],
+            datasets: [{
+                data: [data.present, data.absent, data.tardy, data.excused],
+                backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                barPercentage: 0.6,
+            }],
+        };
+        
+        const total = data.present + data.absent + data.tardy + data.excused;
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: chartData,
+            plugins: [ChartDataLabels],
+            options: {
+                responsive: false,
+                animation: {
+                    duration: 0, // No animation
                 },
-                options: {
-                    responsive: false,
-                    animation: {
-                        duration: 0,
-                    },
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: { enabled: false },
-                        datalabels: { // Using a datalabels plugin if available, otherwise would need custom drawing
-                           anchor: 'end',
-                           align: 'end',
-                           formatter: (value, context) => {
-                               const percentage = percentages[context.dataIndex];
-                               return percentage > 5 ? `${percentage.toFixed(0)}%` : '';
-                           },
-                           color: '#333',
-                           font: {
-                               weight: 'bold'
-                           }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: { stepSize: Math.max(...chartData) > 10 ? undefined : 1 }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: 'end',
+                        formatter: (value) => {
+                            if (total === 0) return '0%';
+                            const percentage = (value / total) * 100;
+                            return `${percentage.toFixed(0)}%`;
+                        },
+                        color: '#333',
+                        font: {
+                            weight: 'bold',
+                            size: 10,
                         }
                     }
-                }
-            });
-            
-            // This is a trick to wait for the chart to be rendered.
-            setTimeout(() => {
-                resolve(chart.toBase64Image('image/jpeg', 0.9));
-                chart.destroy();
-            }, 50);
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: Math.max(...chartData.datasets[0].data) > 10 ? undefined : 1 }
+                    }
+                },
+                // This is key for the promise to resolve after render
+                events: [],
+            },
         });
-    };
+
+        // The chart should be fully rendered after the constructor in this synchronous case
+        setTimeout(() => {
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+        }, 50); // A small delay just in case to ensure canvas is painted
+    });
+};
     
     const generatePdf = async () => {
         if (!logoDataUrl) {
@@ -312,7 +311,7 @@ export default function ReportsPage() {
     
             let currentY = 55;
     
-            // Chart - Always included
+            // Chart
             if (attendanceReportData.details.length > 0) {
                  const chartImage = await generateChartImage(attendanceReportData.summary);
                 if (chartImage) {
@@ -320,8 +319,8 @@ export default function ReportsPage() {
                     doc.setTextColor(40, 40, 40);
                     doc.setFont('helvetica', 'bold');
                     doc.text("Resumen Gráfico de Asistencia", 14, currentY);
-                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 120, 60); // Smaller chart
-                    currentY += 75;
+                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 140, 70); // Adjusted size
+                    currentY += 85;
                 }
             }
             
@@ -338,7 +337,7 @@ export default function ReportsPage() {
                     startY: currentY,
                     head: [['Bombero', 'Clases', '% Presente', '% Ausente', '% Tarde', '% Justificado']],
                     body: summaryTableData.map(item => {
-                        const records = attendanceReportData.details.filter(d => d.firefighter.id === item.firefighterId);
+                         const records = attendanceReportData.details.filter(d => d.firefighter.id === item.firefighterId);
                         const statusCounts = {
                             present: records.filter(d => d.status === 'present').length,
                             absent: records.filter(d => d.status === 'absent').length,
@@ -346,11 +345,12 @@ export default function ReportsPage() {
                             excused: records.filter(d => d.status === 'excused').length,
                             recupero: records.filter(d => d.status === 'recupero').length,
                         };
+
                         const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
                         const totalRecordsForPercentage = records.length - compensatedAbsences;
 
                         if (totalRecordsForPercentage <= 0) {
-                            return [item.firefighter, 0, '0%', '0%', '0%', '0%'];
+                            return [item.firefighter, 0, 'N/A', 'N/A', 'N/A', 'N/A'];
                         }
 
                         const effectivePresents = statusCounts.present + statusCounts.recupero;
@@ -543,10 +543,10 @@ export default function ReportsPage() {
                     firefighterId: firefighter.id,
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     totalClasses: 0,
-                    presentPercentage: '0%',
-                    absentPercentage: '0%',
-                    tardyPercentage: '0%',
-                    excusedPercentage: '0%'
+                    presentPercentage: 'N/A',
+                    absentPercentage: 'N/A',
+                    tardyPercentage: 'N/A',
+                    excusedPercentage: 'N/A'
                 };
             }
 
@@ -889,10 +889,4 @@ export default function ReportsPage() {
         </>
     );
 }
-
-
-
-
-
-
 
