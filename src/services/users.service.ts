@@ -2,6 +2,7 @@ import { User } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { deleteProfileImage } from './storage.service';
+import { getAuth } from 'firebase/auth'; // Auth is needed for rules
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
