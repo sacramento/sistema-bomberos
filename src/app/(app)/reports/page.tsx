@@ -147,7 +147,8 @@ const MultiSelectFilter = ({
     );
 };
 
-
+// Register the datalabels plugin
+Chart.register(ChartDataLabels);
 
 export default function ReportsPage() {
     const { toast } = useToast();
@@ -212,13 +213,13 @@ export default function ReportsPage() {
         fetchLogo();
     }, [toast]);
     
-const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
+const generateChartImage = (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     return new Promise((resolve) => {
         const canvas = document.createElement('canvas');
-        canvas.width = 450;
-        canvas.height = 225;
-
+        canvas.width = 400; // smaller width
+        canvas.height = 200; // smaller height
         const ctx = canvas.getContext('2d');
+        
         if (!ctx) {
             return resolve('');
         }
@@ -227,6 +228,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+        const total = data.present + data.absent + data.tardy + data.excused;
         const chartData = {
             labels: ["Presente", "Ausente", "Tarde", "Justificado"],
             datasets: [{
@@ -235,18 +237,14 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 barPercentage: 0.6,
             }],
         };
-        
-        const total = data.present + data.absent + data.tardy + data.excused;
 
-        new Chart(ctx, {
+        const chart = new Chart(ctx, {
             type: 'bar',
             data: chartData,
             plugins: [ChartDataLabels],
             options: {
+                animation: false,
                 responsive: false,
-                animation: {
-                    duration: 0, // No animation
-                },
                 plugins: {
                     legend: { display: false },
                     tooltip: { enabled: false },
@@ -271,15 +269,12 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                         ticks: { stepSize: Math.max(...chartData.datasets[0].data) > 10 ? undefined : 1 }
                     }
                 },
-                // This is key for the promise to resolve after render
-                events: [],
             },
         });
-
-        // The chart should be fully rendered after the constructor in this synchronous case
-        setTimeout(() => {
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
-        }, 50); // A small delay just in case to ensure canvas is painted
+        
+        // This should be synchronous now with animation: false
+        resolve(chart.toBase64Image('image/jpeg', 0.8));
+        chart.destroy(); // Clean up chart instance
     });
 };
     
@@ -313,15 +308,15 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
             // Chart
             if (attendanceReportData.details.length > 0) {
+                 doc.setFontSize(12);
+                 doc.setTextColor(40, 40, 40);
+                 doc.setFont('helvetica', 'bold');
+                 doc.text("Resumen Gráfico de Asistencia", 14, currentY);
+                 currentY += 5;
+                 
                  const chartImage = await generateChartImage(attendanceReportData.summary);
-                if (chartImage) {
-                    doc.setFontSize(12);
-                    doc.setTextColor(40, 40, 40);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text("Resumen Gráfico de Asistencia", 14, currentY);
-                    doc.addImage(chartImage, 'JPEG', 14, currentY + 5, 140, 70); // Adjusted size
-                    currentY += 85;
-                }
+                 doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); // Adjusted size
+                 currentY += 80;
             }
             
             // Summary Table
@@ -789,7 +784,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                  </Card>
                             </div>
                             
-                            <Card className="mt-8">
+                             <Card className="mt-8">
                                 <CardHeader>
                                     <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
                                     <CardDescription>
@@ -812,10 +807,12 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                                 const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
                                                 return (
                                                     <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
-                                                        <TableCell className="font-medium flex items-center gap-2">
-                                                            {`${item.firefighter.firstName} ${item.firefighter.lastName}`}
-                                                            {isInstructor && <Badge variant="destructive">I</Badge>}
-                                                            {isAssistant && <Badge variant="secondary">A</Badge>}
+                                                        <TableCell className="font-medium">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
+                                                                {isInstructor && <Badge variant="destructive">I</Badge>}
+                                                                {isAssistant && <Badge variant="secondary">A</Badge>}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell>{item.session.title}</TableCell>
                                                         <TableCell className="hidden sm:table-cell">{item.session.date}</TableCell>
@@ -889,4 +886,5 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
