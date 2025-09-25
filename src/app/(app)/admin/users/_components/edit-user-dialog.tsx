@@ -121,7 +121,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
           <div className="grid gap-4 py-4">
              <div className="flex flex-col items-center gap-4">
               <Avatar className="h-24 w-24">
-                <AvatarImage src={imagePreview || undefined} alt={user.name} />
+                <AvatarImage src={imagePreview || undefined} alt={user.name} className="object-cover" />
                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <Input id="picture" type="file" accept="image/*" onChange={handleImageChange} className="text-sm"/>
