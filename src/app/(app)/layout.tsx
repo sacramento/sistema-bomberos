@@ -48,7 +48,7 @@ const navItems = [
 function AppSidebar() {
   const pathname = usePathname();
   const { open } = useSidebar();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   if (!user) return null;
 
@@ -61,7 +61,7 @@ function AppSidebar() {
       return item.label;
   }
   
-  const userImage = `https://picsum.photos/seed/${user.id}/200`;
+  const userImage = user.photoURL || `https://picsum.photos/seed/${user.id}/200`;
 
   return (
     <Sidebar>
@@ -122,11 +122,13 @@ function AppHeader() {
   const { logout } = useAuth();
   const { isMobile } = useSidebar();
 
+  if (!isMobile) return null;
+
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-        {isMobile && <SidebarTrigger />}
-        <div className="flex-1">
-            {/* Can add breadcrumbs or page title here */}
+        <SidebarTrigger />
+        <div className="flex-1 text-center font-headline text-lg font-semibold">
+          Asistencia SMA
         </div>
         <Button variant="ghost" size="icon" onClick={logout}>
             <LogOut className="h-5 w-5"/>
@@ -136,8 +138,25 @@ function AppHeader() {
   )
 }
 
+function DesktopHeader() {
+    const { logout } = useAuth();
+    const { isMobile } = useSidebar();
+
+    if (isMobile) return null;
+    
+    return (
+     <header className="sticky top-0 z-10 flex h-16 items-center justify-end gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+        <Button variant="ghost" size="icon" onClick={logout}>
+            <LogOut className="h-5 w-5"/>
+            <span className="sr-only">Cerrar Sesión</span>
+        </Button>
+    </header>
+    )
+}
+
 function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
     const { isMobile } = useSidebar();
+
     if (isMobile === undefined) {
       return (
         <div className="flex min-h-screen items-center justify-center">
@@ -150,6 +169,7 @@ function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-screen">
             <AppSidebar />
             <div className="flex-1 flex flex-col">
+                <DesktopHeader/>
                 <AppHeader />
                 <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
             </div>
@@ -170,18 +190,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Redirect if user tries to access a route they don't have permission for
     const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
     if(currentNavItem && !currentNavItem.roles.includes(user.role)) {
-       // Redirect to the first available page for their role
        const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
        if (firstAvailablePage) {
            router.push(firstAvailablePage.href);
        } else {
-            router.push('/login'); // Fallback if no pages are available for role
+            router.push('/login'); 
        }
     }
-
 
   }, [user, loading, pathname, router]);
   
