@@ -19,11 +19,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import BottomNav from './_components/bottom-nav';
+import TopNav from './_components/top-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 
@@ -53,7 +52,7 @@ function Sidebar() {
     return item.label;
   };
   
-  const userImage = user.photoURL || `https://picsum.photos/seed/${user.id}/200`;
+  const userImage = `https://picsum.photos/seed/${user.id}/200`;
 
   return (
     <TooltipProvider>
@@ -68,35 +67,37 @@ function Sidebar() {
           </Button>
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto p-2">
-          {availableNavItems.map((item) => {
-            const label = getLabel(item);
-            const buttonContent = (
-              <Link
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  pathname.startsWith(item.href) && "bg-muted text-primary",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {!isCollapsed && <span>{label}</span>}
-              </Link>
-            );
+          <ul>
+            {availableNavItems.map((item) => {
+              const label = getLabel(item);
+              const buttonContent = (
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                    pathname.startsWith(item.href) && "bg-muted text-primary",
+                    isCollapsed && "justify-center"
+                  )}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {!isCollapsed && <span>{label}</span>}
+                </Link>
+              );
 
-            return (
-              <li key={item.href}>
-                {isCollapsed ? (
-                  <Tooltip delayDuration={0}>
-                    <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
-                    <TooltipContent side="right">{label}</TooltipContent>
-                  </Tooltip>
-                ) : (
-                  buttonContent
-                )}
-              </li>
-            );
-          })}
+              return (
+                <li key={item.href}>
+                  {isCollapsed ? (
+                    <Tooltip delayDuration={0}>
+                      <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+                      <TooltipContent side="right">{label}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    buttonContent
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </nav>
         <div className="mt-auto border-t p-2">
            <div className={cn("flex items-center gap-3 p-2", isCollapsed && "justify-center")}>
@@ -120,26 +121,6 @@ function Sidebar() {
     </TooltipProvider>
   );
 }
-
-
-function MobileHeader() {
-  const { user, logout } = useAuth();
-  if (!user) return null;
-
-  return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:hidden">
-      <div className="flex items-center gap-2 font-semibold">
-        <Flame className="h-6 w-6 text-primary" />
-        <span className="font-headline text-lg">Asistencia SMA</span>
-      </div>
-       <Button variant="ghost" size="icon" className="ml-auto" onClick={logout}>
-            <LogOut className="h-5 w-5"/>
-            <span className="sr-only">Cerrar Sesión</span>
-        </Button>
-    </header>
-  );
-}
-
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -179,11 +160,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen w-full">
       <Sidebar />
       <div className="flex flex-1 flex-col">
-        <MobileHeader />
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
             {children}
         </main>
-        {isMobile && <BottomNav navItems={navItems} userRole={user.role} />}
+        {isMobile && <TopNav navItems={navItems} userRole={user.role} />}
       </div>
     </div>
   );
