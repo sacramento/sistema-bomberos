@@ -297,7 +297,7 @@ export default function AttendancePage() {
             </div>
 
             <Tabs defaultValue={canEdit ? "register" : "view"} className="w-full">
-                <TabsList className={cn("grid w-full mb-4", canEdit ? "grid-cols-2 max-w-md" : "grid-cols-1 max-w-[200px]")}>
+                <TabsList className={cn("grid w-full mb-4", canEdit ? "grid-cols-2 max-w-md mx-auto" : "grid-cols-1 max-w-[200px] mx-auto")}>
                     {canEdit && <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>}
                     <TabsTrigger value="view"><Eye className="mr-2 h-4 w-4"/>Ver Resumen</TabsTrigger>
                 </TabsList>

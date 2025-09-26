@@ -71,18 +71,20 @@ export default function FirefightersPage() {
   return (
     <>
       <PageHeader title="Lista de Bomberos" description="Gestione los bomberos de su departamento.">
-        <ImportCsvDialog onImportSuccess={handleDataChange}>
-            <Button variant="outline">
-              <Upload className="mr-2 h-4 w-4" />
-              Importar CSV
+        <div className="flex flex-col sm:flex-row gap-2">
+            <ImportCsvDialog onImportSuccess={handleDataChange}>
+                <Button variant="outline">
+                <Upload className="mr-2 h-4 w-4" />
+                Importar CSV
+                </Button>
+            </ImportCsvDialog>
+            <AddFirefighterDialog onFirefighterAdded={handleDataChange}>
+            <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Agregar Bombero
             </Button>
-        </ImportCsvDialog>
-        <AddFirefighterDialog onFirefighterAdded={handleDataChange}>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Agregar Bombero
-          </Button>
-        </AddFirefighterDialog>
+            </AddFirefighterDialog>
+        </div>
       </PageHeader>
       <Card>
         <CardHeader>

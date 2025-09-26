@@ -756,7 +756,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             
             <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
                  {user?.role !== 'Bombero' && (
-                    <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+                    <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                         <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
                         {(user?.role === 'Ayudantía' || user?.role === 'Administrador') && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
                     </TabsList>

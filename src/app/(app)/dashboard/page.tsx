@@ -183,7 +183,7 @@ export default function DashboardPage() {
             </Select>
         </div>
       </PageHeader>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -237,7 +237,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
+      <div className="grid gap-4 lg:grid-cols-7 mt-8">
         <Card className="lg:col-span-4">
           <CardHeader>
             <CardTitle className="font-headline">Asistencia Mensual</CardTitle>

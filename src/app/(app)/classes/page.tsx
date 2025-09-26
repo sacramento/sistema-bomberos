@@ -414,7 +414,7 @@ export default function ClassesPage() {
       </Card>
       
         <Tabs defaultValue="current" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                 <TabsTrigger value="current"><CalendarClock className="mr-2 h-4 w-4"/>Actuales y Próximas</TabsTrigger>
                 <TabsTrigger value="past"><History className="mr-2 h-4 w-4"/>Pasadas</TabsTrigger>
             </TabsList>

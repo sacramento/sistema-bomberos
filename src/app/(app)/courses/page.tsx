@@ -29,7 +29,7 @@ export default function CoursesPage() {
             </PageHeader>
 
              <Tabs defaultValue="list" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
+                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                     <TabsTrigger value="list">Listado de Cursos</TabsTrigger>
                     <TabsTrigger value="reports">Reportes</TabsTrigger>
                 </TabsList>
