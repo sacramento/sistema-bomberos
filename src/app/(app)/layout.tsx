@@ -61,7 +61,7 @@ function AppSidebar() {
       return item.label;
   }
   
-  const userImage = `https://picsum.photos/seed/${user.id}/200`
+  const userImage = user.photoURL || `https://picsum.photos/seed/${user.id}/200`;
 
   return (
     <Sidebar>
@@ -104,7 +104,7 @@ function AppSidebar() {
       <SidebarFooter>
         <div className="flex items-center gap-3 p-2">
            <Avatar className="size-8">
-            <AvatarImage src={userImage} alt={user.name} className="object-cover"/>
+            <AvatarImage src={userImage} alt={user.name} className="object-cover" />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
@@ -118,18 +118,16 @@ function AppSidebar() {
 }
 
 
-function AppHeader({children}: {children: React.ReactNode}) {
+function AppHeader() {
   const { logout } = useAuth();
+  const { isMobile } = useSidebar();
 
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-        <div className="md:hidden">
-            <SidebarTrigger />
-        </div>
+        {isMobile && <SidebarTrigger />}
         <div className="flex-1">
             {/* Can add breadcrumbs or page title here */}
         </div>
-        {children}
         <Button variant="ghost" size="icon" onClick={logout}>
             <LogOut className="h-5 w-5"/>
             <span className="sr-only">Cerrar Sesión</span>
@@ -149,13 +147,13 @@ function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <>
+        <div className="flex min-h-screen">
             <AppSidebar />
-            <SidebarInset>
+            <div className="flex-1 flex flex-col">
                 <AppHeader />
-                <main className="flex-1 p-4 md:p-8">{children}</main>
-            </SidebarInset>
-        </>
+                <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
+            </div>
+        </div>
     )
 }
 
