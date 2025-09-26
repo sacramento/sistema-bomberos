@@ -1,19 +1,19 @@
 import * as React from "react"
 
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+  const [isMobile, setIsMobile] = React.useState(false);
 
   React.useEffect(() => {
-    const checkDevice = () => {
-      setIsMobile(window.matchMedia("(max-width: 768px)").matches)
-    }
-    
-    // Initial check
-    checkDevice()
+    // Check on mount (client-side only)
+    const checkDevice = () => setIsMobile(window.innerWidth < 768);
+    checkDevice();
 
-    window.addEventListener("resize", checkDevice)
-    return () => window.removeEventListener("resize", checkDevice)
-  }, [])
+    // Add resize listener
+    window.addEventListener("resize", checkDevice);
 
-  return isMobile
+    // Cleanup listener on component unmount
+    return () => window.removeEventListener("resize", checkDevice);
+  }, []);
+
+  return isMobile;
 }

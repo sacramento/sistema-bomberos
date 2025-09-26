@@ -4,18 +4,6 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
-  SidebarTrigger,
-  useSidebar,
-} from '@/components/ui/sidebar';
-import {
   Flame,
   LayoutDashboard,
   Users,
@@ -25,16 +13,21 @@ import {
   Settings,
   LogOut,
   GraduationCap,
+  PanelLeft,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/context/auth-context';
-import { useEffect } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import BottomNav from './_components/bottom-nav';
+import { useIsMobile } from '@/hooks/use-mobile';
 
-const navItems = [
+
+export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Ayudantía'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
@@ -44,125 +37,115 @@ const navItems = [
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
 
-function AppSidebar() {
+function Sidebar() {
   const pathname = usePathname();
-  const { open } = useSidebar();
   const { user, logout } = useAuth();
-  
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   if (!user) return null;
 
   const availableNavItems = navItems.filter(item => item.roles.includes(user.role));
-  
+
   const getLabel = (item: typeof navItems[0]) => {
-      if (item.href === '/reports' && user.role === 'Bombero') {
-          return 'Mi Reporte';
-      }
-      return item.label;
-  }
+    if (item.href === '/reports' && user.role === 'Bombero') {
+      return 'Mi Reporte';
+    }
+    return item.label;
+  };
   
   const userImage = user.photoURL || `https://picsum.photos/seed/${user.id}/200`;
 
   return (
-    <Sidebar>
-      <SidebarHeader>
-        <div
-          className={cn(
-            'flex items-center gap-2',
-            open ? 'px-2' : 'px-0 justify-center'
-          )}
-        >
-          <Flame className="text-primary size-7" />
-          <span
-            className={cn(
-              'font-headline text-xl font-semibold transition-opacity duration-200',
-              open ? 'opacity-100' : 'opacity-0'
-            )}
-          >
-            Asistencia SMA
-          </span>
+    <TooltipProvider>
+      <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
+        <div className="flex h-16 items-center border-b px-4">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+            <Flame className="h-6 w-6 text-primary" />
+            {!isCollapsed && <span className="font-headline">Asistencia SMA</span>}
+          </Link>
+          <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={() => setIsCollapsed(!isCollapsed)}>
+            <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
+          </Button>
         </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
-          {availableNavItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
-                <SidebarMenuButton
-                  isActive={pathname.startsWith(item.href)}
-                  tooltip={getLabel(item)}
-                >
-                  <item.icon />
-                  <span>{getLabel(item)}</span>
-                </SidebarMenuButton>
+        <nav className="flex-1 space-y-2 overflow-y-auto p-2">
+          {availableNavItems.map((item) => {
+            const label = getLabel(item);
+            const buttonContent = (
+              <Link
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                  pathname.startsWith(item.href) && "bg-muted text-primary",
+                  isCollapsed && "justify-center"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {!isCollapsed && <span>{label}</span>}
               </Link>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarContent>
-      <Separator className="my-2" />
-      <SidebarFooter>
-        <div className="flex items-center gap-3 p-2">
-           <Avatar className="size-8">
-            <AvatarImage src={userImage} alt={user.name} className="object-cover" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div className={cn("flex flex-col", open ? "opacity-100" : "opacity-0", "transition-opacity duration-200")}>
-            <p className="text-sm font-medium text-sidebar-foreground">{user.name}</p>
-            <p className="text-xs text-muted-foreground">{user.role}</p>
+            );
+
+            return (
+              <li key={item.href}>
+                {isCollapsed ? (
+                  <Tooltip delayDuration={0}>
+                    <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
+                    <TooltipContent side="right">{label}</TooltipContent>
+                  </Tooltip>
+                ) : (
+                  buttonContent
+                )}
+              </li>
+            );
+          })}
+        </nav>
+        <div className="mt-auto border-t p-2">
+           <div className={cn("flex items-center gap-3 p-2", isCollapsed && "justify-center")}>
+            <Avatar className="size-9">
+              <AvatarImage src={userImage} alt={user.name} className="object-cover" />
+              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.role}</p>
+              </div>
+            )}
           </div>
+          <Button variant="ghost" className={cn("w-full", isCollapsed ? "justify-center" : "justify-start")} onClick={logout}>
+            <LogOut className={cn("h-5 w-5", !isCollapsed && "mr-3")} />
+            {!isCollapsed && <span>Cerrar Sesión</span>}
+          </Button>
         </div>
-        <Button variant="ghost" className={cn("w-full justify-center", !open && "hidden")} onClick={logout}>
-          <LogOut className="mr-2" />
-          Cerrar Sesión
-        </Button>
-      </SidebarFooter>
-    </Sidebar>
+      </aside>
+    </TooltipProvider>
   );
 }
 
-function AppHeader() {
-  const { logout } = useAuth();
+
+function MobileHeader() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:hidden">
-        <SidebarTrigger />
-        <div className="flex-1 text-center font-headline text-lg font-semibold">
-          Asistencia SMA
-        </div>
-        <Button variant="ghost" size="icon" onClick={logout}>
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-4 border-b bg-background px-4 md:hidden">
+      <div className="flex items-center gap-2 font-semibold">
+        <Flame className="h-6 w-6 text-primary" />
+        <span className="font-headline text-lg">Asistencia SMA</span>
+      </div>
+       <Button variant="ghost" size="icon" className="ml-auto" onClick={logout}>
             <LogOut className="h-5 w-5"/>
             <span className="sr-only">Cerrar Sesión</span>
         </Button>
     </header>
-  )
+  );
 }
 
-function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
-    const { isMobile } = useSidebar();
-
-    if (isMobile === undefined) {
-      return (
-        <div className="flex min-h-screen items-center justify-center">
-          <p>Cargando...</p>
-        </div>
-      );
-    }
-
-    return (
-        <div className="flex min-h-screen">
-            <AppSidebar />
-            <div className="flex-1 flex flex-col">
-                <AppHeader />
-                <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
-            </div>
-        </div>
-    )
-}
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (loading) return;
@@ -193,9 +176,16 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SidebarProvider>
-        <MainLayoutWithSidebar>{children}</MainLayoutWithSidebar>
-    </SidebarProvider>
+    <div className="flex min-h-screen w-full">
+      <Sidebar />
+      <div className="flex flex-1 flex-col">
+        <MobileHeader />
+        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
+            {children}
+        </main>
+        {isMobile && <BottomNav navItems={navItems} userRole={user.role} />}
+      </div>
+    </div>
   );
 }
 
