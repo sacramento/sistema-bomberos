@@ -61,7 +61,7 @@ function AppSidebar() {
       return item.label;
   }
   
-  const userImage = user.photoURL || `https://picsum.photos/seed/${user.id}/200`;
+  const userImage = `https://picsum.photos/seed/${user.id}/200`;
 
   return (
     <Sidebar>
