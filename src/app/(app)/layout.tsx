@@ -13,7 +13,6 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   SidebarTrigger,
-  SidebarInset,
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
@@ -112,20 +111,20 @@ function AppSidebar() {
             <p className="text-xs text-muted-foreground">{user.role}</p>
           </div>
         </div>
+        <Button variant="ghost" className={cn("w-full justify-center", !open && "hidden")} onClick={logout}>
+          <LogOut className="mr-2" />
+          Cerrar Sesión
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
 }
 
-
 function AppHeader() {
   const { logout } = useAuth();
-  const { isMobile } = useSidebar();
-
-  if (!isMobile) return null;
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
+    <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:hidden">
         <SidebarTrigger />
         <div className="flex-1 text-center font-headline text-lg font-semibold">
           Asistencia SMA
@@ -136,22 +135,6 @@ function AppHeader() {
         </Button>
     </header>
   )
-}
-
-function DesktopHeader() {
-    const { logout } = useAuth();
-    const { isMobile } = useSidebar();
-
-    if (isMobile) return null;
-    
-    return (
-     <header className="sticky top-0 z-10 flex h-16 items-center justify-end gap-4 border-b bg-background/80 backdrop-blur-sm px-4 md:px-6">
-        <Button variant="ghost" size="icon" onClick={logout}>
-            <LogOut className="h-5 w-5"/>
-            <span className="sr-only">Cerrar Sesión</span>
-        </Button>
-    </header>
-    )
 }
 
 function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
@@ -169,7 +152,6 @@ function MainLayoutWithSidebar({ children }: { children: React.ReactNode }) {
         <div className="flex min-h-screen">
             <AppSidebar />
             <div className="flex-1 flex flex-col">
-                <DesktopHeader/>
                 <AppHeader />
                 <main className="flex-1 p-4 sm:p-6 md:p-8">{children}</main>
             </div>
@@ -216,7 +198,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     </SidebarProvider>
   );
 }
-
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     return <AppLayoutContent>{children}</AppLayoutContent>
