@@ -38,7 +38,7 @@ export default function TopNav({ navItems, userRole }: TopNavProps) {
                     <span className="sr-only">Cerrar Sesión</span>
                 </Button>
             </div>
-            <div className="flex h-12 items-center justify-center gap-2 overflow-x-auto px-4">
+            <div className="flex h-12 items-center justify-start gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap px-4">
                 {availableNavItems.map((item) => (
                     <Link
                         key={item.href}
