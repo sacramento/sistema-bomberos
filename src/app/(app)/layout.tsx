@@ -15,7 +15,6 @@ import {
   LogOut,
   GraduationCap,
   PanelLeft,
-  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -140,10 +139,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         // Find the current top-level route being accessed
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
+        
+        // This is a special exception for the portal page
+        if (currentTopLevelPath === '/') {
+            return;
+        }
+
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
         
-        // Allow access to dashboard, otherwise check roles for other pages within this layout
-        if (currentTopLevelPath && currentTopLevelPath !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
+        if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(user.role)) {
            const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
            if (firstAvailablePage) {
                router.push(firstAvailablePage.href);

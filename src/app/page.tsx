@@ -12,13 +12,6 @@ import { useEffect } from 'react';
 export default function PortalPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
-
-  // If user is already logged in, redirect them to the portal, not dashboard
-  useEffect(() => {
-    if (user && window.location.pathname === '/login') {
-      router.push('/');
-    }
-  }, [user, router]);
   
   if (loading) {
      return (
