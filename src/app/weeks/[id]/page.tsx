@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Week, Task } from "@/lib/types";
+import { Week, Task, Firefighter } from "@/lib/types";
 import { getWeekById } from "@/services/weeks.service";
-import { getTasksByWeek } from "@/services/tasks.service";
+import { getTasksByWeek, updateTask } from "@/services/tasks.service";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { format } from 'date-fns';
@@ -18,6 +18,28 @@ import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog } from 
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+
+
+const getStatusVariant = (status: Task['status']) => {
+    switch (status) {
+        case 'Pendiente': return 'default';
+        case 'En Progreso': return 'secondary';
+        case 'Completada': return 'destructive'; // Using destructive for a 'done' state, can be changed
+        default: return 'outline';
+    }
+}
+const getStatusBadgeColor = (status: Task['status']) => {
+    switch (status) {
+        case 'Pendiente': return 'bg-yellow-500 text-black';
+        case 'En Progreso': return 'bg-blue-500';
+        case 'Completada': return 'bg-green-600';
+        default: return '';
+    }
+};
+
+const taskStatuses: Task['status'][] = ['Pendiente', 'En Progreso', 'Completada'];
 
 export default function WeekDetailPage() {
     const params = useParams();
@@ -53,16 +75,33 @@ export default function WeekDetailPage() {
         fetchWeekAndTasks();
     }, [weekId, toast]);
 
+    const refreshTasks = () => {
+        if(week) {
+            getTasksByWeek(week.id).then(setTasks);
+        }
+    }
+
     const handleTaskAdded = () => {
        toast({
             title: "Tarea agregada",
             description: "La tarea ha sido creada y asignada correctamente."
         });
-        // Refetch only tasks to update the list
-        if(week) {
-            getTasksByWeek(week.id).then(setTasks);
-        }
+        refreshTasks();
     }
+    
+    const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
+        try {
+            await updateTask(taskId, { status: newStatus });
+            toast({
+                title: "Estado actualizado",
+                description: `La tarea se ha marcado como "${newStatus}".`
+            });
+            refreshTasks();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo actualizar el estado de la tarea.", variant: "destructive" });
+        }
+    };
+
 
     if (loading) {
         return (
@@ -132,12 +171,25 @@ export default function WeekDetailPage() {
                                 <div className="space-y-6">
                                     {tasks.map(task => (
                                         <div key={task.id} className="p-4 border rounded-lg">
-                                            <div className="flex justify-between items-start">
-                                                <div className="space-y-1">
+                                            <div className="flex justify-between items-start gap-4">
+                                                <div className="space-y-1 flex-grow">
                                                     <h3 className="font-semibold text-lg">{task.title}</h3>
                                                     {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
                                                 </div>
-                                                <Badge>{task.status}</Badge>
+                                                 <Select 
+                                                    value={task.status} 
+                                                    onValueChange={(newStatus) => handleStatusChange(task.id, newStatus as Task['status'])}
+                                                    disabled={!canManageTasks}
+                                                >
+                                                    <SelectTrigger className={cn("w-[180px] flex-shrink-0", getStatusBadgeColor(task.status))}>
+                                                        <SelectValue placeholder="Seleccionar estado" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {taskStatuses.map(status => (
+                                                            <SelectItem key={status} value={status}>{status}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
                                             </div>
                                             <Separator className="my-3"/>
                                             <div className="flex items-center justify-between text-sm">
@@ -146,7 +198,10 @@ export default function WeekDetailPage() {
                                                     Asignado a:
                                                  </div>
                                                  <div className="flex flex-wrap gap-1 justify-end">
-                                                    {task.assignedTo?.map(f => <Badge key={f.id} variant="secondary">{f.lastName}</Badge>)}
+                                                    {task.assignedTo && task.assignedTo.length > 0 ?
+                                                        task.assignedTo.map(f => <Badge key={f.id} variant="secondary">{f.lastName}</Badge>) :
+                                                        <Badge variant="outline">Nadie</Badge>
+                                                    }
                                                  </div>
                                             </div>
                                         </div>

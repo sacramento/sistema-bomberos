@@ -43,7 +43,7 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo'>): Promis
     return docRef.id;
 }
 
-export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id'>>): Promise<void> => {
+export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo'>>): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
     await updateDoc(docRef, taskData);
 }
