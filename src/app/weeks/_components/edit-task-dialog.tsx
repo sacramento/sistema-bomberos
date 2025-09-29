@@ -15,14 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { Firefighter, Week } from "@/lib/types";
+import { useState, useEffect } from "react";
+import { Firefighter, Week, Task } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, UserCheck } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { addTask } from "@/services/tasks.service";
+import { updateTask } from "@/services/tasks.service";
 
 const MultiFirefighterSelect = ({ 
     title, 
@@ -77,28 +77,30 @@ const MultiFirefighterSelect = ({
 };
 
 
-export default function AddTaskDialog({ children, week, onTaskAdded }: { children: React.ReactNode; week: Week, onTaskAdded: () => void; }) {
+export default function EditTaskDialog({ children, week, task, onTaskUpdated }: { children: React.ReactNode; week: Week, task: Task, onTaskUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   
   // Form state
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [assignedTo, setAssignedTo] = useState<Firefighter[]>([]);
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description);
+  const [assignedTo, setAssignedTo] = useState<Firefighter[]>(task.assignedTo || []);
+
+  useEffect(() => {
+    if (open) {
+        setTitle(task.title);
+        setDescription(task.description);
+        setAssignedTo(task.assignedTo || []);
+    }
+  }, [open, task]);
   
-  const resetForm = () => {
-    setTitle('');
-    setDescription('');
-    setAssignedTo([]);
-  };
 
   const assignToAll = () => {
     if (week.allMembers) {
         setAssignedTo(week.allMembers);
     }
   }
-
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -110,44 +112,41 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
     
     try {
         const taskData = {
-            weekId: week.id,
             title,
             description,
             assignedToIds: assignedTo.map(f => f.id),
-            status: 'Pendiente' as const
         };
         
-        await addTask(taskData);
+        await updateTask(task.id, taskData);
         
-        onTaskAdded();
-        resetForm();
+        onTaskUpdated();
         setOpen(false);
 
     } catch (error: any) {
         console.error(error);
-        toast({ title: "Error", description: error.message || "No se pudo crear la tarea.", variant: "destructive" });
+        toast({ title: "Error", description: error.message || "No se pudo actualizar la tarea.", variant: "destructive" });
     } finally {
         setLoading(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) resetForm(); setOpen(isOpen); }}>
+    <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="sm:max-w-lg">
              <DialogHeader>
-                <DialogTitle className="font-headline">Nueva Tarea para {week.name}</DialogTitle>
-                <DialogDescription>Complete los detalles de la tarea y asígnela a los integrantes correspondientes.</DialogDescription>
+                <DialogTitle className="font-headline">Editar Tarea</DialogTitle>
+                <DialogDescription>Modifique los detalles de la tarea y sus asignados.</DialogDescription>
             </DialogHeader>
 
             <div className="py-4 space-y-4">
                 <div className="space-y-2">
-                    <Label htmlFor="title">Título de la Tarea</Label>
-                    <Input id="title" placeholder="Ej: Limpieza de unidad móvil 5" value={title} onChange={(e) => setTitle(e.target.value)} required />
+                    <Label htmlFor="title-edit">Título de la Tarea</Label>
+                    <Input id="title-edit" value={title} onChange={(e) => setTitle(e.target.value)} required />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="description">Descripción (Opcional)</Label>
-                    <Textarea id="description" placeholder="Detalles adicionales sobre la tarea..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                    <Label htmlFor="description-edit">Descripción (Opcional)</Label>
+                    <Textarea id="description-edit" value={description} onChange={(e) => setDescription(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
@@ -164,7 +163,7 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
             <DialogFooter>
                 <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
                 <Button onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar Tarea'}
+                    {loading ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
             </DialogFooter>
         </DialogContent>

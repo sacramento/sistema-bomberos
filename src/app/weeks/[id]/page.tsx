@@ -8,19 +8,22 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Week, Task, Firefighter } from "@/lib/types";
 import { getWeekById, updateWeek } from "@/services/weeks.service";
-import { getTasksByWeek, updateTask } from "@/services/tasks.service";
+import { getTasksByWeek, updateTask, deleteTask } from "@/services/tasks.service";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft } from "lucide-react";
+import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
+import EditTaskDialog from "../_components/edit-task-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
@@ -82,10 +85,10 @@ export default function WeekDetailPage() {
         }
     }
 
-    const handleTaskAdded = () => {
+    const handleTaskChange = () => {
        toast({
-            title: "Tarea agregada",
-            description: "La tarea ha sido creada y asignada correctamente."
+            title: "Tareas actualizadas",
+            description: "La lista de tareas ha sido actualizada."
         });
         refreshTasks();
     }
@@ -100,6 +103,16 @@ export default function WeekDetailPage() {
             refreshTasks();
         } catch (error) {
             toast({ title: "Error", description: "No se pudo actualizar el estado de la tarea.", variant: "destructive" });
+        }
+    };
+
+     const handleDeleteTask = async (taskId: string) => {
+        try {
+            await deleteTask(taskId);
+            toast({ title: "Tarea eliminada", description: "La tarea ha sido eliminada correctamente." });
+            refreshTasks();
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo eliminar la tarea.", variant: "destructive" });
         }
     };
     
@@ -155,7 +168,7 @@ export default function WeekDetailPage() {
                         Volver al Dashboard
                     </Button>
                     {canManage && (
-                        <AddTaskDialog week={week} onTaskAdded={handleTaskAdded}>
+                        <AddTaskDialog week={week} onTaskAdded={handleTaskChange}>
                             <Button>
                                 <PlusCircle className="mr-2" />
                                 Agregar Tarea
@@ -205,10 +218,35 @@ export default function WeekDetailPage() {
                             {tasks.length > 0 ? (
                                 <div className="space-y-6">
                                     {tasks.map(task => (
-                                        <div key={task.id} className="p-4 border rounded-lg">
+                                        <AlertDialog key={task.id}>
+                                        <div className="p-4 border rounded-lg">
                                             <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                                                 <div className="space-y-1 flex-grow">
-                                                    <h3 className="font-semibold text-lg">{task.title}</h3>
+                                                    <div className="flex justify-between items-start">
+                                                        <h3 className="font-semibold text-lg">{task.title}</h3>
+                                                         {canManage && (
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mt-2 -mr-2">
+                                                                        <MoreVertical className="h-4 w-4" />
+                                                                    </Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                    <EditTaskDialog week={week} task={task} onTaskUpdated={handleTaskChange}>
+                                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                            <Edit className="mr-2 h-4 w-4" /> Editar Tarea
+                                                                        </DropdownMenuItem>
+                                                                    </EditTaskDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                                             <Trash2 className="mr-2 h-4 w-4" /> Eliminar Tarea
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                        )}
+                                                    </div>
                                                     {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
                                                 </div>
                                                  <Select 
@@ -240,6 +278,21 @@ export default function WeekDetailPage() {
                                                  </div>
                                             </div>
                                         </div>
+                                         <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Está seguro de que desea eliminar esta tarea?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. La tarea "{task.title}" será eliminada permanentemente.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteTask(task.id)} variant="destructive">
+                                                    Eliminar
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                        </AlertDialog>
                                     ))}
                                 </div>
                             ) : (
@@ -295,3 +348,5 @@ export default function WeekDetailPage() {
         </>
     )
 }
+
+    
