@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
   const { user, logout } = useAuth();
   
-  // Corrected hrefs to point to the module's main page
+  // The href for "Asistencia" now correctly points to its own dashboard
   const assistanceHref = "/sessions"; 
   const weeksHref = "/weeks";
 
