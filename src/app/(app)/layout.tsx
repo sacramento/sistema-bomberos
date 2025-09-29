@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,6 +15,7 @@ import {
   LogOut,
   GraduationCap,
   PanelLeft,
+  CalendarDays,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
   { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Administrador', 'Operador', 'Ayudantía', 'Oficial'] },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
