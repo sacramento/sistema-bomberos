@@ -65,14 +65,15 @@ export default function SchedulePage() {
     }, [toast]);
     
     const sortedSessions = useMemo(() => {
-        return [...sessions].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        // Sort by most recent date first
+        return [...sessions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     }, [sessions]);
 
     const renderSessionCards = () => {
         if (loading) {
             return (
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {Array.from({ length: 8 }).map((_, index) => (
+                <div className="space-y-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
                         <Card key={index}>
                             <CardHeader>
                                 <Skeleton className="h-5 w-24" />
@@ -97,7 +98,7 @@ export default function SchedulePage() {
         }
 
         return (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sortedSessions.map(session => {
                     const firehouseInfo = getMajorityFirehouseInfo(session);
                     return (
@@ -111,7 +112,7 @@ export default function SchedulePage() {
                             </CardHeader>
                             <CardContent className="mt-auto">
                                 <p className="text-sm text-muted-foreground">
-                                    {format(new Date(session.date), 'dd/MM/yyyy', { locale: es })} a las {session.startTime}hs
+                                    {format(new Date(session.date), "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
                                 </p>
                             </CardContent>
                         </Card>
@@ -125,7 +126,7 @@ export default function SchedulePage() {
         <>
             <PageHeader
                 title="Cronograma de Capacitaciones"
-                description="Vista de todas las clases de capacitación planificadas, coloreadas por cuartel principal."
+                description="Vista de todas las clases de capacitación planificadas, ordenadas de más reciente a más antigua."
             />
             {renderSessionCards()}
         </>
