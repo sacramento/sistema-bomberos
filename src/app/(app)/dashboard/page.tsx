@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
   const { user, logout } = useAuth();
   
-  const assistanceHref = "/sessions";
+  // Corrected hrefs to point to the module's main page
+  const assistanceHref = "/sessions"; 
   const weeksHref = "/weeks";
 
 
