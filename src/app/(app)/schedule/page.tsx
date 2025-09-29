@@ -74,15 +74,12 @@ export default function SchedulePage() {
             return (
                 <div className="space-y-4">
                     {Array.from({ length: 4 }).map((_, index) => (
-                        <Card key={index}>
-                            <CardHeader>
-                                <Skeleton className="h-5 w-24" />
-                                <Skeleton className="h-4 w-32" />
-                            </CardHeader>
-                            <CardContent>
+                        <Card key={index} className="shadow-md">
+                            <div className="p-4">
+                                <Skeleton className="h-5 w-24 mb-2" />
                                 <Skeleton className="h-7 w-4/5" />
-                                <Skeleton className="h-5 w-full mt-2" />
-                            </CardContent>
+                                <Skeleton className="h-5 w-32 mt-2" />
+                            </div>
                         </Card>
                     ))}
                 </div>
@@ -102,7 +99,7 @@ export default function SchedulePage() {
                 {sortedSessions.map(session => {
                     const firehouseInfo = getMajorityFirehouseInfo(session);
                     return (
-                        <Card key={session.id} className={cn("border-l-4", firehouseInfo.className)}>
+                        <Card key={session.id} className={cn("border-l-4 shadow-md", firehouseInfo.className)}>
                            <div className="grid grid-cols-1 sm:grid-cols-4 items-center p-4 gap-4">
                                 <div className="sm:col-span-2">
                                      <div className="flex items-center gap-2 mb-2">
