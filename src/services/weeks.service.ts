@@ -16,13 +16,11 @@ const weeksCollection = collection(db, 'weeks');
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
-    const lead = firefighterMap.get(data.leadId);
-    const driver = firefighterMap.get(data.driverId);
-    // 'members' are the ones that are not lead or driver
-    const members = (data.memberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
-    
-    // 'allMembers' are all firefighters associated with the week for filtering/display
     const allMembers = (data.allMemberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+    
+    const lead = allMembers.find(m => m.id === data.leadId);
+    const driver = allMembers.find(m => m.id === data.driverId);
+    const members = allMembers.filter(m => m.id !== data.leadId && m.id !== data.driverId);
 
     const week: Week = {
         id: docSnap.id,
