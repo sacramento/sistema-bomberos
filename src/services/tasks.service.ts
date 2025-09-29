@@ -3,7 +3,7 @@
 
 import { Task, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -26,7 +26,7 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 }
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
-    const q = query(tasksCollection, where('weekId', '==', weekId), orderBy('dueDate', 'asc'));
+    const q = query(tasksCollection, where('weekId', '==', weekId));
     const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
@@ -35,7 +35,7 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
     const tasks = await Promise.all(tasksPromises);
 
-    return tasks;
+    return tasks.sort((a, b) => a.title.localeCompare(b.title));
 }
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo'>): Promise<string> => {

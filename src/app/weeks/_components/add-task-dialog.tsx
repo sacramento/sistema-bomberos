@@ -19,12 +19,9 @@ import { useState } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Calendar as CalendarIcon, UserCheck } from "lucide-react";
+import { Check, ChevronsUpDown, UserCheck } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { addTask } from "@/services/tasks.service";
 
 const MultiFirefighterSelect = ({ 
@@ -88,13 +85,11 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [dueDate, setDueDate] = useState<Date | undefined>();
   const [assignedTo, setAssignedTo] = useState<Firefighter[]>([]);
   
   const resetForm = () => {
     setTitle('');
     setDescription('');
-    setDueDate(undefined);
     setAssignedTo([]);
   };
 
@@ -107,8 +102,8 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
 
   const handleSubmit = async () => {
     setLoading(true);
-    if (!title || !dueDate || assignedTo.length === 0) {
-        toast({ title: "Error", description: "Título, fecha de vencimiento y al menos un asignado son requeridos.", variant: "destructive" });
+    if (!title || assignedTo.length === 0) {
+        toast({ title: "Error", description: "El título y al menos un asignado son requeridos.", variant: "destructive" });
         setLoading(false);
         return;
     }
@@ -118,7 +113,6 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
             weekId: week.id,
             title,
             description,
-            dueDate: format(dueDate, 'yyyy-MM-dd'),
             assignedToIds: assignedTo.map(f => f.id),
             status: 'Pendiente' as const
         };
@@ -156,22 +150,6 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
                 <div className="space-y-2">
                     <Label htmlFor="description">Descripción (Opcional)</Label>
                     <Textarea id="description" placeholder="Detalles adicionales sobre la tarea..." value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Fecha de Vencimiento</Label>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button id="dueDate" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dueDate && "text-muted-foreground")}>
-                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                    {dueDate ? format(dueDate, "PPP", { locale: es }) : <span>Seleccionar fecha</span>}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={dueDate} onSelect={setDueDate} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">
