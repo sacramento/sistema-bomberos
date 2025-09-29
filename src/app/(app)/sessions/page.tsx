@@ -33,24 +33,18 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { useEffect, useState } from 'react';
-import { Firefighter, Session } from '@/lib/types';
+import { useEffect, useState, useMemo } from 'react';
+import { Firefighter, Session, Leave } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
+import { getLeaves } from '@/services/leaves.service';
 import { Skeleton } from '@/components/ui/skeleton';
-
-const chartData = [
-  { month: "Enero", attendees: 186, absentees: 80 },
-  { month: "Febrero", attendees: 305, absentees: 200 },
-  { month: "Marzo", attendees: 237, absentees: 120 },
-  { month: "Abril", attendees: 73, absentees: 190 },
-  { month: "Mayo", attendees: 209, absentees: 130 },
-  { month: "Junio", attendees: 214, absentees: 140 },
-]
+import { isWithinInterval, startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const chartConfig = {
   attendees: {
-    label: "Asistentes",
+    label: "Presentes",
     color: "hsl(var(--primary))",
   },
   absentees: {
@@ -62,18 +56,21 @@ const chartConfig = {
 export default function DashboardPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [leaves, setLeaves] = useState<Leave[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [firefightersData, sessionsData] = await Promise.all([
+        const [firefightersData, sessionsData, leavesData] = await Promise.all([
           getFirefighters(),
-          getSessions()
+          getSessions(),
+          getLeaves(),
         ]);
         setFirefighters(firefightersData);
         setSessions(sessionsData);
+        setLeaves(leavesData);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
       } finally {
@@ -83,9 +80,59 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
+  const dashboardStats = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const upcomingSessions = sessions.filter(s => new Date(s.date) >= new Date()).length;
+    const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
+    const upcomingSessions = sessions.filter(s => new Date(s.date) >= today).length;
+    const onLeave = leaves.filter(l => isWithinInterval(today, { start: new Date(l.startDate), end: new Date(l.endDate) })).length;
+    
+    let totalAttendance = 0;
+    let presentCount = 0;
+    sessions.forEach(session => {
+        if(session.attendance) {
+            const attendanceValues = Object.values(session.attendance);
+            totalAttendance += attendanceValues.length;
+            presentCount += attendanceValues.filter(status => status === 'present' || status === 'recupero').length;
+        }
+    });
+    const attendanceRate = totalAttendance > 0 ? ((presentCount / totalAttendance) * 100).toFixed(1) : "0.0";
+    
+    return { activeFirefighters, upcomingSessions, onLeave, attendanceRate };
+  }, [firefighters, sessions, leaves]);
+
+  const chartData = useMemo(() => {
+      const last6Months = Array.from({ length: 6 }).map((_, i) => {
+        const d = subMonths(new Date(), i);
+        return {
+            month: format(d, 'MMMM', { locale: es }),
+            start: startOfMonth(d),
+            end: endOfMonth(d)
+        };
+      }).reverse();
+
+      return last6Months.map(monthRange => {
+          let attendees = 0;
+          let absentees = 0;
+          sessions.forEach(session => {
+              const sessionDate = new Date(session.date);
+              if (isWithinInterval(sessionDate, { start: monthRange.start, end: monthRange.end })) {
+                  if (session.attendance) {
+                      Object.values(session.attendance).forEach(status => {
+                          if (status === 'present' || status === 'recupero') {
+                              attendees++;
+                          } else if (status === 'absent') {
+                              absentees++;
+                          }
+                      });
+                  }
+              }
+          });
+          return { month: monthRange.month.charAt(0).toUpperCase() + monthRange.month.slice(1), attendees, absentees };
+      });
+  }, [sessions]);
+
 
   if (loading) {
     return (
@@ -131,7 +178,7 @@ export default function DashboardPage() {
             <ShieldCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeFirefighters}</div>
+            <div className="text-2xl font-bold">{dashboardStats.activeFirefighters}</div>
             <p className="text-xs text-muted-foreground">
               Personal total de guardia
             </p>
@@ -145,7 +192,7 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{upcomingSessions}</div>
+            <div className="text-2xl font-bold">+{dashboardStats.upcomingSessions}</div>
             <p className="text-xs text-muted-foreground">
               Programadas en los próximos 30 días
             </p>
@@ -157,7 +204,7 @@ export default function DashboardPage() {
             <BarChart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">92.5%</div>
+            <div className="text-2xl font-bold">{dashboardStats.attendanceRate}%</div>
             <p className="text-xs text-muted-foreground">
               Promedio en todas las clases
             </p>
@@ -169,7 +216,7 @@ export default function DashboardPage() {
             <UserX className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{dashboardStats.onLeave}</div>
             <p className="text-xs text-muted-foreground">
               Bomberos actualmente de licencia
             </p>
@@ -224,7 +271,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.slice(0, 4).map((session) => (
+                {sessions.filter(s => new Date(s.date) >= new Date()).slice(0, 5).map((session) => (
                   <TableRow key={session.id}>
                     <TableCell>
                       <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
@@ -234,7 +281,7 @@ export default function DashboardPage() {
                     <TableCell>
                       <Badge variant="secondary">{session.specialization}</Badge>
                     </TableCell>
-                    <TableCell>{session.date}</TableCell>
+                    <TableCell>{format(new Date(session.date), "dd/MM/yy")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -245,3 +292,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    

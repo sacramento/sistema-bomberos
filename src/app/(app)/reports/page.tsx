@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2, ClipboardMinus } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2, ClipboardMinus, Percent } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -360,32 +360,12 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
                  (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Bombero', 'Clases', '% Presente', '% Ausente', '% Tarde', '% Justificado']],
-                    body: summaryTableData.map(item => {
-                         const records = attendanceReportData.details.filter(d => d.firefighter.id === item.firefighterId);
-                        const statusCounts = {
-                            present: records.filter(d => d.status === 'present').length,
-                            absent: records.filter(d => d.status === 'absent').length,
-                            tardy: records.filter(d => d.status === 'tardy').length,
-                            excused: records.filter(d => d.status === 'excused').length,
-                            recupero: records.filter(d => d.status === 'recupero').length,
-                        };
-
-                        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-                        const totalRecordsForPercentage = records.length - compensatedAbsences;
-
-                        if (totalRecordsForPercentage <= 0) {
-                            return [item.firefighter, 0, 'N/A', 'N/A', 'N/A', 'N/A'];
-                        }
-
-                        const effectivePresents = statusCounts.present + statusCounts.recupero;
-                        const presentPercentage = `${((effectivePresents / totalRecordsForPercentage) * 100).toFixed(0)}%`;
-                        const absentPercentage = `${(((statusCounts.absent - compensatedAbsences) / totalRecordsForPercentage) * 100).toFixed(0)}%`;
-                        const tardyPercentage = `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`;
-                        const excusedPercentage = `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`;
-
-                        return [item.firefighter, totalRecordsForPercentage, presentPercentage, absentPercentage, tardyPercentage, excusedPercentage];
-                    }),
+                    head: [['Bombero', 'Clases a Cargo', '% Presentismo']],
+                    body: summaryTableData.map(item => [
+                        item.firefighter,
+                        item.totalClasses,
+                        item.presentPercentage
+                    ]),
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
@@ -522,19 +502,21 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             recupero: finalData.filter(item => item.status === 'recupero').length,
         };
         
-        const effectivePresents = statusCounts.present + statusCounts.recupero;
-        const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-        const netAbsences = statusCounts.absent - compensatedAbsences;
+        // Use 'present' and 'tardy' for the positive side of the percentage
+        const attendedClasses = statusCounts.present + statusCounts.tardy;
+
+        // Total classes to consider for percentage are only 'present', 'tardy', and 'absent'
+        const totalClassesForPercentage = attendedClasses + statusCounts.absent;
 
         const pieData = [
-            { name: getStatusLabel('present'), value: effectivePresents, fill: PIE_CHART_COLORS.present },
-            { name: getStatusLabel('absent'), value: netAbsences, fill: PIE_CHART_COLORS.absent },
+            { name: getStatusLabel('present'), value: statusCounts.present, fill: PIE_CHART_COLORS.present },
+            { name: getStatusLabel('absent'), value: statusCounts.absent, fill: PIE_CHART_COLORS.absent },
             { name: getStatusLabel('tardy'), value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
             { name: getStatusLabel('excused'), value: statusCounts.excused, fill: PIE_CHART_COLORS.excused },
         ].filter(item => item.value > 0);
             
         return { 
-            summary: { present: effectivePresents, absent: netAbsences, tardy: statusCounts.tardy, excused: statusCounts.excused },
+            summary: { present: attendedClasses, absent: statusCounts.absent, tardy: statusCounts.tardy, excused: statusCounts.excused, totalForPercentage: totalClassesForPercentage },
             pieData, 
             details: finalData
         };
@@ -548,43 +530,29 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
         return Array.from(firefighterIdsInFilter).map(firefighterId => {
             const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
+            // Get records for this specific firefighter
             const records = attendanceReportData.details.filter(d => d.firefighter.id === firefighterId);
             
-            if (records.length === 0) return null;
-            
-            const statusCounts = {
-                present: records.filter(d => d.status === 'present').length,
-                absent: records.filter(d => d.status === 'absent').length,
-                tardy: records.filter(d => d.status === 'tardy').length,
-                excused: records.filter(d => d.status === 'excused').length,
-                recupero: records.filter(d => d.status === 'recupero').length,
-            };
-            
-            const compensatedAbsences = Math.min(statusCounts.absent, statusCounts.recupero);
-            const totalRecordsForPercentage = records.length - compensatedAbsences;
+            // Only consider statuses relevant for the percentage calculation
+            const relevantRecords = records.filter(d => d.status === 'present' || d.status === 'tardy' || d.status === 'absent');
+            const totalClasses = relevantRecords.length;
 
-            if (totalRecordsForPercentage <= 0) {
+            if (totalClasses === 0) {
                  return {
                     firefighterId: firefighter.id,
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     totalClasses: 0,
                     presentPercentage: 'N/A',
-                    absentPercentage: 'N/A',
-                    tardyPercentage: 'N/A',
-                    excusedPercentage: 'N/A'
                 };
             }
 
-            const effectivePresents = statusCounts.present + statusCounts.recupero;
+            const attendedCount = relevantRecords.filter(d => d.status === 'present' || d.status === 'tardy').length;
             
             return {
                 firefighterId: firefighter.id,
                 firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
-                totalClasses: totalRecordsForPercentage,
-                presentPercentage: `${((effectivePresents / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                absentPercentage: `${(((statusCounts.absent - compensatedAbsences) / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                tardyPercentage: `${((statusCounts.tardy / totalRecordsForPercentage) * 100).toFixed(0)}%`,
-                excusedPercentage: `${((statusCounts.excused / totalRecordsForPercentage) * 100).toFixed(0)}%`,
+                totalClasses,
+                presentPercentage: `${((attendedCount / totalClasses) * 100).toFixed(0)}%`,
             };
         }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
     }, [attendanceReportData.details, allFirefighters]);
@@ -629,11 +597,15 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
     }, [allSessions]);
     
+    const overallAttendancePercentage = attendanceReportData.summary.totalForPercentage > 0
+        ? ((attendanceReportData.summary.present / attendanceReportData.summary.totalForPercentage) * 100).toFixed(0)
+        : "0";
+
     const summaryCards = [
-        { title: "Presentes (inc. recuperos)", value: attendanceReportData.summary.present, icon: UserCheck, color: "text-green-500" },
-        { title: "Ausentes Netos", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
-        { title: "Tardes", value: attendanceReportData.summary.tardy, icon: Clock, color: "text-yellow-500" },
-        { title: "Justificados", value: attendanceReportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+        { title: "Asistencias (Presente/Tarde)", value: attendanceReportData.summary.present, icon: UserCheck, color: "text-green-500" },
+        { title: "Ausencias", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
+        { title: "Justificadas (Licencia)", value: attendanceReportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+        { title: "% Presentismo General", value: `${overallAttendancePercentage}%`, icon: Percent, color: "text-blue-500" },
     ];
     
     const RADIAN = Math.PI / 180;
@@ -782,7 +754,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                             <div className="grid gap-8 lg:grid-cols-5">
                                 <Card className="lg:col-span-2">
                                     <CardHeader>
-                                        <CardTitle className="font-headline">Distribución General</CardTitle>
+                                        <CardTitle className="font-headline">Distribución de Estados</CardTitle>
                                     </CardHeader>
                                     <CardContent>
                                         <ChartContainer config={{}} className="h-[250px] w-full">
@@ -807,8 +779,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clases</TableHead>
-                                                    <TableHead>% Presente</TableHead>
+                                                    <TableHead>Clases a Cargo</TableHead>
+                                                    <TableHead>% Presentismo</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -928,5 +900,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     );
 }
 
+
+    
 
     
