@@ -192,6 +192,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // This logic decides whether to show the sidebar or not.
     // The portal page at /dashboard will not have the sidebar.
     const showSidebar = pathname !== '/dashboard';
+    const showTopNav = isMobile && showSidebar; // Also hide top nav on portal page
 
     return (
         <div className="flex min-h-screen w-full">
@@ -200,7 +201,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
                     {children}
                 </main>
-                {isMobile && user && <TopNav navItems={navItems} userRole={user.role} />}
+                {showTopNav && user && <TopNav navItems={navItems} userRole={user.role} />}
             </div>
         </div>
     );
