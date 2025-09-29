@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Flame, Car } from 'lucide-react';
+import { Flame, Car, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function PortalPage() {
@@ -21,7 +21,7 @@ export default function PortalPage() {
         </p>
       </div>
 
-      <div className="grid w-full max-w-2xl grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
         <Link href="/dashboard" className="transform transition-transform hover:scale-105">
           <Card className="h-full hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4">
@@ -34,6 +34,23 @@ export default function PortalPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Acceda para gestionar clases, tomar asistencia, registrar licencias y generar reportes detallados.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link href="/weeks" className="transform transition-transform hover:scale-105">
+          <Card className="h-full hover:border-primary">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <CalendarCheck className="h-10 w-10 text-primary" />
+              <div>
+                <CardTitle className="font-headline text-2xl">Semanas</CardTitle>
+                <CardDescription>Gestión de tareas y personal.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Organice personal en semanas, asigne tareas y genere reportes de actividad.
               </p>
             </CardContent>
           </Card>

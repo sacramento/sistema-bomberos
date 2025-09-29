@@ -15,6 +15,7 @@ import {
   LogOut,
   GraduationCap,
   PanelLeft,
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Ayudantía'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
+  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Administrador', 'Oficial', 'Bombero'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía', 'Oficial'] },
@@ -61,7 +63,7 @@ function Sidebar() {
         <div className="flex h-16 items-center border-b px-4">
           <Link href="/" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
-            {!isCollapsed && <span className="font-headline">Asistencia SMA</span>}
+            {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
           </Link>
           <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={() => setIsCollapsed(!isCollapsed)}>
             <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
@@ -137,10 +139,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       return;
     }
     
-    // Check if the user has access to the current route
-    // This allows access to the root dashboard route, but protects sub-routes
-    const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
-    if (pathname !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
+    // Find the current top-level route being accessed
+    const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
+    const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
+    
+    // Allow access to root/dashboard, otherwise check roles
+    if (currentTopLevelPath && currentTopLevelPath !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
        const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
        if (firstAvailablePage) {
            router.push(firstAvailablePage.href);
