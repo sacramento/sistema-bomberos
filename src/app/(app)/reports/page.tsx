@@ -504,7 +504,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
         const attendedClasses = statusCounts.present + statusCounts.tardy;
         const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
-        const totalClassesForPercentage = attendedClasses + netAbsences;
+        const totalForPercentage = attendedClasses + netAbsences;
         
         const pieData = [
             { name: getStatusLabel('present'), value: attendedClasses, fill: PIE_CHART_COLORS.present },
