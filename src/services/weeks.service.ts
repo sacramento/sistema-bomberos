@@ -18,13 +18,11 @@ const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     
     const lead = firefighterMap.get(data.leadId);
     const driver = firefighterMap.get(data.driverId);
+    // 'members' are the ones that are not lead or driver
     const members = (data.memberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     
-    // Create a comprehensive list of all members, ensuring no duplicates
-    const allMembersMap = new Map<string, Firefighter>();
-    if(lead) allMembersMap.set(lead.id, lead);
-    if(driver) allMembersMap.set(driver.id, driver);
-    members.forEach(member => allMembersMap.set(member.id, member));
+    // 'allMembers' are all firefighters associated with the week for filtering/display
+    const allMembers = (data.allMemberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
 
     const week: Week = {
         id: docSnap.id,
@@ -32,7 +30,7 @@ const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
         lead,
         driver,
         members,
-        allMembers: Array.from(allMembersMap.values()),
+        allMembers,
     };
     return week;
 }
@@ -64,7 +62,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
 }
 
 
-export const addWeek = async (weekData: Omit<Week, 'id'>): Promise<string> => {
+export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>): Promise<string> => {
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     
     const dataToSave = {
@@ -74,7 +72,8 @@ export const addWeek = async (weekData: Omit<Week, 'id'>): Promise<string> => {
         periodEndDate: weekData.periodEndDate,
         leadId: weekData.leadId,
         driverId: weekData.driverId,
-        memberIds: weekData.memberIds, // Storing only the additional members, lead/driver are separate
+        memberIds: weekData.memberIds,
+        allMemberIds: allMemberIds, // Save the complete list of everyone
         observations: weekData.observations
     };
 

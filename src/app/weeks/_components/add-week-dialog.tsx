@@ -205,7 +205,7 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
     }
     
     try {
-        const weekData: Omit<Week, 'id'> = {
+        const weekData: Omit<Week, 'id' | 'allMemberIds' | 'allMembers'> = {
             name,
             firehouse,
             periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
