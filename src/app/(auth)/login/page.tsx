@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -5,16 +6,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
-import { Flame } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
 
 export default function LoginPage() {
   const { user, login, loading, error } = useAuth();
   const { toast } = useToast();
+  const router = useRouter();
   const [legajo, setLegajo] = useState('');
   const [password, setPassword] = useState('');
 
@@ -32,9 +37,17 @@ export default function LoginPage() {
       });
     }
   }, [error, toast]);
+  
+  // If user is already logged in, redirect them to the main portal page
+  useEffect(() => {
+    if (user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
 
   // Prevent rendering the form if auth state is loading or user is already logged in
-  // This avoids hydration errors caused by redirection logic in AuthProvider
+  // This avoids hydration errors caused by redirection logic
   if (loading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
@@ -45,15 +58,20 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm relative">
+         <Button asChild variant="ghost" size="icon" className="absolute top-2 left-2">
+            <Link href="/" aria-label="Volver al portal">
+                <ArrowLeft className="h-4 w-4" />
+            </Link>
+        </Button>
         <form onSubmit={handleLogin}>
-          <CardHeader className="text-center">
+          <CardHeader className="text-center pt-12">
              <div className="mb-4 flex justify-center">
               <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
             </div>
-            <CardTitle className="font-headline text-2xl">Asistencia SMA</CardTitle>
+            <CardTitle className="font-headline text-2xl">Módulo de Asistencia</CardTitle>
             <CardDescription>
-              Iniciá sesión para acceder al sistema.
+              Iniciá sesión para continuar.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

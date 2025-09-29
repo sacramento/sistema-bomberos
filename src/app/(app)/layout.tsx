@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -58,7 +59,7 @@ function Sidebar() {
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+          <Link href="/" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
             {!isCollapsed && <span className="font-headline">Asistencia SMA</span>}
           </Link>
@@ -136,13 +137,15 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    // Check if the user has access to the current route
+    // This allows access to the root dashboard route, but protects sub-routes
     const currentNavItem = navItems.find(item => pathname.startsWith(item.href));
-    if(currentNavItem && !currentNavItem.roles.includes(user.role)) {
+    if (pathname !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
        const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
        if (firstAvailablePage) {
            router.push(firstAvailablePage.href);
        } else {
-            router.push('/login'); 
+            router.push('/'); // Redirect to portal if no pages are available
        }
     }
 
