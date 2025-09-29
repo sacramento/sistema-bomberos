@@ -28,7 +28,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 
 export const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Ayudantía'] },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
@@ -59,9 +59,9 @@ function Sidebar() {
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/" className="flex items-center gap-2 font-semibold">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
-            {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
+            {!isCollapsed && <span className="font-headline">Módulo Asistencia</span>}
           </Link>
           <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={() => setIsCollapsed(!isCollapsed)}>
             <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
@@ -133,7 +133,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (loading) return;
 
         if (!user) {
-            router.push('/login');
+            router.push('/');
             return;
         }
 
@@ -145,7 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            if (firstAvailablePage) {
                router.push(firstAvailablePage.href);
            } else {
-                router.push('/'); 
+                router.push('/dashboard'); 
            }
         }
 

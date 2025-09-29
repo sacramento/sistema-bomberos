@@ -1,325 +1,95 @@
 
 'use client';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  BarChart,
-  Calendar,
-  ShieldCheck,
-  UserX,
-} from 'lucide-react';
-import { PageHeader } from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
+
 import Link from 'next/link';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from "@/components/ui/chart"
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { useEffect, useState, useMemo } from 'react';
-import { getFirefighters } from '@/services/firefighters.service';
-import { getSessions } from '@/services/sessions.service';
-import { getLeaves } from '@/services/leaves.service';
-import { Session } from '@/lib/types';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { isWithinInterval, startOfToday, endOfToday } from 'date-fns';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Flame, Car, CalendarCheck } from 'lucide-react';
+import Image from 'next/image';
+import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
 
-const chartConfig = {
-  attendees: {
-    label: "Asistentes",
-    color: "hsl(var(--primary))",
-  },
-  absentees: {
-    label: "Ausentes",
-    color: "hsl(var(--muted-foreground))",
-  },
-}
-
-export default function DashboardPage() {
-  const [activeFirefighters, setActiveFirefighters] = useState(0);
-  const [allSessions, setAllSessions] = useState<Session[]>([]);
-  const [activeLeavesCount, setActiveLeavesCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const firefighters = await getFirefighters();
-        const activeCount = firefighters.filter(f => f.status === 'Active').length;
-        setActiveFirefighters(activeCount);
-
-        const sessionData = await getSessions();
-        setAllSessions(sessionData);
-        
-        const leavesData = await getLeaves();
-        const today = new Date();
-        const currentLeaves = leavesData.filter(leave => 
-            isWithinInterval(today, { start: new Date(leave.startDate), end: new Date(leave.endDate) })
-        );
-        setActiveLeavesCount(new Set(currentLeaves.map(l => l.firefighterId)).size);
-
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+export default function PortalPage() {
+  const { user, logout } = useAuth();
   
-  const availableYears = useMemo(() => {
-    const years = new Set(allSessions.map(s => new Date(s.date).getFullYear().toString()));
-    return Array.from(years).sort((a, b) => b.localeCompare(a));
-  }, [allSessions]);
-
-  const filteredData = useMemo(() => {
-    const sessionsInYear = allSessions.filter(session => {
-        if(filterYear === 'all') return true;
-        // Adding timezone offset to avoid issues with date comparison
-        const sessionDate = new Date(session.date);
-        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-        return sessionDate.getFullYear().toString() === filterYear;
-    });
-
-    const monthlyData: Record<string, { present: number, absent: number, tardy: number, excused: number, month: string }> = {};
-    const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-
-    sessionsInYear.forEach(session => {
-        const sessionDate = new Date(session.date);
-        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-        const monthIndex = sessionDate.getMonth();
-        const month = monthNames[monthIndex];
-        
-        if (!monthlyData[month]) {
-            monthlyData[month] = { present: 0, absent: 0, tardy: 0, excused: 0, month };
-        }
-        
-        if (session.attendance) {
-            Object.values(session.attendance).forEach(status => {
-                if (status === 'present') monthlyData[month].present++;
-                if (status === 'absent') monthlyData[month].absent++;
-                if (status === 'tardy') monthlyData[month].tardy++;
-                if (status === 'excused') monthlyData[month].excused++;
-            });
-        }
-    });
-    
-    const chartData = monthNames.map(month => {
-        const data = monthlyData[month];
-        if (!data) return { month, attendees: 0, absentees: 0 };
-        return {
-            month,
-            attendees: data.present + data.tardy + data.excused, // Contando todos como asistentes para el gráfico
-            absentees: data.absent
-        };
-    });
-
-    const totalAttendance = Object.values(monthlyData).reduce((acc, data) => acc + data.present, 0);
-    const totalTardy = Object.values(monthlyData).reduce((acc, data) => acc + data.tardy, 0);
-    const totalExcused = Object.values(monthlyData).reduce((acc, data) => acc + data.excused, 0);
-    const totalAbsent = Object.values(monthlyData).reduce((acc, data) => acc + data.absent, 0);
-    const totalPossible = totalAttendance + totalTardy + totalExcused + totalAbsent;
-    
-    // Consideramos presentes, tardes y justificados para el ratio de asistencia
-    const attendanceRate = totalPossible > 0 ? ((totalAttendance + totalTardy + totalExcused) / totalPossible) * 100 : 0;
-    
-    // Logic for upcoming classes
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Set to start of today for comparison
-
-    const upcomingSessions = allSessions
-      .filter(session => {
-        const sessionDate = new Date(session.date);
-        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
-        return sessionDate >= today;
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-
-
-    return {
-        sessions: sessionsInYear,
-        upcomingSessions,
-        chartData,
-        attendanceRate
-    };
-
-  }, [allSessions, filterYear]);
+  // These links now point to the root of each module's functionality.
+  const assistanceHref = "/classes"; // Default to classes for assistance module
+  const weeksHref = "/weeks";
 
 
   return (
-    <>
-      <PageHeader
-        title="Tablero"
-        description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
-      >
-        <div className="w-48">
-            <Select value={filterYear} onValueChange={setFilterYear}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar año" />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="all">Ver Todos</SelectItem>
-                     {availableYears.map(year => <SelectItem key={year} value={year}>{`Año ${year}`}</SelectItem>)}
-                </SelectContent>
-            </Select>
+    <div className="flex min-h-[80vh] flex-col items-center justify-center bg-background p-4">
+      <div className="mb-8 text-center">
+        <div className="mb-4 flex justify-center">
+          <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={80} height={80} />
         </div>
-      </PageHeader>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Bomberos Activos
-            </CardTitle>
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{activeFirefighters}</div>}
-            <p className="text-xs text-muted-foreground">
-              Personal total de guardia
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Clases Programadas
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">+{filteredData.sessions.length}</div>}
-            <p className="text-xs text-muted-foreground">
-              {filterYear === 'all' ? 'Total de clases en el sistema' : `Clases para el año ${filterYear}`}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasa de Asistencia</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{filteredData.attendanceRate.toFixed(1)}%</div>}
-            <p className="text-xs text-muted-foreground">
-              Promedio para el período
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">De Licencia</CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-             {loading ? <Skeleton className="h-7 w-12" /> : <div className="text-2xl font-bold">{activeLeavesCount}</div>}
-            <p className="text-xs text-muted-foreground">
-              Bomberos actualmente de licencia
-            </p>
-          </CardContent>
-        </Card>
+        <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight">
+          Plataforma Unificada SMA
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Seleccione el módulo al que desea acceder.
+        </p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-7 mt-8">
-        <Card className="lg:col-span-4">
-          <CardHeader>
-            <CardTitle className="font-headline">Asistencia Mensual</CardTitle>
-            <CardDescription>
-              Resumen de asistencia a capacitaciones para el año {filterYear === 'all' ? 'general' : filterYear}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-             <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <RechartsBarChart accessibilityLayer data={filteredData.chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                 <YAxis />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                 <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="attendees" fill="var(--color-attendees)" radius={4} />
-                <Bar dataKey="absentees" fill="var(--color-absentees)" radius={4} />
-              </RechartsBarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-headline">Próximas Clases</CardTitle>
-            <CardDescription>
-              Próximas clases de capacitación programadas en el sistema.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Clase</TableHead>
-                  <TableHead>Especialidad</TableHead>
-                  <TableHead>Fecha</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                    Array.from({ length: 4 }).map((_, index) => (
-                        <TableRow key={index}>
-                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                        </TableRow>
-                    ))
-                ) : (
-                    filteredData.upcomingSessions.slice(0, 5).map((session) => (
-                      <TableRow key={session.id}>
-                        <TableCell>
-                          <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
-                            {session.title}
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{session.specialization}</Badge>
-                        </TableCell>
-                        <TableCell>{session.date}</TableCell>
-                      </TableRow>
-                    ))
-                )}
-                 { !loading && filteredData.upcomingSessions.length === 0 && (
-                    <TableRow>
-                        <TableCell colSpan={3} className="text-center text-muted-foreground">
-                            No hay clases programadas a futuro.
-                        </TableCell>
-                    </TableRow>
-                 )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+
+      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
+        <Link href={assistanceHref} className="transform transition-transform hover:scale-105">
+          <Card className="h-full hover:border-primary">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <Flame className="h-10 w-10 text-primary" />
+              <div>
+                <CardTitle className="font-headline text-2xl">Asistencia</CardTitle>
+                <CardDescription>Gestión de capacitación y asistencia.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Acceda para gestionar clases, tomar asistencia, registrar licencias y generar reportes detallados.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+        
+        <Link href={weeksHref} className="transform transition-transform hover:scale-105">
+          <Card className="h-full hover:border-primary">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <CalendarCheck className="h-10 w-10 text-primary" />
+              <div>
+                <CardTitle className="font-headline text-2xl">Semanas</CardTitle>
+                <CardDescription>Gestión de tareas y personal.</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Organice personal en semanas, asigne tareas y genere reportes de actividad.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="#" className="transform transition-transform hover:scale-105" aria-disabled="true" onClick={(e) => e.preventDefault()}>
+           <Card className="h-full bg-muted/50 cursor-not-allowed">
+            <CardHeader className="flex flex-row items-center gap-4">
+              <Car className="h-10 w-10 text-muted-foreground" />
+              <div>
+                <CardTitle className="font-headline text-2xl text-muted-foreground">Movilidad</CardTitle>
+                <CardDescription>Próximamente...</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+               <p className="text-sm text-muted-foreground">
+                Módulo para la gestión de vehículos, órdenes internas y logística de movilidad.
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
-    </>
+      {user && (
+          <div className="mt-8">
+            <Button variant="outline" onClick={logout}>Cerrar Sesión</Button>
+          </div>
+      )}
+       <footer className="mt-16 text-center text-sm text-muted-foreground">
+        <p>&copy; {new Date().getFullYear()} Asistencia SMA. Todos los derechos reservados.</p>
+      </footer>
+    </div>
   );
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -53,8 +54,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        // Redirect to portal page after login, not dashboard
-        router.push('/');
+        // Redirect to portal page after login
+        router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleLogout = () => {
     setUser(null);
     sessionStorage.removeItem(SESSION_STORAGE_KEY);
-    router.push('/login');
+    router.push('/');
   };
 
   const value = {

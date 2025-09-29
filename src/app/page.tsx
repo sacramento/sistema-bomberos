@@ -1,106 +1,104 @@
 
 'use client';
 
-import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Flame, Car, CalendarCheck } from 'lucide-react';
-import Image from 'next/image';
-import { useAuth } from '@/context/auth-context';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth } from "@/context/auth-context";
+import { useState, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-export default function PortalPage() {
-  const { user, loading } = useAuth();
+
+export default function LoginPage() {
+  const { user, login, loading, error } = useAuth();
+  const { toast } = useToast();
+  const router = useRouter();
+  const [legajo, setLegajo] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await login({ legajo, password });
+  };
   
-  if (loading) {
-     return (
+  // If user is already logged in, redirect them to the main portal page
+  useEffect(() => {
+    if (user) {
+      router.push('/dashboard');
+    }
+  }, [user, router]);
+
+
+  // Prevent rendering the form if auth state is loading or user is already logged in
+  // This avoids hydration errors caused by redirection logic
+  if (loading || user) {
+    return (
         <div className="flex min-h-screen items-center justify-center">
             <p>Cargando...</p>
         </div>
     );
   }
 
-  // Los enlaces ahora apuntan directamente a los módulos.
-  // La lógica de protección de rutas en los layouts de cada módulo se encargará de redirigir a login si es necesario.
-  const assistanceHref = "/dashboard";
-  const weeksHref = "/weeks";
-
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="mb-8 text-center">
-        <div className="mb-4 flex justify-center">
-          <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={80} height={80} />
-        </div>
-        <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight">
-          Plataforma Unificada SMA
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Seleccione el módulo al que desea acceder.
-        </p>
-      </div>
-
-      <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
-        <Link href={assistanceHref} className="transform transition-transform hover:scale-105">
-          <Card className="h-full hover:border-primary">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <Flame className="h-10 w-10 text-primary" />
-              <div>
-                <CardTitle className="font-headline text-2xl">Asistencia</CardTitle>
-                <CardDescription>Gestión de capacitación y asistencia.</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Acceda para gestionar clases, tomar asistencia, registrar licencias y generar reportes detallados.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-        
-        <Link href={weeksHref} className="transform transition-transform hover:scale-105">
-          <Card className="h-full hover:border-primary">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <CalendarCheck className="h-10 w-10 text-primary" />
-              <div>
-                <CardTitle className="font-headline text-2xl">Semanas</CardTitle>
-                <CardDescription>Gestión de tareas y personal.</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Organice personal en semanas, asigne tareas y genere reportes de actividad.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="#" className="transform transition-transform hover:scale-105" aria-disabled="true" onClick={(e) => e.preventDefault()}>
-           <Card className="h-full bg-muted/50 cursor-not-allowed">
-            <CardHeader className="flex flex-row items-center gap-4">
-              <Car className="h-10 w-10 text-muted-foreground" />
-              <div>
-                <CardTitle className="font-headline text-2xl text-muted-foreground">Movilidad</CardTitle>
-                <CardDescription>Próximamente...</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-               <p className="text-sm text-muted-foreground">
-                Módulo para la gestión de vehículos, órdenes internas y logística de movilidad.
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-      {!user && (
-          <div className="mt-8">
-            <Button asChild>
-                <Link href="/login">Iniciar Sesión</Link>
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <Card className="w-full max-w-sm relative">
+        <form onSubmit={handleLogin}>
+          <CardHeader className="text-center pt-12">
+             <div className="mb-4 flex justify-center">
+              <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
+            </div>
+            <CardTitle className="font-headline text-2xl">Plataforma SMA</CardTitle>
+            <CardDescription>
+              Inicie sesión para continuar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+             {error && (
+                 <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Error</AlertTitle>
+                    <AlertDescription>
+                        {error}
+                    </AlertDescription>
+                </Alert>
+             )}
+            <div className="space-y-2">
+              <Label htmlFor="legajo">Legajo</Label>
+              <Input 
+                id="legajo" 
+                type="text" 
+                placeholder="Tu número de legajo" 
+                required 
+                value={legajo}
+                onChange={(e) => setLegajo(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Contraseña</Label>
+              <Input 
+                id="password" 
+                type="password" 
+                placeholder="Tu contraseña" 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
+              />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Ingresar'}
             </Button>
-          </div>
-      )}
-       <footer className="mt-16 text-center text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Asistencia SMA. Todos los derechos reservados.</p>
-      </footer>
+          </CardFooter>
+        </form>
+      </Card>
     </div>
   );
 }

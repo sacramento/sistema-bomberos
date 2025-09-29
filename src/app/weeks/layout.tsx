@@ -18,7 +18,7 @@ export default function WeeksLayout({
 
     useEffect(() => {
         if (!loading && !user) {
-            router.push('/login');
+            router.push('/');
         }
     }, [user, loading, router]);
 
@@ -38,7 +38,7 @@ export default function WeeksLayout({
                 Módulo de Semanas
             </h1>
             <Button asChild variant="outline">
-                <Link href="/">Volver al Portal</Link>
+                <Link href="/dashboard">Volver al Portal</Link>
             </Button>
         </header>
         <main className="flex-1 p-4 sm:p-6 md:p-8">
