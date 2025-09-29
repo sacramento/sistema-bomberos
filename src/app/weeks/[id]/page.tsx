@@ -10,7 +10,7 @@ import { Week, Task, Firefighter } from "@/lib/types";
 import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask } from "@/services/tasks.service";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,12 @@ export default function WeekDetailPage() {
     const [observations, setObservations] = useState('');
     const [savingObservations, setSavingObservations] = useState(false);
 
-    const canManage = user?.role === 'Administrador' || user?.id === week?.lead?.legajo;
+    const canManage = useMemo(() => {
+        if (!user || !week) return false;
+        // The user can manage if they are an Admin OR if their user ID (legajo) matches the week's lead legajo.
+        return user.role === 'Administrador' || user.id === week.lead?.legajo;
+    }, [user, week]);
+
 
     const fetchWeekAndTasks = async () => {
         if (weekId) {
