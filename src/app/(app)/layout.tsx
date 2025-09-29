@@ -72,13 +72,14 @@ function Sidebar() {
           <ul>
             {availableNavItems.map((item) => {
               const label = getLabel(item);
+              const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+              
               const buttonContent = (
                 <Link
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    pathname.startsWith(item.href) && item.href !== '/dashboard' ? "bg-muted text-primary" : "",
-                    pathname === '/dashboard' && item.href === '/dashboard' ? "bg-muted text-primary" : "",
+                    isActive ? "bg-muted text-primary" : "",
                     isCollapsed && "justify-center"
                   )}
                 >

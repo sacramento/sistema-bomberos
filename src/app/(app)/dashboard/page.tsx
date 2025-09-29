@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
   const { user, logout } = useAuth();
   
+  // The "Assistance" module's dashboard is now at /sessions
   const assistanceHref = "/sessions";
   const weeksHref = "/weeks";
 
