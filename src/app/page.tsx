@@ -6,12 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Flame, Car, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 export default function PortalPage() {
   const { user, loading } = useAuth();
-  const router = useRouter();
   
   if (loading) {
      return (
@@ -21,9 +18,10 @@ export default function PortalPage() {
     );
   }
 
-  // This logic ensures that if the user clicks a module, they will be taken to login if not authenticated
-  const assistanceHref = user ? "/dashboard" : "/login";
-  const weeksHref = user ? "/weeks" : "/login";
+  // Los enlaces ahora apuntan directamente a los módulos.
+  // La lógica de protección de rutas en los layouts de cada módulo se encargará de redirigir a login si es necesario.
+  const assistanceHref = "/dashboard";
+  const weeksHref = "/weeks";
 
 
   return (
@@ -92,6 +90,13 @@ export default function PortalPage() {
           </Card>
         </Link>
       </div>
+      {!user && (
+          <div className="mt-8">
+            <Button asChild>
+                <Link href="/login">Iniciar Sesión</Link>
+            </Button>
+          </div>
+      )}
        <footer className="mt-16 text-center text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} Asistencia SMA. Todos los derechos reservados.</p>
       </footer>

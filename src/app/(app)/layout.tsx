@@ -137,14 +137,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        // Find the current top-level route being accessed
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
-        
-        // This is a special exception for the portal page
-        if (currentTopLevelPath === '/') {
-            return;
-        }
-
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
         
         if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(user.role)) {
@@ -152,7 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
            if (firstAvailablePage) {
                router.push(firstAvailablePage.href);
            } else {
-                router.push('/'); // Redirect to portal if no pages are available for some reason
+                router.push('/'); 
            }
         }
 
