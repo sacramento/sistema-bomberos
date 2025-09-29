@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Flame, Car, CalendarCheck } from 'lucide-react';
+import { Flame, CalendarCheck, Car } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
   const { user, logout } = useAuth();
   
-  // The "Assistance" module's dashboard is now at /sessions
   const assistanceHref = "/sessions";
   const weeksHref = "/weeks";
 
