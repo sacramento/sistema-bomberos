@@ -98,23 +98,25 @@ export default function SchedulePage() {
         }
 
         return (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+             <div className="space-y-4">
                 {sortedSessions.map(session => {
                     const firehouseInfo = getMajorityFirehouseInfo(session);
                     return (
-                        <Card key={session.id} className={cn("flex flex-col border-l-4", firehouseInfo.className)}>
-                            <CardHeader>
-                                <div className="flex justify-between items-start">
-                                    <Badge variant="secondary">{session.specialization}</Badge>
-                                    <span className="text-sm font-medium text-muted-foreground">{firehouseInfo.name}</span>
+                        <Card key={session.id} className={cn("border-l-4", firehouseInfo.className)}>
+                           <div className="grid grid-cols-1 sm:grid-cols-4 items-center p-4 gap-4">
+                                <div className="sm:col-span-2">
+                                     <div className="flex items-center gap-2 mb-2">
+                                         <Badge variant="secondary">{session.specialization}</Badge>
+                                         <span className="text-sm font-medium text-muted-foreground">{firehouseInfo.name}</span>
+                                     </div>
+                                     <h3 className="font-headline text-lg font-semibold">{session.title}</h3>
                                 </div>
-                                <CardTitle className="font-headline text-lg pt-2">{session.title}</CardTitle>
-                            </CardHeader>
-                            <CardContent className="mt-auto">
-                                <p className="text-sm text-muted-foreground">
-                                    {format(new Date(session.date), "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
-                                </p>
-                            </CardContent>
+                                <div className="sm:col-span-2 sm:text-right">
+                                     <p className="font-medium text-muted-foreground">
+                                        {format(new Date(session.date), "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
+                                    </p>
+                                </div>
+                           </div>
                         </Card>
                     );
                 })}
