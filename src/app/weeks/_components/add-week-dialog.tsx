@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
+import { addWeek } from "@/services/weeks.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Calendar as CalendarIcon, ArrowRight, ArrowLeft } from "lucide-react";
@@ -204,10 +205,7 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
     }
     
     try {
-        console.log("Submitting..."); // TODO: Replace with actual service call
-        
-        // Example of what would be sent to the service
-        const weekData = {
+        const weekData: Omit<Week, 'id'> = {
             name,
             firehouse,
             periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
@@ -217,9 +215,10 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
             memberIds: members.map(m => m.id),
             observations
         };
-        // await addWeek(weekData); // This function will be created later
+        
+        await addWeek(weekData);
 
-        toast({ title: "¡Éxito!", description: "La nueva semana ha sido creada (simulación)." });
+        toast({ title: "¡Éxito!", description: "La nueva semana ha sido creada." });
         
         onWeekAdded();
         resetForm();
