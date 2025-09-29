@@ -7,29 +7,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Week, Task, Firefighter } from "@/lib/types";
-import { getWeekById } from "@/services/weeks.service";
+import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask } from "@/services/tasks.service";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog } from "lucide-react";
+import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { Textarea } from "@/components/ui/textarea";
 
-
-const getStatusVariant = (status: Task['status']) => {
-    switch (status) {
-        case 'Pendiente': return 'default';
-        case 'En Progreso': return 'secondary';
-        case 'Completada': return 'destructive'; // Using destructive for a 'done' state, can be changed
-        default: return 'outline';
-    }
-}
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
         case 'Pendiente': return 'bg-yellow-500 text-black';
@@ -50,8 +42,10 @@ export default function WeekDetailPage() {
     const [week, setWeek] = useState<Week | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
+    const [observations, setObservations] = useState('');
+    const [savingObservations, setSavingObservations] = useState(false);
 
-    const canManageTasks = user?.role === 'Administrador' || user?.id === week?.lead?.legajo;
+    const canManage = user?.role === 'Administrador' || user?.id === week?.lead?.legajo;
 
     const fetchWeekAndTasks = async () => {
         if (weekId) {
@@ -60,6 +54,7 @@ export default function WeekDetailPage() {
                 const weekData = await getWeekById(weekId);
                 setWeek(weekData);
                 if (weekData) {
+                    setObservations(weekData.observations || '');
                     const taskData = await getTasksByWeek(weekData.id);
                     setTasks(taskData);
                 }
@@ -101,6 +96,19 @@ export default function WeekDetailPage() {
             toast({ title: "Error", description: "No se pudo actualizar el estado de la tarea.", variant: "destructive" });
         }
     };
+    
+    const handleSaveObservations = async () => {
+        if (!week) return;
+        setSavingObservations(true);
+        try {
+            await updateWeek(week.id, { observations });
+            toast({ title: "Éxito", description: "La pizarra de novedades ha sido actualizada." });
+        } catch (error) {
+            toast({ title: "Error", description: "No se pudo guardar la pizarra de novedades.", variant: "destructive" });
+        } finally {
+            setSavingObservations(false);
+        }
+    };
 
 
     if (loading) {
@@ -135,7 +143,7 @@ export default function WeekDetailPage() {
                 title={week.name}
                 description={`${format(new Date(week.periodStartDate), "dd MMM yyyy", { locale: es })} - ${format(new Date(week.periodEndDate), "dd MMM yyyy", { locale: es })}`}
             >
-                {canManageTasks && (
+                {canManage && (
                     <AddTaskDialog week={week} onTaskAdded={handleTaskAdded}>
                         <Button>
                             <PlusCircle className="mr-2" />
@@ -153,11 +161,26 @@ export default function WeekDetailPage() {
                             <CardTitle className="font-headline">Pizarra de Novedades</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {week.observations ? (
-                                <p className="text-muted-foreground whitespace-pre-wrap">{week.observations}</p>
-                            ): (
-                                <p className="text-muted-foreground">No hay novedades para esta semana.</p>
-                            )}
+                           {canManage ? (
+                               <div className="space-y-4">
+                                   <Textarea 
+                                       placeholder="No hay novedades para esta semana. Escriba aquí para agregar..."
+                                       value={observations}
+                                       onChange={(e) => setObservations(e.target.value)}
+                                       className="min-h-32"
+                                   />
+                                   <Button onClick={handleSaveObservations} disabled={savingObservations}>
+                                       {savingObservations ? <Loader2 className="mr-2 animate-spin" /> : <Save className="mr-2" />}
+                                       {savingObservations ? 'Guardando...' : 'Guardar Novedades'}
+                                   </Button>
+                               </div>
+                           ) : (
+                                observations ? (
+                                    <p className="text-muted-foreground whitespace-pre-wrap">{observations}</p>
+                                ): (
+                                    <p className="text-muted-foreground">No hay novedades para esta semana.</p>
+                                )
+                           )}
                         </CardContent>
                     </Card>
 
@@ -171,7 +194,7 @@ export default function WeekDetailPage() {
                                 <div className="space-y-6">
                                     {tasks.map(task => (
                                         <div key={task.id} className="p-4 border rounded-lg">
-                                            <div className="flex justify-between items-start gap-4">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                                                 <div className="space-y-1 flex-grow">
                                                     <h3 className="font-semibold text-lg">{task.title}</h3>
                                                     {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
@@ -179,9 +202,9 @@ export default function WeekDetailPage() {
                                                  <Select 
                                                     value={task.status} 
                                                     onValueChange={(newStatus) => handleStatusChange(task.id, newStatus as Task['status'])}
-                                                    disabled={!canManageTasks}
+                                                    disabled={!canManage}
                                                 >
-                                                    <SelectTrigger className={cn("w-[180px] flex-shrink-0", getStatusBadgeColor(task.status))}>
+                                                    <SelectTrigger className={cn("w-full sm:w-[180px] flex-shrink-0", getStatusBadgeColor(task.status))}>
                                                         <SelectValue placeholder="Seleccionar estado" />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -211,7 +234,7 @@ export default function WeekDetailPage() {
                                  <div className="flex flex-col items-center justify-center h-48 text-center border-2 border-dashed rounded-lg">
                                     <CheckCircle2 className="h-10 w-10 text-green-500 mb-2"/>
                                     <p className="text-muted-foreground">No hay tareas asignadas para esta semana.</p>
-                                    {canManageTasks && <p className="text-sm text-muted-foreground mt-2">Use el botón "Agregar Tarea" para comenzar.</p>}
+                                    {canManage && <p className="text-sm text-muted-foreground mt-2">Use el botón "Agregar Tarea" para comenzar.</p>}
                                 </div>
                             )}
                         </CardContent>

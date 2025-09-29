@@ -3,7 +3,7 @@
 
 import { Week, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -80,4 +80,9 @@ export const addWeek = async (weekData: Omit<Week, 'id'>): Promise<string> => {
 
     const docRef = await addDoc(weeksCollection, dataToSave);
     return docRef.id;
+};
+
+export const updateWeek = async (id: string, weekData: Partial<Pick<Week, 'observations'>>): Promise<void> => {
+    const docRef = doc(db, 'weeks', id);
+    await updateDoc(docRef, weekData);
 };
