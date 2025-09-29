@@ -11,8 +11,7 @@ import { Button } from '@/components/ui/button';
 export default function PortalPage() {
   const { user, logout } = useAuth();
   
-  // These links now point to the root of each module's functionality.
-  const assistanceHref = "/classes"; // Default to classes for assistance module
+  const assistanceHref = "/sessions";
   const weeksHref = "/weeks";
 
 

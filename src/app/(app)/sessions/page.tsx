@@ -1,3 +1,4 @@
+
 'use client';
 import {
   Card,
@@ -21,7 +22,6 @@ import {
   UserX,
 } from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
-import { sessions, firefighters } from '@/lib/data';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,11 @@ import {
   ChartLegendContent,
 } from "@/components/ui/chart"
 import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { useEffect, useState } from 'react';
+import { Firefighter, Session } from '@/lib/types';
+import { getFirefighters } from '@/services/firefighters.service';
+import { getSessions } from '@/services/sessions.service';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const chartData = [
   { month: "Enero", attendees: 186, absentees: 80 },
@@ -55,7 +60,61 @@ const chartConfig = {
 }
 
 export default function DashboardPage() {
+  const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [firefightersData, sessionsData] = await Promise.all([
+          getFirefighters(),
+          getSessions()
+        ]);
+        setFirefighters(firefightersData);
+        setSessions(sessionsData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
   const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
+
+  const upcomingSessions = sessions.filter(s => new Date(s.date) >= new Date()).length;
+
+  if (loading) {
+    return (
+      <>
+        <PageHeader
+          title="Tablero"
+          description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
+        />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({length: 4}).map((_, index) => (
+            <Card key={index}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-1/3 mb-2" />
+                <Skeleton className="h-3 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
+            <Skeleton className="lg:col-span-4 h-96" />
+            <Skeleton className="lg:col-span-3 h-96" />
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
@@ -86,7 +145,7 @@ export default function DashboardPage() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+{sessions.length}</div>
+            <div className="text-2xl font-bold">+{upcomingSessions}</div>
             <p className="text-xs text-muted-foreground">
               Programadas en los próximos 30 días
             </p>

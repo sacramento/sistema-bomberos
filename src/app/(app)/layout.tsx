@@ -29,6 +29,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
+  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Administrador', 'Operador', 'Ayudantía', 'Oficial'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
@@ -76,7 +77,8 @@ function Sidebar() {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                    pathname.startsWith(item.href) && "bg-muted text-primary",
+                    pathname.startsWith(item.href) && item.href !== '/dashboard' ? "bg-muted text-primary" : "",
+                    pathname === '/dashboard' && item.href === '/dashboard' ? "bg-muted text-primary" : "",
                     isCollapsed && "justify-center"
                   )}
                 >
