@@ -476,7 +476,10 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             }
         }
         
-        const finalData = filteredAttendance.filter(({ firefighter }) => {
+        const finalData = filteredAttendance.filter(({ firefighter, status }) => {
+            // Exclude excused attendances from all calculations
+            if (status === 'excused') return false;
+
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
             if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
             if (filterHierarchy.length > 0) {
@@ -498,22 +501,29 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
             tardy: finalData.filter(item => item.status === 'tardy').length,
-            excused: finalData.filter(item => item.status === 'excused').length,
             recupero: finalData.filter(item => item.status === 'recupero').length,
+            // We count original excused records separately for the summary card, even if they are excluded from the main list
+            excused: filteredAttendance.filter(item => item.status === 'excused').length,
         };
-
-        const attendedClasses = statusCounts.present + statusCounts.tardy;
-        const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
-        const totalForPercentage = attendedClasses + netAbsences;
         
+        const netAbsences = Math.max(0, statusCounts.absent - statusCounts.recupero);
+        const attendedClasses = statusCounts.present + statusCounts.tardy;
+
+        // The total number of classes where attendance was expected (present, absent, or tardy)
+        const totalForPercentage = attendedClasses + statusCounts.absent; 
+        // Recuperos cancel out absences but don't reduce the total number of classes.
+        const presentForPercentage = attendedClasses + statusCounts.recupero;
+
+
         const pieData = [
-            { name: getStatusLabel('present'), value: attendedClasses, fill: PIE_CHART_COLORS.present },
+            { name: getStatusLabel('present'), value: attendedClasses + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
             { name: getStatusLabel('absent'), value: netAbsences, fill: PIE_CHART_COLORS.absent },
+             // We show original excused count in the pie chart for context
             { name: getStatusLabel('excused'), value: statusCounts.excused, fill: PIE_CHART_COLORS.excused },
         ].filter(item => item.value > 0);
             
         return { 
-            summary: { present: attendedClasses, absent: netAbsences, tardy: 0, excused: statusCounts.excused, totalForPercentage },
+            summary: { present: presentForPercentage, absent: netAbsences, tardy: statusCounts.tardy, excused: statusCounts.excused, totalForPercentage },
             pieData, 
             details: finalData
         };
@@ -533,8 +543,9 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             const absentCount = records.filter(d => d.status === 'absent').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
 
-            const netAbsences = Math.max(0, absentCount - recuperoCount);
-            const totalClasses = presentCount + netAbsences;
+            const totalClasses = presentCount + absentCount;
+            const presentForPercentage = presentCount + recuperoCount;
+
 
             if (totalClasses === 0) {
                  return {
@@ -549,7 +560,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 firefighterId: firefighter.id,
                 firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                 totalClasses,
-                presentPercentage: `${((presentCount / totalClasses) * 100).toFixed(0)}%`,
+                presentPercentage: `${((presentForPercentage / totalClasses) * 100).toFixed(0)}%`,
             };
         }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
     }, [attendanceReportData.details, allFirefighters]);
@@ -903,3 +914,4 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
 
     
+
