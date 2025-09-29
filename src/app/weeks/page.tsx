@@ -5,17 +5,21 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
 import { PlusCircle } from "lucide-react";
+import { useState } from "react";
 import AddWeekDialog from "./_components/add-week-dialog";
+import WeekList from "./_components/week-list";
 
 
 export default function WeeksPage() {
     const { user } = useAuth();
     // This logic can be expanded later for specific roles within the "Semanas" module
     const canManage = user?.role === 'Administrador';
+    
+    // State to trigger a refresh of the week list
+    const [refreshSignal, setRefreshSignal] = useState(false);
 
     const handleWeekAdded = () => {
-        // TODO: Implement logic to refresh the list of weeks
-        console.log("Week added, refresh needed.");
+        setRefreshSignal(prev => !prev);
     }
 
     return (
@@ -33,12 +37,8 @@ export default function WeeksPage() {
                     </AddWeekDialog>
                 )}
             </PageHeader>
-            <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg">
-                <div className="text-center">
-                    <h2 className="text-2xl font-semibold">Módulo en Construcción</h2>
-                    <p className="text-muted-foreground mt-2">Aquí podrá ver y gestionar las semanas de trabajo.</p>
-                </div>
-            </div>
+            
+            <WeekList refreshSignal={refreshSignal} />
         </>
     );
 }

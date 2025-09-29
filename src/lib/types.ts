@@ -91,6 +91,10 @@ export type Week = {
     driverId: string; // Firefighter ID of the driver
     memberIds: string[]; // List of all firefighter IDs in the week
     observations: string; // For the "Pizarra de Novedades"
+    // Enriched properties for client side
+    lead?: Firefighter;
+    driver?: Firefighter;
+    members?: Firefighter[];
 }
 
 export type Task = {
