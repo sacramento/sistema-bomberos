@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Flame, Car, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
+import { Button } from '@/components/ui/button';
 
 export default function PortalPage() {
   const { user, loading } = useAuth();
