@@ -5,8 +5,17 @@ import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Flame, Car, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/context/auth-context';
 
 export default function PortalPage() {
+  const { user } = useAuth();
+  
+  // This logic ensures that if the user is already logged in, the links will take them
+  // directly to the modules. If not, they will be redirected to the login page by the AuthProvider.
+  const assistanceHref = user ? "/dashboard" : "/login";
+  const weeksHref = user ? "/weeks" : "/login";
+
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="mb-8 text-center">
@@ -22,7 +31,7 @@ export default function PortalPage() {
       </div>
 
       <div className="grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-3">
-        <Link href="/dashboard" className="transform transition-transform hover:scale-105">
+        <Link href={assistanceHref} className="transform transition-transform hover:scale-105">
           <Card className="h-full hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4">
               <Flame className="h-10 w-10 text-primary" />
@@ -39,7 +48,7 @@ export default function PortalPage() {
           </Card>
         </Link>
         
-        <Link href="/weeks" className="transform transition-transform hover:scale-105">
+        <Link href={weeksHref} className="transform transition-transform hover:scale-105">
           <Card className="h-full hover:border-primary">
             <CardHeader className="flex flex-row items-center gap-4">
               <CalendarCheck className="h-10 w-10 text-primary" />

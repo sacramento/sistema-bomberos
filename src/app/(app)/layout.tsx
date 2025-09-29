@@ -31,7 +31,6 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export const navItems = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Tablero', roles: ['Administrador', 'Ayudantía'] },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
-  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Administrador', 'Oficial', 'Bombero'] },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía', 'Oficial'] },
@@ -139,6 +138,12 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
       return;
     }
     
+    // The portal page is an exception and should always be accessible.
+    // The weeks page is a placeholder and should be accessible.
+    if (pathname === '/' || pathname.startsWith('/weeks')) {
+        return;
+    }
+    
     // Find the current top-level route being accessed
     const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
     const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
@@ -155,7 +160,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
 
   }, [user, loading, pathname, router]);
   
-  if (loading || !user) {
+  if (loading || (!user && pathname !== '/')) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <p>Cargando...</p>
@@ -163,19 +168,35 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     );
   }
 
+  // Hide sidebar on /weeks page for now as it's a separate module
+  const showSidebar = !pathname.startsWith('/weeks');
+
   return (
     <div className="flex min-h-screen w-full">
-      <Sidebar />
+      {showSidebar && <Sidebar />}
       <div className="flex flex-1 flex-col">
         <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
             {children}
         </main>
-        {isMobile && <TopNav navItems={navItems} userRole={user.role} />}
+        {isMobile && showSidebar && <TopNav navItems={navItems} userRole={user.role} />}
       </div>
     </div>
   );
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+
+    // If we are on the portal page, we don't want the app layout with sidebars etc.
+    if (pathname === '/') {
+        return <>{children}</>;
+    }
+    
+    // The "Weeks" module will have its own layout in the future.
+    // For now, let's wrap it in a basic div.
+    if (pathname.startsWith('/weeks')) {
+        return <div className="flex min-h-screen w-full flex-col">{children}</div>;
+    }
+
     return <AppLayoutContent>{children}</AppLayoutContent>
 }
