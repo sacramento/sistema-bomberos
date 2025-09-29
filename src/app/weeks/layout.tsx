@@ -37,9 +37,6 @@ export default function WeeksLayout({
                 <Flame className="h-6 w-6 text-primary" />
                 Módulo de Semanas
             </h1>
-            <Button asChild variant="outline">
-                <Link href="/dashboard">Volver al Portal</Link>
-            </Button>
         </header>
         <main className="flex-1 p-4 sm:p-6 md:p-8">
             {children}

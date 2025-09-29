@@ -4,7 +4,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { PlusCircle, Calendar, ClipboardList, Users } from "lucide-react";
+import { PlusCircle, Calendar, ClipboardList, Users, Home } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import AddWeekDialog from "./_components/add-week-dialog";
 import WeekList from "./_components/week-list";
@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import MyTasks from "./_components/my-tasks";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import Link from "next/link";
 
 
 export default function WeeksPage() {
@@ -90,7 +91,7 @@ export default function WeeksPage() {
         return (
              <>
                 <PageHeader title="Gestión de Semanas" description="Organice al personal en semanas, asigne tareas y supervise la actividad.">
-                     {canManage && <Skeleton className="h-10 w-44" />}
+                     <Skeleton className="h-10 w-44" />
                 </PageHeader>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
                      {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-28" />)}
@@ -107,14 +108,19 @@ export default function WeeksPage() {
                 title="Dashboard de Semanas" 
                 description="Vista general del estado de las semanas y tareas."
             >
-                {canManage && (
-                    <AddWeekDialog onWeekAdded={handleWeekAdded}>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Crear Nueva Semana
-                        </Button>
-                    </AddWeekDialog>
-                )}
+                <div className="flex items-center gap-2">
+                    <Button asChild variant="outline">
+                        <Link href="/dashboard"><Home className="mr-2"/>Volver al Portal</Link>
+                    </Button>
+                    {canManage && (
+                        <AddWeekDialog onWeekAdded={handleWeekAdded}>
+                            <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Crear Semana
+                            </Button>
+                        </AddWeekDialog>
+                    )}
+                </div>
             </PageHeader>
 
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">

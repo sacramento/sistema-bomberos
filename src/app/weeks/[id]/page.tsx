@@ -9,12 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Week, Task, Firefighter } from "@/lib/types";
 import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask } from "@/services/tasks.service";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2 } from "lucide-react";
+import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +35,7 @@ const taskStatuses: Task['status'][] = ['Pendiente', 'En Progreso', 'Completada'
 
 export default function WeekDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const weekId = params.id as string;
     const { toast } = useToast();
     const { user } = useAuth();
@@ -148,14 +149,20 @@ export default function WeekDetailPage() {
                 title={week.name}
                 description={`${format(new Date(week.periodStartDate), "dd MMM yyyy", { locale: es })} - ${format(new Date(week.periodEndDate), "dd MMM yyyy", { locale: es })}`}
             >
-                {canManage && (
-                    <AddTaskDialog week={week} onTaskAdded={handleTaskAdded}>
-                        <Button>
-                            <PlusCircle className="mr-2" />
-                            Agregar Tarea
-                        </Button>
-                    </AddTaskDialog>
-                )}
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => router.push('/weeks')}>
+                        <ArrowLeft className="mr-2"/>
+                        Volver al Dashboard
+                    </Button>
+                    {canManage && (
+                        <AddTaskDialog week={week} onTaskAdded={handleTaskAdded}>
+                            <Button>
+                                <PlusCircle className="mr-2" />
+                                Agregar Tarea
+                            </Button>
+                        </AddTaskDialog>
+                    )}
+                </div>
             </PageHeader>
 
             <div className="grid gap-8 md:grid-cols-3">
