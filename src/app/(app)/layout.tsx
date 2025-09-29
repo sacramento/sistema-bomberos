@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -45,7 +44,11 @@ function Sidebar() {
 
   if (!user) return null;
 
-  const availableNavItems = navItems.filter(item => item.roles.includes(user.role));
+  const availableNavItems = navItems.filter(item => {
+    // Exclude the 'Portal' link from the sidebar itself
+    if (item.href === '/dashboard') return false;
+    return item.roles.includes(user.role);
+  });
 
   const getLabel = (item: typeof navItems[0]) => {
     if (item.href === '/reports' && user.role === 'Bombero') {
@@ -70,9 +73,27 @@ function Sidebar() {
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto p-2">
           <ul>
+             <li>
+                <Tooltip delayDuration={0}>
+                  <TooltipTrigger asChild>
+                     <Link
+                      href="/dashboard"
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                        pathname === '/dashboard' && "bg-muted text-primary",
+                        isCollapsed && "justify-center"
+                      )}
+                    >
+                      <LayoutDashboard className="h-5 w-5" />
+                      {!isCollapsed && <span>Portal</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  {isCollapsed && <TooltipContent side="right">Portal</TooltipContent>}
+                </Tooltip>
+             </li>
             {availableNavItems.map((item) => {
               const label = getLabel(item);
-              const isActive = pathname.startsWith(item.href) && (item.href !== '/dashboard' || pathname === '/dashboard');
+              const isActive = pathname.startsWith(item.href);
               
               const buttonContent = (
                 <Link
@@ -139,6 +160,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             router.push('/');
             return;
         }
+        
+        // If we are on the portal page, we don't need to check for roles.
+        if (pathname === '/dashboard') return;
 
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
@@ -162,9 +186,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
+    // This logic decides whether to show the sidebar or not.
+    // The portal page at /dashboard will not have the sidebar.
+    const showSidebar = pathname !== '/dashboard';
+
     return (
         <div className="flex min-h-screen w-full">
-            <Sidebar />
+            {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
                 <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
                     {children}
