@@ -12,6 +12,7 @@ import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, User, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 interface WeekListProps {
     refreshSignal: boolean;
@@ -101,8 +102,10 @@ export default function WeekList({ refreshSignal }: WeekListProps) {
                         </div>
                     </CardContent>
                     <CardFooter>
-                        <Button className="w-full" variant="outline">
-                            Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                        <Button asChild className="w-full" variant="outline">
+                            <Link href={`/weeks/${week.id}`}>
+                                Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
                         </Button>
                     </CardFooter>
                 </Card>

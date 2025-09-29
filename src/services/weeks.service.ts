@@ -3,7 +3,7 @@
 
 import { Week, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -16,21 +16,25 @@ const weeksCollection = collection(db, 'weeks');
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
-    // Helper to safely get an array of firefighter objects from IDs
-    const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
-        if (!ids) return [];
-        return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
-    };
+    const lead = firefighterMap.get(data.leadId);
+    const driver = firefighterMap.get(data.driverId);
+    const members = (data.memberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     
-    // Create an enriched object that matches the Week type more closely for client-side use
-    const week: Week & { lead?: Firefighter, driver?: Firefighter, members?: Firefighter[] } = {
+    // Create a comprehensive list of all members, ensuring no duplicates
+    const allMembersMap = new Map<string, Firefighter>();
+    if(lead) allMembersMap.set(lead.id, lead);
+    if(driver) allMembersMap.set(driver.id, driver);
+    members.forEach(member => allMembersMap.set(member.id, member));
+
+    const week: Week = {
         id: docSnap.id,
         ...data,
-        lead: firefighterMap.get(data.leadId),
-        driver: firefighterMap.get(data.driverId),
-        members: getFirefighterObjects(data.memberIds),
+        lead,
+        driver,
+        members,
+        allMembers: Array.from(allMembersMap.values()),
     };
-    return week as Week;
+    return week;
 }
 
 
@@ -38,25 +42,40 @@ export const getWeeks = async (): Promise<Week[]> => {
     const q = query(weeksCollection, orderBy('periodStartDate', 'desc'));
     const querySnapshot = await getDocs(q);
 
-    // Fetch all firefighters once to create a lookup map
     const allFirefighters = await getFirefighters();
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
-    // Process all weeks asynchronously
     const weeksPromises = querySnapshot.docs.map(doc => docToWeek(doc, firefighterMap));
     const weeks = await Promise.all(weeksPromises);
 
     return weeks;
 }
 
+export const getWeekById = async (id: string): Promise<Week | null> => {
+    const docRef = doc(db, 'weeks', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const allFirefighters = await getFirefighters();
+        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+        return await docToWeek(docSnap, firefighterMap);
+    }
+    return null;
+}
+
 
 export const addWeek = async (weekData: Omit<Week, 'id'>): Promise<string> => {
-    // Ensure all members are included in the memberIds list for consistency
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     
     const dataToSave = {
-        ...weekData,
-        memberIds: allMemberIds
+        name: weekData.name,
+        firehouse: weekData.firehouse,
+        periodStartDate: weekData.periodStartDate,
+        periodEndDate: weekData.periodEndDate,
+        leadId: weekData.leadId,
+        driverId: weekData.driverId,
+        memberIds: weekData.memberIds, // Storing only the additional members, lead/driver are separate
+        observations: weekData.observations
     };
 
     const docRef = await addDoc(weeksCollection, dataToSave);
