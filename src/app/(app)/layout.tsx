@@ -124,79 +124,53 @@ function Sidebar() {
   );
 }
 
-function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const isMobile = useIsMobile();
-
-  useEffect(() => {
-    if (loading) return;
-
-    if (!user) {
-      router.push('/login');
-      return;
-    }
-    
-    // The portal page is an exception and should always be accessible.
-    // The weeks page is a placeholder and should be accessible.
-    if (pathname === '/' || pathname.startsWith('/weeks')) {
-        return;
-    }
-    
-    // Find the current top-level route being accessed
-    const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
-    const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
-    
-    // Allow access to root/dashboard, otherwise check roles
-    if (currentTopLevelPath && currentTopLevelPath !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
-       const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
-       if (firstAvailablePage) {
-           router.push(firstAvailablePage.href);
-       } else {
-            router.push('/'); // Redirect to portal if no pages are available
-       }
-    }
-
-  }, [user, loading, pathname, router]);
-  
-  if (loading || (!user && pathname !== '/')) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Cargando...</p>
-      </div>
-    );
-  }
-
-  // Hide sidebar on /weeks page for now as it's a separate module
-  const showSidebar = !pathname.startsWith('/weeks');
-
-  return (
-    <div className="flex min-h-screen w-full">
-      {showSidebar && <Sidebar />}
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
-            {children}
-        </main>
-        {isMobile && showSidebar && <TopNav navItems={navItems} userRole={user.role} />}
-      </div>
-    </div>
-  );
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+    const { user, loading } = useAuth();
+    const router = useRouter();
     const pathname = usePathname();
+    const isMobile = useIsMobile();
 
-    // If we are on the portal page, we don't want the app layout with sidebars etc.
-    if (pathname === '/') {
-        return <>{children}</>;
-    }
-    
-    // The "Weeks" module will have its own layout in the future.
-    // For now, let's wrap it in a basic div.
-    if (pathname.startsWith('/weeks')) {
-        return <div className="flex min-h-screen w-full flex-col">{children}</div>;
-    }
+    useEffect(() => {
+        if (loading) return;
 
-    return <AppLayoutContent>{children}</AppLayoutContent>
+        if (!user) {
+            router.push('/login');
+            return;
+        }
+
+        // Find the current top-level route being accessed
+        const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
+        const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
+        
+        // Allow access to dashboard, otherwise check roles for other pages within this layout
+        if (currentTopLevelPath && currentTopLevelPath !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(user.role)) {
+           const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
+           if (firstAvailablePage) {
+               router.push(firstAvailablePage.href);
+           } else {
+                router.push('/'); // Redirect to portal if no pages are available for some reason
+           }
+        }
+
+    }, [user, loading, pathname, router]);
+
+    if (loading || !user) {
+        return (
+            <div className="flex min-h-screen items-center justify-center">
+                <p>Cargando...</p>
+            </div>
+        );
+    }
+  
+    return (
+        <div className="flex min-h-screen w-full">
+            <Sidebar />
+            <div className="flex flex-1 flex-col">
+                <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
+                    {children}
+                </main>
+                {isMobile && user && <TopNav navItems={navItems} userRole={user.role} />}
+            </div>
+        </div>
+    );
 }

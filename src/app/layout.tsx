@@ -31,7 +31,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={cn("antialiased", fontBody.variable, fontHeadline.variable)}>
         <AuthProvider>
-          {children}
+            {children}
         </AuthProvider>
         <Toaster />
       </body>

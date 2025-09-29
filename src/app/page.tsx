@@ -6,12 +6,29 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Flame, Car, CalendarCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useAuth } from '@/context/auth-context';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function PortalPage() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  // If user is already logged in, redirect them to the portal, not dashboard
+  useEffect(() => {
+    if (user && window.location.pathname === '/login') {
+      router.push('/');
+    }
+  }, [user, router]);
   
-  // This logic ensures that if the user is already logged in, the links will take them
-  // directly to the modules. If not, they will be redirected to the login page by the AuthProvider.
+  if (loading) {
+     return (
+        <div className="flex min-h-screen items-center justify-center">
+            <p>Cargando...</p>
+        </div>
+    );
+  }
+
+  // This logic ensures that if the user clicks a module, they will be taken to login if not authenticated
   const assistanceHref = user ? "/dashboard" : "/login";
   const weeksHref = user ? "/weeks" : "/login";
 

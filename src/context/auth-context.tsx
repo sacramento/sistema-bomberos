@@ -45,21 +45,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  // Effect to handle redirection based on auth state
-  useEffect(() => {
-    if (loading) return;
-    
-    const isAuthRoute = pathname === '/login';
-
-    // If user is logged in and tries to access login page, redirect to dashboard
-    if (user && isAuthRoute) {
-      router.push('/dashboard');
-    }
-    // If user is not logged in and not on login page, they should be redirected
-    // This logic is now handled in the AppLayout to avoid provider conflicts.
-    
-  }, [user, loading, pathname, router]);
-
   const handleLogin = async (credentials: LoginInput) => {
     setLoading(true);
     setError(null);
@@ -68,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        router.push('/dashboard');
+        // Redirect to portal page after login, not dashboard
+        router.push('/');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }
