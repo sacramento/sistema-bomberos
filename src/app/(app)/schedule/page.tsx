@@ -3,25 +3,41 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { useEffect, useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { cn } from "@/lib/utils";
 
-const getMajorityFirehouse = (session: Session): string => {
-    if (!session.attendees || session.attendees.length === 0) return 'N/A';
+const getMajorityFirehouseInfo = (session: Session): { name: string, className: string } => {
+    if (!session.attendees || session.attendees.length === 0) return { name: 'N/A', className: 'border-gray-500' };
     
     const firehouseCounts = session.attendees.reduce((acc, attendee) => {
         acc[attendee.firehouse] = (acc[attendee.firehouse] || 0) + 1;
         return acc;
     }, {} as Record<string, number>);
 
-    const majorityFirehouse = Object.keys(firehouseCounts).reduce((a, b) => firehouseCounts[a] > firehouseCounts[b] ? a : b, '');
+    let majorityFirehouse = 'N/A';
+    let maxCount = 0;
 
-    return majorityFirehouse || 'N/A';
+    for(const firehouse in firehouseCounts) {
+        if(firehouseCounts[firehouse] > maxCount) {
+            maxCount = firehouseCounts[firehouse];
+            majorityFirehouse = firehouse;
+        }
+    }
+    
+    const colorMap: Record<string, string> = {
+        'Cuartel 1': 'border-yellow-500',
+        'Cuartel 2': 'border-blue-500',
+        'Cuartel 3': 'border-orange-500',
+    };
+
+    return { name: majorityFirehouse, className: colorMap[majorityFirehouse] || 'border-gray-500' };
 };
 
 export default function SchedulePage() {
@@ -52,61 +68,66 @@ export default function SchedulePage() {
         return [...sessions].sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     }, [sessions]);
 
+    const renderSessionCards = () => {
+        if (loading) {
+            return (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {Array.from({ length: 8 }).map((_, index) => (
+                        <Card key={index}>
+                            <CardHeader>
+                                <Skeleton className="h-5 w-24" />
+                                <Skeleton className="h-4 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-7 w-4/5" />
+                                <Skeleton className="h-5 w-full mt-2" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            );
+        }
+
+        if (sortedSessions.length === 0) {
+            return (
+                <div className="text-center py-16 text-muted-foreground">
+                    <p>No hay clases programadas.</p>
+                </div>
+            );
+        }
+
+        return (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sortedSessions.map(session => {
+                    const firehouseInfo = getMajorityFirehouseInfo(session);
+                    return (
+                        <Card key={session.id} className={cn("flex flex-col border-l-4", firehouseInfo.className)}>
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <Badge variant="secondary">{session.specialization}</Badge>
+                                    <span className="text-sm font-medium text-muted-foreground">{firehouseInfo.name}</span>
+                                </div>
+                                <CardTitle className="font-headline text-lg pt-2">{session.title}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="mt-auto">
+                                <p className="text-sm text-muted-foreground">
+                                    {format(new Date(session.date), 'dd/MM/yyyy', { locale: es })} a las {session.startTime}hs
+                                </p>
+                            </CardContent>
+                        </Card>
+                    );
+                })}
+            </div>
+        );
+    }
 
     return (
         <>
             <PageHeader
                 title="Cronograma de Capacitaciones"
-                description="Vista de solo lectura de todas las clases de capacitación planificadas."
+                description="Vista de todas las clases de capacitación planificadas, coloreadas por cuartel principal."
             />
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Todas las Clases</CardTitle>
-                    <CardDescription>
-                        Una lista completa de todas las capacitaciones, ordenadas por fecha.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Capacitación</TableHead>
-                                <TableHead>Especialidad</TableHead>
-                                <TableHead>Cuartel Principal</TableHead>
-                                <TableHead>Fecha y Hora</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell><Skeleton className="h-5 w-48" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                sortedSessions.map(session => (
-                                    <TableRow key={session.id}>
-                                        <TableCell className="font-medium">{session.title}</TableCell>
-                                        <TableCell>
-                                            <Badge variant="secondary">{session.specialization}</Badge>
-                                        </TableCell>
-                                        <TableCell>{getMajorityFirehouse(session)}</TableCell>
-                                        <TableCell>{session.date} @ {session.startTime}hs</TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
-                    {sessions.length === 0 && !loading && (
-                        <div className="text-center py-16 text-muted-foreground">
-                            <p>No hay clases programadas.</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+            {renderSessionCards()}
         </>
     );
 }
