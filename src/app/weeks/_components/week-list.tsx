@@ -31,8 +31,8 @@ export default function WeekList({ refreshSignal }: WeekListProps) {
         try {
             const data = await getWeeks();
             
-            // If user is not an admin, filter weeks to show only those they are part of.
-            if (user.role !== 'Administrador') {
+            // If user is not an Admin or Oficial, filter weeks to show only those they are part of.
+            if (user.role !== 'Administrador' && user.role !== 'Oficial') {
                 const userWeekIds = new Set<string>();
                 data.forEach(week => {
                     const isMember = week.allMembers?.some(member => member.legajo === user.id);
@@ -43,7 +43,7 @@ export default function WeekList({ refreshSignal }: WeekListProps) {
                 const filteredWeeks = data.filter(week => userWeekIds.has(week.id));
                 setWeeks(filteredWeeks);
             } else {
-                // Admin sees all weeks
+                // Admin and Oficial see all weeks
                 setWeeks(data);
             }
 
@@ -59,7 +59,9 @@ export default function WeekList({ refreshSignal }: WeekListProps) {
     };
     
     useEffect(() => {
-        fetchWeeks();
+        if (user) {
+            fetchWeeks();
+        }
     }, [refreshSignal, user]);
 
     if (loading) {
