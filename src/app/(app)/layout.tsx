@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -58,18 +59,14 @@ function Sidebar() {
 
   // Group nav items by module, filtered by role
   const navItemsByModule = navItems.reduce((acc, item) => {
-    // Determine the specific role for this item's path
-    const itemActiveRole = getActiveRole(item.href);
-
-    // Check if the user's role for this path is in the allowed roles for the item
-    if (!item.roles.includes(itemActiveRole)) {
-      return acc;
+    const userRoleForItem = getActiveRole(item.href);
+    if (item.roles.includes(userRoleForItem)) {
+      const module = item.module;
+      if (!acc[module]) {
+        acc[module] = [];
+      }
+      acc[module].push(item);
     }
-    const module = item.module;
-    if (!acc[module]) {
-      acc[module] = [];
-    }
-    acc[module].push(item);
     return acc;
   }, {} as Record<string, NavItem[]>);
 
@@ -99,7 +96,7 @@ function Sidebar() {
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+          <Link href="/sessions" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
             {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
           </Link>
@@ -143,7 +140,7 @@ function Sidebar() {
                     </div>
                   );
                 })}
-                 {!isCollapsed && navItemsByModule[moduleKey].length > 0 && <Separator className="my-2" />}
+                 {!isCollapsed && navItemsByModule[moduleKey].length > 0 && moduleKey !== 'general' && <Separator className="my-2" />}
               </React.Fragment>
             )
           ))}
@@ -186,19 +183,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        // Find the most specific nav item match for the current path
         const currentNavItem = [...navItems]
             .filter(item => pathname.startsWith(item.href))
             .sort((a,b) => b.href.length - a.href.length)[0];
         
-        // If a matching nav item is found, check permissions
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
-               router.push('/sessions'); // Redirect to a default safe page
+               router.push('/sessions'); 
             }
         } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes/') && !pathname.startsWith('/weeks/')) {
-             // Allow access to detail pages like /classes/[id] and /weeks/[id] even if not in nav
             // router.push('/sessions');
         }
 
@@ -216,7 +210,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const showTopNav = isMobile;
     const activeRole = getActiveRole(pathname);
     
-    // For TopNav, we show all items the user has access to, regardless of current module
     const availableNavItemsForTopNav = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
 
     return (

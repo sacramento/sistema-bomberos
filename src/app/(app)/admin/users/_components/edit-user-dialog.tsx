@@ -21,9 +21,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
 const globalRoles: GlobalRole[] = ['Master', 'Oficial', 'Usuario'];
-const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
-const weekRoles: WeekModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
-const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Operador', 'Bombero', 'Ninguno'];
+const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Instructor', 'Ayudantía', 'Bombero', 'Oficial', 'Ninguno'];
+const weekRoles: WeekModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Oficial', 'Ninguno'];
+const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Operador', 'Bombero', 'Oficial', 'Ninguno'];
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -61,15 +61,15 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
     setLoading(true);
 
     try {
-        const isMasterOrOficial = globalRole === 'Master' || globalRole === 'Oficial';
+        const isMaster = globalRole === 'Master';
         
         const updatedData: Partial<Omit<User, 'id'>> = {
             name,
             role: globalRole,
             roles: {
-                asistencia: isMasterOrOficial ? 'Administrador' : asistenciaRole,
-                semanas: isMasterOrOficial ? 'Administrador' : semanasRole,
-                movilidad: isMasterOrOficial ? 'Administrador' : movilidadRole,
+                asistencia: isMaster ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : asistenciaRole),
+                semanas: isMaster ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : semanasRole),
+                movilidad: isMaster ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : movilidadRole),
             }
         };
 
@@ -143,7 +143,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="asistenciaRole-edit" className="text-right">Asistencia</Label>
-              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={globalRole === 'Master' || globalRole === 'Oficial' ? 'Administrador' : asistenciaRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : asistenciaRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger id="asistenciaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -152,7 +152,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="semanasRole-edit" className="text-right">Semanas</Label>
-              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={globalRole === 'Master' || globalRole === 'Oficial' ? 'Administrador' : semanasRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : semanasRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger id="semanasRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -161,7 +161,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="movilidadRole-edit" className="text-right">Movilidad</Label>
-              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={globalRole === 'Master' || globalRole === 'Oficial' ? 'Administrador' : movilidadRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Oficial' : movilidadRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger id="movilidadRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
