@@ -35,17 +35,20 @@ const loginFlow = ai.defineFlow(
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
       
-      // Prepara el objeto de usuario para devolver, asegurando que cumpla el esquema.
-      // El objeto 'user' de la base de datos ya tiene la estructura correcta.
-      // Solo necesitamos quitar la contraseña.
-      const { password: _, ...userData } = user;
+      // Construir el objeto de respuesta CUMPLIENDO el esquema de salida.
+      // Este fue el punto del error anterior.
+      const response: LoginOutput = {
+          id: user.id,
+          name: user.name,
+          role: user.role, // 'Master' o 'Usuario'
+          roles: user.roles, // El objeto con los roles modulares
+      };
       
-      // userData ya contiene 'id', 'name', 'role' ('Master' o 'Usuario') y 'roles' (el objeto modular).
-      // Esto ahora coincide con LoginOutputSchema.
-      return userData;
+      return response;
     }
 
     console.log('Contraseña incorrecta');
     return null;
   }
 );
+
