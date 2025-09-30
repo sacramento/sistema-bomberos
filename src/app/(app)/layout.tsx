@@ -39,12 +39,10 @@ type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
-  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'], module: 'asistencia' },
-  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Oficial', 'Administrador', 'Operador'], module: 'asistencia' },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/weeks', icon: CalendarCheck, label: 'Dashboard Semanas', roles: ['Master', 'Oficial', 'Administrador', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -57,10 +55,11 @@ function Sidebar() {
   
   if (!user) return null;
 
-  // Group nav items by module
+  // Group nav items by module, filtered by role
   const navItemsByModule = navItems.reduce((acc, item) => {
     // Determine the specific role for this item's path
     const itemActiveRole = getActiveRole(item.href);
+
     // Check if the user's role for this path is in the allowed roles for the item
     if (!item.roles.includes(itemActiveRole)) {
       return acc;
@@ -99,7 +98,7 @@ function Sidebar() {
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/sessions" className="flex items-center gap-2 font-semibold">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
             {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
           </Link>
@@ -143,7 +142,7 @@ function Sidebar() {
                     </div>
                   );
                 })}
-                 {!isCollapsed && <Separator className="my-2" />}
+                 {!isCollapsed && navItemsByModule[moduleKey].length > 0 && <Separator className="my-2" />}
               </React.Fragment>
             )
           ))}
@@ -197,9 +196,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (!currentNavItem.roles.includes(activeRole)) {
                router.push('/sessions'); // Redirect to a default safe page
             }
-        } else if (pathname !== '/dashboard' && pathname !== '/sessions') {
-            // Optional: if no nav item matches and it's not a known dashboard, redirect
-            // This can prevent users from accessing invalid URLs
+        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/firefighters')) {
+             // Allow access to detail pages like /classes/[id] even if not in nav
             // router.push('/sessions');
         }
 
