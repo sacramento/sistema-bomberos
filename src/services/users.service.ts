@@ -10,17 +10,17 @@ const usersCollection = collection(db, 'users');
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
-    // Set default module roles if they don't exist to prevent crashes
+    // Default roles for safety, in case a user doc is missing them.
     const roles = data.roles || {
         asistencia: 'Ninguno',
         semanas: 'Ninguno',
         movilidad: 'Ninguno'
     };
-    return { 
+    return {
         id: docSnap.id, 
         name: data.name,
         password: data.password,
-        role: data.role, // This should be 'Master' or 'Usuario'
+        role: data.role, // This will be 'Master', 'Oficial', or 'Usuario'
         roles 
     } as User;
 }

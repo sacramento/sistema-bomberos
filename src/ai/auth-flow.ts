@@ -8,7 +8,6 @@ import { ai } from '@/ai/genkit';
 import { LoginInput, LoginInputSchema, LoginOutput, LoginOutputSchema } from '@/lib/schemas/auth.schema';
 import { getUserById } from '@/services/users.service';
 
-
 export async function login(input: LoginInput): Promise<LoginOutput> {
   return loginFlow(input);
 }
@@ -20,39 +19,26 @@ const loginFlow = ai.defineFlow(
     outputSchema: LoginOutputSchema,
   },
   async ({ legajo, password }) => {
-    console.log(`Intentando iniciar sesión para el legajo: ${legajo}`);
-    
-    // Busca al usuario directamente por su legajo, que es el ID del documento.
     const user = await getUserById(legajo);
 
-    if (!user) {
-      console.log('Usuario no encontrado');
+    if (!user || user.password !== password) {
       return null;
     }
 
-    // Verificación de contraseña.
-    if (user.password === password) { 
-      console.log(`Usuario encontrado: ${user.name} con rol global: ${user.role}`);
-      
-      const isMasterOrOficial = user.role === 'Master' || user.role === 'Oficial';
-
-      // Construimos el objeto de respuesta CUMPLIENDO el esquema de salida.
-      // Esta es la única fuente de verdad para la respuesta.
-      const response: LoginOutput = {
-          id: user.id,
-          name: user.name,
-          role: user.role, // Este es el rol global: 'Master', 'Oficial' o 'Usuario'
-          roles: { 
-              asistencia: isMasterOrOficial ? 'Administrador' : (user.roles?.asistencia || 'Ninguno'),
-              semanas: isMasterOrOficial ? 'Administrador' : (user.roles?.semanas || 'Ninguno'),
-              movilidad: isMasterOrOficial ? 'Administrador' : (user.roles?.movilidad || 'Ninguno'),
-          }
-      };
-      
-      return response;
-    }
-
-    console.log('Contraseña incorrecta');
-    return null;
+    // Now we can trust that `user` from `getUserById` is correctly structured.
+    // We just need to build the final response object that matches the output schema.
+    const response: LoginOutput = {
+      id: user.id,
+      name: user.name,
+      role: user.role, // This is now guaranteed to be 'Master', 'Oficial', or 'Usuario'
+      roles: {
+        // If Master/Oficial, they get full admin visibility. Otherwise, use their specific modular roles.
+        asistencia: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.asistencia,
+        semanas: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.semanas,
+        movilidad: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.movilidad,
+      },
+    };
+    
+    return response;
   }
 );
