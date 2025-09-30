@@ -26,15 +26,18 @@ const loginFlow = ai.defineFlow(
       return null;
     }
     
-    // El flujo ahora es mucho más simple.
-    // Solo valida las credenciales y devuelve el objeto de usuario completo.
-    // La lógica de "qué rol usar y dónde" se traslada al cliente (AuthContext).
-    // Esto evita los problemas de validación de esquema en Genkit.
-    return {
+    // Construcción manual y explícita del objeto de respuesta para CUMPLIR con el schema.
+    const response: LoginOutput = {
       id: user.id,
       name: user.name,
-      role: user.role,
-      roles: user.roles,
+      role: user.role, // <-- Se usa SIEMPRE el rol global del usuario
+      roles: { // Se usan los roles modulares que tiene el usuario en la DB
+        asistencia: user.roles.asistencia,
+        semanas: user.roles.semanas,
+        movilidad: user.roles.movilidad,
+      },
     };
+    
+    return response;
   }
 );
