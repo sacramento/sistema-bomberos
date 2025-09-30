@@ -138,7 +138,7 @@ export default function DashboardPage() {
     return (
       <>
         <PageHeader
-          title="Tablero"
+          title="Dashboard Asistencia"
           description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
         />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -166,7 +166,7 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Tablero"
+        title="Dashboard Asistencia"
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
       />
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

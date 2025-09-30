@@ -39,7 +39,7 @@ type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: '/sessions', icon: LayoutDashboard, label: 'Tablero Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
@@ -57,12 +57,11 @@ function Sidebar() {
   
   if (!user) return null;
 
-  const activeRole = getActiveRole(pathname);
-
   // Group nav items by module
   const navItemsByModule = navItems.reduce((acc, item) => {
-    // Only consider items the user has access to based on their specific module role
+    // Determine the specific role for this item's path
     const itemActiveRole = getActiveRole(item.href);
+    // Check if the user's role for this path is in the allowed roles for the item
     if (!item.roles.includes(itemActiveRole)) {
       return acc;
     }
@@ -76,7 +75,9 @@ function Sidebar() {
 
 
   const getLabel = (item: NavItem) => {
-    if (item.href === '/reports' && activeRole === 'Bombero') {
+    // Determine role based on the item's specific path
+    const itemActiveRole = getActiveRole(item.href);
+    if (item.href === '/reports' && itemActiveRole === 'Bombero') {
       return 'Mi Reporte';
     }
     return item.label;
@@ -91,6 +92,8 @@ function Sidebar() {
   };
   
   const moduleOrder: (keyof typeof moduleTitles)[] = ['asistencia', 'semanas', 'general'];
+  
+  const userRoleDisplay = getActiveRole(pathname);
 
   return (
     <TooltipProvider>
@@ -155,7 +158,7 @@ function Sidebar() {
             {!isCollapsed && (
               <div className="flex flex-col">
                 <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{activeRole}</p>
+                <p className="text-xs text-muted-foreground">{userRoleDisplay}</p>
               </div>
             )}
           </div>
@@ -183,13 +186,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        const activeRole = getActiveRole(pathname);
+        // Find the most specific nav item match for the current path
         const currentNavItem = [...navItems]
             .filter(item => pathname.startsWith(item.href))
             .sort((a,b) => b.href.length - a.href.length)[0];
         
-        if (pathname !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
-           router.push('/sessions');
+        // If a matching nav item is found, check permissions
+        if (currentNavItem) {
+            const activeRole = getActiveRole(pathname);
+            if (!currentNavItem.roles.includes(activeRole)) {
+               router.push('/sessions'); // Redirect to a default safe page
+            }
+        } else if (pathname !== '/dashboard' && pathname !== '/sessions') {
+            // Optional: if no nav item matches and it's not a known dashboard, redirect
+            // This can prevent users from accessing invalid URLs
+            // router.push('/sessions');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -202,21 +213,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = true; // Always show sidebar in the new paradigm
+    const showSidebar = true;
     const showTopNav = isMobile;
     const activeRole = getActiveRole(pathname);
     
-    // We need to check permissions for each item for the top nav
+    // For TopNav, we show all items the user has access to, regardless of current module
     const availableNavItemsForTopNav = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
 
     return (
         <div className="flex min-h-screen w-full">
             {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
+                {showTopNav && <TopNav navItems={availableNavItemsForTopNav} userRole={activeRole} />}
                 <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
                     {children}
                 </main>
-                {showTopNav && <TopNav navItems={availableNavItemsForTopNav} userRole={activeRole} />}
             </div>
         </div>
     );
