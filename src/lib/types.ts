@@ -66,9 +66,9 @@ export type Course = {
   endDate: string;
 }
 
-export type AttendanceModuleRole = 'Administrador' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Oficial' | 'Ninguno';
-export type WeekModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Oficial' | 'Ninguno';
-export type MobilityModuleRole = 'Administrador' | 'Operador' | 'Bombero' | 'Oficial' | 'Ninguno';
+export type AttendanceModuleRole = 'Administrador' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
+export type WeekModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
+export type MobilityModuleRole = 'Administrador' | 'Operador' | 'Bombero' | 'Ninguno';
 
 export type GlobalRole = 'Master' | 'Oficial' | 'Usuario';
 

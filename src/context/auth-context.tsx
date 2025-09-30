@@ -79,19 +79,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
 
-      if (user.role === 'Master') return 'Master';
+      if (user.role === 'Master' || user.role === 'Oficial') return user.role;
 
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
       
       const pathSegments = currentPath.split('/');
       const mainModule = pathSegments[1];
       
-      let moduleRole: ActiveRole = 'Ninguno';
-
       switch(mainModule) {
         case 'weeks':
-          moduleRole = roles.semanas;
-          break;
+          return roles.semanas;
         
         case 'sessions':
         case 'schedule':
@@ -100,8 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'classes':
         case 'leaves':
         case 'reports':
-          moduleRole = roles.asistencia;
-          break;
+          return roles.asistencia;
         
         case 'admin':
           return user.role; // Should be 'Master'
@@ -109,14 +105,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         default:
           return user.role; // Default for pages like '/dashboard'
       }
-
-      // If the user's global role is 'Oficial' and they have no specific role for the module, their role is 'Oficial'.
-      // Otherwise, the specific module role takes precedence.
-      if (moduleRole === 'Ninguno' && user.role === 'Oficial') {
-          return 'Oficial';
-      }
-      
-      return moduleRole;
   };
 
   const value = {
