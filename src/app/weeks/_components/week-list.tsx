@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from "react";
@@ -49,7 +48,7 @@ export default function WeekList({ weeks, isLoading }: WeekListProps) {
     
     // Filter weeks for non-admin/non-oficial users
     const filteredWeeks = useMemo(() => {
-        if (!user || activeRole === 'Administrador' || activeRole === 'Oficial') {
+        if (!user || activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') {
             return weeks;
         }
         return weeks.filter(week => 
@@ -63,7 +62,7 @@ export default function WeekList({ weeks, isLoading }: WeekListProps) {
                 <div className="text-center">
                     <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
                      <p className="text-muted-foreground mt-2">
-                        {user && (activeRole === 'Administrador' || activeRole === 'Oficial')
+                        {user && (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial')
                          ? 'Cree una nueva semana para comenzar.'
                          : 'No estás asignado a ninguna semana en esta categoría.'
                         }

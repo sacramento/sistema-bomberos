@@ -1,174 +1,112 @@
-
 'use client';
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useEffect, useState, useMemo } from "react";
+import { Week } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { Firefighter, Week, Task } from "@/lib/types";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, UserCheck } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Button } from "@/components/ui/button";
+import { ArrowRight, User, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { updateTask } from "@/services/tasks.service";
+import Link from "next/link";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
-const MultiFirefighterSelect = ({ 
-    title, 
-    selected, 
-    onSelectedChange,
-    firefighters,
-}: { 
-    title: string;
-    selected: Firefighter[]; 
-    onSelectedChange: (selected: Firefighter[]) => void;
-    firefighters: Firefighter[];
-}) => {
-    const [open, setOpen] = useState(false);
-    const handleSelect = (firefighter: Firefighter) => {
-        const isSelected = selected.some(s => s.id === firefighter.id);
-        if (isSelected) {
-            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
-        } else {
-            onSelectedChange([...selected, firefighter]);
-        }
-    };
-    
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
-                    <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
-                    <CommandList>
-                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
-                        <CommandGroup>
-                            {firefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => handleSelect(firefighter)}>
-                                    <Check className={cn("mr-2 h-4 w-4", selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.lastName}, ${firefighter.firstName}`}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
-
-
-export default function EditTaskDialog({ children, week, task, onTaskUpdated }: { children: React.ReactNode; week: Week, task: Task, onTaskUpdated: () => void; }) {
-  const [open, setOpen] = useState(false);
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  
-  // Form state
-  const [title, setTitle] = useState(task.title);
-  const [description, setDescription] = useState(task.description);
-  const [assignedTo, setAssignedTo] = useState<Firefighter[]>(task.assignedTo || []);
-
-  useEffect(() => {
-    if (open) {
-        setTitle(task.title);
-        setDescription(task.description);
-        setAssignedTo(task.assignedTo || []);
-    }
-  }, [open, task]);
-  
-
-  const assignToAll = () => {
-    if (week.allMembers) {
-        setAssignedTo(week.allMembers);
-    }
-  }
-
-  const handleSubmit = async () => {
-    setLoading(true);
-    if (!title || assignedTo.length === 0) {
-        toast({ title: "Error", description: "El título y al menos un asignado son requeridos.", variant: "destructive" });
-        setLoading(false);
-        return;
-    }
-    
-    try {
-        const taskData = {
-            title,
-            description,
-            assignedToIds: assignedTo.map(f => f.id),
-        };
-        
-        await updateTask(task.id, taskData);
-        
-        onTaskUpdated();
-        setOpen(false);
-
-    } catch (error: any) {
-        console.error(error);
-        toast({ title: "Error", description: error.message || "No se pudo actualizar la tarea.", variant: "destructive" });
-    } finally {
-        setLoading(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-lg">
-             <DialogHeader>
-                <DialogTitle className="font-headline">Editar Tarea</DialogTitle>
-                <DialogDescription>Modifique los detalles de la tarea y sus asignados.</DialogDescription>
-            </DialogHeader>
-
-            <div className="py-4 space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="title-edit">Título de la Tarea</Label>
-                    <Input id="title-edit" value={title} onChange={(e) => setTitle(e.target.value)} required />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="description-edit">Descripción (Opcional)</Label>
-                    <Textarea id="description-edit" value={description} onChange={(e) => setDescription(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                        <Label>Asignar a</Label>
-                        <Button variant="link" size="sm" className="p-0 h-auto" onClick={assignToAll}>
-                            <UserCheck className="mr-2 h-4 w-4"/>
-                            Asignar a todos
-                        </Button>
-                    </div>
-                    <MultiFirefighterSelect title="integrantes" selected={assignedTo} onSelectedChange={setAssignedTo} firefighters={week.allMembers || []} />
-                </div>
-            </div>
-            
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button onClick={handleSubmit} disabled={loading}>
-                    {loading ? 'Guardando...' : 'Guardar Cambios'}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
-  );
+interface WeekListProps {
+    weeks: Week[];
+    isLoading?: boolean;
 }
 
+export default function WeekList({ weeks, isLoading }: WeekListProps) {
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
+
+    if (isLoading) {
+        return (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Card key={index}>
+                <CardHeader>
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    <Skeleton className="h-5 w-full" />
+                    <Skeleton className="h-5 w-5/6" />
+                </CardContent>
+                <CardFooter>
+                  <Skeleton className="h-10 w-full" />
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        );
+    }
     
+    // Filter weeks for non-admin/non-oficial users
+    const filteredWeeks = useMemo(() => {
+        if (!user || activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') {
+            return weeks;
+        }
+        return weeks.filter(week => 
+            week.allMembers?.some(member => member.legajo === user.id)
+        );
+    }, [weeks, user, activeRole]);
+    
+    if (filteredWeeks.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
+                     <p className="text-muted-foreground mt-2">
+                        {user && (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial')
+                         ? 'Cree una nueva semana para comenzar.'
+                         : 'No estás asignado a ninguna semana en esta categoría.'
+                        }
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+
+    return (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredWeeks.map((week) => (
+                <Card key={week.id} className="flex flex-col">
+                    <CardHeader>
+                        <div className="flex justify-between items-start">
+                            <CardTitle className="font-headline text-xl">{week.name}</CardTitle>
+                            <Badge variant="secondary">{week.firehouse}</Badge>
+                        </div>
+                        <CardDescription>
+                            {format(new Date(week.periodStartDate), "dd 'de' LLL", { locale: es })} - {format(new Date(week.periodEndDate), "dd 'de' LLL, yyyy", { locale: es })}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-grow space-y-3">
+                        <div className="flex items-center gap-2 text-sm">
+                            <User className="h-4 w-4 text-muted-foreground"/>
+                            <span className="font-medium">Encargado:</span>
+                            <span className="text-muted-foreground">{week.lead?.lastName || 'N/A'}</span>
+                        </div>
+                         <div className="flex items-center gap-2 text-sm">
+                            <Truck className="h-4 w-4 text-muted-foreground"/>
+                            <span className="font-medium">Chofer:</span>
+                            <span className="text-muted-foreground">{week.driver?.lastName || 'N/A'}</span>
+                        </div>
+                    </CardContent>
+                    <CardFooter>
+                        <Button asChild className="w-full" variant="outline">
+                            <Link href={`/weeks/${week.id}`}>
+                                Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                            </Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+            ))}
+        </div>
+    )
+}
