@@ -15,34 +15,43 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { User, UserRole } from "@/lib/types";
+import { User, ModuleRole } from "@/lib/types";
 import { addUser } from "@/services/users.service";
+import { Separator } from "@/components/ui/separator";
 
-const roles: UserRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'];
+const globalRoles: User['role'][] = ['Administrador', 'Usuario'];
+const moduleRoles: ModuleRole[] = ['Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-
-  const [id, setId] = useState(''); // This will be the legajo
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<UserRole | ''>('');
   const [loading, setLoading] = useState(false);
   
+  // Form State
+  const [legajo, setLegajo] = useState('');
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [globalRole, setGlobalRole] = useState<User['role'] | ''>('');
+  const [asistenciaRole, setAsistenciaRole] = useState<ModuleRole>('Ninguno');
+  const [semanasRole, setSemanasRole] = useState<ModuleRole>('Ninguno');
+  const [movilidadRole, setMovilidadRole] = useState<ModuleRole>('Ninguno');
+
   const resetForm = () => {
-    setId('');
+    setLegajo('');
     setName('');
     setPassword('');
-    setRole('');
+    setGlobalRole('');
+    setAsistenciaRole('Ninguno');
+    setSemanasRole('Ninguno');
+    setMovilidadRole('Ninguno');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!id || !name || !password || !role) {
+    if (!legajo || !name || !password || !globalRole) {
         toast({
             title: "Error",
-            description: "Por favor, complete todos los campos.",
+            description: "Por favor, complete todos los campos generales.",
             variant: "destructive",
         });
         return;
@@ -54,10 +63,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         const newUser: Omit<User, 'id'> = {
             name,
             password,
-            role: role as UserRole,
+            role: globalRole,
+            roles: {
+                asistencia: globalRole === 'Administrador' ? 'Oficial' : asistenciaRole,
+                semanas: globalRole === 'Administrador' ? 'Oficial' : semanasRole,
+                movilidad: globalRole === 'Administrador' ? 'Oficial' : movilidadRole,
+            }
         };
         
-        await addUser(id, newUser);
+        await addUser(legajo, newUser);
 
         toast({
             title: "¡Éxito!",
@@ -83,45 +97,72 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Usuario</DialogTitle>
             <DialogDescription>
-              Ingrese los detalles del nuevo usuario. Haga clic en guardar cuando haya terminado.
+              Complete los detalles generales y asigne roles para cada módulo.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-6 py-4">
+            {/* General Fields */}
+            <div className="space-y-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="legajo" className="text-right">Legajo</Label>
+                  <Input id="legajo" placeholder="Ej: U-004" className="col-span-3" value={legajo} onChange={e => setLegajo(e.target.value)} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="name" className="text-right">Nombre</Label>
+                  <Input id="name" placeholder="Ej: María López" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
+                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="password" className="text-right">Contraseña</Label>
+                  <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="globalRole" className="text-right">Rol Global</Label>
+                  <Select onValueChange={(value) => setGlobalRole(value as User['role'])} value={globalRole} required>
+                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione un rol global" /></SelectTrigger>
+                    <SelectContent>
+                      {globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+            </div>
+
+            <Separator />
+
+            {/* Module Roles */}
+            <div className="space-y-2">
+                <h4 className="font-medium text-center">Roles por Módulo</h4>
+                 <p className="text-sm text-muted-foreground text-center">Si el rol global es Administrador, tendrá acceso total a todo.</p>
+            </div>
+            
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="id" className="text-right">
-                Legajo
-              </Label>
-              <Input id="id" placeholder="Ej: U-004" className="col-span-3" value={id} onChange={e => setId(e.target.value)} required />
+              <Label htmlFor="asistenciaRole" className="text-right">Asistencia</Label>
+              <Select onValueChange={(value) => setAsistenciaRole(value as ModuleRole)} value={asistenciaRole} disabled={globalRole === 'Administrador'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nombre
-              </Label>
-              <Input id="name" placeholder="Ej: María López" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
+              <Label htmlFor="semanasRole" className="text-right">Semanas</Label>
+              <Select onValueChange={(value) => setSemanasRole(value as ModuleRole)} value={semanasRole} disabled={globalRole === 'Administrador'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="password" className="text-right">
-                Contraseña
-              </Label>
-              <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="role" className="text-right">
-                Rol
-              </Label>
-              <Select onValueChange={(value) => setRole(value as UserRole)} value={role} required>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccione un rol" />
-                </SelectTrigger>
+              <Label htmlFor="movilidadRole" className="text-right">Movilidad</Label>
+              <Select onValueChange={(value) => setMovilidadRole(value as ModuleRole)} value={movilidadRole} disabled={globalRole === 'Administrador'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {roles.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
+                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

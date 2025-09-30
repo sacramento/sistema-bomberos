@@ -4,14 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import type { navItems } from "../layout";
-import { UserRole } from "@/lib/types";
+import { ModuleRole } from "@/lib/types";
 import { LogOut, Flame } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 
 interface TopNavProps {
     navItems: typeof navItems;
-    userRole: UserRole;
+    userRole: ModuleRole | 'Administrador' | 'Ninguno';
 }
 
 export default function TopNav({ navItems, userRole }: TopNavProps) {

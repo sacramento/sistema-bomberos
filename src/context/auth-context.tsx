@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser } from '@/lib/types';
+import { LoggedInUser, ModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -21,6 +21,7 @@ interface AuthContextType {
   logout: () => void;
   loading: boolean;
   error: string | null;
+  getActiveRole: (pathname: string) => ModuleRole | 'Administrador' | 'Ninguno';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // On initial load, check sessionStorage for a stored session
   useEffect(() => {
     try {
       const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
@@ -54,7 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        // Redirect to portal page after login
         router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
@@ -72,12 +71,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/');
   };
 
+  const getActiveRole = (currentPath: string): ModuleRole | 'Administrador' | 'Ninguno' => {
+      if (!user) return 'Ninguno';
+      if (user.role === 'Administrador') return 'Administrador';
+
+      if (currentPath.startsWith('/weeks')) {
+          return user.roles.semanas;
+      }
+      
+      // Asistencia es el módulo por defecto
+      if (currentPath.startsWith('/sessions') || currentPath.startsWith('/schedule') || currentPath.startsWith('/firefighters') || currentPath.startsWith('/courses') || currentPath.startsWith('/classes') || currentPath.startsWith('/leaves') || currentPath.startsWith('/reports')) {
+        return user.roles.asistencia;
+      }
+      
+      return 'Bombero'; // Default role for portal or unknown paths
+  };
+
   const value = {
     user,
     login: handleLogin,
     logout: handleLogout,
     loading: loading,
     error,
+    getActiveRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -3,7 +3,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Flame,
   LayoutDashboard,
@@ -22,39 +22,47 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TopNav from './_components/top-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ModuleRole } from '@/lib/types';
 
+type NavItem = {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  roles: (ModuleRole | 'Administrador')[];
+};
 
-export const navItems = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
-  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Administrador', 'Operador', 'Ayudantía', 'Oficial'] },
-  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
-  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] },
+export const navItems: NavItem[] = [
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
+  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía'] },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
+  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] }, // Admin only for now
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Operador', 'Oficial'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Ayudantía', 'Oficial'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Oficial'] },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Oficial', 'Operador'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Oficial', 'Ayudantía'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
 ];
 
 function Sidebar() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
+  const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  const activeRole = getActiveRole(pathname);
 
   if (!user) return null;
-
+  
+  // Filter nav items based on the active role for the current module
   const availableNavItems = navItems.filter(item => {
-    // Exclude the 'Portal' link from the sidebar itself
-    if (item.href === '/dashboard') return false;
-    return item.roles.includes(user.role);
+    if (item.href === '/dashboard') return false; // Exclude portal from sidebar
+    return item.roles.includes(activeRole);
   });
 
-  const getLabel = (item: typeof navItems[0]) => {
-    if (item.href === '/reports' && user.role === 'Bombero') {
+  const getLabel = (item: NavItem) => {
+    if (item.href === '/reports' && activeRole === 'Bombero') {
       return 'Mi Reporte';
     }
     return item.label;
@@ -136,7 +144,7 @@ function Sidebar() {
             {!isCollapsed && (
               <div className="flex flex-col">
                 <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">{user.role}</p>
+                <p className="text-xs text-muted-foreground">{activeRole}</p>
               </div>
             )}
           </div>
@@ -151,7 +159,7 @@ function Sidebar() {
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const { user, loading } = useAuth();
+    const { user, loading, getActiveRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const isMobile = useIsMobile();
@@ -164,22 +172,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        // If we are on the portal page, we don't need to check for roles.
         if (pathname === '/dashboard') return;
 
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
+        const activeRole = getActiveRole(pathname);
         
-        if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(user.role)) {
-           const firstAvailablePage = navItems.find(item => item.roles.includes(user.role));
-           if (firstAvailablePage) {
-               router.push(firstAvailablePage.href);
-           } else {
-                router.push('/dashboard'); 
-           }
+        if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
+           const firstAvailablePage = navItems.find(item => item.roles.includes(activeRole));
+           router.push(firstAvailablePage ? firstAvailablePage.href : '/dashboard');
         }
 
-    }, [user, loading, pathname, router]);
+    }, [user, loading, pathname, router, getActiveRole]);
 
     if (loading || !user) {
         return (
@@ -189,10 +193,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    // This logic decides whether to show the sidebar or not.
-    // The portal page at /dashboard will not have the sidebar.
     const showSidebar = pathname !== '/dashboard';
-    const showTopNav = isMobile && showSidebar; // Also hide top nav on portal page
+    const showTopNav = isMobile && showSidebar;
+    const activeRole = getActiveRole(pathname);
 
     return (
         <div className="flex min-h-screen w-full">
@@ -201,7 +204,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
                     {children}
                 </main>
-                {showTopNav && user && <TopNav navItems={navItems} userRole={user.role} />}
+                {showTopNav && <TopNav navItems={navItems} userRole={activeRole} />}
             </div>
         </div>
     );

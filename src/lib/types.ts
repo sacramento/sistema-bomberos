@@ -68,12 +68,18 @@ export type Course = {
 
 export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial';
 
+export type ModuleRole = 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial' | 'Ninguno';
+
 export type User = {
   id: string; // This is the user's legajo
   name: string;
   password: string;
-  role: UserRole;
-  // photoURL is no longer a property on the user
+  role: 'Administrador' | 'Usuario'; // Global role
+  roles: {
+    asistencia: ModuleRole;
+    semanas: ModuleRole;
+    movilidad: ModuleRole;
+  };
 };
 
 // Tipo para el usuario logueado, puede ser nulo si no está autenticado

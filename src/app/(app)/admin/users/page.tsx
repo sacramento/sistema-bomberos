@@ -24,6 +24,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -91,7 +92,8 @@ export default function UsersPage() {
                     <TableRow>
                         <TableHead className="hidden sm:table-cell">Legajo</TableHead>
                         <TableHead>Nombre</TableHead>
-                        <TableHead>Rol</TableHead>
+                        <TableHead>Rol Global</TableHead>
+                        <TableHead className="hidden md:table-cell">Roles Modulares</TableHead>
                         <TableHead>
                         <span className="sr-only">Acciones</span>
                         </TableHead>
@@ -104,6 +106,7 @@ export default function UsersPage() {
                             <TableCell className="hidden sm:table-cell"><Skeleton className="h-5 w-20" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                             <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-48" /></TableCell>
                             <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
                         </TableRow>
                         ))
@@ -112,7 +115,20 @@ export default function UsersPage() {
                         <TableRow key={user.id}>
                             <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell>
                             <TableCell>{user.name}</TableCell>
-                            <TableCell>{user.role}</TableCell>
+                            <TableCell>
+                                <Badge variant={user.role === 'Administrador' ? 'destructive' : 'secondary'}>{user.role}</Badge>
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                               <div className="flex flex-wrap gap-1">
+                                    {user.role === 'Usuario' && user.roles && (
+                                        <>
+                                            <Badge variant="outline">A: {user.roles.asistencia}</Badge>
+                                            <Badge variant="outline">S: {user.roles.semanas}</Badge>
+                                            <Badge variant="outline">M: {user.roles.movilidad}</Badge>
+                                        </>
+                                    )}
+                               </div>
+                            </TableCell>
                             <TableCell>
                             <AlertDialog>
                                 <DropdownMenu>

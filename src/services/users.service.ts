@@ -8,11 +8,22 @@ if (!db) {
 
 const usersCollection = collection(db, 'users');
 
+const docToUser = (docSnap: any): User => {
+    const data = docSnap.data();
+    // Set default module roles if they don't exist to prevent crashes
+    const roles = data.roles || {
+        asistencia: 'Ninguno',
+        semanas: 'Ninguno',
+        movilidad: 'Ninguno'
+    };
+    return { id: docSnap.id, ...data, roles } as User;
+}
+
 export const getUsers = async (): Promise<User[]> => {
     const querySnapshot = await getDocs(usersCollection);
     const users: User[] = [];
     querySnapshot.forEach((doc) => {
-        users.push({ id: doc.id, ...doc.data() } as User);
+        users.push(docToUser(doc));
     });
     return users;
 };
@@ -22,7 +33,7 @@ export const getUserById = async (id: string): Promise<User | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as User;
+        return docToUser(docSnap);
     }
     return null;
 }

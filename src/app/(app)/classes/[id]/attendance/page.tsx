@@ -47,7 +47,7 @@ export default function AttendancePage() {
     const params = useParams();
     const sessionId = params.id as string;
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { getActiveRole, user } = useAuth();
     
     const [session, setSession] = useState<Session | null>(null);
     const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
@@ -57,8 +57,9 @@ export default function AttendancePage() {
     
     const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
     const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
-
-    const canEdit = useMemo(() => user?.role === 'Administrador' || user?.role === 'Operador', [user]);
+    
+    const activeRole = getActiveRole(params.id as string);
+    const canEdit = useMemo(() => activeRole === 'Administrador' || activeRole === 'Operador', [activeRole]);
 
     useEffect(() => {
         const fetchSession = async () => {
