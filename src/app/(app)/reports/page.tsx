@@ -152,7 +152,7 @@ Chart.register(ChartDataLabels);
 
 export default function ReportsPage() {
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -175,8 +175,10 @@ export default function ReportsPage() {
     // PDF Content Switches
     const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
     const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
-
-    const isBomberoRole = user?.roles.asistencia === 'Bombero';
+    
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
+    const isBomberoRole = activeRole === 'Bombero';
 
     useEffect(() => {
         const fetchData = async () => {
@@ -191,7 +193,7 @@ export default function ReportsPage() {
                 setAllFirefighters(firefightersData);
                 setAllLeaves(leavesData);
 
-                if (isBomberoRole) {
+                if (isBomberoRole && user) {
                     const firefighterUser = firefightersData.find(f => f.legajo === user.id);
                     if(firefighterUser) {
                         setFilterFirefighter(firefighterUser.id);
@@ -362,7 +364,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
                  (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Bombero', 'Clases a Cargo', '% Presentismo']],
+                    head: [['Bombero', 'Clases', '% Presentismo']],
                     body: summaryTableData.map(item => [
                         item.firefighter,
                         item.totalClasses,
@@ -512,9 +514,10 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         const effectiveAttendance = statusCounts.present + statusCounts.tardy + statusCounts.recupero;
         const totalClassesForPercentage = statusCounts.present + statusCounts.tardy + statusCounts.absent;
 
-        // 5. Prepare Pie Chart data (excluding 'excused')
+        // 5. Prepare Pie Chart data (including 'tardy', excluding 'excused')
         const pieData = [
-            { name: 'Presente', value: statusCounts.present + statusCounts.tardy + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Presente', value: statusCounts.present + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Tarde', value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
             { name: 'Ausente', value: netAbsences, fill: PIE_CHART_COLORS.absent },
         ].filter(item => item.value > 0);
             
@@ -522,12 +525,12 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             summary: {
                 present: effectiveAttendance,
                 absent: netAbsences,
-                tardy: statusCounts.tardy, // Kept for potential future use, not primary display
-                excused: statusCounts.excused, // For the summary card
+                tardy: statusCounts.tardy,
+                excused: statusCounts.excused,
                 totalForPercentage: totalClassesForPercentage
             },
             pieData, 
-            details: finalData // This includes all statuses for the detailed table
+            details: finalData
         };
 
     }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
@@ -576,7 +579,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             const firefighter = allFirefighters.find(f => f.id === leave.firefighterId);
             
             // For 'Bombero' role, they can't see this tab anyway, but as a safeguard:
-            if (user?.role === 'Bombero') return false;
+            if (activeRole === 'Bombero') return false;
 
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
 
@@ -604,7 +607,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             }
             return true;
         });
-    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, user?.role]);
+    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, activeRole]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
@@ -743,12 +746,12 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                  {user?.role !== 'Bombero' && (
                     <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                         <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
-                        {(user?.role === 'Ayudantía' || user?.role === 'Administrador') && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
+                        {(activeRole === 'Ayudantía' || activeRole === 'Administrador' || activeRole === 'Master') && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
                     </TabsList>
                  )}
                 
                 <TabsContent value="attendance">
-                    <CommonFilters />
+                    {!isBomberoRole && <CommonFilters />}
                     {attendanceReportData.details.length > 0 ? (
                         <div className="space-y-8">
                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -792,7 +795,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                             <TableHeader>
                                                 <TableRow>
                                                     <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clases a Cargo</TableHead>
+                                                    <TableHead>Clases</TableHead>
                                                     <TableHead>% Presentismo</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -912,3 +915,4 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
