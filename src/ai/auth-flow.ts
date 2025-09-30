@@ -27,6 +27,7 @@ const loginFlow = ai.defineFlow(
     }
 
     // Construcción manual y explícita para garantizar la validez del esquema.
+    // Este es el único lugar donde se construye la respuesta.
     const response: LoginOutput = {
       id: user.id,
       name: user.name,
