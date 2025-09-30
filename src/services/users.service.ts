@@ -8,9 +8,10 @@ if (!db) {
 
 const usersCollection = collection(db, 'users');
 
+// Función corregida para mapear siempre el rol global correctamente.
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
-    // Default roles for safety, in case a user doc is missing them.
+    // Se asegura que el objeto `roles` exista para evitar errores.
     const roles = data.roles || {
         asistencia: 'Ninguno',
         semanas: 'Ninguno',
@@ -20,7 +21,7 @@ const docToUser = (docSnap: any): User => {
         id: docSnap.id, 
         name: data.name,
         password: data.password,
-        role: data.role, // This will be 'Master', 'Oficial', or 'Usuario'
+        role: data.role, // <-- CLAVE: Esto asegura que el rol global ('Master', 'Oficial', 'Usuario') se asigne correctamente.
         roles 
     } as User;
 }

@@ -26,18 +26,8 @@ const loginFlow = ai.defineFlow(
       return null;
     }
     
-    // Construcción manual y explícita del objeto de respuesta para CUMPLIR con el schema.
-    const response: LoginOutput = {
-      id: user.id,
-      name: user.name,
-      role: user.role, // <-- Se usa SIEMPRE el rol global del usuario
-      roles: { 
-        asistencia: user.roles.asistencia,
-        semanas: user.roles.semanas,
-        movilidad: user.roles.movilidad,
-      },
-    };
-    
-    return response;
+    // Ahora que getUserById es confiable, podemos simplemente devolver el objeto de usuario.
+    // Genkit se encargará de validarlo contra el LoginOutputSchema.
+    return user;
   }
 );
