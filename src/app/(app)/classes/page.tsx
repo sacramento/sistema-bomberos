@@ -32,6 +32,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import EditClassDialog from './_components/edit-class-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { parseISO } from 'date-fns';
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -137,7 +138,7 @@ export default function ClassesPage() {
   };
 
   const availableYears = useMemo(() => {
-    const years = new Set(sessions.map(s => new Date(s.date).getFullYear().toString()));
+    const years = new Set(sessions.map(s => parseISO(s.date).getFullYear().toString()));
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [sessions]);
 
@@ -151,8 +152,7 @@ export default function ClassesPage() {
             return false;
         }
         if (filterYear !== 'all') {
-            const sessionDate = new Date(session.date);
-            sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+            const sessionDate = parseISO(session.date);
             const sessionYear = sessionDate.getFullYear().toString();
             if(sessionYear !== filterYear) return false;
         }
@@ -199,8 +199,7 @@ export default function ClassesPage() {
     const past: Session[] = [];
 
     filtered.forEach(session => {
-        const sessionDate = new Date(session.date);
-        sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+        const sessionDate = parseISO(session.date);
         if (sessionDate >= today) {
             upcomingOrCurrent.push(session);
         } else {

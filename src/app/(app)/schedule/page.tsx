@@ -9,7 +9,7 @@ import { Session } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { useEffect, useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 
@@ -66,7 +66,7 @@ export default function SchedulePage() {
     
     const sortedSessions = useMemo(() => {
         // Sort by most recent date first
-        return [...sessions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        return [...sessions].sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
     }, [sessions]);
 
     const renderSessionCards = () => {
@@ -98,6 +98,8 @@ export default function SchedulePage() {
              <div className="space-y-4">
                 {sortedSessions.map(session => {
                     const firehouseInfo = getMajorityFirehouseInfo(session);
+                    // The date string 'YYYY-MM-DD' is parsed as UTC, so we use parseISO to handle it correctly without timezone shifts.
+                    const sessionDate = parseISO(session.date);
                     return (
                         <Card key={session.id} className={cn("border-l-4 shadow-md", firehouseInfo.className)}>
                            <div className="grid grid-cols-1 sm:grid-cols-4 items-center p-4 gap-4">
@@ -110,7 +112,7 @@ export default function SchedulePage() {
                                 </div>
                                 <div className="sm:col-span-2 sm:text-right">
                                      <p className="font-medium text-muted-foreground">
-                                        {format(new Date(session.date), "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
+                                        {format(sessionDate, "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
                                     </p>
                                 </div>
                            </div>
