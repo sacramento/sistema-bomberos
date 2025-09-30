@@ -20,7 +20,7 @@ import { addUser } from "@/services/users.service";
 import { Separator } from "@/components/ui/separator";
 
 const globalRoles: GlobalRole[] = ['Master', 'Oficial', 'Usuario'];
-const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
+const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Operador', 'Bombero', 'Ninguno'];
 

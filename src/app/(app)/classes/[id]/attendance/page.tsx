@@ -59,7 +59,7 @@ export default function AttendancePage() {
     const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
     
     const activeRole = getActiveRole(pathname);
-    const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Operador', [activeRole]);
+    const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Instructor', [activeRole]);
 
     useEffect(() => {
         const fetchSession = async () => {

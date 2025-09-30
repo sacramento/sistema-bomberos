@@ -35,15 +35,15 @@ type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'general'
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'general';
 };
 
 export const navItems: NavItem[] = [
-  { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
-  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/weeks', icon: CalendarCheck, label: 'Dashboard Semanas', roles: ['Master', 'Oficial', 'Administrador', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
 ];
@@ -196,7 +196,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (!currentNavItem.roles.includes(activeRole)) {
                router.push('/sessions'); // Redirect to a default safe page
             }
-        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/firefighters') && !pathname.startsWith('/weeks/')) {
+        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/weeks/')) {
              // Allow access to detail pages like /classes/[id] and /weeks/[id] even if not in nav
             // router.push('/sessions');
         }

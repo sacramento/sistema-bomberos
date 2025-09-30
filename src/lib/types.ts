@@ -66,7 +66,7 @@ export type Course = {
   endDate: string;
 }
 
-export type AttendanceModuleRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero' | 'Ninguno';
+export type AttendanceModuleRole = 'Administrador' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type MobilityModuleRole = 'Administrador' | 'Operador' | 'Bombero' | 'Ninguno';
 
