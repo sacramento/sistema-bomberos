@@ -66,8 +66,6 @@ export type Course = {
   endDate: string;
 }
 
-export type UserRole = 'Administrador' | 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial';
-
 export type ModuleRole = 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial' | 'Ninguno';
 
 export type User = {

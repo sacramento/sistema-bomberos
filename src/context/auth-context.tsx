@@ -73,7 +73,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getActiveRole = (currentPath: string): ModuleRole | 'Administrador' | 'Ninguno' => {
       if (!user) return 'Ninguno';
-      if (user.role === 'Administrador') return 'Administrador';
+      if (user.role === 'Administrador' || user.roles.asistencia === 'Oficial') return 'Administrador';
 
       if (currentPath.startsWith('/weeks')) {
           return user.roles.semanas;
