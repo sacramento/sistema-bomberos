@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole;
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -33,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const pathname = usePathname();
 
   useEffect(() => {
     try {
@@ -80,13 +79,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
-      if (user.role === 'Master' || user.role === 'Oficial') return user.role;
+
+      // Master y Oficial siempre tienen el rol máximo en cualquier contexto.
+      if (user.role === 'Master') return 'Master';
+      if (user.role === 'Oficial') return 'Oficial';
 
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
       
       const pathSegments = currentPath.split('/');
       const mainModule = pathSegments[1];
 
+      // Determina el rol a usar basado en el módulo de la URL
       switch(mainModule) {
         case 'weeks':
           return roles.semanas;
@@ -101,14 +104,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return roles.asistencia;
         
         case 'admin':
-          // Only Master should have access here, but we check for safety.
-          return user.role === 'Master' ? 'Master' : 'Ninguno';
+          // Acceso a admin es solo para Master, ya manejado arriba.
+          return 'Ninguno';
 
         default:
-          // For dashboard or unknown paths, return the highest available role
-          if (roles.asistencia !== 'Ninguno') return roles.asistencia;
-          if (roles.semanas !== 'Ninguno') return roles.semanas;
-          return 'Ninguno';
+          // Para /dashboard o rutas no reconocidas, se retorna el rol global 'Usuario'.
+          // Esto proporciona un rol base para la navegación general.
+          return user.role;
       }
   };
 

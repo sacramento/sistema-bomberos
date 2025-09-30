@@ -11,7 +11,7 @@ import { Download, Eye, Edit, UserCheck, UserX, Clock, ShieldAlert, Save, UserCo
 import { useState, useMemo, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Firefighter, Session, AttendanceStatus } from "@/lib/types";
 import { getSessionById, updateSessionAttendance } from "@/services/sessions.service";
@@ -45,9 +45,10 @@ const getStatusLabel = (status: AttendanceStatus) => {
 
 export default function AttendancePage() {
     const params = useParams();
+    const pathname = usePathname();
     const sessionId = params.id as string;
     const { toast } = useToast();
-    const { getActiveRole, user } = useAuth();
+    const { getActiveRole } = useAuth();
     
     const [session, setSession] = useState<Session | null>(null);
     const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
@@ -58,8 +59,8 @@ export default function AttendancePage() {
     const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
     const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
     
-    const activeRole = getActiveRole(params.id as string);
-    const canEdit = useMemo(() => activeRole === 'Administrador' || activeRole === 'Operador', [activeRole]);
+    const activeRole = getActiveRole(pathname);
+    const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Oficial' || activeRole === 'Administrador' || activeRole === 'Operador', [activeRole]);
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -359,5 +360,3 @@ export default function AttendancePage() {
         </>
     );
 }
-
-

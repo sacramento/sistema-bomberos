@@ -6,6 +6,8 @@ export const LoginInputSchema = z.object({
 });
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 
+// Se simplifica el esquema. El flujo de login ahora solo valida el usuario y contraseña.
+// La lógica de roles modulares se manejará en el cliente (AuthContext).
 export const LoginOutputSchema = z.nullable(
   z.object({
     id: z.string(),

@@ -16,6 +16,8 @@ import {
   GraduationCap,
   PanelLeft,
   CalendarDays,
+  Car,
+  CalendarCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -32,18 +34,20 @@ type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'general'
 };
 
 export const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
-  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'] },
-  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
-  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'] },
-  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'] },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Oficial', 'Administrador', 'Operador'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'] },
-  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'] },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Oficial', 'Usuario', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'], module: 'general' },
+  { href: '/sessions', icon: Flame, label: 'Tablero Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'], module: 'asistencia' },
+  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Oficial', 'Administrador', 'Operador'], module: 'asistencia' },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/weeks', icon: CalendarCheck, label: 'Dashboard Semanas', roles: ['Master', 'Oficial', 'Administrador', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
 ];
 
 function Sidebar() {
@@ -52,14 +56,38 @@ function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const activeRole = getActiveRole(pathname);
+  const currentModule = pathname.split('/')[1];
 
+  const getModuleTitle = () => {
+    switch(currentModule) {
+        case 'weeks':
+            return 'Módulo Semanas';
+        case 'admin':
+            return 'Administración';
+        default:
+            return 'Módulo Asistencia';
+    }
+  }
+  
   if (!user) return null;
   
-  // Filter nav items based on the active role for the current module
   const availableNavItems = navItems.filter(item => {
-    if (item.href === '/dashboard') return false; // Exclude portal from sidebar
-    return item.roles.includes(activeRole);
+    if (item.href === '/dashboard') return false; 
+    // Show item if its module matches the current path's module
+    const itemModule = item.href.split('/')[1];
+    
+    let isSameModule = false;
+    if (['sessions', 'schedule', 'firefighters', 'courses', 'classes', 'leaves', 'reports'].includes(currentModule)) {
+       isSameModule = item.module === 'asistencia';
+    } else if (currentModule === 'weeks') {
+       isSameModule = item.module === 'semanas';
+    } else if (currentModule === 'admin') {
+        isSameModule = item.module === 'general';
+    }
+
+    return isSameModule && item.roles.includes(activeRole);
   });
+
 
   const getLabel = (item: NavItem) => {
     if (item.href === '/reports' && activeRole === 'Bombero') {
@@ -76,7 +104,7 @@ function Sidebar() {
         <div className="flex h-16 items-center border-b px-4">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
-            {!isCollapsed && <span className="font-headline">Módulo Asistencia</span>}
+            {!isCollapsed && <span className="font-headline">{getModuleTitle()}</span>}
           </Link>
           <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={() => setIsCollapsed(!isCollapsed)}>
             <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
@@ -173,17 +201,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         const activeRole = getActiveRole(pathname);
-
-        // This covers dashboard and other top-level pages
-        if (pathname === '/dashboard') return;
-
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
+
+        if (pathname === '/dashboard' || currentTopLevelPath === '/') return;
+
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
         
         if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
-           // If user doesn't have access, find the first page they DO have access to.
-           const firstAvailablePage = navItems.find(item => item.roles.includes(activeRole) && item.href !== '/dashboard');
-           router.push(firstAvailablePage ? firstAvailablePage.href : '/dashboard');
+           // Si el usuario no tiene acceso, lo redirige al portal para que elija otro módulo.
+           router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);

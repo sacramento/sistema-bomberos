@@ -25,22 +25,16 @@ const loginFlow = ai.defineFlow(
     if (!user || user.password !== password) {
       return null;
     }
-
-    // Construcción manual y explícita para garantizar la validez del esquema.
-    // Este es el único lugar donde se construye la respuesta.
-    const response: LoginOutput = {
+    
+    // El flujo ahora es mucho más simple.
+    // Solo valida las credenciales y devuelve el objeto de usuario completo.
+    // La lógica de "qué rol usar y dónde" se traslada al cliente (AuthContext).
+    // Esto evita los problemas de validación de esquema en Genkit.
+    return {
       id: user.id,
       name: user.name,
-      role: user.role, // Esto asegura que siempre se use el rol global: 'Master', 'Oficial', o 'Usuario'.
-      roles: {
-        // Si el rol global es de supervisión, se asigna 'Administrador' para dar visibilidad total.
-        // De lo contrario, se usan los roles específicos del usuario.
-        asistencia: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.asistencia,
-        semanas: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.semanas,
-        movilidad: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.movilidad,
-      },
+      role: user.role,
+      roles: user.roles,
     };
-    
-    return response;
   }
 );
