@@ -33,6 +33,7 @@ import Chart from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { usePathname } from "next/navigation";
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -642,7 +643,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     const CommonFilters = () => (
          <Card className="mb-8">
             <CardHeader>
-                <CardTitle className="font-headline">Filtros de Reporte</CardTitle>
+                <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Asistencia'}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                  <div className="space-y-2">
@@ -751,7 +752,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                  )}
                 
                 <TabsContent value="attendance">
-                    {!isBomberoRole && <CommonFilters />}
+                    <CommonFilters />
                     {attendanceReportData.details.length > 0 ? (
                         <div className="space-y-8">
                              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -915,4 +916,3 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
-
