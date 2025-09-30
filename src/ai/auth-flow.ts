@@ -26,15 +26,14 @@ const loginFlow = ai.defineFlow(
       return null;
     }
 
-    // Explicitly build the response object to match the output schema.
-    // This is the only way to guarantee the structure is correct.
+    // Construcción manual y explícita para garantizar la validez del esquema.
     const response: LoginOutput = {
       id: user.id,
       name: user.name,
-      role: user.role, // This is guaranteed to be 'Master', 'Oficial', or 'Usuario' from the service.
+      role: user.role, // Esto asegura que siempre se use el rol global: 'Master', 'Oficial', o 'Usuario'.
       roles: {
-        // If the global role is Master or Oficial, they get full admin visibility in all modules.
-        // Otherwise, use their specific modular roles.
+        // Si el rol global es de supervisión, se asigna 'Administrador' para dar visibilidad total.
+        // De lo contrario, se usan los roles específicos del usuario.
         asistencia: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.asistencia,
         semanas: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.semanas,
         movilidad: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.movilidad,
