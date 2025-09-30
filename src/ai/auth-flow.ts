@@ -35,8 +35,9 @@ const loginFlow = ai.defineFlow(
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
       
-      // Construir el objeto de respuesta CUMPLIENDO el esquema de salida.
-      // Este fue el punto del error anterior.
+      // El servicio `getUserById` ahora devuelve el objeto en el formato correcto,
+      // por lo que podemos confiar en la estructura de `user`.
+      // Construimos el objeto de respuesta CUMPLIENDO el esquema de salida.
       const response: LoginOutput = {
           id: user.id,
           name: user.name,
@@ -51,4 +52,3 @@ const loginFlow = ai.defineFlow(
     return null;
   }
 );
-

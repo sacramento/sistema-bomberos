@@ -16,7 +16,13 @@ const docToUser = (docSnap: any): User => {
         semanas: 'Ninguno',
         movilidad: 'Ninguno'
     };
-    return { id: docSnap.id, ...data, roles } as User;
+    return { 
+        id: docSnap.id, 
+        name: data.name,
+        password: data.password,
+        role: data.role, // This should be 'Master' or 'Usuario'
+        roles 
+    } as User;
 }
 
 export const getUsers = async (): Promise<User[]> => {
