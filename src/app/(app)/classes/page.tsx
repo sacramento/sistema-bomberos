@@ -33,6 +33,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import EditClassDialog from './_components/edit-class-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO } from 'date-fns';
+import { usePathname } from 'next/navigation';
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -46,7 +47,8 @@ const hierarchyOptions = [
 export default function ClassesPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { getActiveRole } = useAuth();
+  const pathname = usePathname();
   const { toast } = useToast();
   
   // State for filters
@@ -55,6 +57,9 @@ export default function ClassesPage() {
   const [filterStation, setFilterStation] = useState('all');
   const [filterHierarchy, setFilterHierarchy] = useState('all');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+
+  const activeRole = getActiveRole(pathname);
+  const canManageClasses = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial' || activeRole === 'Operador';
 
 
   const fetchSessions = async () => {
@@ -249,15 +254,19 @@ export default function ClassesPage() {
       
       return (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {sessionList.map((session) => (
+          {sessionList.map((session) => {
+            const sessionDate = parseISO(session.date);
+            const formattedDate = sessionDate.toLocaleDateString('es-AR', { timeZone: 'UTC' });
+
+            return (
             <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
                <CardHeader className="p-4 flex-grow">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2 flex-grow">
                     <Badge variant="secondary" className="w-fit">{session.specialization}</Badge>
-                    <p className="text-sm text-muted-foreground">{session.date} @ {session.startTime}</p>
+                    <p className="text-sm text-muted-foreground">{formattedDate} @ {session.startTime}</p>
                   </div>
-                  {(user?.role === 'Administrador' || user?.role === 'Operador') && (
+                  {canManageClasses && (
                     <AlertDialog>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -319,7 +328,7 @@ export default function ClassesPage() {
                   </Button>
               </CardFooter>
             </Card>
-          ))}
+          )})}
         </div>
       );
   }
@@ -327,7 +336,7 @@ export default function ClassesPage() {
   return (
     <>
       <PageHeader title="Clases de Capacitación" description="Cree, gestione y filtre clases de capacitación.">
-        {(user?.role === 'Administrador' || user?.role === 'Operador') && (
+        {canManageClasses && (
           <AddClassDialog onClassAdded={handleDataChange}>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />

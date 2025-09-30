@@ -17,14 +17,17 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import EditLeaveDialog from "./_components/edit-leave-dialog";
 import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 export default function LeavesPage() {
     const [leaves, setLeaves] = useState<Leave[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
-    const { user } = useAuth();
-    
-    const canEdit = useMemo(() => user?.role === 'Administrador' || user?.role === 'Ayudantía', [user]);
+    const { getActiveRole } = useAuth();
+    const pathname = usePathname();
+
+    const activeRole = getActiveRole(pathname);
+    const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Ayudantía', [activeRole]);
 
     const fetchLeaves = async () => {
         setLoading(true);

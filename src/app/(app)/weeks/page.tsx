@@ -22,7 +22,7 @@ import { usePathname } from "next/navigation";
 
 
 export default function WeeksPage() {
-    const { user, getActiveRole } = useAuth();
+    const { getActiveRole } = useAuth();
     const { toast } = useToast();
     const pathname = usePathname();
 
@@ -33,7 +33,7 @@ export default function WeeksPage() {
     const [refreshSignal, setRefreshSignal] = useState(false);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = activeRole === 'Administrador' || activeRole === 'Oficial';
+    const canManage = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial';
 
     const fetchModuleData = async () => {
         setLoading(true);

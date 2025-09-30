@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-type ActiveRole = AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Administrador' | 'Ninguno';
+export type ActiveRole = AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Master' | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -80,10 +80,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
-      if (user.role === 'Administrador') return 'Administrador';
+      if (user.role === 'Master') return 'Master';
 
       // Ensure roles object exists
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+      
+      // Admin Users page is a special case, accessible only by Master
+      if (currentPath.startsWith('/admin/users')) {
+          return 'Master';
+      }
 
       if (currentPath.startsWith('/weeks')) {
           return roles.semanas;

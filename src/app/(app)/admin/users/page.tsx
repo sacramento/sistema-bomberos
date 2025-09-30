@@ -116,7 +116,7 @@ export default function UsersPage() {
                             <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell>
                             <TableCell>{user.name}</TableCell>
                             <TableCell>
-                                <Badge variant={user.role === 'Administrador' ? 'destructive' : 'secondary'}>{user.role}</Badge>
+                                <Badge variant={user.role === 'Master' ? 'destructive' : 'secondary'}>{user.role}</Badge>
                             </TableCell>
                             <TableCell className="hidden md:table-cell">
                                <div className="flex flex-wrap gap-1">

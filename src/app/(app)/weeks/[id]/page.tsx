@@ -53,9 +53,9 @@ export default function WeekDetailPage() {
     const activeRole = getActiveRole(pathname);
     const canManage = useMemo(() => {
         if (!user || !week) return false;
-        // User can manage if they are Admin, "Oficial" or "Encargado" in this module OR if their user ID matches the week's lead legajo.
+        // User can manage if they have Master/Admin/Oficial/Encargado role in this module OR if their user ID matches the week's lead legajo.
         const isLead = user.id === week.lead?.legajo;
-        const hasStaticPermission = activeRole === 'Administrador' || activeRole === 'Oficial' || activeRole === 'Encargado';
+        const hasStaticPermission = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial' || activeRole === 'Encargado';
         return hasStaticPermission || isLead;
     }, [user, week, activeRole]);
 

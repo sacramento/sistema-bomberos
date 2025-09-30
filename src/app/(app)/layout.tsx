@@ -25,25 +25,25 @@ import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import TopNav from './_components/top-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ModuleRole } from '@/lib/types';
+import type { ActiveRole } from '@/context/auth-context';
 
 type NavItem = {
   href: string;
   icon: React.ElementType;
   label: string;
-  roles: (ModuleRole | 'Administrador')[];
+  roles: ActiveRole[];
 };
 
 export const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
-  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía'] },
-  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
-  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Administrador'] }, // Admin only for now
-  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Administrador', 'Ayudantía'] },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Administrador', 'Oficial', 'Operador'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Administrador', 'Oficial', 'Ayudantía'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
-  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Administrador'] },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
+  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía'] },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
+  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Administrador'] },
+  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Ayudantía'] },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Oficial', 'Operador'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
+  { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'] },
 ];
 
 function Sidebar() {
