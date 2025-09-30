@@ -35,14 +35,17 @@ const loginFlow = ai.defineFlow(
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
       
-      // El servicio `getUserById` ahora devuelve el objeto en el formato correcto,
-      // por lo que podemos confiar en la estructura de `user`.
       // Construimos el objeto de respuesta CUMPLIENDO el esquema de salida.
+      // Esta es la única fuente de verdad para la respuesta.
       const response: LoginOutput = {
           id: user.id,
           name: user.name,
-          role: user.role, // 'Master' o 'Usuario'
-          roles: user.roles, // El objeto con los roles modulares
+          role: user.role, // Este es el rol global: 'Master' o 'Usuario'
+          roles: { // Este es el objeto de roles modulares
+              asistencia: user.roles.asistencia || 'Ninguno',
+              semanas: user.roles.semanas || 'Ninguno',
+              movilidad: user.roles.movilidad || 'Ninguno',
+          }
       };
       
       return response;
