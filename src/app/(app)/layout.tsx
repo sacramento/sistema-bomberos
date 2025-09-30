@@ -196,8 +196,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (!currentNavItem.roles.includes(activeRole)) {
                router.push('/sessions'); // Redirect to a default safe page
             }
-        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/firefighters')) {
-             // Allow access to detail pages like /classes/[id] even if not in nav
+        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/firefighters') && !pathname.startsWith('/weeks/')) {
+             // Allow access to detail pages like /classes/[id] and /weeks/[id] even if not in nav
             // router.push('/sessions');
         }
 
