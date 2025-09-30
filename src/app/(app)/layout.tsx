@@ -40,6 +40,7 @@ type NavItem = {
 
 export const navItems: NavItem[] = [
   { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Instructor'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
@@ -196,7 +197,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (!currentNavItem.roles.includes(activeRole)) {
                router.push('/sessions'); // Redirect to a default safe page
             }
-        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes') && !pathname.startsWith('/weeks/')) {
+        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes/') && !pathname.startsWith('/weeks/')) {
              // Allow access to detail pages like /classes/[id] and /weeks/[id] even if not in nav
             // router.push('/sessions');
         }
