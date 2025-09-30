@@ -13,6 +13,7 @@ import { ArrowRight, User, Truck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 interface WeekListProps {
     weeks: Week[];
@@ -20,7 +21,9 @@ interface WeekListProps {
 }
 
 export default function WeekList({ weeks, isLoading }: WeekListProps) {
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
 
     if (isLoading) {
         return (
@@ -44,26 +47,31 @@ export default function WeekList({ weeks, isLoading }: WeekListProps) {
         );
     }
     
-    if (weeks.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                <div className="text-center">
-                    <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
-                     <p className="text-muted-foreground mt-2">No se encontraron semanas en esta categoría.</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Filter weeks for non-admin users
+    // Filter weeks for non-admin/non-oficial users
     const filteredWeeks = useMemo(() => {
-        if (!user || user.role === 'Administrador' || user.role === 'Oficial') {
+        if (!user || activeRole === 'Administrador' || activeRole === 'Oficial') {
             return weeks;
         }
         return weeks.filter(week => 
             week.allMembers?.some(member => member.legajo === user.id)
         );
-    }, [weeks, user]);
+    }, [weeks, user, activeRole]);
+    
+    if (filteredWeeks.length === 0) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                <div className="text-center">
+                    <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
+                     <p className="text-muted-foreground mt-2">
+                        {user && (activeRole === 'Administrador' || activeRole === 'Oficial')
+                         ? 'Cree una nueva semana para comenzar.'
+                         : 'No estás asignado a ninguna semana en esta categoría.'
+                        }
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
 
     return (

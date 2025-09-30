@@ -18,11 +18,13 @@ import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import MyTasks from "./_components/my-tasks";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 
 export default function WeeksPage() {
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
     const { toast } = useToast();
+    const pathname = usePathname();
 
     const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [allTasks, setAllTasks] = useState<Task[]>([]);
@@ -30,7 +32,8 @@ export default function WeeksPage() {
 
     const [refreshSignal, setRefreshSignal] = useState(false);
 
-    const canManage = user?.role === 'Administrador';
+    const activeRole = getActiveRole(pathname);
+    const canManage = activeRole === 'Administrador' || activeRole === 'Oficial';
 
     const fetchModuleData = async () => {
         setLoading(true);
@@ -52,7 +55,7 @@ export default function WeeksPage() {
     
     useEffect(() => {
         fetchModuleData();
-    }, [refreshSignal]);
+    }, [refreshSignal, toast]);
 
 
     const handleWeekAdded = () => {

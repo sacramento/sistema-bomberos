@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser, ModuleRole } from '@/lib/types';
+import { LoggedInUser, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -15,13 +15,15 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
+type ActiveRole = AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Administrador' | 'Ninguno';
+
 interface AuthContextType {
   user: LoggedInUser;
   login: (credentials: LoginInput) => Promise<void>;
   logout: () => void;
   loading: boolean;
   error: string | null;
-  getActiveRole: (pathname: string) => ModuleRole | 'Administrador' | 'Ninguno';
+  getActiveRole: (pathname: string) => ActiveRole;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -37,7 +39,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (storedSession) {
-        setUser(JSON.parse(storedSession));
+        const parsedUser = JSON.parse(storedSession);
+        // Ensure roles object exists to prevent errors with old session data
+        if (!parsedUser.roles) {
+            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+        }
+        setUser(parsedUser);
       }
     } catch (e) {
       console.error('Error parsing stored session', e);
@@ -71,20 +78,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push('/');
   };
 
-  const getActiveRole = (currentPath: string): ModuleRole | 'Administrador' | 'Ninguno' => {
+  const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
-      if (user.role === 'Administrador' || user.roles.asistencia === 'Oficial') return 'Administrador';
+      if (user.role === 'Administrador') return 'Administrador';
+
+      // Ensure roles object exists
+      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
 
       if (currentPath.startsWith('/weeks')) {
-          return user.roles.semanas;
+          return roles.semanas;
       }
       
-      // Asistencia es el módulo por defecto
       if (currentPath.startsWith('/sessions') || currentPath.startsWith('/schedule') || currentPath.startsWith('/firefighters') || currentPath.startsWith('/courses') || currentPath.startsWith('/classes') || currentPath.startsWith('/leaves') || currentPath.startsWith('/reports')) {
-        return user.roles.asistencia;
+        return roles.asistencia;
       }
       
-      return 'Bombero'; // Default role for portal or unknown paths
+      // Default for dashboard or unknown paths
+      return roles.asistencia !== 'Ninguno' ? roles.asistencia : roles.semanas;
   };
 
   const value = {

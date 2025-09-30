@@ -15,12 +15,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { User, ModuleRole } from "@/lib/types";
+import { User, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from "@/lib/types";
 import { addUser } from "@/services/users.service";
 import { Separator } from "@/components/ui/separator";
 
 const globalRoles: User['role'][] = ['Administrador', 'Usuario'];
-const moduleRoles: ModuleRole[] = ['Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
+const attendanceRoles: AttendanceModuleRole[] = ['Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
+const weekRoles: WeekModuleRole[] = ['Oficial', 'Encargado', 'Bombero', 'Ninguno'];
+const mobilityRoles: MobilityModuleRole[] = ['Oficial', 'Operador', 'Bombero', 'Ninguno'];
+
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -32,9 +35,9 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [globalRole, setGlobalRole] = useState<User['role'] | ''>('');
-  const [asistenciaRole, setAsistenciaRole] = useState<ModuleRole>('Ninguno');
-  const [semanasRole, setSemanasRole] = useState<ModuleRole>('Ninguno');
-  const [movilidadRole, setMovilidadRole] = useState<ModuleRole>('Ninguno');
+  const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
+  const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
+  const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
 
   const resetForm = () => {
     setLegajo('');
@@ -141,28 +144,28 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="asistenciaRole" className="text-right">Asistencia</Label>
-              <Select onValueChange={(value) => setAsistenciaRole(value as ModuleRole)} value={asistenciaRole} disabled={globalRole === 'Administrador'}>
+              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={asistenciaRole} disabled={globalRole === 'Administrador'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="semanasRole" className="text-right">Semanas</Label>
-              <Select onValueChange={(value) => setSemanasRole(value as ModuleRole)} value={semanasRole} disabled={globalRole === 'Administrador'}>
+              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={semanasRole} disabled={globalRole === 'Administrador'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="movilidadRole" className="text-right">Movilidad</Label>
-              <Select onValueChange={(value) => setMovilidadRole(value as ModuleRole)} value={movilidadRole} disabled={globalRole === 'Administrador'}>
+              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={movilidadRole} disabled={globalRole === 'Administrador'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {moduleRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                  {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

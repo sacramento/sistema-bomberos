@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Week, Task, Firefighter } from "@/lib/types";
+import { Week, Task } from "@/lib/types";
 import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask, deleteTask } from "@/services/tasks.service";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -39,9 +39,10 @@ const taskStatuses: Task['status'][] = ['Pendiente', 'En Progreso', 'Completada'
 export default function WeekDetailPage() {
     const params = useParams();
     const router = useRouter();
+    const pathname = usePathname();
     const weekId = params.id as string;
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
 
     const [week, setWeek] = useState<Week | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -49,11 +50,14 @@ export default function WeekDetailPage() {
     const [observations, setObservations] = useState('');
     const [savingObservations, setSavingObservations] = useState(false);
 
+    const activeRole = getActiveRole(pathname);
     const canManage = useMemo(() => {
         if (!user || !week) return false;
-        // The user can manage if they are an Admin OR if their user ID (legajo) matches the week's lead legajo.
-        return user.role === 'Administrador' || user.id === week.lead?.legajo;
-    }, [user, week]);
+        // User can manage if they are Admin, "Oficial" or "Encargado" in this module OR if their user ID matches the week's lead legajo.
+        const isLead = user.id === week.lead?.legajo;
+        const hasStaticPermission = activeRole === 'Administrador' || activeRole === 'Oficial' || activeRole === 'Encargado';
+        return hasStaticPermission || isLead;
+    }, [user, week, activeRole]);
 
 
     const fetchWeekAndTasks = async () => {
@@ -348,5 +352,3 @@ export default function WeekDetailPage() {
         </>
     )
 }
-
-    

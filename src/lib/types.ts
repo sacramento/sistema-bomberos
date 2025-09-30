@@ -66,7 +66,9 @@ export type Course = {
   endDate: string;
 }
 
-export type ModuleRole = 'Operador' | 'Ayudantía' | 'Bombero' | 'Oficial' | 'Ninguno';
+export type AttendanceModuleRole = 'Oficial' | 'Operador' | 'Ayudantía' | 'Bombero' | 'Ninguno';
+export type WeekModuleRole = 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
+export type MobilityModuleRole = 'Oficial' | 'Operador' | 'Bombero' | 'Ninguno';
 
 export type User = {
   id: string; // This is the user's legajo
@@ -74,9 +76,9 @@ export type User = {
   password: string;
   role: 'Administrador' | 'Usuario'; // Global role
   roles: {
-    asistencia: ModuleRole;
-    semanas: ModuleRole;
-    movilidad: ModuleRole;
+    asistencia: AttendanceModuleRole;
+    semanas: WeekModuleRole;
+    movilidad: MobilityModuleRole;
   };
 };
 

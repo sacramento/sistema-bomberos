@@ -12,9 +12,9 @@ export const LoginOutputSchema = z.nullable(
     name: z.string(),
     role: z.enum(['Administrador', 'Usuario']),
     roles: z.object({
-      asistencia: z.enum(['Operador', 'Ayudantía', 'Bombero', 'Oficial', 'Ninguno']),
-      semanas: z.enum(['Operador', 'Ayudantía', 'Bombero', 'Oficial', 'Ninguno']),
-      movilidad: z.enum(['Operador', 'Ayudantía', 'Bombero', 'Oficial', 'Ninguno']),
+      asistencia: z.enum(['Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno']),
+      semanas: z.enum(['Oficial', 'Encargado', 'Bombero', 'Ninguno']),
+      movilidad: z.enum(['Oficial', 'Operador', 'Bombero', 'Ninguno']),
     }),
   })
 );
