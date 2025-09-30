@@ -15,14 +15,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
-import { User, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from "@/lib/types";
 import { addUser } from "@/services/users.service";
 import { Separator } from "@/components/ui/separator";
 
-const globalRoles: User['role'][] = ['Master', 'Usuario'];
-const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
-const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
-const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Operador', 'Bombero', 'Ninguno'];
+const globalRoles: GlobalRole[] = ['Master', 'Oficial', 'Usuario'];
+const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Ninguno'];
+const weekRoles: WeekModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
+const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Operador', 'Bombero', 'Ninguno'];
 
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
@@ -34,7 +34,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [legajo, setLegajo] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [globalRole, setGlobalRole] = useState<User['role'] | ''>('');
+  const [globalRole, setGlobalRole] = useState<GlobalRole | ''>('');
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
@@ -63,14 +63,16 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setLoading(true);
 
     try {
+        const isMasterOrOficial = globalRole === 'Master' || globalRole === 'Oficial';
+
         const newUser: Omit<User, 'id'> = {
             name,
             password,
-            role: globalRole,
+            role: globalRole as GlobalRole,
             roles: {
-                asistencia: globalRole === 'Master' ? 'Administrador' : asistenciaRole,
-                semanas: globalRole === 'Master' ? 'Administrador' : semanasRole,
-                movilidad: globalRole === 'Master' ? 'Administrador' : movilidadRole,
+                asistencia: isMasterOrOficial ? 'Administrador' : asistenciaRole,
+                semanas: isMasterOrOficial ? 'Administrador' : semanasRole,
+                movilidad: isMasterOrOficial ? 'Administrador' : movilidadRole,
             }
         };
         
@@ -125,7 +127,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="globalRole" className="text-right">Rol Global</Label>
-                  <Select onValueChange={(value) => setGlobalRole(value as User['role'])} value={globalRole} required>
+                  <Select onValueChange={(value) => setGlobalRole(value as GlobalRole)} value={globalRole} required>
                     <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione un rol global" /></SelectTrigger>
                     <SelectContent>
                       {globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -139,12 +141,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             {/* Module Roles */}
             <div className="space-y-2">
                 <h4 className="font-medium text-center">Roles por Módulo</h4>
-                 <p className="text-sm text-muted-foreground text-center">Si el rol global es Master, tendrá acceso total a todo.</p>
+                 <p className="text-sm text-muted-foreground text-center">Si el rol global es Master u Oficial, tendrá acceso total.</p>
             </div>
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="asistenciaRole" className="text-right">Asistencia</Label>
-              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={asistenciaRole} disabled={globalRole === 'Master'}>
+              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={asistenciaRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -153,7 +155,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="semanasRole" className="text-right">Semanas</Label>
-              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={semanasRole} disabled={globalRole === 'Master'}>
+              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={semanasRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -162,7 +164,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="movilidadRole" className="text-right">Movilidad</Label>
-              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={movilidadRole} disabled={globalRole === 'Master'}>
+              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={movilidadRole} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}

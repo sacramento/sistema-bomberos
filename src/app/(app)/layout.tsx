@@ -35,14 +35,14 @@ type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
-  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía'] },
-  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
-  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Administrador'] },
-  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Ayudantía'] },
-  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Oficial', 'Operador'] },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'] },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Operador', 'Ayudantía', 'Bombero'] },
+  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
+  { href: '/sessions', icon: Flame, label: 'Tablero', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'] },
+  { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'] },
+  { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'] },
+  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'] },
+  { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Oficial', 'Administrador', 'Operador'] },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'] },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'] },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'] },
 ];
 
@@ -172,14 +172,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
+        const activeRole = getActiveRole(pathname);
+
+        // This covers dashboard and other top-level pages
         if (pathname === '/dashboard') return;
 
         const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
         const currentNavItem = navItems.find(item => item.href === currentTopLevelPath);
-        const activeRole = getActiveRole(pathname);
         
         if (currentTopLevelPath && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
-           const firstAvailablePage = navItems.find(item => item.roles.includes(activeRole));
+           // If user doesn't have access, find the first page they DO have access to.
+           const firstAvailablePage = navItems.find(item => item.roles.includes(activeRole) && item.href !== '/dashboard');
            router.push(firstAvailablePage ? firstAvailablePage.href : '/dashboard');
         }
 

@@ -59,7 +59,7 @@ export default function ClassesPage() {
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
   const activeRole = getActiveRole(pathname);
-  const canManageClasses = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial' || activeRole === 'Operador';
+  const canManageClasses = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Operador';
 
 
   const fetchSessions = async () => {

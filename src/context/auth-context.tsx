@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from '@/lib/types';
+import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-export type ActiveRole = AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Master' | 'Ninguno';
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole;
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -80,26 +80,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
-      if (user.role === 'Master') return 'Master';
+      if (user.role === 'Master' || user.role === 'Oficial') return user.role;
 
-      // Ensure roles object exists
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
       
-      // Admin Users page is a special case, accessible only by Master
-      if (currentPath.startsWith('/admin/users')) {
-          return 'Master';
-      }
+      const pathSegments = currentPath.split('/');
+      const mainModule = pathSegments[1];
 
-      if (currentPath.startsWith('/weeks')) {
+      switch(mainModule) {
+        case 'weeks':
           return roles.semanas;
+        
+        case 'sessions':
+        case 'schedule':
+        case 'firefighters':
+        case 'courses':
+        case 'classes':
+        case 'leaves':
+        case 'reports':
+          return roles.asistencia;
+        
+        case 'admin':
+          // Only Master should have access here, but we check for safety.
+          return user.role === 'Master' ? 'Master' : 'Ninguno';
+
+        default:
+          // For dashboard or unknown paths, return the highest available role
+          if (roles.asistencia !== 'Ninguno') return roles.asistencia;
+          if (roles.semanas !== 'Ninguno') return roles.semanas;
+          return 'Ninguno';
       }
-      
-      if (currentPath.startsWith('/sessions') || currentPath.startsWith('/schedule') || currentPath.startsWith('/firefighters') || currentPath.startsWith('/courses') || currentPath.startsWith('/classes') || currentPath.startsWith('/leaves') || currentPath.startsWith('/reports')) {
-        return roles.asistencia;
-      }
-      
-      // Default for dashboard or unknown paths
-      return roles.asistencia !== 'Ninguno' ? roles.asistencia : roles.semanas;
   };
 
   const value = {

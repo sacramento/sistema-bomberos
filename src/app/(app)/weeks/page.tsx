@@ -33,7 +33,7 @@ export default function WeeksPage() {
     const [refreshSignal, setRefreshSignal] = useState(false);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial';
+    const canManage = activeRole === 'Master' || activeRole === 'Administrador';
 
     const fetchModuleData = async () => {
         setLoading(true);
