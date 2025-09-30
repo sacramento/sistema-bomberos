@@ -25,14 +25,15 @@ const loginFlow = ai.defineFlow(
       return null;
     }
 
-    // Now we can trust that `user` from `getUserById` is correctly structured.
-    // We just need to build the final response object that matches the output schema.
+    // Explicitly build the response object to match the output schema.
+    // This is the only way to guarantee the structure is correct.
     const response: LoginOutput = {
       id: user.id,
       name: user.name,
-      role: user.role, // This is now guaranteed to be 'Master', 'Oficial', or 'Usuario'
+      role: user.role, // This is guaranteed to be 'Master', 'Oficial', or 'Usuario' from the service.
       roles: {
-        // If Master/Oficial, they get full admin visibility. Otherwise, use their specific modular roles.
+        // If the global role is Master or Oficial, they get full admin visibility in all modules.
+        // Otherwise, use their specific modular roles.
         asistencia: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.asistencia,
         semanas: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.semanas,
         movilidad: (user.role === 'Master' || user.role === 'Oficial') ? 'Administrador' : user.roles.movilidad,
