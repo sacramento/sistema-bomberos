@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        router.push('/dashboard');
+        router.push('/sessions');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }
@@ -101,10 +101,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return roles.asistencia;
         
         case 'admin':
-          return user.role;
+          return user.role; // Should be 'Master'
 
         default:
-          return user.role;
+          return user.role; // Default for pages like '/dashboard'
       }
   };
 

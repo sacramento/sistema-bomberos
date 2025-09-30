@@ -29,7 +29,7 @@ export default function LoginPage() {
   // If user is already logged in, redirect them to the main portal page
   useEffect(() => {
     if (user) {
-      router.push('/dashboard');
+      router.push('/sessions');
     }
   }, [user, router]);
 

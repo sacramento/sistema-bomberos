@@ -39,8 +39,7 @@ type NavItem = {
 };
 
 export const navItems: NavItem[] = [
-  { href: '/dashboard', icon: LayoutDashboard, label: 'Portal', roles: ['Master', 'Oficial', 'Usuario', 'Administrador', 'Operador', 'Ayudantía', 'Bombero', 'Encargado'], module: 'general' },
-  { href: '/sessions', icon: Flame, label: 'Tablero Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
+  { href: '/sessions', icon: LayoutDashboard, label: 'Tablero Asistencia', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Oficial', 'Administrador', 'Operador', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master', 'Oficial', 'Administrador'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Oficial', 'Administrador', 'Ayudantía'], module: 'asistencia' },
@@ -62,8 +61,9 @@ function Sidebar() {
 
   // Group nav items by module
   const navItemsByModule = navItems.reduce((acc, item) => {
-    // Only consider items the user has access to
-    if (!item.roles.includes(activeRole)) {
+    // Only consider items the user has access to based on their specific module role
+    const itemActiveRole = getActiveRole(item.href);
+    if (!item.roles.includes(itemActiveRole)) {
       return acc;
     }
     const module = item.module;
@@ -89,12 +89,14 @@ function Sidebar() {
       semanas: 'Módulo Semanas',
       general: 'Administración'
   };
+  
+  const moduleOrder: (keyof typeof moduleTitles)[] = ['asistencia', 'semanas', 'general'];
 
   return (
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+          <Link href="/sessions" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
             {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
           </Link>
@@ -104,38 +106,15 @@ function Sidebar() {
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto p-2">
             
-          {/* General Links First (like Portal) */}
-          {navItemsByModule.general?.map(item => {
-              if (item.href === '/dashboard') {
-                  return (
-                      <Tooltip key={item.href} delayDuration={0}>
-                          <TooltipTrigger asChild>
-                              <Link href={item.href} className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", pathname === item.href && "bg-muted text-primary", isCollapsed && "justify-center")}>
-                                  <item.icon className="h-5 w-5" />
-                                  {!isCollapsed && <span>{item.label}</span>}
-                              </Link>
-                          </TooltipTrigger>
-                          {isCollapsed && <TooltipContent side="right">{item.label}</TooltipContent>}
-                      </Tooltip>
-                  );
-              }
-              return null;
-          })}
-
-          {(navItemsByModule.asistencia || navItemsByModule.semanas || navItemsByModule.general) && <Separator className="my-2" />}
-
-          {/* Module-specific links */}
-          {Object.entries(moduleTitles).map(([moduleKey, moduleTitle]) => (
-            navItemsByModule[moduleKey as keyof typeof moduleTitles] && (
+          {moduleOrder.map(moduleKey => (
+            navItemsByModule[moduleKey] && (
               <React.Fragment key={moduleKey}>
                 {!isCollapsed && (
                     <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                        {moduleTitle}
+                        {moduleTitles[moduleKey]}
                     </h4>
                 )}
-                {navItemsByModule[moduleKey as keyof typeof moduleTitles]
-                    .filter(item => item.href !== '/dashboard') // Don't repeat dashboard link
-                    .map((item) => {
+                {navItemsByModule[moduleKey].map((item) => {
                   const label = getLabel(item);
                   const isActive = pathname.startsWith(item.href);
                   const buttonContent = (
@@ -205,16 +184,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         const activeRole = getActiveRole(pathname);
-        // Find the nav item that best matches the current path.
-        // We sort by href length descending to match more specific paths first (e.g., /admin/users before /admin).
-        const currentTopLevelPath = '/' + (pathname.split('/')[1] || '');
         const currentNavItem = [...navItems]
             .filter(item => pathname.startsWith(item.href))
             .sort((a,b) => b.href.length - a.href.length)[0];
         
-        if (currentTopLevelPath && currentTopLevelPath !== '/' && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
-           // If the user does not have the role for this specific route, redirect to dashboard.
-           router.push('/dashboard');
+        if (pathname !== '/dashboard' && currentNavItem && !currentNavItem.roles.includes(activeRole)) {
+           router.push('/sessions');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -227,12 +202,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = pathname !== '/dashboard';
-    const showTopNav = isMobile && showSidebar;
+    const showSidebar = true; // Always show sidebar in the new paradigm
+    const showTopNav = isMobile;
     const activeRole = getActiveRole(pathname);
-
-    // Re-filter nav items for the top nav, which needs a flat, accessible list
-    const availableNavItemsForTopNav = navItems.filter(item => item.roles.includes(activeRole));
+    
+    // We need to check permissions for each item for the top nav
+    const availableNavItemsForTopNav = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
 
     return (
         <div className="flex min-h-screen w-full">
