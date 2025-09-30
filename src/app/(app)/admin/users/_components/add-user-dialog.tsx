@@ -68,7 +68,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         const newUser: Omit<User, 'id'> = {
             name,
             password,
-            role: globalRole as GlobalRole,
+            role: globalRole,
             roles: {
                 asistencia: isMasterOrOficial ? 'Administrador' : asistenciaRole,
                 semanas: isMasterOrOficial ? 'Administrador' : semanasRole,
