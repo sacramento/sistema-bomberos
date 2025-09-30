@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview Flujo de autenticación de usuarios.
@@ -35,16 +34,18 @@ const loginFlow = ai.defineFlow(
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
       
+      const isMasterOrOficial = user.role === 'Master' || user.role === 'Oficial';
+
       // Construimos el objeto de respuesta CUMPLIENDO el esquema de salida.
       // Esta es la única fuente de verdad para la respuesta.
       const response: LoginOutput = {
           id: user.id,
           name: user.name,
-          role: user.role, // Este es el rol global: 'Master' o 'Usuario'
-          roles: { // Este es el objeto de roles modulares
-              asistencia: user.roles.asistencia || 'Ninguno',
-              semanas: user.roles.semanas || 'Ninguno',
-              movilidad: user.roles.movilidad || 'Ninguno',
+          role: user.role, // Este es el rol global: 'Master', 'Oficial' o 'Usuario'
+          roles: { 
+              asistencia: isMasterOrOficial ? 'Administrador' : (user.roles?.asistencia || 'Ninguno'),
+              semanas: isMasterOrOficial ? 'Administrador' : (user.roles?.semanas || 'Ninguno'),
+              movilidad: isMasterOrOficial ? 'Administrador' : (user.roles?.movilidad || 'Ninguno'),
           }
       };
       
