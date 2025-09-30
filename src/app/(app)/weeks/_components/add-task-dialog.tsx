@@ -171,5 +171,3 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
     </Dialog>
   );
 }
-
-    

@@ -170,5 +170,3 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
     </Dialog>
   );
 }
-
-    
