@@ -33,7 +33,7 @@ export default function WeeksPage() {
     const [refreshSignal, setRefreshSignal] = useState(false);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = activeRole === 'Master' || activeRole === 'Administrador';
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchModuleData = async () => {
         setLoading(true);
@@ -164,10 +164,10 @@ export default function WeeksPage() {
                     <TabsTrigger value="past">Semanas Pasadas</TabsTrigger>
                 </TabsList>
                 <TabsContent value="active">
-                    <WeekList weeks={activeWeeks} />
+                    <WeekList weeks={activeWeeks} isLoading={loading} />
                 </TabsContent>
                 <TabsContent value="past">
-                     <WeekList weeks={pastWeeks} />
+                     <WeekList weeks={pastWeeks} isLoading={loading} />
                 </TabsContent>
             </Tabs>
         </>

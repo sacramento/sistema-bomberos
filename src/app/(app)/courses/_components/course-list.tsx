@@ -19,9 +19,10 @@ import { MoreHorizontal, Trash2, Edit } from "lucide-react";
 interface CourseListProps {
     refreshSignal: boolean;
     onDataChange: () => void;
+    canManage: boolean;
 }
 
-export default function CourseList({ refreshSignal, onDataChange }: CourseListProps) {
+export default function CourseList({ refreshSignal, onDataChange, canManage }: CourseListProps) {
     const [courses, setCourses] = useState<Course[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
@@ -78,7 +79,7 @@ export default function CourseList({ refreshSignal, onDataChange }: CourseListPr
                             <TableHead>Especialidad</TableHead>
                             <TableHead>Lugar</TableHead>
                             <TableHead>Fecha</TableHead>
-                            <TableHead><span className="sr-only">Acciones</span></TableHead>
+                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -91,7 +92,7 @@ export default function CourseList({ refreshSignal, onDataChange }: CourseListPr
                                 <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                                 <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                                {canManage && <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>}
                             </TableRow>
                             ))
                         ) : (
@@ -103,48 +104,50 @@ export default function CourseList({ refreshSignal, onDataChange }: CourseListPr
                                     <TableCell>{course.specialization}</TableCell>
                                     <TableCell>{course.location}</TableCell>
                                     <TableCell>{format(new Date(course.startDate), "P", { locale: es })} - {format(new Date(course.endDate), "P", { locale: es })}</TableCell>
-                                    <TableCell>
-                                         <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                        <span className="sr-only">Toggle menu</span>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                    <EditCourseDialog course={course} onCourseUpdated={onDataChange}>
-                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                            <Edit className="mr-2 h-4 w-4" />
-                                                            Editar
-                                                        </DropdownMenuItem>
-                                                    </EditCourseDialog>
-                                                    <DropdownMenuSeparator />
-                                                    <AlertDialogTrigger asChild>
-                                                        <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
-                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                    {canManage && (
+                                        <TableCell>
+                                            <AlertDialog>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                            <MoreHorizontal className="h-4 w-4" />
+                                                            <span className="sr-only">Toggle menu</span>
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        <EditCourseDialog course={course} onCourseUpdated={onDataChange}>
+                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                                <Edit className="mr-2 h-4 w-4" />
+                                                                Editar
+                                                            </DropdownMenuItem>
+                                                        </EditCourseDialog>
+                                                        <DropdownMenuSeparator />
+                                                        <AlertDialogTrigger asChild>
+                                                            <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}>
+                                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                                Eliminar
+                                                            </DropdownMenuItem>
+                                                        </AlertDialogTrigger>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del curso.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(course.id)} variant="destructive">
                                                             Eliminar
-                                                        </DropdownMenuItem>
-                                                    </AlertDialogTrigger>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. Esto eliminará permanentemente el registro del curso.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(course.id)} variant="destructive">
-                                                        Eliminar
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))
                         )}
