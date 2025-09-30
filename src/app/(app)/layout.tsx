@@ -56,10 +56,10 @@ function Sidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const activeRole = getActiveRole(pathname);
-  const currentModule = pathname.split('/')[1];
+  const currentModulePath = pathname.split('/')[1];
 
   const getModuleTitle = () => {
-    switch(currentModule) {
+    switch(currentModulePath) {
         case 'weeks':
             return 'Módulo Semanas';
         case 'admin':
@@ -71,21 +71,24 @@ function Sidebar() {
   
   if (!user) return null;
   
+  const getModuleFromPath = (path: string) => {
+    if (['sessions', 'schedule', 'firefighters', 'courses', 'classes', 'leaves', 'reports'].includes(path)) {
+        return 'asistencia';
+    }
+    if (path === 'weeks') {
+        return 'semanas';
+    }
+     if (path === 'admin') {
+        return 'general';
+    }
+    return 'general';
+  }
+
+  const currentModule = getModuleFromPath(currentModulePath);
+  
   const availableNavItems = navItems.filter(item => {
     if (item.href === '/dashboard') return false; 
-    // Show item if its module matches the current path's module
-    const itemModule = item.href.split('/')[1];
-    
-    let isSameModule = false;
-    if (['sessions', 'schedule', 'firefighters', 'courses', 'classes', 'leaves', 'reports'].includes(currentModule)) {
-       isSameModule = item.module === 'asistencia';
-    } else if (currentModule === 'weeks') {
-       isSameModule = item.module === 'semanas';
-    } else if (currentModule === 'admin') {
-        isSameModule = item.module === 'general';
-    }
-
-    return isSameModule && item.roles.includes(activeRole);
+    return item.module === currentModule && item.roles.includes(activeRole);
   });
 
 

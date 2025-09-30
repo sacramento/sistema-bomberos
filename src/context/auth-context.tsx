@@ -39,7 +39,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
-        // Ensure roles object exists to prevent errors with old session data
         if (!parsedUser.roles) {
             parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
         }
@@ -80,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
 
-      // Master y Oficial siempre tienen el rol máximo en cualquier contexto.
       if (user.role === 'Master') return 'Master';
       if (user.role === 'Oficial') return 'Oficial';
 
@@ -89,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const pathSegments = currentPath.split('/');
       const mainModule = pathSegments[1];
 
-      // Determina el rol a usar basado en el módulo de la URL
       switch(mainModule) {
         case 'weeks':
           return roles.semanas;
@@ -104,12 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return roles.asistencia;
         
         case 'admin':
-          // Acceso a admin es solo para Master, ya manejado arriba.
-          return 'Ninguno';
+          return user.role;
 
         default:
-          // Para /dashboard o rutas no reconocidas, se retorna el rol global 'Usuario'.
-          // Esto proporciona un rol base para la navegación general.
           return user.role;
       }
   };
