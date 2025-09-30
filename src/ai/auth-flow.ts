@@ -32,7 +32,7 @@ const loginFlow = ai.defineFlow(
 
     // Verificación de contraseña.
     if (user.password === password) { 
-      console.log(`Usuario encontrado: ${user.name}`);
+      console.log(`Usuario encontrado: ${user.name} con rol global: ${user.role}`);
       
       const isMasterOrOficial = user.role === 'Master' || user.role === 'Oficial';
 
