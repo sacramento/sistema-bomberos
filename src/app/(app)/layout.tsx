@@ -71,17 +71,17 @@ function Sidebar() {
   
   if (!user) return null;
   
-  const getModuleFromPath = (path: string) => {
+  const getModuleFromPath = (path: string): 'asistencia' | 'semanas' | 'movilidad' | 'general' => {
     if (['sessions', 'schedule', 'firefighters', 'courses', 'classes', 'leaves', 'reports'].includes(path)) {
         return 'asistencia';
     }
     if (path === 'weeks') {
         return 'semanas';
     }
-     if (path === 'admin') {
+    if (path === 'admin') {
         return 'general';
     }
-    return 'general';
+    return 'asistencia'; // Default to 'asistencia' if not in another specific module
   }
 
   const currentModule = getModuleFromPath(currentModulePath);
