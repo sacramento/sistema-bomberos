@@ -31,7 +31,7 @@ const loginFlow = ai.defineFlow(
       id: user.id,
       name: user.name,
       role: user.role, // <-- Se usa SIEMPRE el rol global del usuario
-      roles: { // Se usan los roles modulares que tiene el usuario en la DB
+      roles: { 
         asistencia: user.roles.asistencia,
         semanas: user.roles.semanas,
         movilidad: user.roles.movilidad,
