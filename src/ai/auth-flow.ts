@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Flujo de autenticación de usuarios.
@@ -33,8 +34,14 @@ const loginFlow = ai.defineFlow(
     // Verificación de contraseña.
     if (user.password === password) { 
       console.log(`Usuario encontrado: ${user.name}`);
-      // No devolver la contraseña al cliente.
+      
+      // Prepara el objeto de usuario para devolver, asegurando que cumpla el esquema.
+      // El objeto 'user' de la base de datos ya tiene la estructura correcta.
+      // Solo necesitamos quitar la contraseña.
       const { password: _, ...userData } = user;
+      
+      // userData ya contiene 'id', 'name', 'role' ('Master' o 'Usuario') y 'roles' (el objeto modular).
+      // Esto ahora coincide con LoginOutputSchema.
       return userData;
     }
 
