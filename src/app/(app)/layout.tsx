@@ -126,14 +126,14 @@ function Sidebar() {
 
           {/* Module-specific links */}
           {Object.entries(moduleTitles).map(([moduleKey, moduleTitle]) => (
-            navItemsByModule[moduleKey] && (
+            navItemsByModule[moduleKey as keyof typeof moduleTitles] && (
               <React.Fragment key={moduleKey}>
                 {!isCollapsed && (
                     <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
                         {moduleTitle}
                     </h4>
                 )}
-                {navItemsByModule[moduleKey]
+                {navItemsByModule[moduleKey as keyof typeof moduleTitles]
                     .filter(item => item.href !== '/dashboard') // Don't repeat dashboard link
                     .map((item) => {
                   const label = getLabel(item);
