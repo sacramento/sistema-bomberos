@@ -176,6 +176,8 @@ export default function ReportsPage() {
     const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
     const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
 
+    const isBomberoRole = user?.roles.asistencia === 'Bombero';
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -189,7 +191,7 @@ export default function ReportsPage() {
                 setAllFirefighters(firefightersData);
                 setAllLeaves(leavesData);
 
-                if (user?.role === 'Bombero') {
+                if (isBomberoRole) {
                     const firefighterUser = firefightersData.find(f => f.legajo === user.id);
                     if(firefighterUser) {
                         setFilterFirefighter(firefighterUser.id);
@@ -221,7 +223,7 @@ export default function ReportsPage() {
         }
         fetchData();
         fetchLogo();
-    }, [toast, user]);
+    }, [toast, user, isBomberoRole]);
     
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
@@ -654,7 +656,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                       </PopoverContent>
                   </Popover>
                 </div>
-                { user?.role !== 'Bombero' && (
+                { !isBomberoRole && (
                     <>
                          <div className="space-y-2">
                             <Label>Integrante Específico</Label>
@@ -727,7 +729,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     if (loading) {
         return (
             <>
-                <PageHeader title={user?.role === 'Bombero' ? 'Mi Reporte' : 'Reportes'} description="Genere y exporte reportes de asistencia y actividad." />
+                <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description="Genere y exporte reportes de asistencia y actividad." />
                 <Skeleton className="w-full h-96" />
             </>
         )
@@ -735,7 +737,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
     return (
         <>
-            <PageHeader title={user?.role === 'Bombero' ? 'Mi Reporte' : 'Reportes'} description={user?.role === 'Bombero' ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia y licencias.'} />
+            <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description={isBomberoRole ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia y licencias.'} />
             
             <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
                  {user?.role !== 'Bombero' && (
@@ -910,10 +912,3 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
-
-
-    
-
-    
-
-    
