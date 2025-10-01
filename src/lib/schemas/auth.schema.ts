@@ -8,17 +8,15 @@ export const LoginInputSchema = z.object({
 });
 export type LoginInput = z.infer<typeof LoginInputSchema>;
 
-// Se simplifica el esquema. El flujo de login ahora solo valida el usuario y contraseña.
-// La lógica de roles modulares se manejará en el cliente (AuthContext).
 export const LoginOutputSchema = z.nullable(
   z.object({
     id: z.string(),
     name: z.string(),
-    role: z.enum(['Master', 'Oficial', 'Usuario']),
+    role: z.enum(['Master', 'Usuario']),
     roles: z.object({
-      asistencia: z.enum(['Administrador', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno']),
-      semanas: z.enum(['Administrador', 'Encargado', 'Bombero', 'Ninguno']),
-      movilidad: z.enum(['Administrador', 'Operador', 'Bombero', 'Ninguno']),
+      asistencia: z.enum(['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno']),
+      semanas: z.enum(['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno']),
+      movilidad: z.enum(['Administrador', 'Oficial', 'Operador', 'Bombero', 'Ninguno']),
     }),
   })
 );

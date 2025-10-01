@@ -78,8 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const getActiveRole = (currentPath: string): ActiveRole => {
       if (!user) return 'Ninguno';
-
-      if (user.role === 'Master' || user.role === 'Oficial') return user.role;
+      if (user.role === 'Master') return 'Master';
 
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
       

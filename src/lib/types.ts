@@ -66,11 +66,11 @@ export type Course = {
   endDate: string;
 }
 
-export type AttendanceModuleRole = 'Administrador' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
-export type WeekModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
-export type MobilityModuleRole = 'Administrador' | 'Operador' | 'Bombero' | 'Ninguno';
+export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
+export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
+export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Operador' | 'Bombero' | 'Ninguno';
 
-export type GlobalRole = 'Master' | 'Oficial' | 'Usuario';
+export type GlobalRole = 'Master' | 'Usuario';
 
 export type User = {
   id: string; // This is the user's legajo

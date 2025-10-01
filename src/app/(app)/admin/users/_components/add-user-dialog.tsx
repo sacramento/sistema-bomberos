@@ -19,10 +19,10 @@ import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleR
 import { addUser } from "@/services/users.service";
 import { Separator } from "@/components/ui/separator";
 
-const globalRoles: GlobalRole[] = ['Master', 'Oficial', 'Usuario'];
-const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
-const weekRoles: WeekModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
-const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Operador', 'Bombero', 'Ninguno'];
+const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
+const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
+const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
+const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Operador', 'Bombero', 'Ninguno'];
 
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
@@ -64,16 +64,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
 
     try {
         const isMaster = globalRole === 'Master';
-        const isOficial = globalRole === 'Oficial';
 
         const newUser: Omit<User, 'id'> = {
             name,
             password,
             role: globalRole,
             roles: {
-                asistencia: isMaster ? 'Administrador' : (isOficial ? 'Ninguno' : asistenciaRole),
-                semanas: isMaster ? 'Administrador' : (isOficial ? 'Ninguno' : semanasRole),
-                movilidad: isMaster ? 'Administrador' : (isOficial ? 'Ninguno' : movilidadRole),
+                asistencia: isMaster ? 'Administrador' : asistenciaRole,
+                semanas: isMaster ? 'Administrador' : semanasRole,
+                movilidad: isMaster ? 'Administrador' : movilidadRole,
             }
         };
         
@@ -142,12 +141,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             {/* Module Roles */}
             <div className="space-y-2">
                 <h4 className="font-medium text-center">Roles por Módulo</h4>
-                 <p className="text-sm text-muted-foreground text-center">Master y Oficial tienen roles predefinidos.</p>
+                 <p className="text-sm text-muted-foreground text-center">El rol "Master" hereda permisos de Administrador en todos los módulos.</p>
             </div>
             
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="asistenciaRole" className="text-right">Asistencia</Label>
-              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Ninguno' : asistenciaRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={globalRole === 'Master' ? 'Administrador' : asistenciaRole} disabled={globalRole === 'Master'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -156,7 +155,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="semanasRole" className="text-right">Semanas</Label>
-              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Ninguno' : semanasRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={globalRole === 'Master' ? 'Administrador' : semanasRole} disabled={globalRole === 'Master'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
@@ -165,7 +164,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="movilidadRole" className="text-right">Movilidad</Label>
-              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={globalRole === 'Master' ? 'Administrador' : (globalRole === 'Oficial' ? 'Ninguno' : movilidadRole)} disabled={globalRole === 'Master' || globalRole === 'Oficial'}>
+              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={globalRole === 'Master' ? 'Administrador' : movilidadRole} disabled={globalRole === 'Master'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
