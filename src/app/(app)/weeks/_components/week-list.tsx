@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Week } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
@@ -18,6 +18,7 @@ import EditWeekDialog from "./edit-week-dialog";
 import { deleteWeek } from "@/services/weeks.service";
 import AddWeekDialog from "./add-week-dialog";
 import { cn } from "@/lib/utils";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 
 interface WeekListProps {
@@ -126,29 +127,45 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                                 </div>
                             </div>
                            
-                            <div className="border-t pt-4 mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
-                                <div className="flex items-center gap-2">
-                                    <User className="h-4 w-4 text-muted-foreground"/>
-                                    <div>
-                                        <span className="font-medium">Encargado:</span>
-                                        <p className="text-muted-foreground">{week.lead?.lastName || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Truck className="h-4 w-4 text-muted-foreground"/>
-                                    <div>
-                                        <span className="font-medium">Chofer:</span>
-                                        <p className="text-muted-foreground">{week.driver?.lastName || 'N/A'}</p>
-                                    </div>
-                                </div>
-                                 <div className="flex items-center gap-2">
-                                    <Users2 className="h-4 w-4 text-muted-foreground"/>
-                                    <div>
-                                        <span className="font-medium">Integrantes:</span>
-                                        <p className="text-muted-foreground">{week.allMembers?.length || 0} en total</p>
-                                    </div>
-                                </div>
-                            </div>
+                            <Accordion type="single" collapsible className="w-full text-sm">
+                                <AccordionItem value="item-1">
+                                    <AccordionTrigger>
+                                        <div className="flex items-center gap-2">
+                                            <Users2 className="h-4 w-4 text-muted-foreground"/>
+                                            <span className="font-medium">Ver Integrantes ({week.allMembers?.length || 0} en total)</span>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <AccordionContent>
+                                        <ul className="space-y-2 pt-2 pl-2">
+                                            {week.lead && (
+                                                <li className="flex items-center gap-2">
+                                                    <User className="h-4 w-4 text-muted-foreground"/>
+                                                    <div>
+                                                        <p>{`${week.lead.firstName} ${week.lead.lastName}`}</p>
+                                                        <p className="text-xs text-muted-foreground">Encargado</p>
+                                                    </div>
+                                                </li>
+                                            )}
+                                            {week.driver && (
+                                                 <li className="flex items-center gap-2">
+                                                    <Truck className="h-4 w-4 text-muted-foreground"/>
+                                                    <div>
+                                                        <p>{`${week.driver.firstName} ${week.driver.lastName}`}</p>
+                                                        <p className="text-xs text-muted-foreground">Chofer</p>
+                                                    </div>
+                                                </li>
+                                            )}
+                                            {week.members?.map(member => (
+                                                <li key={member.id} className="flex items-center gap-2">
+                                                    <div className="w-4 h-4" />
+                                                    <p>{`${member.firstName} ${member.lastName}`}</p>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </AccordionContent>
+                                </AccordionItem>
+                            </Accordion>
+
                         </div>
                         {canManage && (
                             <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
