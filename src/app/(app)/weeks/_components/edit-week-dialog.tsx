@@ -347,3 +347,5 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
     </Dialog>
   );
 }
+
+    
