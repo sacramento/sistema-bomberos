@@ -123,12 +123,15 @@ function Sidebar() {
                   const label = getLabel(item);
                   
                   let isActive = false;
-                  if (item.href === '/weeks') {
-                    // Make '/weeks' active only for the exact path, not for '/weeks/...'
-                     isActive = pathname === '/weeks';
-                  } else {
-                    // For other items, check if the path starts with the href
-                    isActive = pathname.startsWith(item.href);
+                  // Exact match for most routes
+                  isActive = pathname === item.href;
+
+                  // Special case for dynamic routes
+                  if (pathname.startsWith('/classes/') && item.href === '/sessions') {
+                     // Keep 'Dashboard Asistencia' active for class details
+                  } else if (pathname.startsWith('/weeks/') && item.href === '/weeks' && !pathname.includes('my-week')) {
+                     // Keep 'Semanas' active for week details, but not for 'my-week'
+                     isActive = true;
                   }
 
 
@@ -199,16 +202,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         const currentNavItem = [...navItems]
-            .filter(item => pathname.startsWith(item.href))
-            .sort((a,b) => b.href.length - a.href.length)[0];
-        
+            // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks)
+            .sort((a,b) => b.href.length - a.href.length)
+            .find(item => pathname.startsWith(item.href));
+
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
+               console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
                router.push('/sessions'); 
             }
         } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes/') && !pathname.startsWith('/weeks/')) {
-            // router.push('/sessions');
+            console.log(`No matching nav item for '${pathname}'. Redirecting.`);
+            router.push('/sessions');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
