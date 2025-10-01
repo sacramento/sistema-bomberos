@@ -2,13 +2,13 @@
 'use client';
 
 import { PageHeader } from "@/components/page-header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Week, Firefighter } from "@/lib/types";
+import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useEffect, useState, useMemo } from "react";
-import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { User, Truck, Users2 } from "lucide-react";
@@ -39,7 +39,7 @@ export default function WeeksListPage() {
             setLoading(true);
             try {
                 const data = await getWeeks();
-                setWeeks(data);
+                setWeeks(data); // Fetches all weeks, already sorted by date desc
             } catch (error) {
                 toast({
                     title: "Error",
@@ -53,22 +53,29 @@ export default function WeeksListPage() {
         fetchWeeks();
     }, [toast]);
     
-    const currentMonthWeeks = useMemo(() => {
+    const activeWeeksSummary = useMemo(() => {
         const today = new Date();
-        const start = startOfMonth(today);
-        const end = endOfMonth(today);
-        
-        return weeks
-            .filter(week => {
-                const weekStart = parseISO(week.periodStartDate);
-                // Check if any part of the week falls within the current month
-                return isWithinInterval(weekStart, { start, end });
-            })
-            .sort((a,b) => parseISO(a.periodStartDate).getTime() - parseISO(b.periodStartDate).getTime());
+        const activeWeeksByFirehouse: Record<string, string> = {
+            'Cuartel 1': 'Ninguna',
+            'Cuartel 2': 'Ninguna',
+            'Cuartel 3': 'Ninguna'
+        };
+
+        weeks.forEach(week => {
+            const startDate = startOfDay(parseISO(week.periodStartDate));
+            const endDate = endOfDay(parseISO(week.periodEndDate));
+            
+            if (isWithinInterval(today, { start: startDate, end: endDate })) {
+                if (activeWeeksByFirehouse.hasOwnProperty(week.firehouse)) {
+                    activeWeeksByFirehouse[week.firehouse] = week.name;
+                }
+            }
+        });
+        return activeWeeksByFirehouse;
     }, [weeks]);
 
     const weeksByFirehouse = useMemo(() => {
-        return currentMonthWeeks.reduce((acc, week) => {
+        return weeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -76,7 +83,7 @@ export default function WeeksListPage() {
             acc[firehouse].push(week);
             return acc;
         }, {} as Record<string, Week[]>);
-    }, [currentMonthWeeks]);
+    }, [weeks]);
 
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
@@ -99,7 +106,7 @@ export default function WeeksListPage() {
         if (weekList.length === 0) {
             return (
                 <div className="text-center py-8 text-muted-foreground">
-                    <p>No hay semanas programadas para este cuartel en el mes actual.</p>
+                    <p>No hay semanas programadas para este cuartel.</p>
                 </div>
             );
         }
@@ -113,32 +120,32 @@ export default function WeeksListPage() {
                                  <div>
                                      <h3 className="font-headline text-lg font-semibold">{week.name}</h3>
                                      <p className="text-sm text-muted-foreground">
-                                        {format(parseISO(week.periodStartDate), "dd/MM")} - {format(parseISO(week.periodEndDate), "dd/MM/yyyy")}
+                                        {format(parseISO(week.periodStartDate), "dd/MM/yy")} - {format(parseISO(week.periodEndDate), "dd/MM/yy")}
                                     </p>
                                  </div>
-                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
-                                    <div className="flex items-center gap-2 text-sm">
+                                <div className="flex items-center gap-4 mt-2 sm:mt-0 text-sm">
+                                    <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-muted-foreground"/>
                                         <p><span className="font-medium">Enc:</span> {week.lead?.lastName || 'N/A'}</p>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm">
+                                    <div className="flex items-center gap-2">
                                         <Truck className="h-4 w-4 text-muted-foreground"/>
                                          <p><span className="font-medium">Chofer:</span> {week.driver?.lastName || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
                             <Accordion type="single" collapsible className="w-full mt-2">
-                              <AccordionItem value="item-1">
-                                <AccordionTrigger>
+                              <AccordionItem value="item-1" className="border-none">
+                                <AccordionTrigger className="py-1">
                                   <div className="flex items-center gap-2 text-sm">
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
                                     <span>{week.allMembers?.length || 0} Integrantes</span>
                                   </div>
                                 </AccordionTrigger>
                                 <AccordionContent>
-                                  <div className="flex flex-wrap gap-2 pt-2">
+                                  <div className="flex flex-wrap gap-1 pt-2">
                                     {week.members?.map(member => (
-                                        <Badge key={member.id} variant="outline">{member.lastName}</Badge>
+                                        <Badge key={member.id} variant="outline" className="font-normal">{member.lastName}</Badge>
                                     ))}
                                   </div>
                                 </AccordionContent>
@@ -154,9 +161,25 @@ export default function WeeksListPage() {
     return (
         <>
             <PageHeader
-                title="Listado Mensual de Semanas"
-                description={`Resumen de las semanas planificadas para ${format(new Date(), 'MMMM yyyy', { locale: es })}.`}
+                title="Listado Histórico de Semanas"
+                description="Registro completo de todas las semanas de guardia, agrupadas por cuartel."
             />
+            
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">Semanas Activas Actualmente</CardTitle>
+                    <CardDescription>Resumen de las semanas de guardia en curso.</CardDescription>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2">
+                    {Object.entries(activeWeeksSummary).map(([firehouse, weekName]) => (
+                        <div key={firehouse} className="flex justify-between items-center p-2 rounded-md even:bg-muted/50">
+                            <span className="font-medium text-muted-foreground">{firehouse}:</span>
+                            <span className="font-semibold">{weekName}</span>
+                        </div>
+                    ))}
+                </CardContent>
+            </Card>
+
             <div className="space-y-8">
                 {firehouseOrder.map(firehouse => (
                     <div key={firehouse}>
