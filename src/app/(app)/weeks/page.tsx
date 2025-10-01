@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -6,14 +7,21 @@ import WeekList from "./_components/week-list";
 import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
+
+    const activeRole = getActiveRole(pathname);
+    const canSeeAll = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchWeeks = async () => {
         setLoading(true);
@@ -39,7 +47,7 @@ export default function WeeksDashboardPage() {
         fetchWeeks();
     }
     
-    const { activeWeeksSummary, weeksGroupedByFirehouse } = useMemo(() => {
+    const { activeWeeksSummary, weeksToShow } = useMemo(() => {
         const today = new Date();
         const activeSummary: Record<string, string> = {
             'Cuartel 1': 'Ninguna',
@@ -47,7 +55,11 @@ export default function WeeksDashboardPage() {
             'Cuartel 3': 'Ninguna'
         };
 
-        weeks.forEach(week => {
+        const relevantWeeks = canSeeAll 
+            ? weeks
+            : weeks.filter(week => week.allMembers?.some(member => member.legajo === user?.id));
+
+        relevantWeeks.forEach(week => {
             const startDate = startOfDay(parseISO(week.periodStartDate));
             const endDate = endOfDay(parseISO(week.periodEndDate));
             
@@ -58,7 +70,7 @@ export default function WeeksDashboardPage() {
             }
         });
 
-        const grouped = weeks.reduce((acc, week) => {
+        const grouped = relevantWeeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -74,9 +86,9 @@ export default function WeeksDashboardPage() {
 
         return { 
             activeWeeksSummary: activeSummary,
-            weeksGroupedByFirehouse: grouped
+            weeksToShow: grouped
         };
-    }, [weeks]);
+    }, [weeks, user, canSeeAll]);
 
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
     
@@ -114,11 +126,11 @@ export default function WeeksDashboardPage() {
 
             <div className="space-y-12">
                {firehouseOrder.map(firehouse => (
-                    weeksGroupedByFirehouse[firehouse] && weeksGroupedByFirehouse[firehouse].length > 0 && (
+                    weeksToShow[firehouse] && weeksToShow[firehouse].length > 0 && (
                         <div key={firehouse} className="mb-8">
                             <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
                             <WeekList 
-                                weeks={weeksGroupedByFirehouse[firehouse]} 
+                                weeks={weeksToShow[firehouse]} 
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
                                 canManage={false} // This page is always read-only

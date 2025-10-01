@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -19,40 +20,35 @@ export default function MyWeekPage() {
     const pathname = usePathname();
     const router = useRouter();
     const { toast } = useToast();
-    const [userWeeks, setUserWeeks] = useState<Week[]>([]);
+    const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const canCreateWeek = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const isPrivilegedUser = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    const fetchUserWeeks = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        }
+    const fetchAllWeeks = async () => {
         setLoading(true);
         try {
             const allWeeksData = await getWeeks();
-            
-            const assignedWeeks = allWeeksData.filter(week => 
-                week.allMembers?.some(member => member.legajo === user.id)
-            );
-            
-            const today = new Date();
-            const activeWeek = assignedWeeks.find(week => {
-                const startDate = startOfDay(parseISO(week.periodStartDate));
-                const endDate = endOfDay(parseISO(week.periodEndDate));
-                return isWithinInterval(today, { start: startDate, end: endDate });
-            });
+            setAllWeeks(allWeeksData);
 
-            if (activeWeek) {
-                router.replace(`/weeks/${activeWeek.id}`);
-                // We don't call setLoading(false) as the component will unmount upon redirection.
-                return; 
+            // Redirect logic only applies if the user is NOT a Master or Admin
+            if (user && !isPrivilegedUser) {
+                 const assignedWeeks = allWeeksData.filter(week => 
+                    week.allMembers?.some(member => member.legajo === user.id)
+                );
+                const today = new Date();
+                const activeWeek = assignedWeeks.find(week => {
+                    const startDate = startOfDay(parseISO(week.periodStartDate));
+                    const endDate = endOfDay(parseISO(week.periodEndDate));
+                    return isWithinInterval(today, { start: startDate, end: endDate });
+                });
+
+                if (activeWeek) {
+                    router.replace(`/weeks/${activeWeek.id}`);
+                    return; // Stop further processing to avoid setting state on an unmounting component
+                }
             }
-            
-            setUserWeeks(assignedWeeks);
-
         } catch (error) {
             toast({
                 title: "Error",
@@ -65,18 +61,33 @@ export default function MyWeekPage() {
     };
     
     useEffect(() => {
-        fetchUserWeeks();
+        if (user) {
+            fetchAllWeeks();
+        }
     }, [user, router, toast]);
 
     const handleDataChange = () => {
-        fetchUserWeeks();
+        fetchAllWeeks();
     };
+
+    const weeksToShow = useMemo(() => {
+        if (isPrivilegedUser) {
+            return allWeeks; // Master/Admin see all weeks
+        }
+        if (user) {
+            // Other users see only weeks they are a member of
+            return allWeeks.filter(week => 
+                week.allMembers?.some(member => member.legajo === user.id)
+            );
+        }
+        return [];
+    }, [allWeeks, user, isPrivilegedUser]);
 
     if (loading) {
         return (
              <>
                 <PageHeader title="Mis Semanas" description="Gestiona y visualiza tus semanas de guardia asignadas.">
-                    {canCreateWeek && <Skeleton className="h-10 w-36" />}
+                    {isPrivilegedUser && <Skeleton className="h-10 w-36" />}
                 </PageHeader>
                 <div className="space-y-4">
                     <Skeleton className="h-32 w-full" />
@@ -89,10 +100,10 @@ export default function MyWeekPage() {
     return (
         <>
             <PageHeader 
-                title="Mis Semanas" 
-                description="Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."
+                title={isPrivilegedUser ? "Gestión de Semanas" : "Mis Semanas"} 
+                description={isPrivilegedUser ? "Cree, clone o gestione todas las semanas desde esta vista." : "Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."}
             >
-                {canCreateWeek && (
+                {isPrivilegedUser && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -102,7 +113,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={userWeeks} isLoading={loading} onDataChange={handleDataChange} canManage={true} />
+            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={true} />
         </>
     );
 }

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
@@ -19,6 +20,7 @@ import AddWeekDialog from "./add-week-dialog";
 import { cn } from "@/lib/utils";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 
 interface WeekListProps {
@@ -39,7 +41,11 @@ const getBorderColor = (firehouse: Week['firehouse']) => {
 
 export default function WeekList({ weeks, isLoading, onDataChange, canManage }: WeekListProps) {
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
+
+    const isPrivilegedUser = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
      const handleDeleteWeek = async (weekId: string) => {
         try {
@@ -98,7 +104,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
-                                     {canManage && user && (user.role === 'Master' || user.role === 'Administrador') && (
+                                     {canManage && isPrivilegedUser && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
