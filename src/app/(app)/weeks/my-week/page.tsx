@@ -25,6 +25,8 @@ export default function MyWeekPage() {
 
     const activeRole = getActiveRole(pathname);
     const isPrivilegedUser = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const isSupervisor = useMemo(() => isPrivilegedUser || activeRole === 'Oficial', [isPrivilegedUser, activeRole]);
+
 
     const fetchAllWeeks = async () => {
         setLoading(true);
@@ -32,8 +34,8 @@ export default function MyWeekPage() {
             const allWeeksData = await getWeeks();
             setAllWeeks(allWeeksData);
 
-            // Redirect logic only applies if the user is NOT a Master or Admin
-            if (user && !isPrivilegedUser) {
+            // Redirect logic only applies if the user is NOT a privileged supervisor
+            if (user && !isSupervisor) {
                  const assignedWeeks = allWeeksData.filter(week => 
                     week.allMembers?.some(member => member.legajo === user.id)
                 );
@@ -71,8 +73,8 @@ export default function MyWeekPage() {
     };
 
     const weeksToShow = useMemo(() => {
-        if (isPrivilegedUser) {
-            return allWeeks; // Master/Admin see all weeks
+        if (isSupervisor) {
+            return allWeeks; // Master, Admin, and Oficial see all weeks
         }
         if (user) {
             // Other users see only weeks they are a member of
@@ -81,7 +83,7 @@ export default function MyWeekPage() {
             );
         }
         return [];
-    }, [allWeeks, user, isPrivilegedUser]);
+    }, [allWeeks, user, isSupervisor]);
 
     if (loading) {
         return (
@@ -100,8 +102,8 @@ export default function MyWeekPage() {
     return (
         <>
             <PageHeader 
-                title={isPrivilegedUser ? "Gestión de Semanas" : "Mis Semanas"} 
-                description={isPrivilegedUser ? "Cree, clone o gestione todas las semanas desde esta vista." : "Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."}
+                title={isSupervisor ? "Gestión de Semanas" : "Mis Semanas"} 
+                description={isSupervisor ? "Cree, clone o gestione todas las semanas desde esta vista." : "Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."}
             >
                 {isPrivilegedUser && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
