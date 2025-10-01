@@ -136,29 +136,29 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <ul className="space-y-2 pt-2 pl-2">
+                                        <ul className="space-y-3 pt-2 pl-2">
                                             {week.lead && (
-                                                <li className="flex items-center gap-2">
+                                                <li className="flex items-center gap-3">
                                                     <User className="h-4 w-4 text-muted-foreground"/>
-                                                    <div>
-                                                        <p>{`${week.lead.firstName} ${week.lead.lastName}`}</p>
-                                                        <p className="text-xs text-muted-foreground">Encargado</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold">{`${week.lead.firstName} ${week.lead.lastName}`}</span>
+                                                        <Badge variant="outline">Encargado</Badge>
                                                     </div>
                                                 </li>
                                             )}
                                             {week.driver && (
-                                                 <li className="flex items-center gap-2">
+                                                 <li className="flex items-center gap-3">
                                                     <Truck className="h-4 w-4 text-muted-foreground"/>
-                                                    <div>
-                                                        <p>{`${week.driver.firstName} ${week.driver.lastName}`}</p>
-                                                        <p className="text-xs text-muted-foreground">Chofer</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-semibold">{`${week.driver.firstName} ${week.driver.lastName}`}</span>
+                                                        <Badge variant="outline">Chofer</Badge>
                                                     </div>
                                                 </li>
                                             )}
                                             {week.members?.map(member => (
-                                                <li key={member.id} className="flex items-center gap-2">
-                                                    <div className="w-4 h-4" />
-                                                    <p>{`${member.firstName} ${member.lastName}`}</p>
+                                                <li key={member.id} className="flex items-center gap-3">
+                                                    <div className="w-4 h-4 shrink-0" />
+                                                    <p className="text-muted-foreground">{`${member.firstName} ${member.lastName}`}</p>
                                                 </li>
                                             ))}
                                         </ul>
