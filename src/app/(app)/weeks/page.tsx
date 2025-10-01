@@ -3,110 +3,92 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/auth-context";
-import { PlusCircle, Calendar, ClipboardList, Home } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { PlusCircle, Home } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
 import AddWeekDialog from "./_components/add-week-dialog";
 import WeekList from "./_components/week-list";
-import { Week, Task } from "@/lib/types";
+import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
-import { getTasksByWeek } from "@/services/tasks.service";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
-import MyTasks from "./_components/my-tasks";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import Link from "next/link";
+import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 
 export default function WeeksPage() {
     const { getActiveRole } = useAuth();
-    const { toast } = useToast();
     const pathname = usePathname();
-
-    const [allWeeks, setAllWeeks] = useState<Week[]>([]);
-    const [allTasks, setAllTasks] = useState<Task[]>([]);
+    const { toast } = useToast();
+    const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
-
-    const [refreshSignal, setRefreshSignal] = useState(false);
 
     const activeRole = getActiveRole(pathname);
     const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    const fetchModuleData = async () => {
+    const fetchWeeks = async () => {
         setLoading(true);
         try {
-            const weeksData = await getWeeks();
-            setAllWeeks(weeksData);
-
-            // Fetch tasks for all weeks
-            const tasksPromises = weeksData.map(week => getTasksByWeek(week.id));
-            const tasksByWeek = await Promise.all(tasksPromises);
-            setAllTasks(tasksByWeek.flat());
-
+            const data = await getWeeks();
+            setWeeks(data);
         } catch (error) {
-            toast({ title: "Error", description: "No se pudieron cargar los datos del módulo de semanas.", variant: "destructive" });
+            toast({
+                title: "Error",
+                description: "No se pudo cargar el listado de semanas.",
+                variant: "destructive"
+            });
         } finally {
             setLoading(false);
         }
     };
-    
+
     useEffect(() => {
-        fetchModuleData();
-    }, [refreshSignal, toast]);
-
-
+        fetchWeeks();
+    }, [toast]);
+    
     const handleDataChange = () => {
-        setRefreshSignal(prev => !prev);
+        fetchWeeks();
     }
-
-    const { activeWeeks, pastWeeks, dashboardStats } = useMemo(() => {
+    
+    const { activeWeeks, pastWeeks, activeWeeksSummary } = useMemo(() => {
         const today = new Date();
         const active: Week[] = [];
         const past: Week[] = [];
-        
-        const currentActiveWeeksByFirehouse: Record<string, string> = {
+        const activeSummary: Record<string, string> = {
             'Cuartel 1': 'Ninguna',
             'Cuartel 2': 'Ninguna',
             'Cuartel 3': 'Ninguna'
         };
 
-        allWeeks.forEach(week => {
-            const startDate = startOfDay(new Date(week.periodStartDate));
-            const endDate = endOfDay(new Date(week.periodEndDate));
-            if (new Date(week.periodEndDate) < today) {
+        weeks.forEach(week => {
+            const startDate = startOfDay(parseISO(week.periodStartDate));
+            const endDate = endOfDay(parseISO(week.periodEndDate));
+
+            if (new Date(week.periodEndDate) < startOfDay(today)) {
                 past.push(week);
             } else {
                  active.push(week); 
             }
             
             if (isWithinInterval(today, { start: startDate, end: endDate })) {
-                if (currentActiveWeeksByFirehouse.hasOwnProperty(week.firehouse)) {
-                    currentActiveWeeksByFirehouse[week.firehouse] = week.name;
+                if (activeSummary.hasOwnProperty(week.firehouse)) {
+                    activeSummary[week.firehouse] = week.name;
                 }
             }
         });
-        
-        const totalPendingTasks = allTasks.filter(task => task.status === 'Pendiente').length;
-        
-        const stats = {
-            activeWeeksCount: active.length,
-            pendingTasksCount: totalPendingTasks,
-            activeWeeksByFirehouse: currentActiveWeeksByFirehouse,
-        };
 
         return { 
             activeWeeks: active.sort((a,b) => new Date(a.periodStartDate).getTime() - new Date(b.periodStartDate).getTime()), 
             pastWeeks: past.sort((a,b) => new Date(b.periodStartDate).getTime() - new Date(a.periodStartDate).getTime()), 
-            dashboardStats: stats 
+            activeWeeksSummary: activeSummary 
         };
-    }, [allWeeks, allTasks]);
+    }, [weeks]);
 
-
-    const weeksByFirehouse = (weekList: Week[]) => {
-        return weekList.reduce((acc, week) => {
+    const activeWeeksGrouped = useMemo(() => {
+        return activeWeeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -114,45 +96,49 @@ export default function WeeksPage() {
             acc[firehouse].push(week);
             return acc;
         }, {} as Record<string, Week[]>);
-    }
+    }, [activeWeeks]);
 
-    const activeWeeksGrouped = weeksByFirehouse(activeWeeks);
-    const pastWeeksGrouped = weeksByFirehouse(pastWeeks);
+    const pastWeeksGrouped = useMemo(() => {
+        return pastWeeks.reduce((acc, week) => {
+            const firehouse = week.firehouse || 'Sin Cuartel';
+            if (!acc[firehouse]) {
+                acc[firehouse] = [];
+            }
+            acc[firehouse].push(week);
+            return acc;
+        }, {} as Record<string, Week[]>);
+    }, [pastWeeks]);
+
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
-
-    if (loading) {
+    
+    const renderWeekGroups = (groupedWeeks: Record<string, Week[]>, title: string) => {
+        const hasData = Object.values(groupedWeeks).some(w => w.length > 0);
         return (
-             <>
-                <PageHeader title="Gestión de Semanas" description="Organice al personal en semanas, asigne tareas y supervise la actividad.">
-                     <Skeleton className="h-10 w-44" />
-                </PageHeader>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-                     {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-28" />)}
-                </div>
-                 <Skeleton className="h-40 w-full" />
-                 <Skeleton className="h-64 w-full mt-8" />
-             </>
-        )
-    }
-
-    const renderWeekGroups = (groupedWeeks: Record<string, Week[]>) => {
-        return firehouseOrder.map(firehouse => (
-            groupedWeeks[firehouse] && groupedWeeks[firehouse].length > 0 && (
-                <div key={firehouse} className="space-y-4">
-                    <h2 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2">{firehouse}</h2>
-                    <WeekList weeks={groupedWeeks[firehouse]} isLoading={loading} onDataChange={handleDataChange} />
-                </div>
-            )
-        ));
+            <div>
+                 <h2 className="font-headline text-3xl font-semibold tracking-tight mb-4">{title}</h2>
+                 {hasData ? firehouseOrder.map(firehouse => (
+                    groupedWeeks[firehouse] && groupedWeeks[firehouse].length > 0 && (
+                        <div key={firehouse} className="mb-8">
+                            <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
+                            <WeekList weeks={groupedWeeks[firehouse]} isLoading={loading} onDataChange={handleDataChange} />
+                        </div>
+                    )
+                )) : (
+                     <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                        <p className="text-muted-foreground">No hay semanas en esta categoría.</p>
+                    </div>
+                )}
+            </div>
+        );
     };
 
     return (
         <>
             <PageHeader 
-                title="Dashboard de Semanas" 
-                description="Vista general del estado de las semanas y tareas."
+                title="Semanas de Guardia" 
+                description="Listado histórico de todas las semanas de guardia, agrupadas por cuartel."
             >
-                <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2">
                     <Button asChild variant="outline">
                         <Link href="/sessions"><Home className="mr-2"/>Inicio</Link>
                     </Button>
@@ -166,55 +152,36 @@ export default function WeeksPage() {
                     )}
                 </div>
             </PageHeader>
-
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Semanas Activas/Futuras</CardTitle>
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.activeWeeksCount}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Tareas Pendientes</CardTitle>
-                        <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.pendingTasksCount}</div>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">Semanas Activas Hoy</CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-sm">
-                         {Object.entries(dashboardStats.activeWeeksByFirehouse).map(([firehouse, weekName]) => (
-                            <div key={firehouse} className="flex justify-between">
-                                <span className="text-muted-foreground">{firehouse}:</span>
-                                <span className="font-semibold">{weekName}</span>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-            </div>
             
-            <MyTasks allTasks={allTasks} allWeeks={allWeeks} />
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">Semanas Activas Actualmente</CardTitle>
+                    <CardDescription>Resumen de las semanas de guardia en curso.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <div className="space-y-2">
+                           <Skeleton className="h-6 w-full" />
+                           <Skeleton className="h-6 w-full" />
+                           <Skeleton className="h-6 w-full" />
+                        </div>
+                    ) : (
+                        <div className="text-sm space-y-2">
+                            {Object.entries(activeWeeksSummary).map(([firehouse, weekName]) => (
+                                <div key={firehouse} className="flex justify-between items-center p-2 rounded-md even:bg-muted/50">
+                                    <span className="font-medium text-muted-foreground">{firehouse}:</span>
+                                    <span className="font-semibold">{weekName}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
-            <Tabs defaultValue="active" className="w-full mt-8">
-                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
-                    <TabsTrigger value="active">Semanas en Curso y Futuras</TabsTrigger>
-                    <TabsTrigger value="past">Semanas Pasadas</TabsTrigger>
-                </TabsList>
-                <TabsContent value="active" className="space-y-8">
-                    {renderWeekGroups(activeWeeksGrouped)}
-                </TabsContent>
-                <TabsContent value="past" className="space-y-8">
-                     {renderWeekGroups(pastWeeksGrouped)}
-                </TabsContent>
-            </Tabs>
+            <div className="space-y-12">
+               {renderWeekGroups(activeWeeksGrouped, 'Semanas en Curso y Futuras')}
+               {renderWeekGroups(pastWeeksGrouped, 'Semanas Pasadas')}
+            </div>
         </>
     );
 }
