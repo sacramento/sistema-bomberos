@@ -51,22 +51,7 @@ export default function WeekDetailPage() {
     const [savingObservations, setSavingObservations] = useState(false);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => {
-        if (!user || !week) return false;
-        
-        // Master and Admin can always manage.
-        if (activeRole === 'Master' || activeRole === 'Administrador') {
-            return true;
-        }
-
-        // 'Encargado' role from 'semanas' can manage.
-        if (activeRole === 'Encargado') {
-            return true;
-        }
-
-        // A user who is the designated lead can manage.
-        return user.id === week.lead?.legajo;
-    }, [user, week, activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
     
 
     const fetchWeekAndTasks = async () => {
