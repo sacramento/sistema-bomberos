@@ -1,4 +1,5 @@
 
+
 'use client';
 import {
   Card,
@@ -97,10 +98,6 @@ export default function DashboardPage() {
               if (status === 'present' || status === 'recupero' || status === 'tardy') {
                 attendedCount++;
               }
-              if (status !== 'excused') { // This logic was wrong, but user wants excused to count as absent. Let's adjust based on the report page logic.
-                // The correct logic is to count all required classes in the denominator
-              }
-               // Let's adopt the logic from the reports page for consistency.
               if (status === 'present' || status === 'tardy' || status === 'absent' || status === 'recupero' || status === 'excused') {
                   totalRequired++;
               }
@@ -132,7 +129,7 @@ export default function DashboardPage() {
               if (isWithinInterval(sessionDate, { start: monthRange.start, end: monthRange.end })) {
                   if (session.attendance) {
                       Object.values(session.attendance).forEach(status => {
-                          if (status === 'present' || status === 'recupero') {
+                          if (status === 'present' || status === 'recupero' || status === 'tardy') {
                               attendees++;
                           } else if (status === 'absent' || status === 'excused') {
                               absentees++;
@@ -304,3 +301,5 @@ export default function DashboardPage() {
     </>
   );
 }
+
+    
