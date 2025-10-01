@@ -1,93 +1,109 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/auth-context';
-import { getWeeks } from '@/services/weeks.service';
-import { Week } from '@/lib/types';
-import { isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
-import { PageHeader } from '@/components/page-header';
-import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle } from 'lucide-react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { PageHeader } from "@/components/page-header";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import AddWeekDialog from "../_components/add-week-dialog";
+import WeekList from "../_components/week-list";
+import { Week } from "@/lib/types";
+import { getWeeks } from "@/services/weeks.service";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
-export default function MyWeekRedirectPage() {
-    const { user, loading: authLoading } = useAuth();
-    const router = useRouter();
+export default function MyWeekPage() {
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
+    const { toast } = useToast();
+    const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+
+    const activeRole = getActiveRole(pathname);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
+
+    const fetchWeeks = async () => {
+        setLoading(true);
+        try {
+            const data = await getWeeks();
+            setWeeks(data);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "No se pudo cargar el listado de semanas.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        if (authLoading) {
-            return; // Wait for authentication to resolve
-        }
-
-        if (!user) {
-            router.push('/'); // Should be handled by layout, but as a safeguard
-            return;
-        }
-
-        const findAndRedirect = async () => {
-            try {
-                const allWeeks = await getWeeks();
-                const today = new Date();
-                
-                const myActiveWeek = allWeeks.find(week => {
-                    const isMember = week.allMembers?.some(member => member.legajo === user.id);
-                    if (!isMember) return false;
-
-                    const startDate = startOfDay(parseISO(week.periodStartDate));
-                    const endDate = endOfDay(parseISO(week.periodEndDate));
-                    return isWithinInterval(today, { start: startDate, end: endDate });
-                });
-
-                if (myActiveWeek) {
-                    router.replace(`/weeks/${myActiveWeek.id}`);
-                } else {
-                    // If no active week is found, stop loading and show a message
-                    setError("No estás asignado/a a ninguna semana activa en este momento.");
-                    setLoading(false);
-                }
-            } catch (err) {
-                console.error("Failed to find active week:", err);
-                setError("Ocurrió un error al buscar tu semana activa. Por favor, intenta de nuevo.");
-                setLoading(false);
-            }
-        };
-
-        findAndRedirect();
-
-    }, [user, authLoading, router]);
-
-    if (loading) {
-        return (
-            <>
-                <PageHeader title="Buscando tu semana..." description="Redirigiendo a los detalles de tu semana activa." />
-                <Skeleton className="w-full h-64" />
-            </>
-        );
+        fetchWeeks();
+    }, [toast]);
+    
+    const handleDataChange = () => {
+        fetchWeeks();
     }
     
-    if (error) {
-         return (
-            <>
-                <PageHeader title="Mi Semana" />
-                <Alert variant="default" className="max-w-xl mx-auto">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertTitle>No Encontrada</AlertTitle>
-                    <AlertDescription>
-                        {error}
-                    </AlertDescription>
-                </Alert>
-            </>
+    const weeksForUser = useMemo(() => {
+        if (loading || !user) return [];
+        if (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') {
+            return weeks;
+        }
+        return weeks.filter(week => 
+            week.allMembers?.some(member => member.legajo === user.id)
         );
-    }
+    }, [weeks, user, activeRole, loading]);
 
-    // This content will likely not be seen as the user is redirected,
-    // but it's good practice to have a fallback.
+    const weeksGroupedByFirehouse = useMemo(() => {
+        return weeksForUser.reduce((acc, week) => {
+            const firehouse = week.firehouse || 'Sin Cuartel';
+            if (!acc[firehouse]) {
+                acc[firehouse] = [];
+            }
+            acc[firehouse].push(week);
+            return acc;
+        }, {} as Record<string, Week[]>);
+    }, [weeksForUser]);
+
+    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+
     return (
-        <PageHeader title="Redirigiendo..." />
+        <>
+            <PageHeader 
+                title="Mi Semana" 
+                description="Gestione y visualice las semanas de guardia asignadas."
+            >
+                {canManage && (
+                    <AddWeekDialog onWeekAdded={handleDataChange}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Crear Semana
+                        </Button>
+                    </AddWeekDialog>
+                )}
+            </PageHeader>
+            
+            <div className="space-y-12">
+               {firehouseOrder.map(firehouse => (
+                    weeksGroupedByFirehouse[firehouse] && weeksGroupedByFirehouse[firehouse].length > 0 && (
+                        <div key={firehouse} className="mb-8">
+                            <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
+                            <WeekList weeks={weeksGroupedByFirehouse[firehouse]} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
+                        </div>
+                    )
+                ))}
+                {!loading && weeksForUser.length === 0 && (
+                     <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                        <div className="text-center">
+                            <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
+                            <p className="text-muted-foreground mt-2">No estás asignado a ninguna semana.</p>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </>
     );
 }
-

@@ -12,8 +12,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy, Users2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { useAuth } from "@/context/auth-context";
-import { usePathname } from "next/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import EditWeekDialog from "./edit-week-dialog";
@@ -26,6 +24,7 @@ interface WeekListProps {
     weeks: Week[];
     isLoading?: boolean;
     onDataChange: () => void;
+    canManage: boolean;
 }
 
 const getBorderColor = (firehouse: Week['firehouse']) => {
@@ -37,12 +36,8 @@ const getBorderColor = (firehouse: Week['firehouse']) => {
     }
 };
 
-export default function WeekList({ weeks, isLoading, onDataChange }: WeekListProps) {
-    const { user, getActiveRole } = useAuth();
+export default function WeekList({ weeks, isLoading, onDataChange, canManage }: WeekListProps) {
     const { toast } = useToast();
-    const pathname = usePathname();
-    const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
      const handleDeleteWeek = async (weekId: string) => {
         try {
@@ -69,23 +64,13 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
         );
     }
     
-    // Filter weeks for non-admin/non-oficial users
-    const filteredWeeks = useMemo(() => {
-        if (!user || activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') {
-            return weeks;
-        }
-        return weeks.filter(week => 
-            week.allMembers?.some(member => member.legajo === user.id)
-        );
-    }, [weeks, user, activeRole]);
-    
-    if (filteredWeeks.length === 0) {
+    if (weeks.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
                 <div className="text-center">
                     <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
                      <p className="text-muted-foreground mt-2">
-                        {user && (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial')
+                        {canManage
                          ? 'Cree una nueva semana para comenzar.'
                          : 'No estás asignado a ninguna semana en esta categoría.'
                         }
@@ -98,7 +83,7 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
 
     return (
         <div className="space-y-4">
-            {filteredWeeks.map((week) => (
+            {weeks.map((week) => (
                 <AlertDialog key={week.id}>
                     <Card className={cn("flex flex-col sm:flex-row border-l-4", getBorderColor(week.firehouse))}>
                         <div className="flex-grow p-6">
