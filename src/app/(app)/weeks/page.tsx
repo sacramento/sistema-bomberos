@@ -7,21 +7,14 @@ import WeekList from "./_components/week-list";
 import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/context/auth-context";
-import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
-    const { user, getActiveRole } = useAuth();
-    const pathname = usePathname();
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
-
-    const activeRole = getActiveRole(pathname);
-    const canSeeAll = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchWeeks = async () => {
         setLoading(true);
@@ -55,11 +48,7 @@ export default function WeeksDashboardPage() {
             'Cuartel 3': 'Ninguna'
         };
 
-        const relevantWeeks = canSeeAll 
-            ? weeks
-            : weeks.filter(week => week.allMembers?.some(member => member.legajo === user?.id));
-
-        relevantWeeks.forEach(week => {
+        weeks.forEach(week => {
             const startDate = startOfDay(parseISO(week.periodStartDate));
             const endDate = endOfDay(parseISO(week.periodEndDate));
             
@@ -70,7 +59,7 @@ export default function WeeksDashboardPage() {
             }
         });
 
-        const grouped = relevantWeeks.reduce((acc, week) => {
+        const grouped = weeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -88,7 +77,7 @@ export default function WeeksDashboardPage() {
             activeWeeksSummary: activeSummary,
             weeksToShow: grouped
         };
-    }, [weeks, user, canSeeAll]);
+    }, [weeks]);
 
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
     
