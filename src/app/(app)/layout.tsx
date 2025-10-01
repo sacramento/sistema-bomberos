@@ -51,6 +51,7 @@ export const navItems: NavItem[] = [
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
 ];
@@ -124,14 +125,16 @@ function Sidebar() {
                   
                   let isActive = false;
                   // Exact match for most routes
-                  isActive = pathname === item.href;
-
-                  // Special case for dynamic routes
-                  if (pathname.startsWith('/classes/') && item.href === '/sessions') {
-                     // Keep 'Dashboard Asistencia' active for class details
-                  } else if (pathname.startsWith('/weeks/') && item.href === '/weeks' && !pathname.includes('my-week')) {
-                     // Keep 'Semanas' active for week details, but not for 'my-week'
-                     isActive = true;
+                  if (item.href === '/weeks/my-week') {
+                      isActive = pathname === item.href;
+                  } else if (item.href === '/weeks') {
+                       isActive = pathname.startsWith('/weeks') && !pathname.includes('my-week') && !pathname.includes('tasks');
+                  } else if (item.href === '/weeks/tasks') {
+                      isActive = pathname === item.href;
+                  } else if (item.href === '/sessions') {
+                      isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                  } else {
+                      isActive = pathname.startsWith(item.href);
                   }
 
 

@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { Task, Firefighter } from '@/lib/types';
@@ -24,6 +25,18 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     };
     return task;
 }
+
+export const getAllTasks = async (): Promise<Task[]> => {
+    const querySnapshot = await getDocs(tasksCollection);
+    
+    const allFirefighters = await getFirefighters();
+    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    
+    const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
+    const tasks = await Promise.all(tasksPromises);
+
+    return tasks;
+};
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     const q = query(tasksCollection, where('weekId', '==', weekId));
