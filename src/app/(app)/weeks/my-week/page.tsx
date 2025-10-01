@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -20,40 +19,40 @@ export default function MyWeekPage() {
     const pathname = usePathname();
     const router = useRouter();
     const { toast } = useToast();
-    const [allWeeks, setAllWeeks] = useState<Week[]>([]);
+    const [userWeeks, setUserWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
     const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     useEffect(() => {
-        const fetchAllData = async () => {
+        const fetchUserWeeks = async () => {
             if (!user) {
                 setLoading(false);
                 return;
             }
             setLoading(true);
             try {
-                const weeksData = await getWeeks();
-                const userWeeks = weeksData.filter(week => 
+                const allWeeksData = await getWeeks();
+                
+                const assignedWeeks = allWeeksData.filter(week => 
                     week.allMembers?.some(member => member.legajo === user.id)
                 );
                 
                 const today = new Date();
-                const activeWeek = userWeeks.find(week => {
+                const activeWeek = assignedWeeks.find(week => {
                     const startDate = startOfDay(parseISO(week.periodStartDate));
                     const endDate = endOfDay(parseISO(week.periodEndDate));
                     return isWithinInterval(today, { start: startDate, end: endDate });
                 });
 
-                // If user has an active week, redirect them directly to it.
                 if (activeWeek) {
                     router.replace(`/weeks/${activeWeek.id}`);
-                    // We don't setLoading(false) here because the redirect will unmount this component.
-                } else {
-                    setAllWeeks(userWeeks);
-                    setLoading(false);
+                    // We don't call setLoading(false) as the component will unmount upon redirection.
+                    return; 
                 }
+                
+                setUserWeeks(assignedWeeks);
 
             } catch (error) {
                 toast({
@@ -61,38 +60,32 @@ export default function MyWeekPage() {
                     description: "No se pudieron cargar los datos de la semana.",
                     variant: "destructive"
                 });
-                setLoading(false);
-            }
-        };
-
-        fetchAllData();
-    }, [user, router, toast]);
-
-    const handleDataChange = () => {
-        // Re-trigger the fetch logic
-         const fetchAllData = async () => {
-            if (!user) {
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            try {
-                const weeksData = await getWeeks();
-                const userWeeks = weeksData.filter(week => 
-                    week.allMembers?.some(member => member.legajo === user.id)
-                );
-                setAllWeeks(userWeeks);
-            } catch (error) {
-                 toast({
-                    title: "Error",
-                    description: "No se pudieron recargar los datos.",
-                    variant: "destructive"
-                });
             } finally {
                 setLoading(false);
             }
         };
-        fetchAllData();
+
+        fetchUserWeeks();
+    }, [user, router, toast]);
+
+    const handleDataChange = async () => {
+         if (!user) return;
+         setLoading(true);
+         try {
+            const allWeeksData = await getWeeks();
+            const assignedWeeks = allWeeksData.filter(week => 
+                week.allMembers?.some(member => member.legajo === user.id)
+            );
+            setUserWeeks(assignedWeeks);
+         } catch(error) {
+            toast({
+                title: "Error",
+                description: "No se pudieron recargar los datos.",
+                variant: "destructive"
+            });
+         } finally {
+            setLoading(false);
+         }
     };
 
     if (loading) {
@@ -125,7 +118,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={allWeeks} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
+            <WeekList weeks={userWeeks} isLoading={loading} onDataChange={handleDataChange} canManage={true} />
         </>
     );
 }
