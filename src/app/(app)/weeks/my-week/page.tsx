@@ -23,76 +23,60 @@ export default function MyWeekPage() {
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const canCreateWeek = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    useEffect(() => {
-        const fetchUserWeeks = async () => {
-            if (!user) {
-                setLoading(false);
-                return;
-            }
-            setLoading(true);
-            try {
-                const allWeeksData = await getWeeks();
-                
-                const assignedWeeks = allWeeksData.filter(week => 
-                    week.allMembers?.some(member => member.legajo === user.id)
-                );
-                
-                const today = new Date();
-                const activeWeek = assignedWeeks.find(week => {
-                    const startDate = startOfDay(parseISO(week.periodStartDate));
-                    const endDate = endOfDay(parseISO(week.periodEndDate));
-                    return isWithinInterval(today, { start: startDate, end: endDate });
-                });
-
-                if (activeWeek) {
-                    router.replace(`/weeks/${activeWeek.id}`);
-                    // We don't call setLoading(false) as the component will unmount upon redirection.
-                    return; 
-                }
-                
-                setUserWeeks(assignedWeeks);
-
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "No se pudieron cargar los datos de la semana.",
-                    variant: "destructive"
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchUserWeeks();
-    }, [user, router, toast]);
-
-    const handleDataChange = async () => {
-         if (!user) return;
-         setLoading(true);
-         try {
+    const fetchUserWeeks = async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        try {
             const allWeeksData = await getWeeks();
+            
             const assignedWeeks = allWeeksData.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
+            
+            const today = new Date();
+            const activeWeek = assignedWeeks.find(week => {
+                const startDate = startOfDay(parseISO(week.periodStartDate));
+                const endDate = endOfDay(parseISO(week.periodEndDate));
+                return isWithinInterval(today, { start: startDate, end: endDate });
+            });
+
+            if (activeWeek) {
+                router.replace(`/weeks/${activeWeek.id}`);
+                // We don't call setLoading(false) as the component will unmount upon redirection.
+                return; 
+            }
+            
             setUserWeeks(assignedWeeks);
-         } catch(error) {
+
+        } catch (error) {
             toast({
                 title: "Error",
-                description: "No se pudieron recargar los datos.",
+                description: "No se pudieron cargar los datos de la semana.",
                 variant: "destructive"
             });
-         } finally {
+        } finally {
             setLoading(false);
-         }
+        }
+    };
+    
+    useEffect(() => {
+        fetchUserWeeks();
+    }, [user, router, toast]);
+
+    const handleDataChange = () => {
+        fetchUserWeeks();
     };
 
     if (loading) {
         return (
              <>
                 <PageHeader title="Mis Semanas" description="Gestiona y visualiza tus semanas de guardia asignadas.">
-                    {canManage && <Skeleton className="h-10 w-36" />}
+                    {canCreateWeek && <Skeleton className="h-10 w-36" />}
                 </PageHeader>
                 <div className="space-y-4">
                     <Skeleton className="h-32 w-full" />
@@ -108,7 +92,7 @@ export default function MyWeekPage() {
                 title="Mis Semanas" 
                 description="Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."
             >
-                {canManage && (
+                {canCreateWeek && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -23,7 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
@@ -51,7 +50,15 @@ export default function WeekDetailPage() {
     const [savingObservations, setSavingObservations] = useState(false);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
+    
+    // Updated permission logic
+    const canManage = useMemo(() => {
+        if (!user || !week) return false;
+        if (activeRole === 'Master' || activeRole === 'Administrador') return true;
+        // The "Encargado" can manage only if they are the lead of this specific week.
+        if (activeRole === 'Encargado' && user.id === week.leadId) return true;
+        return false;
+    }, [user, week, activeRole]);
     
 
     const fetchWeekAndTasks = async () => {
@@ -163,7 +170,7 @@ export default function WeekDetailPage() {
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push('/weeks')}>
                         <ArrowLeft className="mr-2"/>
-                        Volver al Dashboard
+                        Volver
                     </Button>
                     {canManage && (
                         <AddTaskDialog week={week} onTaskAdded={handleTaskChange}>
