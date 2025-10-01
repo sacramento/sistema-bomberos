@@ -3,7 +3,7 @@
 
 import { Week, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -11,6 +11,7 @@ if (!db) {
 }
 
 const weeksCollection = collection(db, 'weeks');
+const tasksCollection = collection(db, 'tasks');
 
 // Helper to enrich week data with full firefighter objects
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
@@ -79,7 +80,36 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
     return docRef.id;
 };
 
-export const updateWeek = async (id: string, weekData: Partial<Pick<Week, 'observations'>>): Promise<void> => {
+export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>): Promise<void> => {
     const docRef = doc(db, 'weeks', id);
-    await updateDoc(docRef, weekData);
+
+    const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...(weekData.memberIds || [])]));
+
+    const dataToUpdate: any = { ...weekData };
+    if (weekData.leadId && weekData.driverId && weekData.memberIds) {
+        dataToUpdate.allMemberIds = allMemberIds;
+    }
+    
+    // Remove undefined fields so they don't overwrite existing data
+    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+
+    await updateDoc(docRef, dataToUpdate);
 };
+
+export const deleteWeek = async (id: string): Promise<void> => {
+    const batch = writeBatch(db);
+
+    // 1. Delete the week itself
+    const weekDocRef = doc(db, 'weeks', id);
+    batch.delete(weekDocRef);
+
+    // 2. Find and delete all tasks associated with that week
+    const tasksQuery = query(tasksCollection, where('weekId', '==', id));
+    const tasksSnapshot = await getDocs(tasksQuery);
+    tasksSnapshot.forEach(taskDoc => {
+        batch.delete(taskDoc.ref);
+    });
+
+    // 3. Commit the batch
+    await batch.commit();
+}
