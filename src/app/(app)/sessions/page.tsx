@@ -40,7 +40,7 @@ import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { getLeaves } from '@/services/leaves.service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isWithinInterval, startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
+import { isWithinInterval, startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const chartConfig = {
@@ -86,8 +86,8 @@ export default function DashboardPage() {
     today.setHours(0, 0, 0, 0);
 
     const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
-    const upcomingSessions = sessions.filter(s => new Date(s.date) >= today).length;
-    const onLeave = leaves.filter(l => isWithinInterval(today, { start: new Date(l.startDate), end: new Date(l.endDate) })).length;
+    const upcomingSessions = sessions.filter(s => parseISO(s.date) >= today).length;
+    const onLeave = leaves.filter(l => isWithinInterval(today, { start: parseISO(l.startDate), end: parseISO(l.endDate) })).length;
     
     let attendedCount = 0;
     let totalRequired = 0;
@@ -124,7 +124,7 @@ export default function DashboardPage() {
           let attendees = 0;
           let absentees = 0;
           sessions.forEach(session => {
-              const sessionDate = new Date(session.date);
+              const sessionDate = parseISO(session.date);
               if (isWithinInterval(sessionDate, { start: monthRange.start, end: monthRange.end })) {
                   if (session.attendance) {
                       Object.values(session.attendance).forEach(status => {
@@ -279,7 +279,7 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sessions.filter(s => new Date(s.date) >= new Date()).slice(0, 5).map((session) => (
+                {sessions.filter(s => parseISO(s.date) >= new Date()).slice(0, 5).map((session) => (
                   <TableRow key={session.id}>
                     <TableCell>
                       <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
@@ -289,7 +289,7 @@ export default function DashboardPage() {
                     <TableCell>
                       <Badge variant="secondary">{session.specialization}</Badge>
                     </TableCell>
-                    <TableCell>{format(new Date(session.date), "dd/MM/yy")}</TableCell>
+                    <TableCell>{format(parseISO(session.date), "dd/MM/yy")}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

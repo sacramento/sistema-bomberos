@@ -69,7 +69,7 @@ export default function WeeksDashboardPage() {
         
         // Sort weeks inside each group
         for (const firehouse in grouped) {
-            grouped[firehouse].sort((a,b) => new Date(b.periodStartDate).getTime() - new Date(a.periodStartDate).getTime());
+            grouped[firehouse].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
         }
 
         return { 

@@ -17,6 +17,9 @@ import { getSessionById, updateSessionAttendance } from "@/services/sessions.ser
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
+import { parseISO, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
     { value: "present", label: "Presente" },
@@ -272,10 +275,12 @@ export default function AttendancePage() {
             ))}
         </TableBody>
     );
+    
+    const formattedDate = format(parseISO(session.date), "dd 'de' MMMM 'de' yyyy", { locale: es });
 
     return (
         <>
-            <PageHeader title={`Asistencia: ${session.title}`} description={`Clase del ${session.date} a las ${session.startTime}hs.`}>
+            <PageHeader title={`Asistencia: ${session.title}`} description={`Clase del ${formattedDate} a las ${session.startTime}hs.`}>
                 <Button variant="outline">
                     <Download className="mr-2 h-4 w-4" />
                     Exportar

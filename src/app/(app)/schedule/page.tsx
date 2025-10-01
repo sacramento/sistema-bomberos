@@ -98,7 +98,6 @@ export default function SchedulePage() {
              <div className="space-y-4">
                 {sortedSessions.map(session => {
                     const firehouseInfo = getMajorityFirehouseInfo(session);
-                    // The date string 'YYYY-MM-DD' is parsed as UTC, so we use parseISO to handle it correctly without timezone shifts.
                     const sessionDate = parseISO(session.date);
                     return (
                         <Card key={session.id} className={cn("border-l-4 shadow-md", firehouseInfo.className)}>
@@ -112,7 +111,7 @@ export default function SchedulePage() {
                                 </div>
                                 <div className="sm:col-span-2 sm:text-right">
                                      <p className="font-medium text-muted-foreground">
-                                        {format(sessionDate, "dd/MM/yyyy", { locale: es })} a las {session.startTime}hs
+                                        {format(sessionDate, "EEEE, dd 'de' MMMM", { locale: es })} a las {session.startTime}hs
                                     </p>
                                 </div>
                            </div>

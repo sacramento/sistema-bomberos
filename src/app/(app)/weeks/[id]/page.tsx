@@ -10,7 +10,7 @@ import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask, deleteTask } from "@/services/tasks.service";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2 } from "lucide-react";
@@ -160,12 +160,15 @@ export default function WeekDetailPage() {
     if (!week) {
         return <PageHeader title="Semana no encontrada" description="No se pudo encontrar la semana solicitada." />;
     }
+    
+    const formattedStartDate = format(parseISO(week.periodStartDate), "dd MMM yyyy", { locale: es });
+    const formattedEndDate = format(parseISO(week.periodEndDate), "dd MMM yyyy", { locale: es });
 
     return (
         <>
             <PageHeader 
                 title={week.name}
-                description={`${format(new Date(week.periodStartDate), "dd MMM yyyy", { locale: es })} - ${format(new Date(week.periodEndDate), "dd MMM yyyy", { locale: es })}`}
+                description={`${formattedStartDate} - ${formattedEndDate}`}
             >
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push('/weeks')}>

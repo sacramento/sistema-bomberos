@@ -22,7 +22,7 @@ export const getLeaves = async (): Promise<Leave[]> => {
         leaves.push({ id: doc.id, ...doc.data() } as Leave);
     });
     // Sort by most recent start date
-    return leaves.sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+    return leaves.sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime());
 };
 
 export const addLeave = async (leaveData: Omit<Leave, 'id'>): Promise<string> => {

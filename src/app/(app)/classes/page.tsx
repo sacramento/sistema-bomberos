@@ -32,8 +32,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import EditClassDialog from './_components/edit-class-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { parseISO } from 'date-fns';
+import { parseISO, format } from 'date-fns';
 import { usePathname } from 'next/navigation';
+import { es } from 'date-fns/locale';
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -256,7 +257,7 @@ export default function ClassesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {sessionList.map((session) => {
             const sessionDate = parseISO(session.date);
-            const formattedDate = sessionDate.toLocaleDateString('es-AR', { timeZone: 'UTC' });
+            const formattedDate = format(sessionDate, "dd 'de' MMMM", { locale: es });
 
             return (
             <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -103,7 +103,7 @@ export default function CourseList({ refreshSignal, onDataChange, canManage }: C
                                     <TableCell>{course.title}</TableCell>
                                     <TableCell>{course.specialization}</TableCell>
                                     <TableCell>{course.location}</TableCell>
-                                    <TableCell>{format(new Date(course.startDate), "P", { locale: es })} - {format(new Date(course.endDate), "P", { locale: es })}</TableCell>
+                                    <TableCell>{format(parseISO(course.startDate), "P", { locale: es })} - {format(parseISO(course.endDate), "P", { locale: es })}</TableCell>
                                     {canManage && (
                                         <TableCell>
                                             <AlertDialog>

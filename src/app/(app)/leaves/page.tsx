@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import AddLeaveDialog from "./_components/add-leave-dialog";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -115,8 +115,8 @@ export default function LeavesPage() {
                                     <TableRow key={leave.id}>
                                         <TableCell className="font-medium">{leave.firefighterName}</TableCell>
                                         <TableCell>{leave.type}</TableCell>
-                                        <TableCell>{format(new Date(leave.startDate), "PPP", { locale: es })}</TableCell>
-                                        <TableCell>{format(new Date(leave.endDate), "PPP", { locale: es })}</TableCell>
+                                        <TableCell>{format(parseISO(leave.startDate), "PPP", { locale: es })}</TableCell>
+                                        <TableCell>{format(parseISO(leave.endDate), "PPP", { locale: es })}</TableCell>
                                         {canManage && (
                                             <TableCell>
                                                  <AlertDialog>
