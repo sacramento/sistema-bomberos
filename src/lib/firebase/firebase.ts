@@ -1,4 +1,4 @@
-// 'use client'; - Temporarily disabled to allow local data testing
+
 import { initializeApp, getApps, getApp } from 'firebase/app';
 
 const firebaseConfig = {
@@ -10,11 +10,11 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// We will only initialize firebase if the config is valid
 let app;
+// Solo inicializa Firebase si el projectId está presente.
+// Esto asegura que la app no intente conectarse sin configuración.
 if (firebaseConfig.projectId) {
-    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 }
-
 
 export { app };
