@@ -117,3 +117,25 @@ export type Task = {
     // Enriched properties for client side
     assignedTo?: Firefighter[];
 }
+
+// Audit Log Type
+export type AuditLogAction = 
+  | 'CREATE_USER' | 'UPDATE_USER' | 'DELETE_USER'
+  | 'CREATE_FIREFIGHTER' | 'UPDATE_FIREFIGHTER' | 'DELETE_FIREFIGHTER' | 'BATCH_IMPORT_FIREFIGHTERS'
+  | 'CREATE_SESSION' | 'UPDATE_SESSION' | 'DELETE_SESSION' | 'UPDATE_ATTENDANCE'
+  | 'CREATE_LEAVE' | 'UPDATE_LEAVE' | 'DELETE_LEAVE'
+  | 'CREATE_COURSE' | 'UPDATE_COURSE' | 'DELETE_COURSE'
+  | 'CREATE_WEEK' | 'UPDATE_WEEK' | 'DELETE_WEEK'
+  | 'CREATE_TASK' | 'UPDATE_TASK' | 'DELETE_TASK'
+  | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE';
+
+export type AuditLog = {
+    id: string;
+    timestamp: any; // Firestore ServerTimestamp
+    userId: string;
+    userName: string;
+    action: AuditLogAction;
+    targetEntity: string;
+    targetId: string;
+    details?: Record<string, any>;
+};

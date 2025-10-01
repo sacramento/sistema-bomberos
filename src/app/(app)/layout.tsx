@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   ListTodo,
   UserSquare,
+  BookCopy,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -51,6 +52,7 @@ export const navItems: NavItem[] = [
   { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
+  { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
 ];
 
 function Sidebar() {
@@ -120,13 +122,15 @@ function Sidebar() {
                 {navItemsByModule[moduleKey].map((item) => {
                   const label = getLabel(item);
                   
-                  // More specific active check
                   let isActive = false;
                   if (item.href === '/weeks') {
-                    isActive = pathname === '/weeks' || pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week');
+                    // Make '/weeks' active only for the exact path, not for '/weeks/...'
+                     isActive = pathname === '/weeks';
                   } else {
-                    isActive = pathname === item.href;
+                    // For other items, check if the path starts with the href
+                    isActive = pathname.startsWith(item.href);
                   }
+
 
                   const buttonContent = (
                     <Link
