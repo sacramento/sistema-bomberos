@@ -88,16 +88,21 @@ export default function DashboardPage() {
     const upcomingSessions = sessions.filter(s => new Date(s.date) >= today).length;
     const onLeave = leaves.filter(l => isWithinInterval(today, { start: new Date(l.startDate), end: new Date(l.endDate) })).length;
     
-    let totalAttendance = 0;
+    let totalClassesForPercentage = 0;
     let presentCount = 0;
     sessions.forEach(session => {
         if(session.attendance) {
-            const attendanceValues = Object.values(session.attendance);
-            totalAttendance += attendanceValues.length;
-            presentCount += attendanceValues.filter(status => status === 'present' || status === 'recupero').length;
+            Object.values(session.attendance).forEach(status => {
+              if (status !== 'excused') {
+                totalClassesForPercentage++;
+                if (status === 'present' || status === 'recupero' || status === 'tardy') {
+                  presentCount++;
+                }
+              }
+            });
         }
     });
-    const attendanceRate = totalAttendance > 0 ? ((presentCount / totalAttendance) * 100).toFixed(1) : "0.0";
+    const attendanceRate = totalClassesForPercentage > 0 ? ((presentCount / totalClassesForPercentage) * 100).toFixed(0) : "0";
     
     return { activeFirefighters, upcomingSessions, onLeave, attendanceRate };
   }, [firefighters, sessions, leaves]);
@@ -292,5 +297,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    

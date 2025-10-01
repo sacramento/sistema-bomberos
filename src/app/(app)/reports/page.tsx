@@ -33,7 +33,7 @@ import Chart from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { usePathname } from "next/navigation";
+import { usePathname } from 'next/navigation';
 
 
 const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -894,7 +894,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
                 </TabsContent>
                 
-                {(user?.role === 'Ayudantía' || user?.role === 'Administrador') && (
+                {(user?.role === 'Ayudantía' || user?.role === 'Administrador' || user?.role === 'Oficial') && (
                     <TabsContent value="leaves">
                         <CommonFilters />
                         {leavesReportData.length > 0 ? (
