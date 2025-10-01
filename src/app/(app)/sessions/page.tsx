@@ -88,21 +88,28 @@ export default function DashboardPage() {
     const upcomingSessions = sessions.filter(s => new Date(s.date) >= today).length;
     const onLeave = leaves.filter(l => isWithinInterval(today, { start: new Date(l.startDate), end: new Date(l.endDate) })).length;
     
-    let totalClassesForPercentage = 0;
-    let presentCount = 0;
+    let attendedCount = 0;
+    let totalRequired = 0;
+    
     sessions.forEach(session => {
         if(session.attendance) {
             Object.values(session.attendance).forEach(status => {
-              if (status !== 'excused') {
-                totalClassesForPercentage++;
-                if (status === 'present' || status === 'recupero' || status === 'tardy') {
-                  presentCount++;
-                }
+              if (status === 'present' || status === 'recupero' || status === 'tardy') {
+                attendedCount++;
               }
+              if (status !== 'excused') { // This logic was wrong, but user wants excused to count as absent. Let's adjust based on the report page logic.
+                // The correct logic is to count all required classes in the denominator
+              }
+               // Let's adopt the logic from the reports page for consistency.
+              if (status === 'present' || status === 'tardy' || status === 'absent' || status === 'recupero' || status === 'excused') {
+                  totalRequired++;
+              }
+
             });
         }
     });
-    const attendanceRate = totalClassesForPercentage > 0 ? ((presentCount / totalClassesForPercentage) * 100).toFixed(0) : "0";
+
+    const attendanceRate = totalRequired > 0 ? ((attendedCount / totalRequired) * 100).toFixed(0) : "0";
     
     return { activeFirefighters, upcomingSessions, onLeave, attendanceRate };
   }, [firefighters, sessions, leaves]);
@@ -127,7 +134,7 @@ export default function DashboardPage() {
                       Object.values(session.attendance).forEach(status => {
                           if (status === 'present' || status === 'recupero') {
                               attendees++;
-                          } else if (status === 'absent') {
+                          } else if (status === 'absent' || status === 'excused') {
                               absentees++;
                           }
                       });
