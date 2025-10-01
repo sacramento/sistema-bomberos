@@ -11,7 +11,14 @@ import { useEffect, useState, useMemo } from "react";
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { User, Truck } from "lucide-react";
+import { User, Truck, Users2 } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
+import { Badge } from "@/components/ui/badge";
 
 const getBorderColor = (firehouse: Week['firehouse']) => {
     switch (firehouse) {
@@ -101,27 +108,42 @@ export default function WeeksListPage() {
              <div className="space-y-4">
                 {weekList.map(week => (
                     <Card key={week.id} className={cn("border-l-4 shadow-sm", getBorderColor(week.firehouse))}>
-                       <div className="grid grid-cols-1 sm:grid-cols-4 items-center p-4 gap-4">
-                            <div className="sm:col-span-2">
-                                 <h3 className="font-headline text-lg font-semibold">{week.name}</h3>
-                                 <p className="text-sm text-muted-foreground">
-                                    {format(parseISO(week.periodStartDate), "dd/MM")} - {format(parseISO(week.periodEndDate), "dd/MM/yyyy")}
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm">
-                                <User className="h-4 w-4 text-muted-foreground"/>
-                                <div>
-                                    <span className="font-medium">Encargado:</span>
-                                    <p className="text-muted-foreground">{week.lead?.lastName || 'N/A'}</p>
+                       <div className="p-4">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center">
+                                 <div>
+                                     <h3 className="font-headline text-lg font-semibold">{week.name}</h3>
+                                     <p className="text-sm text-muted-foreground">
+                                        {format(parseISO(week.periodStartDate), "dd/MM")} - {format(parseISO(week.periodEndDate), "dd/MM/yyyy")}
+                                    </p>
+                                 </div>
+                                <div className="flex items-center gap-2 mt-2 sm:mt-0">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <User className="h-4 w-4 text-muted-foreground"/>
+                                        <p><span className="font-medium">Enc:</span> {week.lead?.lastName || 'N/A'}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Truck className="h-4 w-4 text-muted-foreground"/>
+                                         <p><span className="font-medium">Chofer:</span> {week.driver?.lastName || 'N/A'}</p>
+                                    </div>
                                 </div>
                             </div>
-                             <div className="flex items-center gap-2 text-sm">
-                                <Truck className="h-4 w-4 text-muted-foreground"/>
-                                <div>
-                                    <span className="font-medium">Chofer:</span>
-                                    <p className="text-muted-foreground">{week.driver?.lastName || 'N/A'}</p>
-                                </div>
-                            </div>
+                            <Accordion type="single" collapsible className="w-full mt-2">
+                              <AccordionItem value="item-1">
+                                <AccordionTrigger>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <Users2 className="h-4 w-4 text-muted-foreground" />
+                                    <span>{week.allMembers?.length || 0} Integrantes</span>
+                                  </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                  <div className="flex flex-wrap gap-2 pt-2">
+                                    {week.members?.map(member => (
+                                        <Badge key={member.id} variant="outline">{member.lastName}</Badge>
+                                    ))}
+                                  </div>
+                                </AccordionContent>
+                              </AccordionItem>
+                            </Accordion>
                        </div>
                     </Card>
                 ))}
