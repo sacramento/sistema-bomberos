@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { Week } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import EditWeekDialog from "./edit-week-dialog";
 import { deleteWeek } from "@/services/weeks.service";
 import AddWeekDialog from "./add-week-dialog";
+import { cn } from "@/lib/utils";
 
 
 interface WeekListProps {
@@ -26,6 +27,15 @@ interface WeekListProps {
     isLoading?: boolean;
     onDataChange: () => void;
 }
+
+const getBorderColor = (firehouse: Week['firehouse']) => {
+    switch (firehouse) {
+        case 'Cuartel 1': return 'border-yellow-500';
+        case 'Cuartel 2': return 'border-blue-500';
+        case 'Cuartel 3': return 'border-orange-500';
+        default: return 'border-gray-500';
+    }
+};
 
 export default function WeekList({ weeks, isLoading, onDataChange }: WeekListProps) {
     const { user, getActiveRole } = useAuth();
@@ -50,9 +60,9 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
           <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, index) => (
                <Card key={index}>
-                    <CardContent className="p-4">
+                    <div className="p-4">
                         <Skeleton className="h-40 w-full" />
-                    </CardContent>
+                    </div>
                 </Card>
             ))}
           </div>
@@ -90,7 +100,7 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
         <div className="space-y-4">
             {filteredWeeks.map((week) => (
                 <AlertDialog key={week.id}>
-                    <Card className="flex flex-col sm:flex-row">
+                    <Card className={cn("flex flex-col sm:flex-row border-l-4", getBorderColor(week.firehouse))}>
                         <div className="flex-grow p-6">
                             <div className="flex justify-between items-start mb-2">
                                 <div>
