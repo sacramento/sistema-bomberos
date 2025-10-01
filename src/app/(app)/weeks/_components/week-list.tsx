@@ -6,7 +6,7 @@ import { Week } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy, Users2 } from "lucide-react";
@@ -107,7 +107,7 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
                                     <Badge variant="secondary" className="mb-2">{week.firehouse}</Badge>
                                     <h3 className="font-headline text-xl font-semibold">{week.name}</h3>
                                      <p className="text-sm text-muted-foreground">
-                                        {format(new Date(week.periodStartDate), "dd 'de' LLL", { locale: es })} - {format(new Date(week.periodEndDate), "dd 'de' LLL, yyyy", { locale: es })}
+                                        {format(parseISO(week.periodStartDate), "dd 'de' LLL", { locale: es })} - {format(parseISO(week.periodEndDate), "dd 'de' LLL, yyyy", { locale: es })}
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
