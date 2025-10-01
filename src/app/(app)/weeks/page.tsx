@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { useEffect, useState, useMemo } from "react";
-import WeekList from "./_components/week-list";
+import WeekList from "../_components/week-list";
 import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
