@@ -17,10 +17,12 @@ const tasksCollection = collection(db, 'tasks');
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
+    // Correctly read from allMemberIds
     const allMembers = (data.allMemberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     
     const lead = allMembers.find(m => m.id === data.leadId);
     const driver = allMembers.find(m => m.id === data.driverId);
+    // Members are everyone who is not the lead or driver
     const members = allMembers.filter(m => m.id !== data.leadId && m.id !== data.driverId);
 
     const week: Week = {
@@ -62,6 +64,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
 
 
 export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>): Promise<string> => {
+    // Combine all unique IDs.
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     
     const dataToSave = {
@@ -71,8 +74,10 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
         periodEndDate: weekData.periodEndDate,
         leadId: weekData.leadId,
         driverId: weekData.driverId,
+        // The individual members list (without lead/driver) is primarily for editing convenience.
         memberIds: weekData.memberIds,
-        allMemberIds: allMemberIds, // Save the complete list of everyone
+        // This is the crucial field for reading and displaying the full team.
+        allMemberIds: allMemberIds,
         observations: weekData.observations
     };
 
@@ -83,10 +88,18 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
 export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>): Promise<void> => {
     const docRef = doc(db, 'weeks', id);
 
-    const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...(weekData.memberIds || [])]));
-
     const dataToUpdate: any = { ...weekData };
-    if (weekData.leadId && weekData.driverId && weekData.memberIds) {
+
+    // If roles or members change, recalculate allMemberIds
+    if (weekData.leadId || weekData.driverId || weekData.memberIds) {
+        const docSnap = await getDoc(docRef);
+        const currentData = docSnap.data() as Week;
+
+        const newLeadId = weekData.leadId ?? currentData.leadId;
+        const newDriverId = weekData.driverId ?? currentData.driverId;
+        const newMemberIds = weekData.memberIds ?? currentData.memberIds;
+        
+        const allMemberIds = Array.from(new Set([newLeadId, newDriverId, ...newMemberIds]));
         dataToUpdate.allMemberIds = allMemberIds;
     }
     
