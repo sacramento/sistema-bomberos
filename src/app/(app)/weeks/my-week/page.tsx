@@ -11,70 +11,109 @@ import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyWeekPage() {
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
+    const router = useRouter();
     const { toast } = useToast();
-    const [weeks, setWeeks] = useState<Week[]>([]);
+    const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
     const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    const fetchWeeks = async () => {
-        setLoading(true);
-        try {
-            const data = await getWeeks();
-            setWeeks(data);
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "No se pudo cargar el listado de semanas.",
-                variant: "destructive"
-            });
-        } finally {
-            setLoading(false);
-        }
+    useEffect(() => {
+        const fetchAllData = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            try {
+                const weeksData = await getWeeks();
+                const userWeeks = weeksData.filter(week => 
+                    week.allMembers?.some(member => member.legajo === user.id)
+                );
+                
+                const today = new Date();
+                const activeWeek = userWeeks.find(week => {
+                    const startDate = startOfDay(parseISO(week.periodStartDate));
+                    const endDate = endOfDay(parseISO(week.periodEndDate));
+                    return isWithinInterval(today, { start: startDate, end: endDate });
+                });
+
+                // If user has an active week, redirect them directly to it.
+                if (activeWeek) {
+                    router.replace(`/weeks/${activeWeek.id}`);
+                    // We don't setLoading(false) here because the redirect will unmount this component.
+                } else {
+                    setAllWeeks(userWeeks);
+                    setLoading(false);
+                }
+
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "No se pudieron cargar los datos de la semana.",
+                    variant: "destructive"
+                });
+                setLoading(false);
+            }
+        };
+
+        fetchAllData();
+    }, [user, router, toast]);
+
+    const handleDataChange = () => {
+        // Re-trigger the fetch logic
+         const fetchAllData = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            }
+            setLoading(true);
+            try {
+                const weeksData = await getWeeks();
+                const userWeeks = weeksData.filter(week => 
+                    week.allMembers?.some(member => member.legajo === user.id)
+                );
+                setAllWeeks(userWeeks);
+            } catch (error) {
+                 toast({
+                    title: "Error",
+                    description: "No se pudieron recargar los datos.",
+                    variant: "destructive"
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchAllData();
     };
 
-    useEffect(() => {
-        fetchWeeks();
-    }, [toast]);
-    
-    const handleDataChange = () => {
-        fetchWeeks();
+    if (loading) {
+        return (
+             <>
+                <PageHeader title="Mis Semanas" description="Gestiona y visualiza tus semanas de guardia asignadas.">
+                    {canManage && <Skeleton className="h-10 w-36" />}
+                </PageHeader>
+                <div className="space-y-4">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                </div>
+            </>
+        )
     }
     
-    const weeksForUser = useMemo(() => {
-        if (loading || !user) return [];
-        if (canManage || activeRole === 'Oficial') {
-            return weeks;
-        }
-        return weeks.filter(week => 
-            week.allMembers?.some(member => member.legajo === user.id)
-        );
-    }, [weeks, user, activeRole, loading, canManage]);
-
-    const weeksGroupedByFirehouse = useMemo(() => {
-        return weeksForUser.reduce((acc, week) => {
-            const firehouse = week.firehouse || 'Sin Cuartel';
-            if (!acc[firehouse]) {
-                acc[firehouse] = [];
-            }
-            acc[firehouse].push(week);
-            return acc;
-        }, {} as Record<string, Week[]>);
-    }, [weeksForUser]);
-
-    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
-
     return (
         <>
             <PageHeader 
-                title="Mi Semana" 
-                description="Gestione y visualice las semanas de guardia asignadas."
+                title="Mis Semanas" 
+                description="Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."
             >
                 {canManage && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
@@ -86,24 +125,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <div className="space-y-12">
-               {firehouseOrder.map(firehouse => (
-                    weeksGroupedByFirehouse[firehouse] && weeksGroupedByFirehouse[firehouse].length > 0 && (
-                        <div key={firehouse} className="mb-8">
-                            <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
-                            <WeekList weeks={weeksGroupedByFirehouse[firehouse]} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
-                        </div>
-                    )
-                ))}
-                {!loading && weeksForUser.length === 0 && (
-                     <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                        <div className="text-center">
-                            <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
-                            <p className="text-muted-foreground mt-2">No estás asignado a ninguna semana.</p>
-                        </div>
-                    </div>
-                )}
-            </div>
+            <WeekList weeks={allWeeks} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
         </>
     );
 }
