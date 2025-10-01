@@ -98,10 +98,9 @@ export default function DashboardPage() {
               if (status === 'present' || status === 'recupero' || status === 'tardy') {
                 attendedCount++;
               }
-              if (status === 'present' || status === 'tardy' || status === 'absent' || status === 'recupero' || status === 'excused') {
+              if (status === 'present' || status === 'tardy' || status === 'absent' || status === 'excused' || status === 'recupero') {
                   totalRequired++;
               }
-
             });
         }
     });
@@ -301,5 +300,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
-    
