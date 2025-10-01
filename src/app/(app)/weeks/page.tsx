@@ -122,7 +122,7 @@ export default function WeeksDashboardPage() {
                                 weeks={weeksGroupedByFirehouse[firehouse]} 
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
-                                canManage={false} // Force read-only view
+                                canManage={false} // This page is always read-only
                             />
                         </div>
                     )
@@ -131,4 +131,3 @@ export default function WeeksDashboardPage() {
         </>
     );
 }
-
