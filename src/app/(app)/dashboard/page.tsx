@@ -9,11 +9,11 @@ import { useAuth } from '@/context/auth-context';
 import { Button } from '@/components/ui/button';
 
 export default function PortalPage() {
-  const { user, logout } = useAuth();
+  const { user, logout, getActiveRole } = useAuth();
   
   // The href for "Asistencia" is now dynamic based on the user's role.
   // High-level roles go to the main dashboard, 'Bombero' goes directly to their report.
-  const assistanceHref = user?.role === 'Bombero' ? '/reports' : '/sessions';
+  const assistanceHref = getActiveRole('/sessions') === 'Bombero' ? '/reports' : '/sessions';
   const weeksHref = "/weeks";
 
 
@@ -94,4 +94,3 @@ export default function PortalPage() {
     </div>
   );
 }
-

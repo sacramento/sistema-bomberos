@@ -154,7 +154,7 @@ export default function WeeksPage() {
             >
                 <div className="flex items-center gap-2">
                     <Button asChild variant="outline">
-                        <Link href="/dashboard"><Home className="mr-2"/>Inicio</Link>
+                        <Link href="/sessions"><Home className="mr-2"/>Inicio</Link>
                     </Button>
                     {canManage && (
                         <AddWeekDialog onWeekAdded={handleDataChange}>
