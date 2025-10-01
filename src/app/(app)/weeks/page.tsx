@@ -12,7 +12,7 @@ import { Week, Task } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { getTasksByWeek } from "@/services/tasks.service";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import MyTasks from "./_components/my-tasks";
@@ -66,29 +66,42 @@ export default function WeeksPage() {
         const today = new Date();
         const active: Week[] = [];
         const past: Week[] = [];
+        
+        const currentActiveWeeksByFirehouse: Record<string, string> = {
+            'Cuartel 1': 'Ninguna',
+            'Cuartel 2': 'Ninguna',
+            'Cuartel 3': 'Ninguna'
+        };
 
         allWeeks.forEach(week => {
             const startDate = startOfDay(new Date(week.periodStartDate));
             const endDate = endOfDay(new Date(week.periodEndDate));
-            if (isWithinInterval(today, { start: startDate, end: endDate })) {
-                active.push(week);
-            } else if (new Date(week.periodEndDate) < today) {
+            if (new Date(week.periodEndDate) < today) {
                 past.push(week);
             } else {
-                 active.push(week); // Also consider future weeks as "active" for visibility
+                 active.push(week); 
+            }
+            
+            if (isWithinInterval(today, { start: startDate, end: endDate })) {
+                if (currentActiveWeeksByFirehouse.hasOwnProperty(week.firehouse)) {
+                    currentActiveWeeksByFirehouse[week.firehouse] = week.name;
+                }
             }
         });
         
         const totalPendingTasks = allTasks.filter(task => task.status === 'Pendiente').length;
-        const membersInService = active.reduce((acc, week) => acc + (week.allMembers?.length || 0), 0);
         
         const stats = {
             activeWeeksCount: active.length,
             pendingTasksCount: totalPendingTasks,
-            membersInServiceCount: membersInService
+            activeWeeksByFirehouse: currentActiveWeeksByFirehouse,
         };
 
-        return { activeWeeks: active.sort((a,b) => new Date(a.periodStartDate).getTime() - new Date(b.periodStartDate).getTime()), pastWeeks: past, dashboardStats: stats };
+        return { 
+            activeWeeks: active.sort((a,b) => new Date(a.periodStartDate).getTime() - new Date(b.periodStartDate).getTime()), 
+            pastWeeks: past.sort((a,b) => new Date(b.periodStartDate).getTime() - new Date(a.periodStartDate).getTime()), 
+            dashboardStats: stats 
+        };
     }, [allWeeks, allTasks]);
 
 
@@ -148,12 +161,16 @@ export default function WeeksPage() {
                     </CardContent>
                 </Card>
                 <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Personal de Guardia (Actualmente)</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium">Semanas Activas Hoy</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{dashboardStats.membersInServiceCount}</div>
+                    <CardContent className="text-sm">
+                         {Object.entries(dashboardStats.activeWeeksByFirehouse).map(([firehouse, weekName]) => (
+                            <div key={firehouse} className="flex justify-between">
+                                <span className="text-muted-foreground">{firehouse}:</span>
+                                <span className="font-semibold">{weekName}</span>
+                            </div>
+                        ))}
                     </CardContent>
                 </Card>
             </div>
