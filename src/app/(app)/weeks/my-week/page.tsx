@@ -49,13 +49,13 @@ export default function MyWeekPage() {
     
     const weeksForUser = useMemo(() => {
         if (loading || !user) return [];
-        if (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') {
+        if (canManage || activeRole === 'Oficial') {
             return weeks;
         }
         return weeks.filter(week => 
             week.allMembers?.some(member => member.legajo === user.id)
         );
-    }, [weeks, user, activeRole, loading]);
+    }, [weeks, user, activeRole, loading, canManage]);
 
     const weeksGroupedByFirehouse = useMemo(() => {
         return weeksForUser.reduce((acc, week) => {
