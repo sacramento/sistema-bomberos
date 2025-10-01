@@ -12,6 +12,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
@@ -56,7 +58,7 @@ export default function AllTasksPage() {
         return tasks.map(task => ({
             ...task,
             weekName: weekMap.get(task.weekId) || 'Semana desconocida'
-        })).sort((a,b) => (a.weekName.localeCompare(b.weekName) || a.title.localeCompare(b.title)));
+        }));
     }, [tasks, weeks]);
 
     return (
@@ -65,7 +67,7 @@ export default function AllTasksPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Todas las Tareas</CardTitle>
-                    <CardDescription>Mostrando {enrichedTasks.length} tareas en total.</CardDescription>
+                    <CardDescription>Mostrando {enrichedTasks.length} tareas en total, ordenadas por fecha de creación.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -73,6 +75,7 @@ export default function AllTasksPage() {
                             <TableRow>
                                 <TableHead>Tarea</TableHead>
                                 <TableHead>Semana</TableHead>
+                                <TableHead>Fecha Creación</TableHead>
                                 <TableHead>Asignado a</TableHead>
                                 <TableHead className="text-right">Estado</TableHead>
                             </TableRow>
@@ -81,9 +84,10 @@ export default function AllTasksPage() {
                             {loading ? (
                                 Array.from({ length: 10 }).map((_, index) => (
                                     <TableRow key={index}>
-                                        <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                                         <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-5 w-56" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-48" /></TableCell>
                                         <TableCell className="text-right"><Skeleton className="h-6 w-24 ml-auto" /></TableCell>
                                     </TableRow>
                                 ))
@@ -92,6 +96,7 @@ export default function AllTasksPage() {
                                     <TableRow key={task.id}>
                                         <TableCell className="font-medium">{task.title}</TableCell>
                                         <TableCell>{task.weekName}</TableCell>
+                                        <TableCell>{task.createdAt ? format(task.createdAt.toDate(), 'P', { locale: es }) : 'N/A'}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
                                                 {task.assignedTo && task.assignedTo.length > 0 ? 
@@ -107,7 +112,7 @@ export default function AllTasksPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
+                                    <TableCell colSpan={5} className="h-24 text-center">
                                         No hay tareas registradas en el sistema.
                                     </TableCell>
                                 </TableRow>

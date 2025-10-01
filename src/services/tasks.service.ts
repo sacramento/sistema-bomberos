@@ -4,7 +4,7 @@
 
 import { Task, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -27,7 +27,8 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 }
 
 export const getAllTasks = async (): Promise<Task[]> => {
-    const querySnapshot = await getDocs(tasksCollection);
+    const q = query(tasksCollection, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
@@ -39,7 +40,7 @@ export const getAllTasks = async (): Promise<Task[]> => {
 };
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
-    const q = query(tasksCollection, where('weekId', '==', weekId));
+    const q = query(tasksCollection, where('weekId', '==', weekId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
@@ -51,8 +52,12 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     return tasks.sort((a, b) => a.title.localeCompare(b.title));
 }
 
-export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo'>): Promise<string> => {
-    const docRef = await addDoc(tasksCollection, taskData);
+export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>): Promise<string> => {
+    const dataToSave = {
+        ...taskData,
+        createdAt: serverTimestamp(),
+    }
+    const docRef = await addDoc(tasksCollection, dataToSave);
     return docRef.id;
 }
 

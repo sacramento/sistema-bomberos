@@ -114,6 +114,7 @@ export type Task = {
     description: string;
     assignedToIds: string[]; // List of firefighter IDs assigned to the task
     status: 'Pendiente' | 'En Progreso' | 'Completada';
+    createdAt: any; // Firestore ServerTimestamp
     // Enriched properties for client side
     assignedTo?: Firefighter[];
 }
