@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
