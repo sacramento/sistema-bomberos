@@ -4,7 +4,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth-context";
-import { PlusCircle, Calendar, ClipboardList, Users, Home } from "lucide-react";
+import { PlusCircle, Calendar, ClipboardList, Home } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import AddWeekDialog from "./_components/add-week-dialog";
 import WeekList from "./_components/week-list";
@@ -12,7 +12,7 @@ import { Week, Task } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { getTasksByWeek } from "@/services/tasks.service";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import MyTasks from "./_components/my-tasks";
@@ -105,6 +105,21 @@ export default function WeeksPage() {
     }, [allWeeks, allTasks]);
 
 
+    const weeksByFirehouse = (weekList: Week[]) => {
+        return weekList.reduce((acc, week) => {
+            const firehouse = week.firehouse || 'Sin Cuartel';
+            if (!acc[firehouse]) {
+                acc[firehouse] = [];
+            }
+            acc[firehouse].push(week);
+            return acc;
+        }, {} as Record<string, Week[]>);
+    }
+
+    const activeWeeksGrouped = weeksByFirehouse(activeWeeks);
+    const pastWeeksGrouped = weeksByFirehouse(pastWeeks);
+    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+
     if (loading) {
         return (
              <>
@@ -119,6 +134,17 @@ export default function WeeksPage() {
              </>
         )
     }
+
+    const renderWeekGroups = (groupedWeeks: Record<string, Week[]>) => {
+        return firehouseOrder.map(firehouse => (
+            groupedWeeks[firehouse] && groupedWeeks[firehouse].length > 0 && (
+                <div key={firehouse} className="space-y-4">
+                    <h2 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2">{firehouse}</h2>
+                    <WeekList weeks={groupedWeeks[firehouse]} isLoading={loading} onDataChange={handleDataChange} />
+                </div>
+            )
+        ));
+    };
 
     return (
         <>
@@ -182,11 +208,11 @@ export default function WeeksPage() {
                     <TabsTrigger value="active">Semanas en Curso y Futuras</TabsTrigger>
                     <TabsTrigger value="past">Semanas Pasadas</TabsTrigger>
                 </TabsList>
-                <TabsContent value="active">
-                    <WeekList weeks={activeWeeks} isLoading={loading} onDataChange={handleDataChange} />
+                <TabsContent value="active" className="space-y-8">
+                    {renderWeekGroups(activeWeeksGrouped)}
                 </TabsContent>
-                <TabsContent value="past">
-                     <WeekList weeks={pastWeeks} isLoading={loading} onDataChange={handleDataChange} />
+                <TabsContent value="past" className="space-y-8">
+                     {renderWeekGroups(pastWeeksGrouped)}
                 </TabsContent>
             </Tabs>
         </>
