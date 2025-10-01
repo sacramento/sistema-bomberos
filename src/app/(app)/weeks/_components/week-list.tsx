@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy } from "lucide-react";
+import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy, Users2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
@@ -47,21 +47,13 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
 
     if (isLoading) {
         return (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-4">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Card key={index}>
-                <CardHeader>
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <Skeleton className="h-5 w-full" />
-                    <Skeleton className="h-5 w-5/6" />
-                </CardContent>
-                <CardFooter>
-                  <Skeleton className="h-10 w-full" />
-                </CardFooter>
-              </Card>
+               <Card key={index}>
+                    <CardContent className="p-4">
+                        <Skeleton className="h-40 w-full" />
+                    </CardContent>
+                </Card>
             ))}
           </div>
         );
@@ -95,66 +87,81 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
 
 
     return (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="space-y-4">
             {filteredWeeks.map((week) => (
                 <AlertDialog key={week.id}>
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <CardTitle className="font-headline text-xl">{week.name}</CardTitle>
-                                {canManage ? (
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
-                                                <MoreVertical className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                            <EditWeekDialog week={week} onWeekUpdated={onDataChange}>
-                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Edit className="mr-2 h-4 w-4" /> Editar
-                                                </DropdownMenuItem>
-                                            </EditWeekDialog>
-                                            <AddWeekDialog onWeekAdded={onDataChange} initialData={week}>
-                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                    <Copy className="mr-2 h-4 w-4" /> Clonar
-                                                </DropdownMenuItem>
-                                            </AddWeekDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar
-                                                </DropdownMenuItem>
-                                            </AlertDialogTrigger>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                ) : (
-                                     <Badge variant="secondary">{week.firehouse}</Badge>
-                                )}
+                    <Card className="flex flex-col sm:flex-row">
+                        <div className="flex-grow p-6">
+                            <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <Badge variant="secondary" className="mb-2">{week.firehouse}</Badge>
+                                    <h3 className="font-headline text-xl font-semibold">{week.name}</h3>
+                                     <p className="text-sm text-muted-foreground">
+                                        {format(new Date(week.periodStartDate), "dd 'de' LLL", { locale: es })} - {format(new Date(week.periodEndDate), "dd 'de' LLL, yyyy", { locale: es })}
+                                    </p>
+                                </div>
+                                <div className="flex-shrink-0">
+                                     {canManage && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                <EditWeekDialog week={week} onWeekUpdated={onDataChange}>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Editar
+                                                    </DropdownMenuItem>
+                                                </EditWeekDialog>
+                                                <AddWeekDialog onWeekAdded={onDataChange} initialData={week}>
+                                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                        <Copy className="mr-2 h-4 w-4" /> Clonar
+                                                    </DropdownMenuItem>
+                                                </AddWeekDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                    </DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
+                                </div>
                             </div>
-                            <CardDescription>
-                                {format(new Date(week.periodStartDate), "dd 'de' LLL", { locale: es })} - {format(new Date(week.periodEndDate), "dd 'de' LLL, yyyy", { locale: es })}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow space-y-3">
-                            <div className="flex items-center gap-2 text-sm">
-                                <User className="h-4 w-4 text-muted-foreground"/>
-                                <span className="font-medium">Encargado:</span>
-                                <span className="text-muted-foreground">{week.lead?.lastName || 'N/A'}</span>
+                           
+                            <div className="border-t pt-4 mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                                <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-muted-foreground"/>
+                                    <div>
+                                        <span className="font-medium">Encargado:</span>
+                                        <p className="text-muted-foreground">{week.lead?.lastName || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Truck className="h-4 w-4 text-muted-foreground"/>
+                                    <div>
+                                        <span className="font-medium">Chofer:</span>
+                                        <p className="text-muted-foreground">{week.driver?.lastName || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                 <div className="flex items-center gap-2">
+                                    <Users2 className="h-4 w-4 text-muted-foreground"/>
+                                    <div>
+                                        <span className="font-medium">Integrantes:</span>
+                                        <p className="text-muted-foreground">{week.allMembers?.length || 0} en total</p>
+                                    </div>
+                                </div>
                             </div>
-                             <div className="flex items-center gap-2 text-sm">
-                                <Truck className="h-4 w-4 text-muted-foreground"/>
-                                <span className="font-medium">Chofer:</span>
-                                <span className="text-muted-foreground">{week.driver?.lastName || 'N/A'}</span>
-                            </div>
-                        </CardContent>
-                        <CardFooter>
-                            <Button asChild className="w-full" variant="outline">
+                        </div>
+                        <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
+                            <Button asChild className="w-full sm:w-auto" variant="outline">
                                 <Link href={`/weeks/${week.id}`}>
                                     Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
                                 </Link>
                             </Button>
-                        </CardFooter>
+                        </div>
                     </Card>
                     <AlertDialogContent>
                         <AlertDialogHeader>
@@ -175,5 +182,3 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
         </div>
     )
 }
-
-    
