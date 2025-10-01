@@ -14,7 +14,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Firefighter, Week } from "@/lib/types";
@@ -30,6 +29,7 @@ import { DateRange } from "react-day-picker";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
 
 const stationOptions = [
     { value: 'Cuartel 1', label: 'Cuartel 1' },
@@ -136,7 +136,7 @@ const MultiFirefighterSelect = ({
     );
 };
 
-export default function AddWeekDialog({ children, onWeekAdded }: { children: React.ReactNode; onWeekAdded: () => void; }) {
+export default function AddWeekDialog({ children, onWeekAdded, initialData }: { children: React.ReactNode; onWeekAdded: () => void; initialData?: Partial<Week> }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
@@ -169,6 +169,16 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
     };
     fetchAllFirefighters();
   }, [open, toast]);
+
+  useEffect(() => {
+      if (open && initialData) {
+          setFirehouse(initialData.firehouse || '');
+          setLead(initialData.lead || null);
+          setDriver(initialData.driver || null);
+          setMembers(initialData.members || []);
+      }
+  }, [open, initialData])
+  
   
   const resetForm = () => {
     setName('');
@@ -316,12 +326,25 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) resetForm(); setOpen(isOpen); }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { 
+        if (isOpen) {
+            // If we are opening and NOT cloning, reset.
+            if (!initialData) {
+                resetForm();
+            }
+        } else {
+            // Always reset on close.
+            resetForm();
+        }
+        setOpen(isOpen); 
+    }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="sm:max-w-lg flex flex-col">
              <DialogHeader>
-                <DialogTitle className="font-headline">Crear Nueva Semana</DialogTitle>
-                <DialogDescription>Paso {step} de {totalSteps} - Complete los detalles de la nueva semana.</DialogDescription>
+                <DialogTitle className="font-headline">{initialData ? 'Clonar Semana' : 'Crear Nueva Semana'}</DialogTitle>
+                <DialogDescription>
+                  {initialData ? 'Ajuste los detalles para la nueva semana clonada.' : `Paso ${step} de ${totalSteps} - Complete los detalles de la nueva semana.`}
+                </DialogDescription>
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
 
@@ -349,3 +372,5 @@ export default function AddWeekDialog({ children, onWeekAdded }: { children: Rea
     </Dialog>
   );
 }
+
+    

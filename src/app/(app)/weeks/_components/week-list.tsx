@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Week } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
@@ -18,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import EditWeekDialog from "./edit-week-dialog";
 import { deleteWeek } from "@/services/weeks.service";
+import AddWeekDialog from "./add-week-dialog";
 
 
 interface WeekListProps {
@@ -115,6 +116,11 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
                                                     <Edit className="mr-2 h-4 w-4" /> Editar
                                                 </DropdownMenuItem>
                                             </EditWeekDialog>
+                                            <AddWeekDialog onWeekAdded={onDataChange} initialData={week}>
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                                    <Copy className="mr-2 h-4 w-4" /> Clonar
+                                                </DropdownMenuItem>
+                                            </AddWeekDialog>
                                             <AlertDialogTrigger asChild>
                                                 <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                                                     <Trash2 className="mr-2 h-4 w-4" /> Eliminar
@@ -169,3 +175,5 @@ export default function WeekList({ weeks, isLoading, onDataChange }: WeekListPro
         </div>
     )
 }
+
+    
