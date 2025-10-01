@@ -119,7 +119,15 @@ function Sidebar() {
                 )}
                 {navItemsByModule[moduleKey].map((item) => {
                   const label = getLabel(item);
-                  const isActive = pathname.startsWith(item.href);
+                  
+                  // More specific active check
+                  let isActive = false;
+                  if (item.href === '/weeks') {
+                    isActive = pathname === '/weeks' || pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week');
+                  } else {
+                    isActive = pathname === item.href;
+                  }
+
                   const buttonContent = (
                     <Link
                       href={item.href}
