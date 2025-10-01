@@ -1,10 +1,9 @@
 
-
 'use server';
 
 import { Task, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 
 if (!db) {
@@ -21,25 +20,34 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     const task: Task = {
         id: docSnap.id,
         ...data,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt : null, // Handle missing or incorrect timestamp
         assignedTo,
     };
     return task;
 }
 
 export const getAllTasks = async (): Promise<Task[]> => {
-    const q = query(tasksCollection, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
+    // Get all tasks without ordering at the DB level to prevent issues with missing fields
+    const querySnapshot = await getDocs(tasksCollection);
     
     const allFirefighters = await getFirefighters();
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-    const tasks = await Promise.all(tasksPromises);
+    let tasks = await Promise.all(tasksPromises);
+
+    // Sort in the application code to handle documents that might not have the createdAt field
+    tasks = tasks.sort((a, b) => {
+        const timeA = a.createdAt?.toDate().getTime() || 0;
+        const timeB = b.createdAt?.toDate().getTime() || 0;
+        return timeB - timeA; // Descending
+    });
 
     return tasks;
 };
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
+    // This can still be ordered as it's a more controlled query
     const q = query(tasksCollection, where('weekId', '==', weekId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     
