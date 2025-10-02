@@ -217,10 +217,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         const currentNavItem = [...navItems]
-            // Sort by href length descending to match more specific paths first
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => {
-                // Special case for /weeks to avoid matching /weeks/my-week or /weeks/tasks
                  if (item.href === '/weeks') {
                     return pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                 }
@@ -231,17 +229,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
-               router.push('/dashboard'); 
+               // If a user from 'semanas' module tries to access a non-semanas page, redirect them to their main page
+               const isWeeksUser = user.roles.semanas !== 'Ninguno';
+               const isAsistenciaUser = user.roles.asistencia !== 'Ninguno';
+               if (isWeeksUser && !isAsistenciaUser) {
+                   router.push('/weeks/my-week');
+               } else {
+                   router.push('/dashboard'); 
+               }
             }
         } else if (pathname !== '/dashboard') {
-            const isWeeksUser = user.roles.semanas !== 'Ninguno';
-            const isAsistenciaUser = user.roles.asistencia !== 'Ninguno';
-
-            if (isWeeksUser && !isAsistenciaUser) {
-                router.push('/weeks/my-week');
-            } else if (pathname !== '/sessions') {
-                 router.push('/dashboard');
-            }
+            // Fallback for paths that don't match any nav item
+            router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
