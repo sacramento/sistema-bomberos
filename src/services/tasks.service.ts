@@ -25,12 +25,13 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     } else if (typeof data.createdAt === 'string') {
         // If it's already a string, use it directly
         createdAtString = data.createdAt;
-    } else if (data.createdAt) { 
-        // For other potential formats, try converting to a Date object first
+    } else if (data.createdAt?.seconds) { 
+        // Handle plain object representation of Timestamp
         try {
-            createdAtString = new Date(data.createdAt).toISOString();
+            const timestamp = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds);
+            createdAtString = timestamp.toDate().toISOString();
         } catch (e) {
-            console.error("Could not parse createdAt date", data.createdAt);
+            console.error("Could not parse createdAt object", data.createdAt);
         }
     }
 
