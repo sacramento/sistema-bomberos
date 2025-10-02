@@ -327,7 +327,7 @@ export default function WeekDetailPage() {
                                     <li className="flex items-center gap-3">
                                         <User className="h-5 w-5 text-primary"/>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold">{`${week.lead.firstName} ${week.lead.lastName}`}</span>
+                                            <span className="font-semibold">{`${week.lead?.firstName || ''} ${week.lead?.lastName || ''}`}</span>
                                             <Badge>Encargado</Badge>
                                         </div>
                                     </li>
@@ -336,7 +336,7 @@ export default function WeekDetailPage() {
                                     <li className="flex items-center gap-3">
                                         <Truck className="h-5 w-5 text-primary"/>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold">{`${week.driver.firstName} ${week.driver.lastName}`}</span>
+                                            <span className="font-semibold">{`${week.driver?.firstName || ''} ${week.driver?.lastName || ''}`}</span>
                                             <Badge variant="secondary">Chofer</Badge>
                                         </div>
                                     </li>
