@@ -41,7 +41,7 @@ export const getAllTasks = async (): Promise<Task[]> => {
 };
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
-    const q = query(tasksCollection, where('weekId', '==', weekId), orderBy('createdAt', 'desc'));
+    const q = query(tasksCollection, where('weekId', '==', weekId));
     const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
