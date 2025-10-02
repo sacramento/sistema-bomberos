@@ -124,6 +124,7 @@ export default function WeeksDashboardPage() {
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
                                 canManage={false}
+                                showDetailsButton={false}
                             />
                         </div>
                     )

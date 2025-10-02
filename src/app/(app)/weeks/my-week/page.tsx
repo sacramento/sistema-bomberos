@@ -26,84 +26,76 @@ export default function MyWeekPage() {
     const activeRole = getActiveRole(pathname);
     const isSupervisor = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    useEffect(() => {
-        const fetchAllWeeks = async () => {
-            if (!user) {
-                setLoading(false);
-                return;
-            };
-
-            setLoading(true);
-            try {
-                const allWeeksData = await getWeeks();
-                setAllWeeks(allWeeksData);
-
-                // This redirection logic only applies to non-supervisors (Encargado, Bombero).
-                if (!isSupervisor && activeRole !== 'Oficial') {
-                     const assignedWeeks = allWeeksData.filter(week => 
-                        week.allMembers?.some(member => member.legajo === user.id)
-                    );
-                    const today = new Date();
-                    const activeWeek = assignedWeeks.find(week => {
-                        const startDate = startOfDay(parseISO(week.periodStartDate));
-                        const endDate = endOfDay(parseISO(week.periodEndDate));
-                        return isWithinInterval(today, { start: startDate, end: endDate });
-                    });
-
-                    if (activeWeek) {
-                        router.replace(`/weeks/${activeWeek.id}`);
-                        return; // A redirect is happening, so we don't need to finish loading on this page.
-                    }
-                }
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "No se pudieron cargar los datos de la semana.",
-                    variant: "destructive"
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-        fetchAllWeeks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, isSupervisor, activeRole]);
-
-    const handleDataChange = () => {
-        setLoading(true);
-        getWeeks().then(data => {
-            setAllWeeks(data);
+    const fetchAllWeeks = async () => {
+        if (!user) {
             setLoading(false);
-        }).catch(() => {
-             toast({
+            return;
+        };
+
+        setLoading(true);
+        try {
+            const allWeeksData = await getWeeks();
+            setAllWeeks(allWeeksData);
+        } catch (error) {
+            toast({
                 title: "Error",
-                description: "No se pudieron recargar los datos de la semana.",
+                description: "No se pudieron cargar los datos de la semana.",
                 variant: "destructive"
             });
+        } finally {
             setLoading(false);
-        });
+        }
+    };
+    
+    useEffect(() => {
+        fetchAllWeeks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+
+    const handleDataChange = () => {
+        fetchAllWeeks();
     };
 
-    const weeksToShow = useMemo(() => {
-        if (isSupervisor || activeRole === 'Oficial') {
-            return allWeeks; 
+    const { weeksToShow, isRedirecting } = useMemo(() => {
+        let shouldRedirect = false;
+        
+        if (loading || !user) {
+            return { weeksToShow: [], isRedirecting: false };
         }
-        if (user) {
-            return allWeeks.filter(week => 
+        
+        // For non-supervisors, check for an active week to redirect to.
+        if (!isSupervisor && activeRole !== 'Oficial') {
+            const assignedWeeks = allWeeks.filter(week => 
+                week.allMembers?.some(member => member.legajo === user.id)
+            );
+            const today = new Date();
+            const activeWeek = assignedWeeks.find(week => {
+                const startDate = startOfDay(parseISO(week.periodStartDate));
+                const endDate = endOfDay(parseISO(week.periodEndDate));
+                return isWithinInterval(today, { start: startDate, end: endDate });
+            });
+            if (activeWeek) {
+                shouldRedirect = true;
+                router.replace(`/weeks/${activeWeek.id}`);
+            }
+        }
+        
+        let finalWeeksToShow: Week[] = [];
+        if (isSupervisor) {
+            finalWeeksToShow = allWeeks; 
+        } else if (user) {
+            finalWeeksToShow = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
         }
-        return [];
-    }, [allWeeks, user, isSupervisor, activeRole]);
 
-    // This check prevents flashing the page content before a potential redirect for non-supervisors.
-    const isRedirecting = (!isSupervisor && activeRole !== 'Oficial') && !loading && weeksToShow.some(week => {
-        const today = new Date();
-        const startDate = startOfDay(parseISO(week.periodStartDate));
-        const endDate = endOfDay(parseISO(week.periodEndDate));
-        return isWithinInterval(today, { start: startDate, end: endDate });
-    });
+        return {
+            weeksToShow: finalWeeksToShow.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime()), 
+            isRedirecting: shouldRedirect
+        };
+
+    }, [allWeeks, user, isSupervisor, activeRole, loading, router]);
+
 
     if (loading || isRedirecting) {
         return (
@@ -121,7 +113,7 @@ export default function MyWeekPage() {
         <>
             <PageHeader 
                 title={isSupervisor ? "Gestión de Semanas" : "Mis Semanas"} 
-                description={isSupervisor ? "Cree, clone o gestione todas las semanas desde esta vista." : "Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."}
+                description={isSupervisor ? "Cree, clone o gestione todas las semanas desde esta vista." : "No tienes una semana activa. Aquí puedes ver todas tus semanas asignadas, pasadas y futuras."}
             >
                 {isSupervisor && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
@@ -133,7 +125,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={isSupervisor} />
+            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={isSupervisor} showDetailsButton={true} />
         </>
     );
 }
