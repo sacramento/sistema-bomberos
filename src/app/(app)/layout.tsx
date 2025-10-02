@@ -29,11 +29,10 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useEffect, useState } from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import TopNav from './_components/top-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
-import { Separator } from '@/components/ui/separator';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import MobileNav from './_components/mobile-nav';
 
 type NavItem = {
   href: string;
@@ -79,7 +78,6 @@ function Sidebar() {
 
 
   const getLabel = (item: NavItem) => {
-    // Determine role based on the item's specific path
     const itemActiveRole = getActiveRole(item.href);
     if (item.href === '/reports' && itemActiveRole === 'Bombero') {
       return 'Mi Reporte';
@@ -105,7 +103,7 @@ function Sidebar() {
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
         <div className="flex h-16 items-center border-b px-4">
-          <Link href="/sessions" className="flex items-center gap-2 font-semibold">
+          <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
             {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
           </Link>
@@ -147,11 +145,12 @@ function Sidebar() {
                                 <AccordionContent className="pl-4">
                                      {navItemsByModule[moduleKey].map(item => {
                                         const label = getLabel(item);
+                                        
                                         let isActive = false;
                                         if (item.href === '/weeks/my-week') {
                                             isActive = pathname === item.href;
-                                        } else if (item.href === '/weeks' && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) {
-                                            isActive = pathname.startsWith('/weeks');
+                                        } else if (item.href === '/weeks' && (pathname === item.href || pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
+                                           isActive = true;
                                         } else if (item.href === '/weeks/tasks') {
                                             isActive = pathname === item.href;
                                         } else if (item.href === '/sessions') {
@@ -159,6 +158,7 @@ function Sidebar() {
                                         } else {
                                             isActive = pathname.startsWith(item.href);
                                         }
+
 
                                         return (
                                             <Link
@@ -217,19 +217,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         
         const currentNavItem = [...navItems]
-            // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks)
+            // Sort by href length descending to match more specific paths first
             .sort((a,b) => b.href.length - a.href.length)
-            .find(item => pathname.startsWith(item.href));
+            .find(item => {
+                // Special case for /weeks to avoid matching /weeks/my-week or /weeks/tasks
+                 if (item.href === '/weeks') {
+                    return pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
+                }
+                return pathname.startsWith(item.href)
+            });
 
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
-               router.push('/sessions'); 
+               router.push('/dashboard'); 
             }
-        } else if (pathname !== '/dashboard' && !pathname.startsWith('/classes/') && !pathname.startsWith('/weeks/')) {
+        } else if (pathname !== '/dashboard') {
             console.log(`No matching nav item for '${pathname}'. Redirecting.`);
-            router.push('/sessions');
+            router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -242,17 +248,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = true;
-    const showTopNav = isMobile;
-    const activeRole = getActiveRole(pathname);
+    const showSidebar = !isMobile;
+    const showMobileNav = isMobile;
     
-    const availableNavItemsForTopNav = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
+    const availableNavItems = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
 
     return (
         <div className="flex min-h-screen w-full">
             {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
-                {showTopNav && <TopNav navItems={availableNavItemsForTopNav} userRole={activeRole} />}
+                {showMobileNav && <MobileNav navItems={availableNavItems} />}
                 <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
                     {children}
                 </main>
