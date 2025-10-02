@@ -60,15 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
 
-        const isWeeksUser = loggedInUser.roles.semanas !== 'Ninguno';
-        
-        // **REVISED LOGIC**: Prioritize 'semanas' module. If user has any role there, send them to my-week.
-        if (isWeeksUser) {
-          router.push('/weeks/my-week');
-        } else {
-          // Otherwise, default to 'asistencia' dashboard.
-          router.push('/sessions');
+        // Define a priority-based destination logic
+        const roles = loggedInUser.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+        let destination = '/dashboard'; // A safe fallback
+
+        if (roles.semanas !== 'Ninguno') {
+            destination = '/weeks/my-week';
+        } else if (roles.asistencia === 'Administrador' || roles.asistencia === 'Oficial' || roles.asistencia === 'Instructor') {
+            destination = '/sessions';
+        } else if (roles.asistencia === 'Ayudantía' || roles.asistencia === 'Bombero') {
+            // Ayudantía and Bombero don't have access to /sessions, so redirect to the first available page
+            destination = '/schedule'; 
         }
+        
+        router.push(destination);
+
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }
