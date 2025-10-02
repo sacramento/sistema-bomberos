@@ -24,67 +24,72 @@ export default function MyWeekPage() {
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const isPrivilegedUser = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
-    const isSupervisor = useMemo(() => isPrivilegedUser || activeRole === 'Oficial', [isPrivilegedUser, activeRole]);
+    const isSupervisor = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial', [activeRole]);
 
-
-    const fetchAllWeeks = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        };
-
-        setLoading(true);
-        try {
-            const allWeeksData = await getWeeks();
-            setAllWeeks(allWeeksData);
-
-            // This redirection logic only applies to non-supervisors.
-            // Supervisors will always see the list on this page.
-            if (!isSupervisor) {
-                 const assignedWeeks = allWeeksData.filter(week => 
-                    week.allMembers?.some(member => member.legajo === user.id)
-                );
-                const today = new Date();
-                const activeWeek = assignedWeeks.find(week => {
-                    const startDate = startOfDay(parseISO(week.periodStartDate));
-                    const endDate = endOfDay(parseISO(week.periodEndDate));
-                    return isWithinInterval(today, { start: startDate, end: endDate });
-                });
-
-                if (activeWeek) {
-                    router.replace(`/weeks/${activeWeek.id}`);
-                    // A redirect is happening, so we don't need to finish loading on this page.
-                    return; 
-                }
-            }
-        } catch (error) {
-            toast({
-                title: "Error",
-                description: "No se pudieron cargar los datos de la semana.",
-                variant: "destructive"
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
     useEffect(() => {
+        const fetchAllWeeks = async () => {
+            if (!user) {
+                setLoading(false);
+                return;
+            };
+
+            setLoading(true);
+            try {
+                const allWeeksData = await getWeeks();
+                setAllWeeks(allWeeksData);
+
+                // This redirection logic only applies to non-supervisors.
+                if (!isSupervisor) {
+                     const assignedWeeks = allWeeksData.filter(week => 
+                        week.allMembers?.some(member => member.legajo === user.id)
+                    );
+                    const today = new Date();
+                    const activeWeek = assignedWeeks.find(week => {
+                        const startDate = startOfDay(parseISO(week.periodStartDate));
+                        const endDate = endOfDay(parseISO(week.periodEndDate));
+                        return isWithinInterval(today, { start: startDate, end: endDate });
+                    });
+
+                    if (activeWeek) {
+                        router.replace(`/weeks/${activeWeek.id}`);
+                        return; // A redirect is happening, so we don't need to finish loading on this page.
+                    }
+                }
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "No se pudieron cargar los datos de la semana.",
+                    variant: "destructive"
+                });
+            } finally {
+                setLoading(false);
+            }
+        };
+        
         fetchAllWeeks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, isSupervisor]);
 
     const handleDataChange = () => {
-        fetchAllWeeks();
+        setLoading(true);
+        getWeeks().then(data => {
+            setAllWeeks(data);
+            setLoading(false);
+        }).catch(() => {
+             toast({
+                title: "Error",
+                description: "No se pudieron recargar los datos de la semana.",
+                variant: "destructive"
+            });
+            setLoading(false);
+        });
     };
 
     const weeksToShow = useMemo(() => {
         if (isSupervisor) {
-            // Master, Admin, and Oficial see all weeks
             return allWeeks; 
         }
         if (user) {
-            // Other users (Encargado, Bombero) see only weeks they are a member of
             return allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
@@ -92,12 +97,18 @@ export default function MyWeekPage() {
         return [];
     }, [allWeeks, user, isSupervisor]);
 
-    if (loading) {
+    // This check prevents flashing the page content before a potential redirect for non-supervisors.
+    const isRedirecting = !isSupervisor && !loading && weeksToShow.some(week => {
+        const today = new Date();
+        const startDate = startOfDay(parseISO(week.periodStartDate));
+        const endDate = endOfDay(parseISO(week.periodEndDate));
+        return isWithinInterval(today, { start: startDate, end: endDate });
+    });
+
+    if (loading || isRedirecting) {
         return (
              <>
-                <PageHeader title="Mis Semanas" description="Gestiona y visualiza tus semanas de guardia asignadas.">
-                    {isPrivilegedUser && <Skeleton className="h-10 w-36" />}
-                </PageHeader>
+                <PageHeader title="Mis Semanas" description="Gestiona y visualiza tus semanas de guardia asignadas." />
                 <div className="space-y-4">
                     <Skeleton className="h-32 w-full" />
                     <Skeleton className="h-32 w-full" />
@@ -112,7 +123,7 @@ export default function MyWeekPage() {
                 title={isSupervisor ? "Gestión de Semanas" : "Mis Semanas"} 
                 description={isSupervisor ? "Cree, clone o gestione todas las semanas desde esta vista." : "Actualmente no tienes una semana activa. Aquí puedes ver todas tus semanas asignadas."}
             >
-                {isPrivilegedUser && (
+                {isSupervisor && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
