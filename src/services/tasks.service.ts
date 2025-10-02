@@ -17,10 +17,19 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     
     const assignedTo = (data.assignedToIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
 
+    let createdAtString: string | null = null;
+    if (data.createdAt instanceof Timestamp) {
+        createdAtString = data.createdAt.toDate().toISOString();
+    }
+
     const task: Task = {
         id: docSnap.id,
-        ...data,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt : null, // Handle missing or incorrect timestamp
+        weekId: data.weekId,
+        title: data.title,
+        description: data.description,
+        assignedToIds: data.assignedToIds,
+        status: data.status,
+        createdAt: createdAtString,
         assignedTo,
     };
     return task;
@@ -48,9 +57,11 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-    const tasks = await Promise.all(tasksPromises);
+    let tasks = await Promise.all(tasksPromises);
 
-    return tasks.sort((a, b) => a.title.localeCompare(b.title));
+    // Sort by title client-side
+    tasks = tasks.sort((a, b) => a.title.localeCompare(b.title));
+    return tasks;
 }
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>): Promise<string> => {
@@ -66,7 +77,7 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'create
     return docRef.id;
 }
 
-export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo'>>): Promise<void> => {
+export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo' | 'createdAt'>>): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
     await updateDoc(docRef, taskData);
 }

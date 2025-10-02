@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 
 const getStatusBadgeColor = (status: Task['status']) => {
@@ -96,7 +96,7 @@ export default function AllTasksPage() {
                                     <TableRow key={task.id}>
                                         <TableCell className="font-medium">{task.title}</TableCell>
                                         <TableCell>{task.weekName}</TableCell>
-                                        <TableCell>{task.createdAt ? format(task.createdAt.toDate(), 'P', { locale: es }) : 'N/A'}</TableCell>
+                                        <TableCell>{task.createdAt ? format(parseISO(task.createdAt), 'P', { locale: es }) : 'N/A'}</TableCell>
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
                                                 {task.assignedTo && task.assignedTo.length > 0 ? 
