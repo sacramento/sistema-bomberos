@@ -51,14 +51,20 @@ export default function WeekDetailPage() {
 
     const activeRole = getActiveRole(pathname);
     
-    // Updated permission logic
+    // A user can manage if they are a privileged role OR the designated lead of the week.
     const canManage = useMemo(() => {
         if (!user || !week) return false;
-        if (activeRole === 'Master' || activeRole === 'Administrador') return true;
-        // The "Encargado" can manage only if they are the lead of this specific week.
+        if (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') return true;
         if (activeRole === 'Encargado' && user.id === week.leadId) return true;
         return false;
     }, [user, week, activeRole]);
+
+    // A user can VIEW if they can manage OR if they are part of the week's members.
+    const canView = useMemo(() => {
+        if (canManage) return true;
+        if (!user || !week || !week.allMembers) return false;
+        return week.allMembers.some(member => member.legajo === user.id);
+    }, [canManage, user, week]);
     
 
     const fetchWeekAndTasks = async () => {
@@ -83,6 +89,14 @@ export default function WeekDetailPage() {
     useEffect(() => {
         fetchWeekAndTasks();
     }, [weekId, toast]);
+    
+    // Redirect if user cannot view this page at all
+    useEffect(() => {
+        if (!loading && !canView) {
+            toast({ title: "Acceso Denegado", description: "No tiene permisos para ver esta semana.", variant: "destructive" });
+            router.push('/weeks/my-week');
+        }
+    }, [loading, canView, router, toast]);
 
     const refreshTasks = () => {
         if(week) {
@@ -135,7 +149,7 @@ export default function WeekDetailPage() {
     };
 
 
-    if (loading) {
+    if (loading || !canView) {
         return (
             <>
                 <PageHeader 
@@ -171,7 +185,7 @@ export default function WeekDetailPage() {
                 description={`${formattedStartDate} - ${formattedEndDate}`}
             >
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => router.push('/weeks')}>
+                    <Button variant="outline" onClick={() => router.push('/weeks/my-week')}>
                         <ArrowLeft className="mr-2"/>
                         Volver
                     </Button>
