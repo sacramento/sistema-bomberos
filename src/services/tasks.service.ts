@@ -20,7 +20,10 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     let createdAtString: string | null = null;
     if (data.createdAt instanceof Timestamp) {
         createdAtString = data.createdAt.toDate().toISOString();
+    } else if (data.createdAt) { // Handle cases where it might already be a string or other format
+        createdAtString = new Date(data.createdAt).toISOString();
     }
+
 
     const task: Task = {
         id: docSnap.id,
@@ -36,15 +39,23 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 }
 
 export const getAllTasks = async (): Promise<Task[]> => {
-    // Order by creation date descending
-    const q = query(tasksCollection, orderBy('createdAt', 'desc'));
+    // Firestore does not require an index for a simple collection scan.
+    // Ordering will be done client-side after fetching.
+    const q = query(tasksCollection);
     const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-    const tasks = await Promise.all(tasksPromises);
+    let tasks = await Promise.all(tasksPromises);
+
+    // Sort by creation date descending (newest first) on the server.
+    tasks.sort((a, b) => {
+        const dateA = a.createdAt ? parseISO(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? parseISO(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+    });
 
     return tasks;
 };
@@ -66,11 +77,7 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>): Promise<string> => {
     const dataToSave = {
-        weekId: taskData.weekId,
-        title: taskData.title,
-        description: taskData.description,
-        assignedToIds: taskData.assignedToIds,
-        status: taskData.status,
+        ...taskData,
         createdAt: serverTimestamp(),
     };
     const docRef = await addDoc(tasksCollection, dataToSave);
@@ -79,7 +86,12 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'create
 
 export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo' | 'createdAt'>>): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
-    await updateDoc(docRef, taskData);
+    const dataToUpdate: any = { ...taskData };
+    
+     // Prevent 'createdAt' from being overwritten on updates.
+    delete dataToUpdate.createdAt;
+    
+    await updateDoc(docRef, dataToUpdate);
 }
 
 export const deleteTask = async (id: string): Promise<void> => {

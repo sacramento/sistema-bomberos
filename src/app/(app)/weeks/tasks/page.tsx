@@ -34,6 +34,7 @@ export default function AllTasksPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
+                // Fetch tasks and weeks in parallel
                 const [taskData, weekData] = await Promise.all([
                     getAllTasks(),
                     getWeeks()
@@ -41,6 +42,7 @@ export default function AllTasksPage() {
                 setTasks(taskData);
                 setWeeks(weekData);
             } catch (error) {
+                console.error("Error fetching tasks:", error);
                 toast({
                     title: "Error",
                     description: "No se pudieron cargar las tareas.",
