@@ -34,7 +34,6 @@ export default function MyWeekPage() {
             const allWeeksData = await getWeeks();
             setAllWeeks(allWeeksData);
 
-            // Redirect logic only applies if the user is NOT a privileged supervisor
             if (user && !isSupervisor) {
                  const assignedWeeks = allWeeksData.filter(week => 
                     week.allMembers?.some(member => member.legajo === user.id)
@@ -66,6 +65,7 @@ export default function MyWeekPage() {
         if (user) {
             fetchAllWeeks();
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const handleDataChange = () => {
@@ -119,4 +119,3 @@ export default function MyWeekPage() {
         </>
     );
 }
-
