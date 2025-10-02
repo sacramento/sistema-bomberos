@@ -216,23 +216,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
+        // Find the most specific matching nav item for the current path
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
-            .find(item => {
-                 if (item.href === '/weeks') {
-                    return pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
-                }
-                return pathname.startsWith(item.href)
-            });
+            .find(item => pathname.startsWith(item.href));
 
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
+               // If user's role is not in the allowed roles for the item, redirect.
                console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
+               // Redirect to a safe default page.
                router.push('/dashboard'); 
             }
-        } else if (pathname !== '/dashboard') {
-            // Fallback for paths that don't match any nav item
+        } else if (pathname !== '/dashboard' && pathname !== '/') {
+            // If the path does not match any nav item and is not the dashboard, it's likely an invalid URL.
+            // This prevents redirect loops.
+            console.log(`Path '${pathname}' not found in nav items. Redirecting to dashboard.`);
             router.push('/dashboard');
         }
 

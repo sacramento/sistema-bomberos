@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isWeeksUser && !isAsistenciaUser) {
           router.push('/weeks/my-week');
         } else {
+          // Default for Asistencia users, Admins, Master, etc.
           router.push('/sessions');
         }
       } else {
@@ -110,7 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return user.role; // Should be 'Master'
 
         default:
-          return user.role; // Default for pages like '/dashboard'
+          // For pages like '/dashboard' or unknown paths, default to the main user role.
+          return user.role;
       }
   };
 
