@@ -61,22 +61,22 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                             <span className="sr-only">Abrir menú</span>
                         </Button>
                     </SheetTrigger>
-                    <SheetContent side="left" className="flex flex-col">
-                         <div className="flex h-16 items-center border-b px-4 -ml-6 -mt-6">
+                    <SheetContent side="left" className="flex flex-col p-0">
+                         <div className="flex h-16 items-center border-b px-6">
                             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                                 <Flame className="h-6 w-6 text-primary" />
-                                <span className="font-headline">Plataforma SMA</span>
+                                <span className="font-headline text-lg">Plataforma SMA</span>
                             </Link>
                         </div>
-                        <nav className="flex-1 overflow-y-auto p-2 -ml-6">
+                        <nav className="flex-1 overflow-y-auto p-4">
                             <Accordion type="multiple" defaultValue={currentModule ? [currentModule] : ['asistencia']} className="w-full">
                                 {moduleOrder.map(moduleKey => (
                                     navItemsByModule[moduleKey] && (
-                                        <AccordionItem value={moduleKey} key={moduleKey}>
-                                            <AccordionTrigger className="text-sm font-semibold text-muted-foreground hover:no-underline hover:text-primary px-3 py-2">
+                                        <AccordionItem value={moduleKey} key={moduleKey} className="border-b-0">
+                                            <AccordionTrigger className="py-3 text-base font-semibold text-muted-foreground hover:no-underline hover:text-primary">
                                                 {moduleTitles[moduleKey]}
                                             </AccordionTrigger>
-                                            <AccordionContent className="pl-4">
+                                            <AccordionContent className="pl-4 space-y-1">
                                                 {navItemsByModule[moduleKey].map(item => {
                                                     const label = getLabel(item);
                                                     let isActive = false;
@@ -95,9 +95,9 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                                                          <SheetClose asChild key={item.href}>
                                                             <Link
                                                                 href={item.href}
-                                                                className={cn("flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isActive ? "bg-muted text-primary" : "")}
+                                                                className={cn("flex items-center gap-4 rounded-md p-3 text-base font-medium text-muted-foreground transition-all hover:bg-muted hover:text-primary", isActive ? "bg-muted text-primary" : "")}
                                                             >
-                                                                <item.icon className="h-4 w-4" />
+                                                                <item.icon className="h-5 w-5" />
                                                                 <span>{label}</span>
                                                             </Link>
                                                         </SheetClose>
@@ -109,19 +109,19 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                                 ))}
                             </Accordion>
                         </nav>
-                         <div className="mt-auto border-t p-2 -ml-6 -mb-6">
-                            <div className="flex items-center gap-3 p-2">
-                                <Avatar className="size-9">
+                         <div className="mt-auto border-t p-4">
+                            <div className="flex items-center gap-3 p-2 mb-2">
+                                <Avatar className="size-11">
                                 <AvatarImage src={userImage} alt={user.name} className="object-cover" />
                                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex flex-col">
-                                    <p className="text-sm font-medium">{user.name}</p>
-                                    <p className="text-xs text-muted-foreground">{getActiveRole(pathname)}</p>
+                                    <p className="text-base font-semibold">{user.name}</p>
+                                    <p className="text-sm text-muted-foreground">{getActiveRole(pathname)}</p>
                                 </div>
                             </div>
                             <SheetClose asChild>
-                                <Button variant="ghost" className="w-full justify-start" onClick={logout}>
+                                <Button variant="ghost" className="w-full justify-center text-base py-6" onClick={logout}>
                                     <LogOut className="h-5 w-5 mr-3" />
                                     <span>Cerrar Sesión</span>
                                 </Button>
@@ -131,7 +131,7 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                 </Sheet>
                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                     <Flame className="h-6 w-6 text-primary" />
-                    <span className="font-headline">SMA</span>
+                    <span className="font-headline text-lg">SMA</span>
                 </Link>
                 <Button variant="ghost" size="icon" onClick={logout}>
                     <LogOut className="h-5 w-5" />
