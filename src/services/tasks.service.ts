@@ -27,21 +27,15 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 }
 
 export const getAllTasks = async (): Promise<Task[]> => {
-    // Get all tasks without ordering at the DB level to prevent issues with missing fields
-    const querySnapshot = await getDocs(tasksCollection);
+    // Order by creation date descending
+    const q = query(tasksCollection, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
     
     const allFirefighters = await getFirefighters();
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-    let tasks = await Promise.all(tasksPromises);
-
-    // Sort in the application code to handle documents that might not have the createdAt field
-    tasks = tasks.sort((a, b) => {
-        const timeA = a.createdAt?.toDate().getTime() || 0;
-        const timeB = b.createdAt?.toDate().getTime() || 0;
-        return timeB - timeA; // Descending
-    });
+    const tasks = await Promise.all(tasksPromises);
 
     return tasks;
 };
