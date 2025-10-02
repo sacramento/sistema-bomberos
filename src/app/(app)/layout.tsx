@@ -33,6 +33,7 @@ import TopNav from './_components/top-nav';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
 import { Separator } from '@/components/ui/separator';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 type NavItem = {
   href: string;
@@ -98,6 +99,8 @@ function Sidebar() {
   
   const userRoleDisplay = getActiveRole(pathname);
 
+  const currentModule = navItems.find(item => pathname.startsWith(item.href))?.module;
+
   return (
     <TooltipProvider>
       <aside className={cn("hidden h-screen md:flex flex-col border-r bg-card transition-all duration-300 ease-in-out", isCollapsed ? "w-16" : "w-64")}>
@@ -111,60 +114,69 @@ function Sidebar() {
           </Button>
         </div>
         <nav className="flex-1 space-y-2 overflow-y-auto p-2">
-            
-          {moduleOrder.map(moduleKey => (
-            navItemsByModule[moduleKey] && (
-              <React.Fragment key={moduleKey}>
-                {!isCollapsed && (
-                    <h4 className="px-3 py-2 text-xs font-semibold text-muted-foreground tracking-wider uppercase">
-                        {moduleTitles[moduleKey]}
-                    </h4>
-                )}
-                {navItemsByModule[moduleKey].map((item) => {
-                  const label = getLabel(item);
-                  
-                  let isActive = false;
-                  // Exact match for most routes
-                  if (item.href === '/weeks/my-week') {
-                      isActive = pathname === item.href;
-                  } else if (item.href === '/weeks') {
-                       isActive = pathname.startsWith('/weeks') && !pathname.includes('my-week') && !pathname.includes('tasks');
-                  } else if (item.href === '/weeks/tasks') {
-                      isActive = pathname === item.href;
-                  } else if (item.href === '/sessions') {
-                      isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
-                  } else {
-                      isActive = pathname.startsWith(item.href);
-                  }
+            {isCollapsed ? (
+                 moduleOrder.flatMap(moduleKey => 
+                    navItemsByModule[moduleKey]?.map(item => {
+                         const label = getLabel(item);
+                         const isActive = pathname.startsWith(item.href) && (item.href !== '/sessions' || pathname === '/sessions');
 
+                         return (
+                            <Tooltip key={item.href} delayDuration={0}>
+                              <TooltipTrigger asChild>
+                                  <Link
+                                    href={item.href}
+                                    className={cn( "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8", isActive && "bg-accent text-accent-foreground" )}
+                                  >
+                                    <item.icon className="h-5 w-5" />
+                                    <span className="sr-only">{label}</span>
+                                  </Link>
+                              </TooltipTrigger>
+                              <TooltipContent side="right">{label}</TooltipContent>
+                            </Tooltip>
+                         )
+                    })
+                )
+            ) : (
+                <Accordion type="multiple" defaultValue={currentModule ? [currentModule] : ['asistencia']} className="w-full">
+                    {moduleOrder.map(moduleKey => (
+                         navItemsByModule[moduleKey] && (
+                            <AccordionItem value={moduleKey} key={moduleKey}>
+                                <AccordionTrigger className="text-sm font-semibold text-muted-foreground hover:no-underline hover:text-primary px-3 py-2">
+                                    {moduleTitles[moduleKey]}
+                                </AccordionTrigger>
+                                <AccordionContent className="pl-4">
+                                     {navItemsByModule[moduleKey].map(item => {
+                                        const label = getLabel(item);
+                                        let isActive = false;
+                                        if (item.href === '/weeks/my-week') {
+                                            isActive = pathname === item.href;
+                                        } else if (item.href === '/weeks' && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) {
+                                            isActive = pathname.startsWith('/weeks');
+                                        } else if (item.href === '/weeks/tasks') {
+                                            isActive = pathname === item.href;
+                                        } else if (item.href === '/sessions') {
+                                            isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                                        } else {
+                                            isActive = pathname.startsWith(item.href);
+                                        }
 
-                  const buttonContent = (
-                    <Link
-                      href={item.href}
-                      className={cn( "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isActive ? "bg-muted text-primary" : "", isCollapsed && "justify-center" )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{label}</span>}
-                    </Link>
-                  );
-
-                  return (
-                    <div key={item.href}>
-                      {isCollapsed ? (
-                        <Tooltip delayDuration={0}>
-                          <TooltipTrigger asChild>{buttonContent}</TooltipTrigger>
-                          <TooltipContent side="right">{label}</TooltipContent>
-                        </Tooltip>
-                      ) : (
-                        buttonContent
-                      )}
-                    </div>
-                  );
-                })}
-                 {!isCollapsed && navItemsByModule[moduleKey].length > 0 && moduleKey !== 'general' && <Separator className="my-2" />}
-              </React.Fragment>
-            )
-          ))}
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                className={cn( "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isActive ? "bg-muted text-primary" : "" )}
+                                            >
+                                                <item.icon className="h-4 w-4" />
+                                                <span>{label}</span>
+                                            </Link>
+                                        )
+                                     })}
+                                </AccordionContent>
+                            </AccordionItem>
+                         )
+                    ))}
+                </Accordion>
+            )}
         </nav>
 
         <div className="mt-auto border-t p-2">
