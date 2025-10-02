@@ -24,7 +24,7 @@ export default function MyWeekPage() {
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const isSupervisor = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial', [activeRole]);
+    const isSupervisor = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     useEffect(() => {
         const fetchAllWeeks = async () => {
@@ -38,8 +38,8 @@ export default function MyWeekPage() {
                 const allWeeksData = await getWeeks();
                 setAllWeeks(allWeeksData);
 
-                // This redirection logic only applies to non-supervisors.
-                if (!isSupervisor) {
+                // This redirection logic only applies to non-supervisors (Encargado, Bombero).
+                if (!isSupervisor && activeRole !== 'Oficial') {
                      const assignedWeeks = allWeeksData.filter(week => 
                         week.allMembers?.some(member => member.legajo === user.id)
                     );
@@ -68,7 +68,7 @@ export default function MyWeekPage() {
         
         fetchAllWeeks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, isSupervisor]);
+    }, [user, isSupervisor, activeRole]);
 
     const handleDataChange = () => {
         setLoading(true);
@@ -86,7 +86,7 @@ export default function MyWeekPage() {
     };
 
     const weeksToShow = useMemo(() => {
-        if (isSupervisor) {
+        if (isSupervisor || activeRole === 'Oficial') {
             return allWeeks; 
         }
         if (user) {
@@ -95,10 +95,10 @@ export default function MyWeekPage() {
             );
         }
         return [];
-    }, [allWeeks, user, isSupervisor]);
+    }, [allWeeks, user, isSupervisor, activeRole]);
 
     // This check prevents flashing the page content before a potential redirect for non-supervisors.
-    const isRedirecting = !isSupervisor && !loading && weeksToShow.some(week => {
+    const isRedirecting = (!isSupervisor && activeRole !== 'Oficial') && !loading && weeksToShow.some(week => {
         const today = new Date();
         const startDate = startOfDay(parseISO(week.periodStartDate));
         const endDate = endOfDay(parseISO(week.periodEndDate));

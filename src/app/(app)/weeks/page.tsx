@@ -123,7 +123,7 @@ export default function WeeksDashboardPage() {
                                 weeks={weeksToShow[firehouse]} 
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
-                                canManage={false} // This page is always read-only
+                                canManage={false}
                             />
                         </div>
                     )

@@ -54,16 +54,17 @@ export default function WeekDetailPage() {
     
     const canManage = useMemo(() => {
         if (!user || !week) return false;
-        if (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') return true;
+        if (activeRole === 'Master' || activeRole === 'Administrador') return true;
         if (activeRole === 'Encargado' && user.id === week.leadId) return true;
         return false;
     }, [user, week, activeRole]);
 
     const canView = useMemo(() => {
         if (canManage) return true;
+        if(activeRole === 'Oficial') return true;
         if (!user || !week || !week.allMembers) return false;
         return week.allMembers.some(member => member && member.legajo === user.id);
-    }, [canManage, user, week]);
+    }, [canManage, user, week, activeRole]);
     
 
     const fetchWeekAndTasks = async () => {
