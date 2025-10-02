@@ -41,7 +41,6 @@ export const getAllTasks = async (): Promise<Task[]> => {
 };
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
-    // This can still be ordered as it's a more controlled query
     const q = query(tasksCollection, where('weekId', '==', weekId), orderBy('createdAt', 'desc'));
     const querySnapshot = await getDocs(q);
     
@@ -56,9 +55,13 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>): Promise<string> => {
     const dataToSave = {
-        ...taskData,
+        weekId: taskData.weekId,
+        title: taskData.title,
+        description: taskData.description,
+        assignedToIds: taskData.assignedToIds,
+        status: taskData.status,
         createdAt: serverTimestamp(),
-    }
+    };
     const docRef = await addDoc(tasksCollection, dataToSave);
     return docRef.id;
 }
