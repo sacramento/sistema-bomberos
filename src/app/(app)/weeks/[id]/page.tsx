@@ -51,7 +51,6 @@ export default function WeekDetailPage() {
 
     const activeRole = getActiveRole(pathname);
     
-    // A user can manage if they are a privileged role OR the designated lead of the week.
     const canManage = useMemo(() => {
         if (!user || !week) return false;
         if (activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Oficial') return true;
@@ -59,11 +58,10 @@ export default function WeekDetailPage() {
         return false;
     }, [user, week, activeRole]);
 
-    // A user can VIEW if they can manage OR if they are part of the week's members.
     const canView = useMemo(() => {
         if (canManage) return true;
         if (!user || !week || !week.allMembers) return false;
-        return week.allMembers.some(member => member.legajo === user.id);
+        return week.allMembers.some(member => member && member.legajo === user.id);
     }, [canManage, user, week]);
     
 
@@ -79,6 +77,7 @@ export default function WeekDetailPage() {
                     setTasks(taskData);
                 }
             } catch (error) {
+                console.error(error);
                 toast({ title: "Error", description: "No se pudo cargar la información de la semana.", variant: "destructive" });
             } finally {
                 setLoading(false);
@@ -88,9 +87,9 @@ export default function WeekDetailPage() {
 
     useEffect(() => {
         fetchWeekAndTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [weekId, toast]);
     
-    // Redirect if user cannot view this page at all
     useEffect(() => {
         if (!loading && !canView) {
             toast({ title: "Acceso Denegado", description: "No tiene permisos para ver esta semana.", variant: "destructive" });

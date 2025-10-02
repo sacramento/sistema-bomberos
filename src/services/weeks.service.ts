@@ -17,20 +17,32 @@ const tasksCollection = collection(db, 'tasks');
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
-    // Correctly read from allMemberIds and enrich them
-    const allMembers = (data.allMemberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+    // Safely get firefighter objects, filtering out any that are not found (i.e., were deleted)
+    const getFirefighterObjects = (ids: string[]): Firefighter[] => {
+        if (!ids) return [];
+        return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
+    };
     
-    const lead = firefighterMap.get(data.leadId);
-    const driver = firefighterMap.get(data.driverId);
-    const members = (data.memberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+    const lead = firefighterMap.get(data.leadId) || null;
+    const driver = firefighterMap.get(data.driverId) || null;
+    const members = getFirefighterObjects(data.memberIds || []);
+
+    // Reconstruct allMembers from the enriched, existing members to ensure consistency
+    const allMembers: Firefighter[] = [];
+    if (lead) allMembers.push(lead);
+    if (driver) allMembers.push(driver);
+    allMembers.push(...members);
+    
+    // Remove duplicates, just in case
+    const uniqueMembers = Array.from(new Map(allMembers.map(m => [m.id, m])).values());
 
     const week: Week = {
         id: docSnap.id,
         ...data,
-        lead: lead || null,
-        driver: driver || null,
-        members: members || [],
-        allMembers: allMembers,
+        lead,
+        driver,
+        members,
+        allMembers: uniqueMembers,
     };
     return week;
 }
