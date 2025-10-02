@@ -463,8 +463,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
             if (filterClass !== 'all' && session.id !== filterClass) return false;
             if (filterDate?.from) {
-                 const sessionDate = new Date(session.date);
-                 sessionDate.setMinutes(sessionDate.getMinutes() + sessionDate.getTimezoneOffset());
+                 const sessionDate = parseISO(session.date);
                  const toDate = filterDate.to ?? filterDate.from;
                  if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
             }
@@ -516,10 +515,11 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         const netAbsences = Math.max(0, totalAbsences - statusCounts.recupero);
         const totalClassesForPercentage = effectiveAttendance + totalAbsences;
 
-        // 5. Prepare Pie Chart data
+        // 5. Prepare Pie Chart data - THIS IS THE CHANGED PART
         const pieData = [
-            { name: 'Presente', value: effectiveAttendance, fill: PIE_CHART_COLORS.present },
-            { name: 'Ausente', value: totalAbsences, fill: PIE_CHART_COLORS.absent },
+            { name: 'Presente', value: statusCounts.present + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Tarde', value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
+            { name: 'Ausente', value: statusCounts.absent + statusCounts.excused, fill: PIE_CHART_COLORS.absent },
         ].filter(item => item.value > 0);
             
         return { 
@@ -601,8 +601,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             }
 
             if (filterDate?.from) {
-                const leaveStartDate = startOfDay(new Date(leave.startDate));
-                const leaveEndDate = endOfDay(new Date(leave.endDate));
+                const leaveStartDate = startOfDay(parseISO(leave.startDate));
+                const leaveEndDate = endOfDay(parseISO(leave.endDate));
                 const filterStartDate = startOfDay(filterDate.from);
                 const filterEndDate = endOfDay(filterDate.to ?? filterDate.from);
                 if (leaveStartDate > filterEndDate || leaveEndDate < filterStartDate) return false;
@@ -914,7 +914,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                 <CardContent>
                                     <Table>
                                         <TableHeader><TableRow><TableHead>Bombero</TableHead><TableHead>Tipo</TableHead><TableHead>Desde</TableHead><TableHead>Hasta</TableHead></TableRow></TableHeader>
-                                        <TableBody>{leavesReportData.map((leave) => (<TableRow key={leave.id}><TableCell className="font-medium">{leave.firefighterName}</TableCell><TableCell>{leave.type}</TableCell><TableCell>{format(new Date(leave.startDate), "PPP", { locale: es })}</TableCell><TableCell>{format(new Date(leave.endDate), "PPP", { locale: es })}</TableCell></TableRow>))}</TableBody>
+                                        <TableBody>{leavesReportData.map((leave) => (<TableRow key={leave.id}><TableCell className="font-medium">{leave.firefighterName}</TableCell><TableCell>{leave.type}</TableCell><TableCell>{format(parseISO(leave.startDate), "PPP", { locale: es })}</TableCell><TableCell>{format(parseISO(leave.endDate), "PPP", { locale: es })}</TableCell></TableRow>))}</TableBody>
                                     </Table>
                                 </CardContent>
                                 <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de licencias filtrados actualmente.</CardDescription></CardHeader>
