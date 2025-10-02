@@ -5,6 +5,7 @@ import { Task, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
+import { parseISO } from 'date-fns';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -19,11 +20,19 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 
     let createdAtString: string | null = null;
     if (data.createdAt instanceof Timestamp) {
+        // If it's a Firestore Timestamp, convert it to an ISO string
         createdAtString = data.createdAt.toDate().toISOString();
-    } else if (data.createdAt) { // Handle cases where it might already be a string or other format
-        createdAtString = new Date(data.createdAt).toISOString();
+    } else if (typeof data.createdAt === 'string') {
+        // If it's already a string, use it directly
+        createdAtString = data.createdAt;
+    } else if (data.createdAt) { 
+        // For other potential formats, try converting to a Date object first
+        try {
+            createdAtString = new Date(data.createdAt).toISOString();
+        } catch (e) {
+            console.error("Could not parse createdAt date", data.createdAt);
+        }
     }
-
 
     const task: Task = {
         id: docSnap.id,
@@ -39,8 +48,6 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 }
 
 export const getAllTasks = async (): Promise<Task[]> => {
-    // Firestore does not require an index for a simple collection scan.
-    // Ordering will be done client-side after fetching.
     const q = query(tasksCollection);
     const querySnapshot = await getDocs(q);
     
@@ -50,7 +57,7 @@ export const getAllTasks = async (): Promise<Task[]> => {
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
     let tasks = await Promise.all(tasksPromises);
 
-    // Sort by creation date descending (newest first) on the server.
+    // Sort by creation date descending (newest first) on the server-side after fetching.
     tasks.sort((a, b) => {
         const dateA = a.createdAt ? parseISO(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? parseISO(b.createdAt).getTime() : 0;
