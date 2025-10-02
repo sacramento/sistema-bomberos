@@ -59,22 +59,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-
-        // Define a priority-based destination logic
-        const roles = loggedInUser.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
-        let destination = '/dashboard'; // A safe fallback
-
-        if (roles.semanas !== 'Ninguno') {
-            destination = '/weeks/my-week';
-        } else if (roles.asistencia === 'Administrador' || roles.asistencia === 'Oficial' || roles.asistencia === 'Instructor') {
-            destination = '/sessions';
-        } else if (roles.asistencia === 'Ayudantía' || roles.asistencia === 'Bombero') {
-            // Ayudantía and Bombero don't have access to /sessions, so redirect to the first available page
-            destination = '/schedule'; 
-        }
-        
-        router.push(destination);
-
+        // Redirect to the main portal page, which will handle role-based redirection.
+        router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }

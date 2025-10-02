@@ -2,62 +2,43 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getWeeks } from '@/services/weeks.service';
-import { useToast } from '@/hooks/use-toast';
-import { isWithinInterval, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { navItems } from '../layout';
 
 export default function PortalPage() {
-  const { user, loading, getActiveRole } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
 
   useEffect(() => {
     if (loading || !user) {
       return;
     }
 
-    const activeRoleForWeeks = user.roles?.semanas;
-    const activeRoleForAttendance = user.roles?.asistencia;
-    
-    // Default path for Asistencia module users
-    let destination = '/sessions';
+    // This page acts as a router to the user's default dashboard.
+    const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
 
-    // If user has any role in the Semanas module, that takes priority
-    if (activeRoleForWeeks && activeRoleForWeeks !== 'Ninguno') {
+    let destination = '/schedule'; // A safe default for roles with limited access.
+
+    // 1. Semanas module has top priority
+    if (roles.semanas !== 'Ninguno') {
         destination = '/weeks/my-week';
-        
-        // For non-supervisor roles in Semanas, try to redirect to their active week
-        if (activeRoleForWeeks === 'Encargado' || activeRoleForWeeks === 'Bombero') {
-            getWeeks().then(allWeeksData => {
-                const today = new Date();
-                const activeWeek = allWeeksData.find(week => 
-                    week.allMembers?.some(member => member.legajo === user.id) &&
-                    isWithinInterval(today, { start: startOfDay(parseISO(week.periodStartDate)), end: endOfDay(parseISO(week.periodEndDate)) })
-                );
-
-                if (activeWeek) {
-                    router.replace(`/weeks/${activeWeek.id}`);
-                } else {
-                    router.replace(destination);
-                }
-            }).catch(() => {
-                toast({
-                    title: "Error",
-                    description: "No se pudo verificar la semana activa, redirigiendo al dashboard principal de semanas.",
-                    variant: "destructive"
-                });
-                router.replace(destination);
-            });
-            return; // Exit useEffect to let async operation handle navigation
-        }
+    } 
+    // 2. Asistencia module for higher-level roles
+    else if (roles.asistencia === 'Master' || roles.asistencia === 'Administrador' || roles.asistencia === 'Oficial' || roles.asistencia === 'Instructor') {
+        destination = '/sessions';
+    }
+    // 3. Fallback for Asistencia roles like Ayudantía, who can't see /sessions.
+    // navItems are imported to check for the first available path.
+    else if (roles.asistencia !== 'Ninguno') {
+        const firstAllowedPath = navItems.find(item => item.module === 'asistencia' && item.roles.includes(roles.asistencia))?.href;
+        destination = firstAllowedPath || '/schedule'; // Default to schedule if somehow no path is found
     }
     
     router.replace(destination);
 
-  }, [user, loading, router, getActiveRole, toast]);
+  }, [user, loading, router]);
 
   // This page is a loading/redirecting fallback.
   return (
