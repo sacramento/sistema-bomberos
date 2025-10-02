@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useEffect, useState } from 'react';
-import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -229,14 +229,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
-               // If a user from 'semanas' module tries to access a non-semanas page, redirect them to their main page
-               const isWeeksUser = user.roles.semanas !== 'Ninguno';
-               const isAsistenciaUser = user.roles.asistencia !== 'Ninguno';
-               if (isWeeksUser && !isAsistenciaUser) {
-                   router.push('/weeks/my-week');
-               } else {
-                   router.push('/dashboard'); 
-               }
+               router.push('/dashboard'); 
             }
         } else if (pathname !== '/dashboard') {
             // Fallback for paths that don't match any nav item
