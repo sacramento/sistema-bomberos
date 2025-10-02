@@ -29,12 +29,19 @@ export default function MyWeekPage() {
 
 
     const fetchAllWeeks = async () => {
+        if (!user) {
+            setLoading(false);
+            return;
+        };
+
         setLoading(true);
         try {
             const allWeeksData = await getWeeks();
             setAllWeeks(allWeeksData);
 
-            if (user && !isSupervisor) {
+            // This redirection logic only applies to non-supervisors.
+            // Supervisors will always see the list on this page.
+            if (!isSupervisor) {
                  const assignedWeeks = allWeeksData.filter(week => 
                     week.allMembers?.some(member => member.legajo === user.id)
                 );
@@ -47,7 +54,8 @@ export default function MyWeekPage() {
 
                 if (activeWeek) {
                     router.replace(`/weeks/${activeWeek.id}`);
-                    return; // Stop further processing to avoid setting state on an unmounting component
+                    // A redirect is happening, so we don't need to finish loading on this page.
+                    return; 
                 }
             }
         } catch (error) {
@@ -62,11 +70,9 @@ export default function MyWeekPage() {
     };
     
     useEffect(() => {
-        if (user) {
-            fetchAllWeeks();
-        }
+        fetchAllWeeks();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, isSupervisor]);
 
     const handleDataChange = () => {
         fetchAllWeeks();
@@ -74,10 +80,11 @@ export default function MyWeekPage() {
 
     const weeksToShow = useMemo(() => {
         if (isSupervisor) {
-            return allWeeks; // Master, Admin, and Oficial see all weeks
+            // Master, Admin, and Oficial see all weeks
+            return allWeeks; 
         }
         if (user) {
-            // Other users see only weeks they are a member of
+            // Other users (Encargado, Bombero) see only weeks they are a member of
             return allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
