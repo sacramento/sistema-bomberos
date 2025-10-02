@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { LogOut, Flame, Menu } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { navItems } from "../layout";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -62,12 +62,13 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left" className="flex flex-col p-0">
-                         <div className="flex h-16 items-center border-b px-6">
+                         <SheetHeader className="h-16 flex-shrink-0 border-b px-6 flex flex-row items-center">
+                            <SheetTitle className="sr-only">Menú Principal</SheetTitle>
                             <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                                 <Flame className="h-6 w-6 text-primary" />
                                 <span className="font-headline text-lg">Plataforma SMA</span>
                             </Link>
-                        </div>
+                        </SheetHeader>
                         <nav className="flex-1 overflow-y-auto p-4">
                             <Accordion type="multiple" defaultValue={currentModule ? [currentModule] : ['asistencia']} className="w-full">
                                 {moduleOrder.map(moduleKey => (
