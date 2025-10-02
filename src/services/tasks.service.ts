@@ -19,14 +19,14 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     const assignedTo = (data.assignedToIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
 
     let createdAtString: string | null = null;
-    if (data.createdAt instanceof Timestamp) {
-        // If it's a Firestore Timestamp, convert it to an ISO string
+    if (data.createdAt && typeof data.createdAt.toDate === 'function') {
+        // This is the most reliable way to check for a Firestore Timestamp
         createdAtString = data.createdAt.toDate().toISOString();
     } else if (typeof data.createdAt === 'string') {
         // If it's already a string, use it directly
         createdAtString = data.createdAt;
     } else if (data.createdAt?.seconds) { 
-        // Handle plain object representation of Timestamp
+        // Fallback for plain object representation of Timestamp
         try {
             const timestamp = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds);
             createdAtString = timestamp.toDate().toISOString();
