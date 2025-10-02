@@ -61,12 +61,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
 
         const isWeeksUser = loggedInUser.roles.semanas !== 'Ninguno';
-        const isAsistenciaUser = loggedInUser.roles.asistencia !== 'Ninguno';
-
-        if (isWeeksUser && !isAsistenciaUser) {
+        
+        // **REVISED LOGIC**: Prioritize 'semanas' module. If user has any role there, send them to my-week.
+        if (isWeeksUser) {
           router.push('/weeks/my-week');
         } else {
-          // Default for Asistencia users, Admins, Master, etc.
+          // Otherwise, default to 'asistencia' dashboard.
           router.push('/sessions');
         }
       } else {

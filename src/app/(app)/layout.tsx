@@ -49,8 +49,8 @@ export const navItems: NavItem[] = [
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
-  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
@@ -229,11 +229,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                // Redirect to a safe default page.
                router.push('/dashboard'); 
             }
-        } else if (pathname !== '/dashboard' && pathname !== '/') {
-            // If the path does not match any nav item and is not the dashboard, it's likely an invalid URL.
-            // This prevents redirect loops.
-            console.log(`Path '${pathname}' not found in nav items. Redirecting to dashboard.`);
-            router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
