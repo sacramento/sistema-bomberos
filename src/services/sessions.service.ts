@@ -21,15 +21,19 @@ const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighte
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
+    const instructorIds = data.instructorIds || [];
+    const assistantIds = data.assistantIds || [];
+    const attendeeIds = data.attendeeIds || [];
+    
     return {
         id: docSnap.id,
         ...data,
-        instructors: getFirefighterObjects(data.instructorIds || []),
-        assistants: getFirefighterObjects(data.assistantIds || []),
-        attendees: getFirefighterObjects(data.attendeeIds || []),
-        instructorIds: data.instructorIds || [],
-        assistantIds: data.assistantIds || [],
-        attendeeIds: data.attendeeIds || [],
+        instructors: getFirefighterObjects(instructorIds),
+        assistants: getFirefighterObjects(assistantIds),
+        attendees: getFirefighterObjects(attendeeIds),
+        instructorIds,
+        assistantIds,
+        attendeeIds,
     } as Session;
 }
 
@@ -112,4 +116,3 @@ export const updateSessionAttendance = async (id: string, attendance: Record<str
         attendance: attendance
     });
 };
-

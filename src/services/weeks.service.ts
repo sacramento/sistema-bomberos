@@ -17,21 +17,20 @@ const tasksCollection = collection(db, 'tasks');
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
-    // Correctly read from allMemberIds
+    // Correctly read from allMemberIds and enrich them
     const allMembers = (data.allMemberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     
-    const lead = allMembers.find(m => m.id === data.leadId);
-    const driver = allMembers.find(m => m.id === data.driverId);
-    // Members are everyone who is not the lead or driver
-    const members = allMembers.filter(m => m.id !== data.leadId && m.id !== data.driverId);
+    const lead = firefighterMap.get(data.leadId);
+    const driver = firefighterMap.get(data.driverId);
+    const members = (data.memberIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
 
     const week: Week = {
         id: docSnap.id,
         ...data,
-        lead,
-        driver,
-        members,
-        allMembers,
+        lead: lead || null,
+        driver: driver || null,
+        members: members || [],
+        allMembers: allMembers,
     };
     return week;
 }
