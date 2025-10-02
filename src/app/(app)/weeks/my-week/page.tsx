@@ -24,7 +24,7 @@ export default function MyWeekPage() {
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const isSupervisor = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchAllWeeks = async () => {
         if (!user) {
@@ -63,8 +63,8 @@ export default function MyWeekPage() {
             return { weeksToShow: [], isRedirecting: false };
         }
         
-        // For non-supervisors, check for an active week to redirect to.
-        if (!isSupervisor && activeRole !== 'Oficial') {
+        // For non-managing roles, check for an active week to redirect to.
+        if (!canManage && activeRole !== 'Oficial') {
             const assignedWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
@@ -81,7 +81,7 @@ export default function MyWeekPage() {
         }
         
         let finalWeeksToShow: Week[] = [];
-        if (isSupervisor) {
+        if (canManage || activeRole === 'Oficial') {
             finalWeeksToShow = allWeeks; 
         } else if (user) {
             finalWeeksToShow = allWeeks.filter(week => 
@@ -94,7 +94,7 @@ export default function MyWeekPage() {
             isRedirecting: shouldRedirect
         };
 
-    }, [allWeeks, user, isSupervisor, activeRole, loading, router]);
+    }, [allWeeks, user, canManage, activeRole, loading, router]);
 
 
     if (loading || isRedirecting) {
@@ -112,10 +112,10 @@ export default function MyWeekPage() {
     return (
         <>
             <PageHeader 
-                title={isSupervisor ? "Gestión de Semanas" : "Mis Semanas"} 
-                description={isSupervisor ? "Cree, clone o gestione todas las semanas desde esta vista." : "No tienes una semana activa. Aquí puedes ver todas tus semanas asignadas, pasadas y futuras."}
+                title={canManage || activeRole === 'Oficial' ? "Gestión de Semanas" : "Mis Semanas"} 
+                description={canManage || activeRole === 'Oficial' ? "Cree, clone o gestione todas las semanas desde esta vista." : "No tienes una semana activa. Aquí puedes ver todas tus semanas asignadas, pasadas y futuras."}
             >
-                {isSupervisor && (
+                {canManage && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -125,7 +125,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={isSupervisor} showDetailsButton={true} />
+            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} showDetailsButton={true} />
         </>
     );
 }
