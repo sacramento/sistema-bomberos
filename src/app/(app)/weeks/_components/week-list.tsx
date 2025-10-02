@@ -104,7 +104,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
-                                     {isPrivilegedUser && canManage && (
+                                     {isPrivilegedUser && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
@@ -174,15 +174,13 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                             </Accordion>
 
                         </div>
-                         {canManage && (
-                            <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
-                                <Button asChild className="w-full sm:w-auto" variant="outline">
-                                    <Link href={`/weeks/${week.id}`}>
-                                        Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
+                         <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
+                            <Button asChild className="w-full sm:w-auto" variant="outline">
+                                <Link href={`/weeks/${week.id}`}>
+                                    Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
                     </Card>
                     <AlertDialogContent>
                         <AlertDialogHeader>

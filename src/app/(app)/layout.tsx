@@ -28,7 +28,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useEffect, useState } from 'react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -234,8 +234,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else if (pathname !== '/dashboard') {
-            console.log(`No matching nav item for '${pathname}'. Redirecting.`);
-            router.push('/dashboard');
+            const isWeeksUser = user.roles.semanas !== 'Ninguno';
+            const isAsistenciaUser = user.roles.asistencia !== 'Ninguno';
+
+            if (isWeeksUser && !isAsistenciaUser) {
+                router.push('/weeks/my-week');
+            } else if (pathname !== '/sessions') {
+                 router.push('/dashboard');
+            }
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -251,7 +257,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const showSidebar = !isMobile;
     const showMobileNav = isMobile;
     
-    const availableNavItems = navItems.filter(item => item.roles.includes(getActiveRole(item.href)));
+    const availableNavItems = navItems.filter(item => {
+        const role = getActiveRole(item.href);
+        return item.roles.includes(role);
+    });
 
     return (
         <div className="flex min-h-screen w-full">

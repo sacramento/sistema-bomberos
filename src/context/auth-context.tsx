@@ -59,7 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        router.push('/sessions');
+
+        const isWeeksUser = loggedInUser.roles.semanas !== 'Ninguno';
+        const isAsistenciaUser = loggedInUser.roles.asistencia !== 'Ninguno';
+
+        if (isWeeksUser && !isAsistenciaUser) {
+          router.push('/weeks/my-week');
+        } else {
+          router.push('/sessions');
+        }
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
       }

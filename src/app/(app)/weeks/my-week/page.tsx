@@ -66,7 +66,7 @@ export default function MyWeekPage() {
         if (user) {
             fetchAllWeeks();
         }
-    }, [user, router, toast]);
+    }, [user]);
 
     const handleDataChange = () => {
         fetchAllWeeks();
@@ -115,7 +115,8 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={true} />
+            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={isSupervisor} />
         </>
     );
 }
+
