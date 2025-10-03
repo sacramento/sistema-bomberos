@@ -196,13 +196,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        // If user is logged in and on the root path, redirect to dashboard.
         if (pathname === '/') {
             router.push('/dashboard');
             return;
         }
 
-        const isDashboard = pathname === '/dashboard';
-        if (isDashboard) return;
+        // Skip permission checks for the dashboard itself
+        if (pathname === '/dashboard') return;
 
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
@@ -211,10 +212,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
-               console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
+               console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting to dashboard.`);
                router.push('/dashboard'); 
             }
-        } else if (pathname !== '/dashboard') {
+        } else {
+             // If no nav item is found for the current path, it's an unknown/invalid route for this layout
              console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
              router.push('/dashboard');
         }

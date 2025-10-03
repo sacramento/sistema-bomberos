@@ -27,6 +27,19 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'general' | 'dashboard'> = {
+    '/sessions': 'asistencia',
+    '/classes': 'asistencia',
+    '/schedule': 'asistencia',
+    '/firefighters': 'asistencia',
+    '/courses': 'asistencia',
+    '/leaves': 'asistencia',
+    '/reports': 'asistencia',
+    '/weeks': 'semanas',
+    '/admin': 'general',
+    '/dashboard': 'dashboard'
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<LoggedInUser>(null);
   const [loading, setLoading] = useState(true);
@@ -58,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        // Redirect to the module selection page.
         router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
@@ -82,29 +94,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
       
-      const pathSegments = currentPath.split('/');
-      const mainModule = pathSegments[1];
+      const moduleKey = Object.keys(pathToModule).find(key => currentPath.startsWith(key));
+      const module = moduleKey ? pathToModule[moduleKey] : null;
       
-      switch(mainModule) {
-        case 'weeks':
+      switch(module) {
+        case 'semanas':
           return roles.semanas;
-        
-        case 'sessions':
-        case 'schedule':
-        case 'firefighters':
-        case 'courses':
-        case 'classes':
-        case 'leaves':
-        case 'reports':
+        case 'asistencia':
           return roles.asistencia;
-        
-        case 'admin':
-          return user.role; // Should be 'Master'
-
+        case 'general':
         case 'dashboard':
           return user.role;
-
         default:
+          // Fallback for paths not explicitly mapped (like /)
           return user.role;
       }
   };
