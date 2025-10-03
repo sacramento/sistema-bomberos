@@ -62,21 +62,32 @@ export default function MyWeekPage() {
         if (loading || !user) {
             return { weeksToShow: [], isRedirecting: false, canManage: false };
         }
-        
-        const canManageWeeks = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado';
 
-        if (isPrivileged) {
-             // Master/Admin see all weeks and can manage them.
-             const sortedWeeks = [...allWeeks].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
-             return { weeksToShow: sortedWeeks, isRedirecting: false, canManage: true };
+        // Determine who can manage weeks (edit/delete/clone)
+        const canManageWeeks = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado';
+        
+        let visibleWeeks: Week[] = [];
+
+        // Master, Admin, and Oficial see all weeks
+        if (isPrivileged || activeRole === 'Oficial') {
+            visibleWeeks = [...allWeeks];
+        } else {
+            // Other roles (Bombero, Encargado) see only their assigned weeks
+            visibleWeeks = allWeeks.filter(week => 
+                week.allMembers?.some(member => member.legajo === user.id)
+            );
         }
 
-        const assignedWeeks = allWeeks.filter(week => 
-            week.allMembers?.some(member => member.legajo === user.id)
-        );
-
-        if (activeRole !== 'Oficial') { // Oficial just sees their assigned weeks, no redirect
+        // Sort all visible weeks by date
+        const sortedWeeks = visibleWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
+        
+        // Auto-redirect logic for non-privileged users to their active week
+        if (!isPrivileged && activeRole !== 'Oficial') {
             const today = new Date();
+            // Find active week only from the weeks they are assigned to
+            const assignedWeeks = allWeeks.filter(week => 
+                week.allMembers?.some(member => member.legajo === user.id)
+            );
             const activeWeek = assignedWeeks.find(week => {
                 const startDate = startOfDay(parseISO(week.periodStartDate));
                 const endDate = endOfDay(parseISO(week.periodEndDate));
@@ -88,12 +99,10 @@ export default function MyWeekPage() {
             }
         }
         
-        const sortedAssignedWeeks = [...assignedWeeks].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
-        
         return {
-            weeksToShow: sortedAssignedWeeks, 
+            weeksToShow: sortedWeeks, 
             isRedirecting: shouldRedirect,
-            canManage: canManageWeeks
+            canManage: canManageWeeks,
         };
 
     }, [allWeeks, user, activeRole, loading, router, isPrivileged]);
