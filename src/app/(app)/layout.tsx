@@ -32,7 +32,6 @@ import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/comp
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
 import MobileNav from './_components/mobile-nav';
-import { Separator } from '@/components/ui/separator';
 
 export type NavItem = {
   href: string;
@@ -63,7 +62,10 @@ function Sidebar() {
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  if (!user || pathname === '/dashboard') return null;
+  // Do not render sidebar if there's no user or if we are on the module selection page
+  if (!user || pathname === '/dashboard') {
+    return null;
+  }
 
   const currentModule = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
   
@@ -194,31 +196,24 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             router.push('/');
             return;
         }
-        
-        // This logic handles permission checks for authenticated users.
+
         const isDashboard = pathname === '/dashboard';
-        
-        // Find the nav item that best matches the current path.
-        // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks).
+        if (isDashboard) return; // No permission checks on the dashboard itself
+
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
 
-        // If on a path that is NOT the dashboard and doesn't match any nav item, something is wrong.
-        // This could be a typo in a URL. Redirect to the dashboard as a safe fallback.
-        if (!isDashboard && !currentNavItem) {
-             console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
-             router.push('/dashboard');
-             return;
-        }
-
-        // If a matching nav item is found, check if the user's role for that module has access.
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
                router.push('/dashboard'); 
             }
+        } else {
+             // If we are not on the dashboard and don't match any nav item, redirect to dashboard.
+             console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
+             router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -234,7 +229,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = !isMobile && pathname !== '/dashboard';
+    const showSidebar = !isMobile;
     const showMobileNav = isMobile && pathname !== '/dashboard';
     
     const availableNavItems = navItems.filter(item => {

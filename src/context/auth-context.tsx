@@ -101,6 +101,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'admin':
           return user.role; // Should be 'Master'
 
+        case 'dashboard':
+          return user.role;
+
         default:
           return user.role;
       }

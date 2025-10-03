@@ -26,16 +26,15 @@ export default function LoginPage() {
     await login({ legajo, password });
   };
   
-  // If user is already logged in, redirect them to the main portal page
   useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
+    // If a logged-in user somehow lands on the login page, redirect them away.
+    if (user) {
+      router.replace('/dashboard');
     }
-  }, [user, loading, router]);
+  }, [user, router]);
 
 
   // Prevent rendering the form if auth state is loading or user is already logged in
-  // This avoids hydration errors caused by redirection logic
   if (loading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
