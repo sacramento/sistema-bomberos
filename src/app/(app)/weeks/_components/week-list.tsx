@@ -91,7 +91,11 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
 
     return (
         <div className="space-y-4">
-            {weeks.map((week) => (
+            {weeks.map((week) => {
+                 const isMember = user ? week.allMembers?.some(m => m.legajo === user.id) : false;
+                 const canViewDetails = canManage || isMember;
+
+                return (
                 <AlertDialog key={week.id}>
                     <Card className={cn("flex flex-col sm:flex-row border-l-4", getBorderColor(week.firehouse))}>
                         <div className="flex-grow p-6">
@@ -174,7 +178,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                             </Accordion>
 
                         </div>
-                         {canManage && (
+                         {canViewDetails && (
                             <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
                                 <Button asChild className="w-full sm:w-auto" variant="outline">
                                     <Link href={`/weeks/${week.id}`}>
@@ -199,7 +203,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                         </AlertDialogFooter>
                     </AlertDialogContent>
                  </AlertDialog>
-            ))}
+            )})}
         </div>
     )
 }
