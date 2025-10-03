@@ -65,7 +65,8 @@ function Sidebar() {
     return null;
   }
 
-  const currentModule = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
+  const currentModuleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
+  const currentModule = currentModuleKey;
   
   const moduleNavItems = navItems.filter(item => {
       const userRoleForItem = getActiveRole(item.href);
@@ -220,10 +221,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         } else if (pathname !== '/') {
             // If no nav item matches and we are not on the root, it's an unknown/unauthorized page.
             // This case might be hit for special routes like /weeks/[id] that don't have a direct navItem.
-            // A more robust check might be needed if we have many dynamic routes without corresponding nav items.
             // For now, let's check the module.
-            const module = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
-            if (!module) {
+            const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
+
+            if (!moduleKey) {
                  console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
                  router.push('/dashboard');
             }
@@ -259,3 +260,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
     );
 }
+
+    
