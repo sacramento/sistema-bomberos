@@ -174,13 +174,15 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                             </Accordion>
 
                         </div>
-                         <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
-                            <Button asChild className="w-full sm:w-auto" variant="outline">
-                                <Link href={`/weeks/${week.id}`}>
-                                    Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
-                                </Link>
-                            </Button>
-                        </div>
+                         {canManage && (
+                            <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
+                                <Button asChild className="w-full sm:w-auto" variant="outline">
+                                    <Link href={`/weeks/${week.id}`}>
+                                        Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            </div>
+                         )}
                     </Card>
                     <AlertDialogContent>
                         <AlertDialogHeader>
