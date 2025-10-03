@@ -93,7 +93,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
         <div className="space-y-4">
             {weeks.map((week) => {
                  const isMember = user ? week.allMembers?.some(m => m.legajo === user.id) : false;
-                 const canViewDetails = canManage || isMember;
+                 const canViewDetails = canManage || isMember || activeRole === 'Oficial';
 
                 return (
                 <AlertDialog key={week.id}>
