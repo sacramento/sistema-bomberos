@@ -9,7 +9,7 @@ import { useAuth } from "@/context/auth-context";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -28,10 +28,10 @@ export default function LoginPage() {
   
   // If user is already logged in, redirect them to the main portal page
   useEffect(() => {
-    if (user) {
-      router.push('/sessions');
+    if (!loading && user) {
+      router.push('/dashboard');
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
 
   // Prevent rendering the form if auth state is loading or user is already logged in
@@ -39,13 +39,16 @@ export default function LoginPage() {
   if (loading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
-            <p>Cargando...</p>
+            <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-muted-foreground">Cargando sesión...</p>
+            </div>
         </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex min-h-screen items-center justify-center">
       <Card className="w-full max-w-sm relative">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center pt-12">

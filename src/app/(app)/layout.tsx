@@ -20,7 +20,8 @@ import {
   ListTodo,
   UserSquare,
   BookCopy,
-  ArrowLeft
+  ArrowLeft,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -194,26 +195,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        if (pathname === '/') {
-            router.push('/dashboard');
-            return;
-        }
-
+        // This logic handles permission checks for authenticated users.
         const isDashboard = pathname === '/dashboard';
+        
+        // Find the nav item that best matches the current path.
+        // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks).
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
 
+        // If on a path that is NOT the dashboard and doesn't match any nav item, something is wrong.
+        // This could be a typo in a URL. Redirect to the dashboard as a safe fallback.
         if (!isDashboard && !currentNavItem) {
-             console.log(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
+             console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
              router.push('/dashboard');
              return;
         }
 
+        // If a matching nav item is found, check if the user's role for that module has access.
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
-               console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
+               console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
                router.push('/dashboard'); 
             }
         }
@@ -223,7 +226,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (loading || !user) {
         return (
             <div className="flex min-h-screen items-center justify-center">
-                <p>Cargando...</p>
+                <div className="flex flex-col items-center gap-4">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-muted-foreground">Cargando...</p>
+                </div>
             </div>
         );
     }
