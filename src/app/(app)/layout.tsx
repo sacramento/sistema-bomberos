@@ -60,8 +60,7 @@ function Sidebar() {
   const pathname = usePathname();
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  // The one and only rule: if we are not logged in, or we are on the module selection page, don't show the sidebar.
+  
   if (!user || pathname === '/dashboard') {
     return null;
   }
@@ -200,12 +199,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             router.push('/');
             return;
         }
-
-        // Avoid checks on the dashboard page
+        
+        // Don't run permission checks on the dashboard itself.
         if (pathname === '/dashboard') {
             return;
         }
 
+        // Find the nav item that best matches the current URL.
+        // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks).
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
@@ -215,6 +216,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (!currentNavItem.roles.includes(activeRole)) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting to dashboard.`);
                router.push('/dashboard'); 
+            }
+        } else if (pathname !== '/') {
+            // If no nav item matches and we are not on the root, it's an unknown/unauthorized page.
+            // This case might be hit for special routes like /weeks/[id] that don't have a direct navItem.
+            // A more robust check might be needed if we have many dynamic routes without corresponding nav items.
+            // For now, let's check the module.
+            const module = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
+            if (!module) {
+                 console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
+                 router.push('/dashboard');
             }
         }
 
