@@ -61,8 +61,9 @@ function Sidebar() {
   const pathname = usePathname();
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const isMobile = useIsMobile();
   
-  if (!user || pathname === '/dashboard') {
+  if (isMobile || !user || pathname === '/dashboard') {
     return null;
   }
 
@@ -196,13 +197,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        // If user is logged in and on the root path, redirect to dashboard.
         if (pathname === '/') {
             router.push('/dashboard');
             return;
         }
-
-        // Skip permission checks for the dashboard itself
+        
         if (pathname === '/dashboard') return;
 
         const currentNavItem = [...navItems]
@@ -216,7 +215,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else {
-             // If no nav item is found for the current path, it's an unknown/invalid route for this layout
              console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
              router.push('/dashboard');
         }
@@ -234,7 +232,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = !isMobile;
     const showMobileNav = isMobile;
     
     const availableNavItems = navItems.filter(item => {
@@ -244,7 +241,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="flex min-h-screen w-full">
-            {showSidebar && <Sidebar />}
+            <Sidebar />
             <div className="flex flex-1 flex-col">
                 {showMobileNav && <MobileNav navItems={availableNavItems} />}
                 <main className={cn("flex-1 p-4 sm:p-6 md:p-8", showMobileNav && "pt-20 md:pt-8")}>
