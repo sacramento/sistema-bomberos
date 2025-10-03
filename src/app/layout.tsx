@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Inter, Roboto } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/context/auth-context';
 
@@ -16,8 +16,9 @@ const fontBody = Inter({
   variable: '--font-body',
 });
 
-const fontHeadline = Space_Grotesk({
+const fontHeadline = Roboto({
   subsets: ['latin'],
+  weight: ['400', '700'],
   variable: '--font-headline',
 });
 
