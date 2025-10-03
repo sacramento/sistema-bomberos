@@ -10,17 +10,17 @@ import { PageHeader } from '@/components/page-header';
 
 const moduleDetails: Record<NavItem['module'], { title: string; description: string; icon: React.ElementType }> = {
     asistencia: {
-        title: 'Módulo de Asistencia',
+        title: 'Asistencia',
         description: 'Gestione clases, asistencias, licencias y reportes de capacitación.',
         icon: Flame
     },
     semanas: {
-        title: 'Módulo de Semanas',
+        title: 'Semanas',
         description: 'Organice guardias, personal y tareas semanales.',
         icon: Flame
     },
     movilidad: {
-        title: 'Módulo de Movilidad',
+        title: 'Movilidad',
         description: 'Coordine y registre los movimientos de la flota vehicular.',
         icon: Flame
     },
