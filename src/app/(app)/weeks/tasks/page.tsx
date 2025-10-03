@@ -102,7 +102,7 @@ export default function AllTasksPage() {
                                         <TableCell>
                                             <div className="flex flex-wrap gap-1">
                                                 {task.assignedTo && task.assignedTo.length > 0 ? 
-                                                    task.assignedTo.map(f => <Badge key={f.id} variant="secondary">{f.lastName}</Badge>) : 
+                                                    task.assignedTo.map(f => f ? <Badge key={f.id} variant="secondary">{f.lastName}</Badge> : null) : 
                                                     <Badge variant="outline">Nadie</Badge>
                                                 }
                                             </div>
