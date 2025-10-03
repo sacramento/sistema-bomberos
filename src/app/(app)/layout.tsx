@@ -201,11 +201,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        // Avoid checks on the dashboard page
+        if (pathname === '/dashboard') {
+            return;
+        }
+
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
 
-        if (pathname !== '/dashboard' && currentNavItem) {
+        if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting to dashboard.`);
