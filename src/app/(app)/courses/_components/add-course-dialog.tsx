@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { Firefighter, Course, Session } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
-import { addCourse } from "@/services/courses.service";
+import { batchAddCourses } from "@/services/courses.service";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,83 @@ import { DateRange } from "react-day-picker";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 
 const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+
+const MultiSelectFirefighter = ({ 
+    title, 
+    selected, 
+    onSelectedChange,
+    firefighters,
+}: { 
+    title: string;
+    selected: Firefighter[]; 
+    onSelectedChange: (selected: Firefighter[]) => void;
+    firefighters: Firefighter[];
+}) => {
+    const [open, setOpen] = useState(false);
+    
+    const handleSelect = (firefighter: Firefighter) => {
+        const isSelected = selected.some(s => s.id === firefighter.id);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
+        } else {
+            onSelectedChange([...selected, firefighter]);
+        }
+    };
+    
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto"
+                >
+                    <div className="flex gap-1 flex-wrap">
+                        {selected.length > 0 ? (
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{getDisplayText(f)}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                        <CommandGroup>
+                            {firefighters.map((firefighter) => (
+                                <CommandItem
+                                    key={firefighter.id}
+                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    onSelect={() => {
+                                        handleSelect(firefighter);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
 
 export default function AddCourseDialog({ children, onCourseAdded }: { children: React.ReactNode; onCourseAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -36,13 +111,11 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
   const [loading, setLoading] = useState(false);
   
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
-  const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
+  const [selectedFirefighters, setSelectedFirefighters] = useState<Firefighter[]>([]);
   const [specialization, setSpecialization] = useState<Session['specialization'] | ''>('');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
-
-  const [openCombobox, setOpenCombobox] = useState(false);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -63,7 +136,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
   }, [open, toast]);
 
   const resetForm = () => {
-    setSelectedFirefighter(null);
+    setSelectedFirefighters([]);
     setSpecialization('');
     setTitle('');
     setLocation('');
@@ -72,10 +145,10 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedFirefighter || !specialization || !title || !location || !dateRange?.from || !dateRange?.to) {
+    if (selectedFirefighters.length === 0 || !specialization || !title || !location || !dateRange?.from || !dateRange?.to) {
         toast({
             title: "Error",
-            description: "Por favor, complete todos los campos.",
+            description: "Por favor, complete todos los campos, incluyendo al menos un bombero.",
             variant: "destructive",
         });
         return;
@@ -84,22 +157,22 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
     setLoading(true);
 
     try {
-        const newCourseData: Omit<Course, 'id'> = {
-            firefighterId: selectedFirefighter.id,
-            firefighterName: `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`,
-            firefighterLegajo: selectedFirefighter.legajo,
+        const coursesToCreate: Omit<Course, 'id'>[] = selectedFirefighters.map(firefighter => ({
+            firefighterId: firefighter.id,
+            firefighterName: `${firefighter.firstName} ${firefighter.lastName}`,
+            firefighterLegajo: firefighter.legajo,
             specialization: specialization as Session['specialization'],
             title,
             location,
-            startDate: format(dateRange.from, 'yyyy-MM-dd'),
-            endDate: format(dateRange.to, 'yyyy-MM-dd'),
-        };
+            startDate: format(dateRange.from!, 'yyyy-MM-dd'),
+            endDate: format(dateRange.to!, 'yyyy-MM-dd'),
+        }));
         
-        await addCourse(newCourseData);
+        await batchAddCourses(coursesToCreate);
 
         toast({
             title: "¡Éxito!",
-            description: "El curso ha sido registrado correctamente.",
+            description: `${coursesToCreate.length} registros de curso han sido creados correctamente.`,
         });
         
         onCourseAdded();
@@ -129,53 +202,18 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
           <DialogHeader>
             <DialogTitle className="font-headline">Registrar Nuevo Curso</DialogTitle>
             <DialogDescription>
-              Complete los detalles del curso o capacitación externa.
+              Complete los detalles del curso y seleccione uno o más participantes.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="firefighter">Bombero</Label>
-               <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openCombobox}
-                        className="w-full justify-between"
-                        >
-                        {selectedFirefighter
-                            ? `${selectedFirefighter.legajo} - ${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`
-                            : "Seleccionar por legajo o nombre..."}
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
-                        <Command>
-                        <CommandInput placeholder="Buscar integrante..." />
-                        <CommandList>
-                            <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                            {allFirefighters.map((firefighter) => (
-                            <CommandItem
-                                key={firefighter.id}
-                                value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                onSelect={() => {
-                                    setSelectedFirefighter(firefighter);
-                                    setOpenCombobox(false);
-                                }}
-                            >
-                                <Check
-                                className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0"
-                                )}
-                                />
-                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
-                            </CommandItem>
-                            ))}
-                        </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+              <Label htmlFor="firefighter">Bomberos</Label>
+               <MultiSelectFirefighter
+                    title="participantes"
+                    selected={selectedFirefighters}
+                    onSelectedChange={setSelectedFirefighters}
+                    firefighters={allFirefighters}
+                />
             </div>
             <div className="space-y-2">
               <Label htmlFor="title">Título del Curso</Label>
@@ -237,7 +275,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Curso'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Curso(s)'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
