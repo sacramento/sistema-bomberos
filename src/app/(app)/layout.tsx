@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -22,6 +20,7 @@ import {
   ListTodo,
   UserSquare,
   BookCopy,
+  ArrowLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -31,10 +30,9 @@ import { useEffect, useState } from 'react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import MobileNav from './_components/mobile-nav';
 
-type NavItem = {
+export type NavItem = {
   href: string;
   icon: React.ElementType;
   label: string;
@@ -56,26 +54,28 @@ export const navItems: NavItem[] = [
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
 ];
 
+
 function Sidebar() {
   const pathname = usePathname();
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  if (!user) return null;
+  if (!user || pathname === '/dashboard') return null;
 
-  // Group nav items by module, filtered by role
-  const navItemsByModule = navItems.reduce((acc, item) => {
-    const userRoleForItem = getActiveRole(item.href);
-    if (item.roles.includes(userRoleForItem)) {
-      const module = item.module;
-      if (!acc[module]) {
-        acc[module] = [];
-      }
-      acc[module].push(item);
-    }
-    return acc;
-  }, {} as Record<string, NavItem[]>);
-
+  const currentModule = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
+  
+  const moduleNavItems = navItems.filter(item => {
+      const userRoleForItem = getActiveRole(item.href);
+      return item.module === currentModule && item.roles.includes(userRoleForItem);
+  });
+  
+  const moduleTitles = {
+      asistencia: 'Módulo Asistencia',
+      semanas: 'Módulo Semanas',
+      movilidad: 'Módulo Movilidad',
+      general: 'Administración'
+  };
+  const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
 
   const getLabel = (item: NavItem) => {
     const itemActiveRole = getActiveRole(item.href);
@@ -86,18 +86,7 @@ function Sidebar() {
   };
   
   const userImage = `https://picsum.photos/seed/${user.id}/200`;
-
-  const moduleTitles = {
-      asistencia: 'Módulo Asistencia',
-      semanas: 'Módulo Semanas',
-      general: 'Administración'
-  };
-  
-  const moduleOrder: (keyof typeof moduleTitles)[] = ['asistencia', 'semanas', 'general'];
-  
   const userRoleDisplay = getActiveRole(pathname);
-
-  const currentModule = navItems.find(item => pathname.startsWith(item.href))?.module;
 
   return (
     <TooltipProvider>
@@ -111,75 +100,62 @@ function Sidebar() {
             <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
           </Button>
         </div>
+        
         <nav className="flex-1 space-y-2 overflow-y-auto p-2">
-            {isCollapsed ? (
-                 moduleOrder.flatMap(moduleKey => 
-                    navItemsByModule[moduleKey]?.map(item => {
-                         const label = getLabel(item);
-                         const isActive = pathname.startsWith(item.href) && (item.href !== '/sessions' || pathname === '/sessions');
-
-                         return (
-                            <Tooltip key={item.href} delayDuration={0}>
-                              <TooltipTrigger asChild>
-                                  <Link
-                                    href={item.href}
-                                    className={cn( "flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8", isActive && "bg-accent text-accent-foreground" )}
-                                  >
-                                    <item.icon className="h-5 w-5" />
-                                    <span className="sr-only">{label}</span>
-                                  </Link>
-                              </TooltipTrigger>
-                              <TooltipContent side="right">{label}</TooltipContent>
-                            </Tooltip>
-                         )
-                    })
-                )
-            ) : (
-                <Accordion type="multiple" defaultValue={currentModule ? [currentModule] : ['asistencia']} className="w-full">
-                    {moduleOrder.map(moduleKey => (
-                         navItemsByModule[moduleKey] && (
-                            <AccordionItem value={moduleKey} key={moduleKey}>
-                                <AccordionTrigger className="text-sm font-semibold text-muted-foreground hover:no-underline hover:text-primary px-3 py-2">
-                                    {moduleTitles[moduleKey]}
-                                </AccordionTrigger>
-                                <AccordionContent className="pl-4">
-                                     {navItemsByModule[moduleKey].map(item => {
-                                        const label = getLabel(item);
-                                        
-                                        let isActive = false;
-                                        if (item.href === '/weeks/my-week') {
-                                            isActive = pathname === item.href;
-                                        } else if (item.href === '/weeks' && (pathname === item.href || pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
-                                           isActive = true;
-                                        } else if (item.href === '/weeks/tasks') {
-                                            isActive = pathname === item.href;
-                                        } else if (item.href === '/sessions') {
-                                            isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
-                                        } else {
-                                            isActive = pathname.startsWith(item.href);
-                                        }
-
-
-                                        return (
-                                            <Link
-                                                key={item.href}
-                                                href={item.href}
-                                                className={cn( "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary", isActive ? "bg-muted text-primary" : "" )}
-                                            >
-                                                <item.icon className="h-4 w-4" />
-                                                <span>{label}</span>
-                                            </Link>
-                                        )
-                                     })}
-                                </AccordionContent>
-                            </AccordionItem>
-                         )
-                    ))}
-                </Accordion>
+            {!isCollapsed && (
+                <div className="px-3 py-2">
+                    <h2 className="mb-2 text-lg font-semibold tracking-tight font-headline">{currentModuleTitle}</h2>
+                    <div className="space-y-1">
+                        {moduleNavItems.map(item => {
+                            const label = getLabel(item);
+                            let isActive = pathname.startsWith(item.href);
+                             if (item.href === '/weeks' && (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
+                                isActive = true;
+                            } else if (item.href === '/sessions') {
+                                isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                            }
+                            
+                            return (
+                                <Link key={item.href} href={item.href}
+                                    className={cn(
+                                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                                        isActive ? "bg-muted text-primary" : ""
+                                    )}>
+                                    <item.icon className="h-4 w-4" />
+                                    <span>{label}</span>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </div>
             )}
+            {isCollapsed && moduleNavItems.map(item => {
+                const label = getLabel(item);
+                const isActive = pathname.startsWith(item.href);
+                return (
+                    <Tooltip key={item.href} delayDuration={0}>
+                        <TooltipTrigger asChild>
+                            <Link href={item.href}
+                                className={cn("flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-foreground md:h-8 md:w-8", isActive && "bg-accent text-accent-foreground")}>
+                                <item.icon className="h-5 w-5" />
+                                <span className="sr-only">{label}</span>
+                            </Link>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">{label}</TooltipContent>
+                    </Tooltip>
+                );
+            })}
         </nav>
 
         <div className="mt-auto border-t p-2">
+           {!isCollapsed && (
+                <Button variant="ghost" className="w-full justify-start mb-2" asChild>
+                    <Link href="/dashboard">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Módulos
+                    </Link>
+                </Button>
+           )}
            <div className={cn("flex items-center gap-3 p-2", isCollapsed && "justify-center")}>
             <Avatar className="size-9">
               <AvatarImage src={userImage} alt={user.name} className="object-cover" />
@@ -216,7 +192,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        // Find the most specific matching nav item for the current path
+        if (pathname === '/') {
+            router.push('/dashboard');
+            return;
+        }
+
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
@@ -224,9 +204,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         if (currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
-               // If user's role is not in the allowed roles for the item, redirect.
                console.log(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
-               // Redirect to a safe default page.
                router.push('/dashboard'); 
             }
         }
@@ -241,8 +219,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showSidebar = !isMobile;
-    const showMobileNav = isMobile;
+    const showSidebar = !isMobile && pathname !== '/dashboard';
+    const showMobileNav = isMobile && pathname !== '/dashboard';
     
     const availableNavItems = navItems.filter(item => {
         const role = getActiveRole(item.href);
@@ -254,7 +232,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
                 {showMobileNav && <MobileNav navItems={availableNavItems} />}
-                <main className="flex-1 p-4 sm:p-6 md:p-8 pt-20 md:pt-8">
+                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", showMobileNav && "pt-20 md:pt-8")}>
                     {children}
                 </main>
             </div>

@@ -1,15 +1,13 @@
-
 'use client';
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { LogOut, Flame, Menu } from "lucide-react";
+import { LogOut, Flame, Menu, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { navItems } from "../layout";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { navItems, NavItem } from "../layout";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 interface MobileNavProps {
@@ -22,19 +20,14 @@ export default function MobileNav({ navItems }: MobileNavProps) {
     
     if(!user) return null;
 
-    const navItemsByModule = navItems.reduce((acc, item) => {
+    const currentModule = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
+  
+    const moduleNavItems = navItems.filter(item => {
         const userRoleForItem = getActiveRole(item.href);
-        if (item.roles.includes(userRoleForItem)) {
-          const module = item.module;
-          if (!acc[module]) {
-            acc[module] = [];
-          }
-          acc[module].push(item);
-        }
-        return acc;
-      }, {} as Record<string, (typeof navItems[0])[]>);
+        return item.module === currentModule && item.roles.includes(userRoleForItem);
+    });
 
-    const getLabel = (item: typeof navItems[0]) => {
+    const getLabel = (item: NavItem) => {
         const itemActiveRole = getActiveRole(item.href);
         if (item.href === '/reports' && itemActiveRole === 'Bombero') {
         return 'Mi Reporte';
@@ -46,10 +39,10 @@ export default function MobileNav({ navItems }: MobileNavProps) {
     const moduleTitles = {
       asistencia: 'Módulo Asistencia',
       semanas: 'Módulo Semanas',
+      movilidad: 'Módulo Movilidad',
       general: 'Administración'
     };
-    const moduleOrder: (keyof typeof moduleTitles)[] = ['asistencia', 'semanas', 'general'];
-    const currentModule = navItems.find(item => pathname.startsWith(item.href))?.module;
+    const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-sm md:hidden">
@@ -63,55 +56,44 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                     </SheetTrigger>
                     <SheetContent side="left" className="flex flex-col p-0">
                          <SheetHeader className="h-16 flex-shrink-0 border-b px-6 flex flex-row items-center">
-                            <SheetTitle className="sr-only">Menú Principal</SheetTitle>
-                            <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                                <Flame className="h-6 w-6 text-primary" />
-                                <span className="font-headline text-lg">Plataforma SMA</span>
-                            </Link>
+                             <div className="flex-grow">
+                                <SheetTitle className="font-headline text-lg">{currentModuleTitle}</SheetTitle>
+                             </div>
                         </SheetHeader>
-                        <nav className="flex-1 overflow-y-auto p-4">
-                            <Accordion type="multiple" defaultValue={currentModule ? [currentModule] : ['asistencia']} className="w-full">
-                                {moduleOrder.map(moduleKey => (
-                                    navItemsByModule[moduleKey] && (
-                                        <AccordionItem value={moduleKey} key={moduleKey} className="border-b-0">
-                                            <AccordionTrigger className="py-3 text-base font-semibold text-muted-foreground hover:no-underline hover:text-primary">
-                                                {moduleTitles[moduleKey]}
-                                            </AccordionTrigger>
-                                            <AccordionContent className="pl-4 space-y-1">
-                                                {navItemsByModule[moduleKey].map(item => {
-                                                    const label = getLabel(item);
-                                                    let isActive = false;
-                                                    if (item.href === '/weeks/my-week') {
-                                                        isActive = pathname === item.href;
-                                                    } else if (item.href === '/weeks' && (pathname === item.href || pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'))) {
-                                                        isActive = true;
-                                                    } else if (item.href === '/weeks/tasks') {
-                                                        isActive = pathname === item.href;
-                                                    } else if (item.href === '/sessions') {
-                                                        isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
-                                                    } else {
-                                                        isActive = pathname.startsWith(item.href);
-                                                    }
-                                                    return (
-                                                         <SheetClose asChild key={item.href}>
-                                                            <Link
-                                                                href={item.href}
-                                                                className={cn("flex items-center gap-4 rounded-md p-3 text-base font-medium text-muted-foreground transition-all hover:bg-muted hover:text-primary", isActive ? "bg-muted text-primary" : "")}
-                                                            >
-                                                                <item.icon className="h-5 w-5" />
-                                                                <span>{label}</span>
-                                                            </Link>
-                                                        </SheetClose>
-                                                    )
-                                                })}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    )
-                                ))}
-                            </Accordion>
+                        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                             {moduleNavItems.map(item => {
+                                const label = getLabel(item);
+                                let isActive = pathname.startsWith(item.href);
+                                 if (item.href === '/weeks' && (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
+                                    isActive = true;
+                                } else if (item.href === '/sessions') {
+                                    isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                                }
+
+                                return (
+                                    <SheetClose asChild key={item.href}>
+                                        <Link
+                                            href={item.href}
+                                            className={cn("flex items-center gap-4 rounded-md p-3 text-base font-medium text-muted-foreground transition-all hover:bg-muted hover:text-primary", isActive ? "bg-muted text-primary" : "")}
+                                        >
+                                            <item.icon className="h-5 w-5" />
+                                            <span>{label}</span>
+                                        </Link>
+                                    </SheetClose>
+                                )
+                            })}
                         </nav>
-                         <div className="mt-auto border-t p-4">
-                            <div className="flex items-center gap-3 p-2 mb-2">
+                         <div className="mt-auto border-t p-4 space-y-2">
+                             <SheetClose asChild>
+                                <Button variant="ghost" className="w-full justify-center text-base py-4" asChild>
+                                    <Link href="/dashboard">
+                                        <ArrowLeft className="h-5 w-5 mr-3" />
+                                        <span>Volver a Módulos</span>
+                                    </Link>
+                                </Button>
+                             </SheetClose>
+                             <Separator />
+                            <div className="flex items-center gap-3 p-2">
                                 <Avatar className="size-11">
                                 <AvatarImage src={userImage} alt={user.name} className="object-cover" />
                                 <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -59,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (loggedInUser) {
         setUser(loggedInUser);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
-        // Redirect to the main portal page, which will handle role-based redirection.
+        // Redirect to the module selection page.
         router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
@@ -103,7 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return user.role; // Should be 'Master'
 
         default:
-          // For pages like '/dashboard' or unknown paths, default to the main user role.
           return user.role;
       }
   };

@@ -1,52 +1,92 @@
-
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/auth-context';
-import { Skeleton } from '@/components/ui/skeleton';
 import { navItems } from '../layout';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import Link from 'next/link';
+import { ArrowRight, Flame } from 'lucide-react';
+import type { NavItem } from '../layout';
+import { PageHeader } from '@/components/page-header';
 
-export default function PortalPage() {
-  const { user, loading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (loading || !user) {
-      return;
+const moduleDetails: Record<NavItem['module'], { title: string; description: string; icon: React.ElementType }> = {
+    asistencia: {
+        title: 'Módulo de Asistencia',
+        description: 'Gestione clases, asistencias, licencias y reportes de capacitación.',
+        icon: Flame
+    },
+    semanas: {
+        title: 'Módulo de Semanas',
+        description: 'Organice guardias, personal y tareas semanales.',
+        icon: Flame
+    },
+    movilidad: {
+        title: 'Módulo de Movilidad',
+        description: 'Coordine y registre los movimientos de la flota vehicular.',
+        icon: Flame
+    },
+    general: {
+        title: 'Administración General',
+        description: 'Gestione usuarios, roles y configuraciones del sistema.',
+        icon: Flame
     }
+};
 
-    // This page acts as a router to the user's default dashboard.
-    const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+export default function ModuleSelectionPage() {
+  const { user, getActiveRole } = useAuth();
+  
+  if (!user) return null;
 
-    let destination = '/schedule'; // A safe default for roles with limited access.
-
-    // 1. Semanas module has top priority
-    if (roles.semanas !== 'Ninguno') {
-        destination = '/weeks/my-week';
-    } 
-    // 2. Asistencia module for higher-level roles
-    else if (roles.asistencia === 'Master' || roles.asistencia === 'Administrador' || roles.asistencia === 'Oficial' || roles.asistencia === 'Instructor') {
-        destination = '/sessions';
+  const accessibleModules = navItems.reduce((acc, item) => {
+    const userRole = getActiveRole(item.href);
+    if (item.roles.includes(userRole)) {
+      if (!acc[item.module]) {
+        // Find the highest priority link for the module to use as its main entry point
+        const firstValidLink = navItems.find(nav => nav.module === item.module && nav.roles.includes(getActiveRole(nav.href)))?.href || '/dashboard';
+        acc[item.module] = { ...moduleDetails[item.module], entryPoint: firstValidLink };
+      }
     }
-    // 3. Fallback for Asistencia roles like Ayudantía, who can't see /sessions.
-    // navItems are imported to check for the first available path.
-    else if (roles.asistencia !== 'Ninguno') {
-        const firstAllowedPath = navItems.find(item => item.module === 'asistencia' && item.roles.includes(roles.asistencia))?.href;
-        destination = firstAllowedPath || '/schedule'; // Default to schedule if somehow no path is found
-    }
-    
-    router.replace(destination);
+    return acc;
+  }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  }, [user, loading, router]);
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'general'];
 
-  // This page is a loading/redirecting fallback.
+
   return (
-    <div className="flex min-h-[80vh] flex-col items-center justify-center p-4">
-        <div className="space-y-4 w-full max-w-md">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-32 w-full" />
-            <p className="text-center text-muted-foreground mt-4">Redirigiendo a su dashboard...</p>
+    <div className="flex flex-col items-center justify-center min-h-[80vh]">
+        <PageHeader 
+            title={`Bienvenido, ${user.name}`}
+            description="Por favor, seleccione un módulo para continuar."
+            className='text-center items-center'
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full">
+            {moduleOrder.map(moduleKey => {
+                const module = accessibleModules[moduleKey];
+                if (!module) return null;
+
+                const ModuleIcon = module.icon;
+
+                return (
+                     <Link href={module.entryPoint} key={moduleKey} className="group">
+                        <Card className="hover:border-primary transition-all duration-200 h-full flex flex-col">
+                            <CardHeader className="flex-row items-center gap-4">
+                                <div className="p-3 bg-primary/10 rounded-lg">
+                                     <ModuleIcon className="h-6 w-6 text-primary" />
+                                </div>
+                                <div>
+                                    <CardTitle className="font-headline text-xl">{module.title}</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardDescription className="px-6 pb-6 flex-grow">{module.description}</CardDescription>
+                            <div className="px-6 pb-4 mt-auto">
+                                <div className="flex items-center text-primary font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+                                    <span>Ingresar al Módulo</span>
+                                    <ArrowRight className="h-4 w-4" />
+                                </div>
+                            </div>
+                        </Card>
+                    </Link>
+                )
+            })}
         </div>
     </div>
   );
