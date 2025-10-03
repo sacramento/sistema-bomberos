@@ -28,7 +28,6 @@ interface WeekListProps {
     isLoading?: boolean;
     onDataChange: () => void;
     canManage: boolean;
-    showDetailsButton?: boolean;
 }
 
 const getBorderColor = (firehouse: Week['firehouse']) => {
@@ -40,7 +39,7 @@ const getBorderColor = (firehouse: Week['firehouse']) => {
     }
 };
 
-export default function WeekList({ weeks, isLoading, onDataChange, canManage, showDetailsButton = true }: WeekListProps) {
+export default function WeekList({ weeks, isLoading, onDataChange, canManage }: WeekListProps) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
@@ -105,7 +104,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage, sh
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
-                                     {isPrivilegedUser && showDetailsButton && (
+                                     {canManage && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
@@ -175,15 +174,13 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage, sh
                             </Accordion>
 
                         </div>
-                         {showDetailsButton && (
-                             <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
-                                <Button asChild className="w-full sm:w-auto" variant="outline">
-                                    <Link href={`/weeks/${week.id}`}>
-                                        Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
-                                    </Link>
-                                </Button>
-                            </div>
-                         )}
+                         <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
+                            <Button asChild className="w-full sm:w-auto" variant="outline">
+                                <Link href={`/weeks/${week.id}`}>
+                                    Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                        </div>
                     </Card>
                     <AlertDialogContent>
                         <AlertDialogHeader>

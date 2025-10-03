@@ -24,7 +24,7 @@ export default function MyWeekPage() {
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
 
     const fetchAllWeeks = async () => {
         if (!user) {
@@ -63,11 +63,11 @@ export default function MyWeekPage() {
             return { weeksToShow: [], isRedirecting: false };
         }
         
-        // For non-managing roles, check for an active week to redirect to.
-        if (!canManage && activeRole !== 'Oficial') {
-            const assignedWeeks = allWeeks.filter(week => 
-                week.allMembers?.some(member => member.legajo === user.id)
-            );
+        const assignedWeeks = allWeeks.filter(week => 
+            week.allMembers?.some(member => member.legajo === user.id)
+        );
+
+        if (activeRole !== 'Master' && activeRole !== 'Administrador' && activeRole !== 'Oficial') {
             const today = new Date();
             const activeWeek = assignedWeeks.find(week => {
                 const startDate = startOfDay(parseISO(week.periodStartDate));
@@ -80,21 +80,12 @@ export default function MyWeekPage() {
             }
         }
         
-        let finalWeeksToShow: Week[] = [];
-        if (canManage || activeRole === 'Oficial') {
-            finalWeeksToShow = allWeeks; 
-        } else if (user) {
-            finalWeeksToShow = allWeeks.filter(week => 
-                week.allMembers?.some(member => member.legajo === user.id)
-            );
-        }
-
         return {
-            weeksToShow: finalWeeksToShow.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime()), 
+            weeksToShow: assignedWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime()), 
             isRedirecting: shouldRedirect
         };
 
-    }, [allWeeks, user, canManage, activeRole, loading, router]);
+    }, [allWeeks, user, activeRole, loading, router]);
 
 
     if (loading || isRedirecting) {
@@ -112,10 +103,10 @@ export default function MyWeekPage() {
     return (
         <>
             <PageHeader 
-                title={canManage || activeRole === 'Oficial' ? "Gestión de Semanas" : "Mis Semanas"} 
-                description={canManage || activeRole === 'Oficial' ? "Cree, clone o gestione todas las semanas desde esta vista." : "No tienes una semana activa. Aquí puedes ver todas tus semanas asignadas, pasadas y futuras."}
+                title="Mi Semana" 
+                description="No tienes una semana activa. Aquí puedes ver todas tus semanas asignadas y gestionar las que te correspondan."
             >
-                {canManage && (
+                {(activeRole === 'Master' || activeRole === 'Administrador') && (
                     <AddWeekDialog onWeekAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -125,7 +116,7 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} showDetailsButton={true} />
+            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
         </>
     );
 }

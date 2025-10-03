@@ -49,7 +49,7 @@ export const navItems: NavItem[] = [
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
-  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
+  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
@@ -207,7 +207,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
 
         // Find the nav item that best matches the current URL.
-        // Sort by href length descending to match more specific paths first (e.g., /weeks/my-week before /weeks).
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
@@ -219,11 +218,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else if (pathname !== '/') {
-            // If no nav item matches and we are not on the root, it's an unknown/unauthorized page.
-            // This case might be hit for special routes like /weeks/[id] that don't have a direct navItem.
-            // For now, let's check the module.
             const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
-
             if (!moduleKey) {
                  console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
                  router.push('/dashboard');
@@ -260,5 +255,3 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
     );
 }
-
-    

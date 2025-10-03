@@ -86,7 +86,7 @@ export default function WeeksDashboardPage() {
         <>
             <PageHeader 
                 title="Semanas de Guardia" 
-                description="Listado histórico de todas las semanas de guardia, agrupadas por cuartel."
+                description="Listado histórico de solo lectura de todas las semanas de guardia, agrupadas por cuartel."
             />
             
             <Card className="mb-8">
@@ -123,8 +123,7 @@ export default function WeeksDashboardPage() {
                                 weeks={weeksToShow[firehouse]} 
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
-                                canManage={false}
-                                showDetailsButton={false}
+                                canManage={false} // This view is always read-only
                             />
                         </div>
                     )
