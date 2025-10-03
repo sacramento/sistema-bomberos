@@ -230,8 +230,9 @@ export default function ReportsPage() {
     
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
-    canvas.width = 400;
-    canvas.height = 200;
+    // Increased resolution for better quality
+    canvas.width = 800;
+    canvas.height = 400;
     const ctx = canvas.getContext('2d');
     
     if (!ctx) return '';
@@ -270,7 +271,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 animation: {
                     duration: 0,
                     onComplete: (context) => {
-                        resolve(context.chart.toBase64Image('image/jpeg', 0.8));
+                        resolve(context.chart.toBase64Image('image/png', 1.0)); // Use PNG for better quality
                         context.chart.destroy();
                     }
                 },
@@ -296,7 +297,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                         },
                         font: {
                             weight: 'bold',
-                            size: 10,
+                            size: 16, // Increased font size for higher res
                         }
                     }
                 },
@@ -304,8 +305,18 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     y: {
                         beginAtZero: true,
                         ticks: { 
-                            precision: 0 
+                            precision: 0,
+                            font: {
+                                size: 14 // Increased font size
+                            }
                         }
+                    },
+                    x: {
+                         ticks: {
+                            font: {
+                                size: 14 // Increased font size
+                            }
+                         }
                     }
                 },
             },
@@ -349,8 +360,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     doc.setFont('helvetica', 'bold');
                     doc.text("Resumen Gráfico de Asistencia", 14, currentY);
                     currentY += 5;
-                    doc.addImage(chartImage, 'JPEG', 14, currentY, 140, 70); 
-                    currentY += 80;
+                    doc.addImage(chartImage, 'PNG', 14, currentY, 180, 90); 
+                    currentY += 100;
                  }
             }
             
@@ -838,7 +849,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                             <TableRow>
                                                 <TableHead>Bombero</TableHead>
                                                 <TableHead>Clase</TableHead>
-                                                <TableHead className="hidden sm:table-cell">Fecha</TableHead>
+                                                <TableHead className="hidden sm:table-cell">Especialidad</TableHead>
+                                                <TableHead className="hidden md:table-cell">Fecha</TableHead>
                                                 <TableHead>Estado</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -856,7 +868,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>{item.session.title}</TableCell>
-                                                        <TableCell className="hidden sm:table-cell">{item.session.date}</TableCell>
+                                                        <TableCell className="hidden sm:table-cell">{item.session.specialization}</TableCell>
+                                                        <TableCell className="hidden md:table-cell">{item.session.date}</TableCell>
                                                         <TableCell>
                                                              <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
                                                                 {getStatusLabel(item.status)}
@@ -927,3 +940,4 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+

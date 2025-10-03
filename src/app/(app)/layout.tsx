@@ -112,11 +112,15 @@ function Sidebar() {
                     <div className="space-y-1">
                         {moduleNavItems.map(item => {
                             const label = getLabel(item);
-                            let isActive = pathname.startsWith(item.href);
-                             if (item.href === '/weeks' && (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
-                                isActive = true;
+                             let isActive = false;
+                            if (item.href === '/weeks/my-week' || item.href === '/weeks/tasks') {
+                                isActive = pathname === item.href;
+                            } else if (item.href === '/weeks') {
+                                isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                             } else if (item.href === '/sessions') {
                                 isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                            } else {
+                                isActive = pathname.startsWith(item.href);
                             }
                             
                             return (
@@ -135,11 +139,15 @@ function Sidebar() {
             )}
             {isCollapsed && moduleNavItems.map(item => {
                 const label = getLabel(item);
-                let isActive = pathname.startsWith(item.href);
-                 if (item.href === '/weeks' && (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
-                    isActive = true;
+                let isActive = false;
+                if (item.href === '/weeks/my-week' || item.href === '/weeks/tasks') {
+                    isActive = pathname === item.href;
+                } else if (item.href === '/weeks') {
+                    isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                 } else if (item.href === '/sessions') {
                     isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                } else {
+                    isActive = pathname.startsWith(item.href);
                 }
                 
                 return (
