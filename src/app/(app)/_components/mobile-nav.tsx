@@ -7,12 +7,12 @@ import { LogOut, Flame, Menu, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { navItems, NavItem } from "../layout";
+import type { NavItem } from "../layout";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 
 interface MobileNavProps {
-    navItems: typeof navItems;
+    navItems: NavItem[];
 }
 
 export default function MobileNav({ navItems }: MobileNavProps) {
@@ -34,10 +34,11 @@ export default function MobileNav({ navItems }: MobileNavProps) {
         </header>
     );
 
-    const currentModule = navItems.find(item => pathname.startsWith(item.href.split('/')[1]))?.module;
+    const currentModule = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
   
     const moduleNavItems = navItems.filter(item => {
         const userRoleForItem = getActiveRole(item.href);
+        // We use the passed `navItems` prop which is already filtered for accessibility
         return item.module === currentModule && item.roles.includes(userRoleForItem);
     });
 
@@ -130,10 +131,7 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                     <Flame className="h-6 w-6 text-primary" />
                     <span className="font-headline text-lg">SMA</span>
                 </Link>
-                <Button variant="ghost" size="icon" onClick={logout}>
-                    <LogOut className="h-5 w-5" />
-                    <span className="sr-only">Cerrar Sesión</span>
-                </Button>
+                <div className="w-10"></div>
             </div>
         </header>
     );
