@@ -61,6 +61,7 @@ function Sidebar() {
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // The one and only rule: if we are not logged in, or we are on the module selection page, don't show the sidebar.
   if (!user || pathname === '/dashboard') {
     return null;
   }
@@ -134,7 +135,13 @@ function Sidebar() {
             )}
             {isCollapsed && moduleNavItems.map(item => {
                 const label = getLabel(item);
-                const isActive = pathname.startsWith(item.href);
+                let isActive = pathname.startsWith(item.href);
+                 if (item.href === '/weeks' && (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks')) ) {
+                    isActive = true;
+                } else if (item.href === '/sessions') {
+                    isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                }
+                
                 return (
                     <Tooltip key={item.href} delayDuration={0}>
                         <TooltipTrigger asChild>
@@ -194,26 +201,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        if (pathname === '/') {
-            router.push('/dashboard');
-            return;
-        }
-        
-        if (pathname === '/dashboard') return;
-
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
 
-        if (currentNavItem) {
+        if (pathname !== '/dashboard' && currentNavItem) {
             const activeRole = getActiveRole(pathname);
             if (!currentNavItem.roles.includes(activeRole)) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting to dashboard.`);
                router.push('/dashboard'); 
             }
-        } else if (!['/dashboard'].includes(pathname)) {
-             console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
-             router.push('/dashboard');
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
