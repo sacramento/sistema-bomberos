@@ -29,7 +29,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/auth-context';
 import { useEffect, useState } from 'react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
-import { useIsMobile } from '@/hooks/use-mobile';
 import type { ActiveRole } from '@/context/auth-context';
 import MobileNav from './_components/mobile-nav';
 
@@ -61,9 +60,8 @@ function Sidebar() {
   const pathname = usePathname();
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const isMobile = useIsMobile();
-  
-  if (isMobile || !user || pathname === '/dashboard') {
+
+  if (!user || pathname === '/dashboard') {
     return null;
   }
 
@@ -187,7 +185,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { user, loading, getActiveRole } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-    const isMobile = useIsMobile();
 
     useEffect(() => {
         if (loading) return;
@@ -214,7 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting to dashboard.`);
                router.push('/dashboard'); 
             }
-        } else {
+        } else if (!['/dashboard'].includes(pathname)) {
              console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
              router.push('/dashboard');
         }
@@ -232,19 +229,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         );
     }
   
-    const showMobileNav = isMobile;
-    
     const availableNavItems = navItems.filter(item => {
         const role = getActiveRole(item.href);
         return item.roles.includes(role);
     });
 
     return (
-        <div className="flex min-h-screen w-full">
+        <div className="flex min-h-screen w-full bg-muted/40">
             <Sidebar />
             <div className="flex flex-1 flex-col">
-                {showMobileNav && <MobileNav navItems={availableNavItems} />}
-                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", showMobileNav && "pt-20 md:pt-8")}>
+                <MobileNav navItems={availableNavItems} />
+                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", "md:pt-8 pt-20")}>
                     {children}
                 </main>
             </div>
