@@ -54,7 +54,7 @@ export default function ModuleSelectionPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh]">
         <PageHeader 
-            title={`Bienvenido, ${user.name}`}
+            title={`Bienvenido/a, ${user.name}`}
             description="Por favor, seleccione un módulo para continuar."
             className='text-center items-center'
         />
