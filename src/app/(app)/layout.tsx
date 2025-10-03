@@ -62,7 +62,6 @@ function Sidebar() {
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // Do not render sidebar if there's no user or if we are on the module selection page
   if (!user || pathname === '/dashboard') {
     return null;
   }
@@ -197,8 +196,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        if (pathname === '/') {
+            router.push('/dashboard');
+            return;
+        }
+
         const isDashboard = pathname === '/dashboard';
-        if (isDashboard) return; // No permission checks on the dashboard itself
+        if (isDashboard) return;
 
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
@@ -210,8 +214,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                console.warn(`Role mismatch: User role '${activeRole}' does not have access to '${pathname}'. Redirecting.`);
                router.push('/dashboard'); 
             }
-        } else {
-             // If we are not on the dashboard and don't match any nav item, redirect to dashboard.
+        } else if (pathname !== '/dashboard') {
              console.warn(`No nav item found for path '${pathname}'. Redirecting to dashboard.`);
              router.push('/dashboard');
         }
@@ -230,7 +233,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   
     const showSidebar = !isMobile;
-    const showMobileNav = isMobile && pathname !== '/dashboard';
+    const showMobileNav = isMobile;
     
     const availableNavItems = navItems.filter(item => {
         const role = getActiveRole(item.href);
