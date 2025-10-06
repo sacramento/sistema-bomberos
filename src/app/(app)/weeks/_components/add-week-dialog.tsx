@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -172,10 +171,14 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
 
   useEffect(() => {
       if (open && initialData) {
+          // When cloning, pre-fill data but clear fields that must be unique for the new week
+          setName(''); // Force user to enter a new name
+          setDateRange(undefined); // Force user to select new dates
           setFirehouse(initialData.firehouse || '');
           setLead(initialData.lead || null);
           setDriver(initialData.driver || null);
           setMembers(initialData.members || []);
+          setObservations(initialData.observations || '');
       }
   }, [open, initialData])
   
@@ -372,5 +375,3 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
     </Dialog>
   );
 }
-
-    

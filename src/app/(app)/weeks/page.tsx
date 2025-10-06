@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -69,9 +68,11 @@ export default function WeeksDashboardPage() {
             return acc;
         }, {} as Record<string, Week[]>);
         
-        // Sort weeks inside each group
+        // Sort weeks inside each group and take the last 4
         for (const firehouse in grouped) {
-            grouped[firehouse].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
+            grouped[firehouse] = grouped[firehouse]
+                .sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime())
+                .slice(0, 4); // Keep only the 4 most recent weeks
         }
 
         return { 
@@ -86,7 +87,7 @@ export default function WeeksDashboardPage() {
         <>
             <PageHeader 
                 title="Semanas de Guardia" 
-                description="Listado histórico de solo lectura de todas las semanas de guardia, agrupadas por cuartel."
+                description="Listado de solo lectura de las últimas 4 semanas de guardia, agrupadas por cuartel."
             />
             
             <Card className="mb-8">
