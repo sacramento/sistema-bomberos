@@ -18,7 +18,6 @@ import { es } from "date-fns/locale";
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
         case 'Pendiente': return 'bg-yellow-500 text-black';
-        case 'En Progreso': return 'bg-blue-500';
         case 'Completada': return 'bg-green-600';
         default: return '';
     }
@@ -57,19 +56,21 @@ export default function AllTasksPage() {
 
     const enrichedTasks = useMemo(() => {
         const weekMap = new Map(weeks.map(w => [w.id, w.name]));
-        return tasks.map(task => ({
-            ...task,
-            weekName: weekMap.get(task.weekId) || 'Semana desconocida'
-        }));
+        return tasks
+            .filter(task => task.status !== 'Completada')
+            .map(task => ({
+                ...task,
+                weekName: weekMap.get(task.weekId) || 'Semana desconocida'
+            }));
     }, [tasks, weeks]);
 
     return (
         <>
-            <PageHeader title="Listado General de Tareas" description="Vista de solo lectura de todas las tareas asignadas en todas las semanas." />
+            <PageHeader title="Listado General de Tareas" description="Vista de solo lectura de todas las tareas pendientes asignadas en todas las semanas." />
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Todas las Tareas</CardTitle>
-                    <CardDescription>Mostrando {enrichedTasks.length} tareas en total, ordenadas por fecha de creación.</CardDescription>
+                    <CardTitle className="font-headline">Todas las Tareas Pendientes</CardTitle>
+                    <CardDescription>Mostrando {enrichedTasks.length} tareas pendientes, ordenadas por fecha de creación.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -115,7 +116,7 @@ export default function AllTasksPage() {
                             ) : (
                                 <TableRow>
                                     <TableCell colSpan={5} className="h-24 text-center">
-                                        No hay tareas registradas en el sistema.
+                                        No hay tareas pendientes registradas en el sistema.
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -126,3 +127,5 @@ export default function AllTasksPage() {
         </>
     );
 }
+
+    

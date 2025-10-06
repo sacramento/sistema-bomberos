@@ -13,7 +13,6 @@ import Link from "next/link";
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
         case 'Pendiente': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
-        case 'En Progreso': return 'bg-blue-500 hover:bg-blue-500/90';
         case 'Completada': return 'bg-green-600 hover:bg-green-600/90';
         default: return '';
     }
@@ -31,8 +30,8 @@ export default function MyTasks({ allTasks, allWeeks }: { allTasks: Task[]; allW
                 weekName: allWeeks.find(w => w.id === task.weekId)?.name || 'Semana desconocida'
             }))
             .sort((a, b) => {
-                // Sort by status: Pendiente > En Progreso > Completada
-                const statusOrder = { 'Pendiente': 1, 'En Progreso': 2, 'Completada': 3 };
+                // Sort by status: Pendiente > Completada
+                const statusOrder = { 'Pendiente': 1, 'Completada': 2 };
                 return statusOrder[a.status] - statusOrder[b.status];
             });
     }, [user, allTasks, allWeeks]);
@@ -74,3 +73,5 @@ export default function MyTasks({ allTasks, allWeeks }: { allTasks: Task[]; allW
         </Card>
     );
 }
+
+    

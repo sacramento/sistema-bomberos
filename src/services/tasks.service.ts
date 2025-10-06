@@ -106,3 +106,5 @@ export const deleteTask = async (id: string): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
     await deleteDoc(docRef);
 }
+
+    

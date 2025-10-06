@@ -28,13 +28,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
         case 'Pendiente': return 'bg-yellow-500 text-black';
-        case 'En Progreso': return 'bg-blue-500';
         case 'Completada': return 'bg-green-600';
         default: return '';
     }
 };
 
-const taskStatuses: Task['status'][] = ['Pendiente', 'En Progreso', 'Completada'];
+const taskStatuses: Task['status'][] = ['Pendiente', 'Completada'];
 
 export default function WeekDetailPage() {
     const params = useParams();
@@ -371,3 +370,5 @@ export default function WeekDetailPage() {
         </>
     )
 }
+
+    
