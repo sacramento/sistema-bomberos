@@ -9,11 +9,11 @@ export default function AuthLayout({
          {/* Decorative corner element */}
         <div aria-hidden="true" className="pointer-events-none fixed bottom-0 right-0 h-full w-full">
             {/* Largest, darkest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-900 border-l-transparent drop-shadow-lg" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[300px] border-l-[300px] border-b-red-900 border-l-transparent drop-shadow-xl" />
             {/* Medium triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[150px] border-l-[150px] border-b-red-700 border-l-transparent drop-shadow-lg" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-700 border-l-transparent drop-shadow-xl" />
             {/* Smallest, lightest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[100px] border-l-[100px] border-b-red-500 border-l-transparent drop-shadow-lg" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[100px] border-l-[100px] border-b-red-500 border-l-transparent drop-shadow-xl" />
         </div>
     </div>
   );
