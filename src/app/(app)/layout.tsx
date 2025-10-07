@@ -74,9 +74,9 @@ function Sidebar() {
   });
   
   const moduleTitles = {
-      asistencia: 'Módulo Asistencia',
-      semanas: 'Módulo Semanas',
-      movilidad: 'Módulo Movilidad',
+      asistencia: 'Asistencia',
+      semanas: 'Semanas',
+      movilidad: 'Movilidad',
       general: 'Administración'
   };
   const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
@@ -251,12 +251,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         return item.roles.includes(role);
     });
 
+    const isDashboard = pathname === '/dashboard';
+
     return (
-        <div className="flex min-h-screen w-full bg-muted/40">
+        <div className={cn("flex min-h-screen w-full", isDashboard ? "bg-gradient-to-br from-red-50 via-rose-50 to-white" : "bg-muted/40")}>
             <Sidebar />
             <div className="flex flex-1 flex-col">
                 <MobileNav navItems={availableNavItems} />
-                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", "md:pt-8 pt-20")}>
+                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", "md:pt-8 pt-20", isDashboard && "p-0 pt-16 md:pt-0")}>
                     {children}
                 </main>
             </div>

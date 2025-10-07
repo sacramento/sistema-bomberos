@@ -25,7 +25,7 @@ const moduleDetails: Record<NavItem['module'], { title: string; description: str
         icon: Flame
     },
     general: {
-        title: 'Administración General',
+        title: 'Administración',
         description: 'Gestione usuarios, roles y configuraciones del sistema.',
         icon: Flame
     }
@@ -52,13 +52,13 @@ export default function ModuleSelectionPage() {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh]">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8">
         <PageHeader 
             title={`Bienvenido/a, ${user.name}`}
             description="Por favor, seleccione un módulo para continuar."
-            className='text-center items-center'
+            className='text-center items-center mb-12'
         />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl w-full">
             {moduleOrder.map(moduleKey => {
                 const module = accessibleModules[moduleKey];
                 if (!module) return null;
@@ -67,18 +67,18 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="hover:border-primary transition-all duration-200 h-full flex flex-col">
+                        <Card className="hover:shadow-xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 bg-card/80 backdrop-blur-sm">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
-                                     <ModuleIcon className="h-6 w-6 text-primary" />
+                                     <ModuleIcon className="h-7 w-7 text-primary" />
                                 </div>
                                 <div>
-                                    <CardTitle className="font-headline text-xl">{module.title}</CardTitle>
+                                    <CardTitle className="font-headline text-2xl">{module.title}</CardTitle>
                                 </div>
                             </CardHeader>
                             <CardDescription className="px-6 pb-6 flex-grow">{module.description}</CardDescription>
                             <div className="px-6 pb-4 mt-auto">
-                                <div className="flex items-center text-primary font-semibold text-sm group-hover:gap-3 transition-all duration-200">
+                                <div className="flex items-center text-primary font-semibold group-hover:gap-3 transition-all duration-200">
                                     <span>Ingresar al Módulo</span>
                                     <ArrowRight className="h-4 w-4" />
                                 </div>
