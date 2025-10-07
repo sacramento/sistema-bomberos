@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="bg-slate-100/80 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm">
+                        <Card className="bg-slate-50 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
@@ -92,14 +92,16 @@ export default function ModuleSelectionPage() {
                 )
             })}
         </div>
-        {/* Decorative corner element */}
+        {/* Decorative corner element - now with a hard shadow */}
          <div aria-hidden="true" className="pointer-events-none fixed bottom-0 right-0 h-full w-full">
+            {/* Hard shadow layer */}
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[610px] border-l-[610px] border-b-gray-900/50 border-l-transparent" />
             {/* Largest, darkest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[600px] border-l-[600px] border-b-red-900 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[600px] border-l-[600px] border-b-red-900 border-l-transparent" />
             {/* Medium triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[400px] border-l-[400px] border-b-red-700 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[400px] border-l-[400px] border-b-red-700 border-l-transparent" />
             {/* Smallest, lightest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-500 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-500 border-l-transparent" />
         </div>
     </div>
   );
