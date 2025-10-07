@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-2 bg-slate-100/80 backdrop-blur-sm border-white/20">
+                        <Card className="shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-2 bg-slate-100 border-white/20">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
