@@ -6,7 +6,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/ca
 import Link from 'next/link';
 import { ArrowRight, Flame } from 'lucide-react';
 import type { NavItem } from '../layout';
-import { PageHeader } from '@/components/page-header';
 import Image from 'next/image';
 
 const moduleDetails: Record<NavItem['module'], { title: string; description: string; icon: React.ElementType }> = {
@@ -55,10 +54,10 @@ export default function ModuleSelectionPage() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8">
         <div className="flex flex-col items-center text-center mb-12">
             <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={72} height={72} className="mb-4" />
-            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-900">
+            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-100">
                 Bienvenido/a, {user.name}
             </h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-slate-300 mt-2">
                 Por favor, seleccione un módulo para continuar.
             </p>
         </div>
