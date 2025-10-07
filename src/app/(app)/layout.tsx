@@ -255,7 +255,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const isDashboard = pathname === '/dashboard';
 
     return (
-        <div className={cn("flex min-h-screen w-full", isDashboard ? "bg-gradient-to-br from-[#cf182f] via-[#e06c10] to-[#FEA003]" : "bg-muted/40")}>
+        <div className={cn("flex min-h-screen w-full bg-muted/40")}>
             <Sidebar />
             <div className="flex flex-1 flex-col">
                 <MobileNav navItems={availableNavItems} />

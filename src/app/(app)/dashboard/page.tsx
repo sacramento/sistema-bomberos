@@ -55,10 +55,10 @@ export default function ModuleSelectionPage() {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8">
         <div className="flex flex-col items-center text-center mb-12">
             <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={128} height={128} className="mb-4" />
-            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-100">
+            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight">
                 Bienvenido/a, {user.name}
             </h1>
-            <p className="text-slate-300 mt-2">
+            <p className="text-muted-foreground mt-2">
                 Por favor, seleccione un módulo para continuar.
             </p>
         </div>
@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-2 bg-slate-100 border-white/20">
+                        <Card className="shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
