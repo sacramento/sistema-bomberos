@@ -45,8 +45,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm relative shadow-xl">
+    <div className="relative flex min-h-screen items-center justify-center bg-background p-4 overflow-hidden">
+      <Card className="w-full max-w-sm relative shadow-xl z-10">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center pt-12">
              <div className="mb-4 flex justify-center">
@@ -99,6 +99,15 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+       {/* Decorative corner element */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed bottom-0 right-0 h-96 w-96"
+      >
+        <div className="absolute bottom-0 right-0 h-[500px] w-[500px] -translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-600/50 opacity-30 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+        <div className="absolute bottom-0 right-0 h-[450px] w-[450px] translate-y-1/3 translate-x-1/4 -rotate-45 transform-gpu rounded-full bg-red-800/50 opacity-40 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+        <div className="absolute bottom-0 right-0 h-[350px] w-[350px] translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-900/50 opacity-50 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+      </div>
     </div>
   );
 }

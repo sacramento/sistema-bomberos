@@ -52,17 +52,17 @@ export default function ModuleSelectionPage() {
 
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8">
-        <div className="flex flex-col items-center text-center mb-12">
-            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={128} height={128} className="mb-4" />
-            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight">
+    <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8 overflow-hidden">
+        <div className="z-10 flex flex-col items-center text-center mb-12">
+            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={128} height={128} className="mb-4 drop-shadow-lg" />
+            <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-800">
                 Bienvenido/a, {user.name}
             </h1>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-slate-600 mt-2">
                 Por favor, seleccione un módulo para continuar.
             </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl w-full">
+        <div className="z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl w-full">
             {moduleOrder.map(moduleKey => {
                 const module = accessibleModules[moduleKey];
                 if (!module) return null;
@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="shadow-lg hover:shadow-xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1">
+                        <Card className="bg-slate-100 shadow-xl hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
@@ -92,6 +92,15 @@ export default function ModuleSelectionPage() {
                 )
             })}
         </div>
+        {/* Decorative corner element */}
+        <div
+            aria-hidden="true"
+            className="pointer-events-none fixed bottom-0 right-0 h-96 w-96"
+        >
+            <div className="absolute bottom-0 right-0 h-[500px] w-[500px] -translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-600/50 opacity-30 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+            <div className="absolute bottom-0 right-0 h-[450px] w-[450px] translate-y-1/3 translate-x-1/4 -rotate-45 transform-gpu rounded-full bg-red-800/50 opacity-40 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+            <div className="absolute bottom-0 right-0 h-[350px] w-[350px] translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-900/50 opacity-50 shadow-2xl shadow-red-900/50 blur-3xl filter" />
+      </div>
     </div>
   );
 }
