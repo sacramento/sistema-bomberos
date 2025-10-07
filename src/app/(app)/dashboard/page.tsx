@@ -17,7 +17,7 @@ const moduleDetails: Record<NavItem['module'], { title: string; description: str
     },
     semanas: {
         title: 'Semanas',
-        description: 'Organice guardias, personal y tareas semanales.',
+        description: 'Organice guardias, personal и tareas semanales.',
         icon: Flame
     },
     movilidad: {
@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="bg-slate-100/80 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm border-white/20">
+                        <Card className="bg-slate-100 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm border-white/20">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
@@ -93,14 +93,11 @@ export default function ModuleSelectionPage() {
             })}
         </div>
         {/* Decorative corner element */}
-        <div
-            aria-hidden="true"
-            className="pointer-events-none fixed bottom-0 right-0 h-full w-full"
-        >
-            <div className="absolute bottom-0 right-0 h-[350px] w-[350px] translate-y-1/2 translate-x-1/3 -rotate-45 transform-gpu rounded-full bg-red-700/80 opacity-70 shadow-2xl shadow-red-900/50 blur-xl filter" />
-            <div className="absolute bottom-0 right-0 h-[450px] w-[450px] translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-500/70 opacity-60 shadow-2xl shadow-red-800/50 blur-2xl filter" />
-            <div className="absolute bottom-0 right-0 h-[500px] w-[500px] translate-y-2/3 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-300/60 opacity-50 shadow-2xl shadow-red-700/50 blur-3xl filter" />
-      </div>
+         <div aria-hidden="true" className="pointer-events-none fixed bottom-0 right-0 h-full w-full">
+            <div className="absolute bottom-0 right-0 h-[500px] w-[500px] translate-y-1/2 translate-x-1/2 -rotate-45 transform-gpu rounded-full bg-red-900 shadow-2xl shadow-red-900/50" />
+            <div className="absolute bottom-0 right-0 h-[350px] w-[350px] translate-y-1/2 translate-x-1/3 -rotate-45 transform-gpu rounded-full bg-red-700 shadow-2xl shadow-red-800/50" />
+            <div className="absolute bottom-0 right-0 h-[200px] w-[200px] translate-y-1/3 translate-x-1/4 -rotate-45 transform-gpu rounded-full bg-red-500 shadow-2xl shadow-red-700/50" />
+        </div>
     </div>
   );
 }
