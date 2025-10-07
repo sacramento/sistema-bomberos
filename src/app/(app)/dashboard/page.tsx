@@ -54,7 +54,7 @@ export default function ModuleSelectionPage() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8 overflow-hidden">
         <div className="z-10 flex flex-col items-center text-center mb-12">
-            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={160} height={160} className="mb-4 drop-shadow-lg" />
+            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={100} height={100} className="mb-4" />
             <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-800">
                 Bienvenido/a, {user.name}
             </h1>
@@ -71,7 +71,7 @@ export default function ModuleSelectionPage() {
 
                 return (
                      <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="bg-slate-100 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1">
+                        <Card className="bg-slate-100/80 shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm">
                             <CardHeader className="flex-row items-center gap-4">
                                 <div className="p-3 bg-primary/10 rounded-lg">
                                      <ModuleIcon className="h-8 w-8 text-primary" />
@@ -95,11 +95,11 @@ export default function ModuleSelectionPage() {
         {/* Decorative corner element */}
          <div aria-hidden="true" className="pointer-events-none fixed bottom-0 right-0 h-full w-full">
             {/* Largest, darkest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[300px] border-l-[300px] border-b-red-900 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[600px] border-l-[600px] border-b-red-900 border-l-transparent drop-shadow-xl" />
             {/* Medium triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-700 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[400px] border-l-[400px] border-b-red-700 border-l-transparent drop-shadow-xl" />
             {/* Smallest, lightest triangle */}
-            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[100px] border-l-[100px] border-b-red-500 border-l-transparent drop-shadow-xl" />
+            <div className="absolute bottom-0 right-0 h-0 w-0 border-b-[200px] border-l-[200px] border-b-red-500 border-l-transparent drop-shadow-xl" />
         </div>
     </div>
   );
