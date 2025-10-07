@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth-context";
 import { useState, useEffect } from "react";
-import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
@@ -16,7 +15,6 @@ import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const { user, login, loading, error } = useAuth();
-  const { toast } = useToast();
   const router = useRouter();
   const [legajo, setLegajo] = useState('');
   const [password, setPassword] = useState('');
@@ -47,8 +45,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <Card className="w-full max-w-sm relative">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 via-rose-50 to-white p-4">
+      <Card className="w-full max-w-sm relative shadow-2xl">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center pt-12">
              <div className="mb-4 flex justify-center">
