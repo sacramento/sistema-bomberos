@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
@@ -53,7 +54,7 @@ export default function ModuleSelectionPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8">
         <div className="flex flex-col items-center text-center mb-12">
-            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={72} height={72} className="mb-4" />
+            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={128} height={128} className="mb-4" />
             <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-100">
                 Bienvenido/a, {user.name}
             </h1>
