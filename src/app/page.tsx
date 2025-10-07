@@ -45,7 +45,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-50 via-rose-50 to-white p-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#4d474e] via-[#282f32] to-[#e51e1b] p-4">
       <Card className="w-full max-w-sm relative shadow-2xl">
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center pt-12">
