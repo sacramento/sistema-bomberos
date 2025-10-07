@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -254,7 +255,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const isDashboard = pathname === '/dashboard';
 
     return (
-        <div className={cn("flex min-h-screen w-full", isDashboard ? "bg-gradient-to-br from-red-100 via-rose-100 to-white" : "bg-muted/40")}>
+        <div className={cn("flex min-h-screen w-full", isDashboard ? "bg-gradient-to-br from-red-200 via-rose-200 to-red-100" : "bg-muted/40")}>
             <Sidebar />
             <div className="flex flex-1 flex-col">
                 <MobileNav navItems={availableNavItems} />
