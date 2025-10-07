@@ -76,10 +76,10 @@ export default function ModuleSelectionPage() {
                                      <ModuleIcon className="h-8 w-8 text-primary" />
                                 </div>
                                 <div>
-                                    <CardTitle className="font-headline text-2xl text-slate-800">{module.title}</CardTitle>
+                                    <CardTitle className="font-headline text-2xl">{module.title}</CardTitle>
                                 </div>
                             </CardHeader>
-                            <CardDescription className="px-6 pb-6 flex-grow text-slate-600">{module.description}</CardDescription>
+                            <CardDescription className="px-6 pb-6 flex-grow">{module.description}</CardDescription>
                             <div className="px-6 pb-4 mt-auto">
                                 <div className="flex items-center text-primary font-semibold group-hover:gap-3 transition-all duration-200">
                                     <span>Ingresar al Módulo</span>
