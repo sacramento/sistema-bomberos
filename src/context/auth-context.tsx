@@ -1,3 +1,4 @@
+
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -27,7 +28,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const pathToModule: Record<string, 'asistencia' | 'semanas' | 'general' | 'dashboard'> = {
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'general' | 'dashboard'> = {
     '/sessions': 'asistencia',
     '/classes': 'asistencia',
     '/schedule': 'asistencia',
@@ -36,6 +37,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'general' | 'dashb
     '/leaves': 'asistencia',
     '/reports': 'asistencia',
     '/weeks': 'semanas',
+    '/vehicles': 'movilidad',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -102,6 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return roles.semanas;
         case 'asistencia':
           return roles.asistencia;
+        case 'movilidad':
+            return roles.movilidad;
         case 'general':
         case 'dashboard':
           return user.role;

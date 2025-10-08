@@ -26,11 +26,13 @@ export type Firefighter = {
 
 export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";
 
+export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'VARIOS';
+
 export type Session = {
   id: string;
   title: string;
   description: string;
-  specialization: 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'VARIOS';
+  specialization: Specialization;
   date: string;
   startTime: string;
   instructors: Firefighter[];
@@ -58,16 +60,34 @@ export type Course = {
   firefighterId: string;
   firefighterName: string;
   firefighterLegajo: string;
-  specialization: Session['specialization'];
+  specialization: Specialization;
   title: string;
   location: string;
   startDate: string;
   endDate: string;
 }
 
+export type Vehicle = {
+  id: string;
+  numeroMovil: string;
+  marca: string;
+  modelo: string;
+  ano: number;
+  kilometraje: number;
+  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  especialidad: Specialization;
+  capacidadAgua: number;
+  tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
+  traccion: 'Trasera' | 'Delantera' | '4x4';
+  encargadoId: string; // Firefighter ID of the person in charge
+  observaciones: string;
+  // Enriched properties for client side
+  encargado?: Firefighter | null;
+}
+
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
-export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Operador' | 'Bombero' | 'Ninguno';
+export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil' | 'Ninguno';
 
 export type GlobalRole = 'Master' | 'Usuario';
 
@@ -139,5 +159,3 @@ export type AuditLog = {
     targetId: string;
     details?: Record<string, any>;
 };
-
-    
