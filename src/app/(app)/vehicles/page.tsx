@@ -20,6 +20,16 @@ import AddVehicleDialog from "./_components/add-vehicle-dialog";
 import EditVehicleDialog from "./_components/edit-vehicle-dialog";
 import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+
+const getCuartelBadgeClass = (cuartel: Vehicle['cuartel']) => {
+    switch (cuartel) {
+        case 'Cuartel 1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
+        case 'Cuartel 2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
+        case 'Cuartel 3': return 'bg-green-600 text-white hover:bg-green-600/90';
+        default: return 'bg-secondary text-secondary-foreground';
+    }
+}
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -159,7 +169,7 @@ export default function VehiclesPage() {
                     </TableCell>
                     <TableCell>{`${vehicle.marca} ${vehicle.modelo}`}</TableCell>
                     <TableCell className="hidden md:table-cell">
-                        <Badge variant="secondary">{vehicle.cuartel}</Badge>
+                        <Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">{renderEncargados(vehicle)}</TableCell>
                     <TableCell>
