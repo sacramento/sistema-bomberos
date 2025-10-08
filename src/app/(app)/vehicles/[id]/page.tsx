@@ -10,7 +10,7 @@ import { getVehicleById } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle, List, History, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import EditVehicleDialog from "../_components/edit-vehicle-dialog";
@@ -20,6 +20,8 @@ import { deleteVehicle } from "@/services/vehicles.service";
 import { cn } from "@/lib/utils";
 import MaintenanceHistory from "../_components/maintenance-history";
 import AddMaintenanceRecordDialog from "../_components/add-maintenance-record-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ChecklistManager from "../_components/checklist-manager";
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -87,8 +89,8 @@ export default function VehicleDetailPage() {
     };
     
     const handleDataChange = () => {
-        fetchVehicle(); // Refreshes vehicle data
-        setRefreshSignal(prev => !prev); // Toggles signal to refresh history
+        fetchVehicle();
+        setRefreshSignal(prev => !prev); 
     };
 
     useEffect(() => {
@@ -133,18 +135,18 @@ export default function VehicleDetailPage() {
             <PageHeader title={`Móvil ${vehicle.numeroMovil}`} description={`${vehicle.marca} ${vehicle.modelo}`}>
                 <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => router.push('/vehicles')}>
+                         <Button variant="outline" onClick={() => router.push('/vehicles')}>
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Volver
                         </Button>
                         {canEdit && (
                             <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
-                                <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar</Button>
+                                <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar Ficha</Button>
                             </EditVehicleDialog>
                         )}
                     </div>
                      {canEdit && (
-                        <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={handleDataChange}>
+                        <AddMaintenanceRecordDialog vehicle={vehicle} onRecordAdded={handleDataChange}>
                             <Button>
                                 <PlusCircle className="mr-2" />
                                 Registrar Servicio
@@ -153,63 +155,74 @@ export default function VehicleDetailPage() {
                     )}
                 </div>
             </PageHeader>
-            <div className="grid grid-cols-1 gap-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Ficha Técnica</CardTitle>
-                        <CardDescription>Detalles técnicos y administrativos del vehículo.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
-                            <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
-                            <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
-                            <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
-                            <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
-                            <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
-                            <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
-                            <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
-                        </div>
-                        <Separator className="my-6" />
-                        <div>
-                            <h4 className="font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5 text-muted-foreground"/>Observaciones</h4>
-                            <p className="text-muted-foreground text-sm whitespace-pre-wrap">{vehicle.observaciones || 'No hay observaciones registradas.'}</p>
-                        </div>
-                        {canManage && (
-                            <>
-                                <Separator className="my-6" />
-                                <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                                    <h4 className="font-bold text-destructive mb-2">Zona Peligrosa</h4>
-                                    <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                            <Button variant="destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Móvil
-                                            </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                            <AlertDialogHeader>
-                                                <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span> y todo su historial de mantenimiento.
-                                                </AlertDialogDescription>
-                                            </AlertDialogHeader>
-                                            <AlertDialogFooter>
-                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                    Sí, eliminar móvil
-                                                </AlertDialogAction>
-                                            </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                    </AlertDialog>
-                                </div>
-                            </>
-                        )}
-                    </CardContent>
-                </Card>
 
-                <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
+            <Tabs defaultValue="ficha" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto mb-6">
+                    <TabsTrigger value="ficha"><FileText className="mr-2 h-4 w-4"/>Ficha Técnica</TabsTrigger>
+                    <TabsTrigger value="checklist"><List className="mr-2 h-4 w-4"/>Checklist</TabsTrigger>
+                    <TabsTrigger value="historial"><History className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ficha">
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Detalles del Vehículo</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
+                                <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
+                                <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
+                                <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
+                                <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
+                                <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
+                                <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
+                                <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
+                            </div>
+                            <Separator className="my-6" />
+                            <div>
+                                <h4 className="font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5 text-muted-foreground"/>Observaciones</h4>
+                                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{vehicle.observaciones || 'No hay observaciones registradas.'}</p>
+                            </div>
+                            {canManage && (
+                                <>
+                                    <Separator className="my-6" />
+                                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                                        <h4 className="font-bold text-destructive mb-2">Zona Peligrosa</h4>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Móvil
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span> y todo su historial de mantenimiento.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                        Sí, eliminar móvil
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="checklist">
+                    <ChecklistManager vehicle={vehicle} canEdit={canEdit} onVehicleUpdated={handleDataChange} />
+                </TabsContent>
+                <TabsContent value="historial">
+                    <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
+                </TabsContent>
+            </Tabs>
 
-            </div>
         </>
     )
 }

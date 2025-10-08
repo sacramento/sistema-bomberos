@@ -81,8 +81,10 @@ export type Vehicle = {
   traccion: 'Trasera' | 'Delantera' | '4x4';
   encargadoIds: string[]; // Firefighter IDs of the people in charge
   observaciones: string;
+  maintenanceItemIds?: string[]; // IDs of MaintenanceItem that apply to this vehicle
   // Enriched properties for client side
   encargados?: Firefighter[];
+  maintenanceItems?: MaintenanceItem[];
 }
 
 export type MaintenanceChecklistItem = {
@@ -182,5 +184,3 @@ export type AuditLog = {
     targetId: string;
     details?: Record<string, any>;
 };
-
-    

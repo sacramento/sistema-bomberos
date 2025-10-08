@@ -15,9 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { MaintenanceItem, MaintenanceChecklistItem } from "@/lib/types";
+import { MaintenanceItem, MaintenanceChecklistItem, Vehicle } from "@/lib/types";
 import { addMaintenanceRecord } from "@/services/maintenance.service";
-import { getMaintenanceItems } from "@/services/maintenance-items.service";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -30,14 +29,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function AddMaintenanceRecordDialog({ children, vehicleId, onRecordAdded }: { children: React.ReactNode; vehicleId: string; onRecordAdded: () => void; }) {
+export default function AddMaintenanceRecordDialog({ children, vehicle, onRecordAdded }: { children: React.ReactNode; vehicle: Vehicle; onRecordAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [itemsLoading, setItemsLoading] = useState(true);
-
-  // Master list of available items
-  const [masterItems, setMasterItems] = useState<MaintenanceItem[]>([]);
   
   // Form State
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -48,23 +43,18 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
   const [observations, setObservations] = useState('');
 
   useEffect(() => {
-    const fetchItems = async () => {
-        if(open) {
-            setItemsLoading(true);
-            try {
-                const items = await getMaintenanceItems();
-                setMasterItems(items);
-                // Initialize checklist state based on master items
-                setChecklist(items.map(item => ({ name: item.name, checked: false })));
-            } catch (error) {
-                toast({ title: "Error", description: "No se pudo cargar la lista de ítems de mantenimiento.", variant: "destructive" });
-            } finally {
-                setItemsLoading(false);
-            }
-        }
-    };
-    fetchItems();
-  }, [open, toast]);
+    if (open) {
+        // Initialize checklist from the vehicle's specific maintenance items
+        const vehicleChecklist = vehicle.maintenanceItems?.map(item => ({
+            name: item.name,
+            checked: false
+        })) || [];
+        setChecklist(vehicleChecklist);
+        
+        // Pre-fill mileage from vehicle data
+        setMileage(vehicle.kilometraje);
+    }
+  }, [open, vehicle]);
   
   const resetForm = () => {
     setDate(new Date());
@@ -89,7 +79,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
     setLoading(true);
     try {
         const newRecord = {
-            vehicleId,
+            vehicleId: vehicle.id,
             date: format(date, 'yyyy-MM-dd'),
             mileage,
             nextServiceDate: nextServiceDate ? format(nextServiceDate, 'yyyy-MM-dd') : undefined,
@@ -120,7 +110,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <form onSubmit={handleSubmit} className="flex flex-col flex-grow">
           <DialogHeader>
-            <DialogTitle className="font-headline">Registrar Nuevo Servicio de Mantenimiento</DialogTitle>
+            <DialogTitle className="font-headline">Registrar Servicio para Móvil {vehicle.numeroMovil}</DialogTitle>
             <DialogDescription>
               Complete los detalles del servicio realizado y el checklist correspondiente.
             </DialogDescription>
@@ -166,13 +156,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
              <div className="space-y-2">
                 <Label>Checklist de Tareas Realizadas</Label>
                  <ScrollArea className="h-64 w-full rounded-md border p-4">
-                    {itemsLoading ? (
-                        <div className="space-y-2">
-                            <Skeleton className="h-6 w-3/4" />
-                            <Skeleton className="h-6 w-1/2" />
-                            <Skeleton className="h-6 w-2/3" />
-                        </div>
-                    ) : masterItems.length > 0 ? (
+                    {checklist.length > 0 ? (
                         <div className="space-y-4">
                             {checklist.map(item => (
                                 <div key={item.name} className="flex items-center space-x-3">
@@ -191,7 +175,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
                             ))}
                         </div>
                     ) : (
-                        <p className="text-sm text-muted-foreground text-center">No hay ítems de checklist configurados. Pida a un administrador que los agregue en la página de Mantenimiento.</p>
+                        <p className="text-sm text-muted-foreground text-center">Este móvil no tiene ítems de checklist configurados. Vaya a la pestaña "Checklist" para agregarlos.</p>
                     )}
                  </ScrollArea>
              </div>

@@ -1,10 +1,11 @@
 
 'use server';
 
-import { Vehicle, Firefighter, Specialization } from '@/lib/types';
+import { Vehicle, Firefighter, Specialization, MaintenanceItem } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
+import { getMaintenanceItems } from './maintenance-items.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -14,10 +15,15 @@ const vehiclesCollection = collection(db, 'vehicles');
 const maintenanceRecordsCollection = collection(db, 'maintenance_records');
 
 // Helper to enrich vehicle data with full firefighter objects for the 'encargados'
-const docToVehicle = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Vehicle> => {
+const docToVehicle = async (
+    docSnap: any, 
+    firefighterMap: Map<string, Firefighter>,
+    maintenanceItemMap: Map<string, MaintenanceItem>
+): Promise<Vehicle> => {
     const data = docSnap.data();
     
     const encargados = (data.encargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+    const maintenanceItems = (data.maintenanceItemIds || []).map((id: string) => maintenanceItemMap.get(id)).filter(Boolean) as MaintenanceItem[];
 
     const vehicle: Vehicle = {
         id: docSnap.id,
@@ -33,7 +39,9 @@ const docToVehicle = async (docSnap: any, firefighterMap: Map<string, Firefighte
         traccion: data.traccion,
         encargadoIds: data.encargadoIds,
         observaciones: data.observaciones,
+        maintenanceItemIds: data.maintenanceItemIds || [],
         encargados,
+        maintenanceItems,
     };
     return vehicle;
 }
@@ -42,10 +50,14 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
     const q = query(vehiclesCollection, orderBy('numeroMovil', 'asc'));
     const querySnapshot = await getDocs(q);
 
-    const allFirefighters = await getFirefighters();
+    const [allFirefighters, allMaintenanceItems] = await Promise.all([
+        getFirefighters(),
+        getMaintenanceItems()
+    ]);
     const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    const maintenanceItemMap = new Map(allMaintenanceItems.map(i => [i.id, i]));
     
-    const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap));
+    const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
     const vehicles = await Promise.all(vehiclesPromises);
 
     return vehicles;
@@ -56,14 +68,18 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const allFirefighters = await getFirefighters();
+        const [allFirefighters, allMaintenanceItems] = await Promise.all([
+            getFirefighters(),
+            getMaintenanceItems()
+        ]);
         const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
-        return await docToVehicle(docSnap, firefighterMap);
+        const maintenanceItemMap = new Map(allMaintenanceItems.map(i => [i.id, i]));
+        return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
     }
     return null;
 }
 
-export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>): Promise<string> => {
+export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>): Promise<string> => {
     // Check for uniqueness of numeroMovil
     const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
     const querySnapshot = await getDocs(q);
@@ -71,15 +87,15 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>
         throw new Error(`El móvil con el número ${vehicleData.numeroMovil} ya existe.`);
     }
 
-    // Ensure that enriched properties are not saved
-    const dataToSave = { ...vehicleData };
-    // @ts-ignore
-    delete dataToSave.encargados;
+    const dataToSave = { 
+        ...vehicleData,
+        maintenanceItemIds: vehicleData.maintenanceItemIds || [], // Ensure it's not undefined
+     };
     const docRef = await addDoc(vehiclesCollection, dataToSave);
     return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados'>>): Promise<void> => {
+export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>>): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
 
     // If numeroMovil is being changed, check for uniqueness
@@ -91,10 +107,7 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
         }
     }
     
-    // Ensure that enriched properties are not saved
     const dataToUpdate = { ...vehicleData };
-    // @ts-ignore
-    delete dataToUpdate.encargados;
     await updateDoc(docRef, dataToUpdate);
 };
 
@@ -116,4 +129,3 @@ export const deleteVehicle = async (id: string): Promise<void> => {
     await batch.commit();
 };
 
-    
