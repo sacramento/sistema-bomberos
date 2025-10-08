@@ -74,19 +74,21 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-start sm:items-center justify-between">
-                <div className="flex-grow">
-                    <CardTitle className="font-headline">Historial de Mantenimiento</CardTitle>
-                    <CardDescription>Servicios realizados en este móvil, del más reciente al más antiguo.</CardDescription>
+            <CardHeader>
+                <div className="flex sm:flex-row flex-col sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <CardTitle className="font-headline">Historial de Mantenimiento</CardTitle>
+                        <CardDescription>Servicios realizados en este móvil, del más reciente al más antiguo.</CardDescription>
+                    </div>
+                    {canEdit && (
+                        <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={onDataChange}>
+                            <Button className="w-full sm:w-auto">
+                                <PlusCircle className="mr-2" />
+                                Registrar Servicio
+                            </Button>
+                        </AddMaintenanceRecordDialog>
+                    )}
                 </div>
-                 {canEdit && (
-                    <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={onDataChange}>
-                        <Button className="w-full sm:w-auto mt-4 sm:mt-0">
-                            <PlusCircle className="mr-2" />
-                            Registrar Servicio
-                        </Button>
-                    </AddMaintenanceRecordDialog>
-                )}
             </CardHeader>
             <CardContent>
                 {records.length > 0 ? (
