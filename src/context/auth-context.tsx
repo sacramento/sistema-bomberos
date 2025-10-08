@@ -38,6 +38,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'gen
     '/reports': 'asistencia',
     '/weeks': 'semanas',
     '/vehicles': 'movilidad',
+    '/maintenance': 'movilidad',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };

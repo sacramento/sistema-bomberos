@@ -85,6 +85,27 @@ export type Vehicle = {
   encargados?: Firefighter[];
 }
 
+export type MaintenanceChecklistItem = {
+  name: string;
+  checked: boolean;
+};
+
+export type MaintenanceRecord = {
+  id: string;
+  vehicleId: string;
+  date: string; // Date of service
+  mileage: number; // Mileage at service
+  nextServiceDate?: string;
+  nextServiceMileage?: number;
+  checklist: MaintenanceChecklistItem[];
+  observations: string;
+};
+
+export type MaintenanceItem = {
+    id: string;
+    name: string;
+};
+
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil' | 'Ninguno';

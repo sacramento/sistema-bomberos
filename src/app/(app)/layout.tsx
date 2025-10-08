@@ -24,6 +24,7 @@ import {
   ArrowLeft,
   Loader2,
   Truck,
+  Wrench,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,6 +57,7 @@ export const navItems: NavItem[] = [
   { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
+  { href: '/maintenance', icon: Wrench, label: 'Mantenimiento', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
 
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
