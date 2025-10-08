@@ -176,5 +176,3 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
         </Card>
     );
 }
-
-    

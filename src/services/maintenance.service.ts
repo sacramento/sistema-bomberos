@@ -48,5 +48,3 @@ export const deleteMaintenanceRecord = async (id: string): Promise<void> => {
     const docRef = doc(db, 'maintenance_records', id);
     await deleteDoc(docRef);
 };
-
-    

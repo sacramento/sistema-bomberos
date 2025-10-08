@@ -208,5 +208,3 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
     </Dialog>
   );
 }
-
-    
