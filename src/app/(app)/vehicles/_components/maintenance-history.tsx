@@ -41,8 +41,11 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
     };
     
     useEffect(() => {
-        fetchRecords();
-    }, [vehicleId, toast, refreshSignal]);
+        if (vehicleId) {
+            fetchRecords();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [vehicleId, refreshSignal]);
 
     const handleDeleteRecord = async (recordId: string) => {
         try {
@@ -176,5 +179,3 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
         </Card>
     );
 }
-
-    
