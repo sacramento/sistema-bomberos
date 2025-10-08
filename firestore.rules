@@ -4,62 +4,108 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
   
-    // Función para verificar el rol del usuario autenticado
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isAdministrator() {
-      return isSignedIn() && getUserRole() == 'Administrador';
-    }
-
-    function isOperator() {
-      return isSignedIn() && getUserRole() == 'Operador';
-    }
-    
-    function isAyudantia() {
-      return isSignedIn() && getUserRole() == 'Ayudantía';
-    }
-
-    // Reglas para la colección 'users'
-    match /users/{userId} {
-      // PERMITE el inicio de sesión. Cualquiera puede intentar obtener un usuario por su ID (legajo).
-      // Esto es seguro porque la contraseña se verifica en el backend (genkit flow).
-      allow get: if true;
+    // Helper function to check if the user has a specific role in a module
+    function hasRole(module, requiredRoles) {
+      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
+      let userGlobalRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
       
-      // SOLO los administradores pueden listar, crear, editar o eliminar usuarios.
-      allow list, create, update, delete: if isAdministrator();
-    }
-
-    // Reglas para la colección 'firefighters'
-    match /firefighters/{firefighterId} {
-      // Administradores tienen acceso total.
-      allow read, write: if isAdministrator();
+      if (userGlobalRole == 'Master') {
+        return true;
+      }
       
-      // Operadores y Ayudantía solo pueden leer la información de los bomberos.
-      allow read: if isOperator() || isAyudantia();
+      if (module == 'asistencia') {
+        return userRoles.asistencia in requiredRoles;
+      }
+      if (module == 'semanas') {
+        return userRoles.semanas in requiredRoles;
+      }
+      if (module == 'movilidad') {
+        return userRoles.movilidad in requiredRoles;
+      }
+      // For global entities like 'users'
+      if (module == 'general') {
+         return userGlobalRole in requiredRoles;
+      }
+      
+      return false;
     }
 
-    // Reglas para la colección 'sessions' (clases)
-    match /sessions/{sessionId} {
-      // Administradores y Operadores tienen acceso total para gestionar clases.
-      allow read, write: if isAdministrator() || isOperator();
+    // --- GENERAL RULES ---
+    match /{document=**} {
+      // By default, deny all reads and writes
+      allow read, write: if false;
     }
+
+    // --- AUTHENTICATED ACCESS ---
+    match /databases/{database}/documents {
     
-    // Reglas para la colección 'leaves' (licencias)
-    match /leaves/{leaveId} {
-        // Administradores y Ayudantía pueden gestionar licencias.
-        allow read, write: if isAdministrator() || isAyudantia();
-    }
-    
-    // Reglas para la colección 'courses' (cursos externos)
-    match /courses/{courseId} {
-       // Administradores y Ayudantía pueden gestionar los cursos.
-       allow read, write: if isAdministrator() || isAyudantia();
+      // USERS: Only Master can manage users
+      match /users/{userId} {
+        allow read, write: if hasRole('general', ['Master']);
+      }
+      
+      // FIREFIGHTERS: Managed by Asistencia Admins/Oficiales
+      match /firefighters/{docId} {
+        allow read: if request.auth != null; // All authenticated users can read
+        allow write: if hasRole('asistencia', ['Administrador', 'Oficial']);
+      }
+
+      // SESSIONS & ATTENDANCE: Granular control
+      match /sessions/{sessionId} {
+        allow read: if request.auth != null; // All authenticated users can read sessions
+        // Admin, Oficial, Instructor can create/edit/delete sessions
+        allow create, update, delete: if hasRole('asistencia', ['Administrador', 'Oficial', 'Instructor']);
+      }
+      
+      // LEAVES: Managed by Asistencia Admins/Ayudantía
+      match /leaves/{leaveId} {
+         allow read: if hasRole('asistencia', ['Administrador', 'Oficial', 'Ayudantía']);
+         allow write: if hasRole('asistencia', ['Administrador', 'Ayudantía']);
+      }
+      
+      // COURSES: Managed by Asistencia Admins/Ayudantía
+      match /courses/{courseId} {
+        allow read: if hasRole('asistencia', ['Administrador', 'Oficial', 'Ayudantía']);
+        allow write: if hasRole('asistencia', ['Administrador', 'Ayudantía']);
+      }
+
+      // WEEKS & TASKS: Granular control
+      match /weeks/{weekId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('semanas', ['Administrador']);
+        allow update: if hasRole('semanas', ['Administrador', 'Encargado']); // Encargado can update observations
+      }
+
+      match /tasks/{taskId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('semanas', ['Administrador', 'Encargado']);
+      }
+
+      // VEHICLES & MAINTENANCE: Granular control
+      match /vehicles/{vehicleId} {
+        allow read: if request.auth != null;
+        allow create, delete: if hasRole('movilidad', ['Administrador']);
+        // Admin can update any vehicle, Encargado can only update their own.
+        allow update: if hasRole('movilidad', ['Administrador']) || 
+                       (hasRole('movilidad', ['Encargado Móvil']) && resource.data.encargadoIds.hasAny(request.auth.uid));
+      }
+      
+      match /maintenance_items/{itemId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('movilidad', ['Administrador']);
+      }
+
+      match /maintenance_records/{recordId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('movilidad', ['Administrador', 'Encargado Móvil']);
+      }
+
+      // AUDIT LOGS: Read-only for Master
+      match /audit_logs/{logId} {
+        allow read: if hasRole('general', ['Master']);
+        // Writes are handled by server-side logic (logAction function)
+        allow write: if false; 
+      }
     }
   }
 }
