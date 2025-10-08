@@ -18,6 +18,7 @@ import { useAuth } from "@/context/auth-context";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { deleteVehicle } from "@/services/vehicles.service";
 import { cn } from "@/lib/utils";
+import MaintenanceHistory from "../_components/maintenance-history";
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -52,6 +53,7 @@ export default function VehicleDetailPage() {
 
     const [vehicle, setVehicle] = useState<Vehicle | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshSignal, setRefreshSignal] = useState(false);
     
     const { user, getActiveRole } = useAuth();
     const activeRole = getActiveRole(`/vehicles/${vehicleId}`);
@@ -81,6 +83,11 @@ export default function VehicleDetailPage() {
                 setLoading(false);
             }
         }
+    };
+    
+    const handleDataChange = () => {
+        fetchVehicle(); // Refreshes vehicle data
+        setRefreshSignal(prev => !prev); // Toggles signal to refresh history
     };
 
     useEffect(() => {
@@ -135,64 +142,71 @@ export default function VehicleDetailPage() {
                         Volver al Listado
                     </Button>
                     {canEdit && (
-                        <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={fetchVehicle}>
+                        <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
                            <Button><Edit className="mr-2 h-4 w-4" />Editar</Button>
                         </EditVehicleDialog>
                     )}
                 </div>
             </PageHeader>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Ficha Técnica Completa</CardTitle>
-                    <CardDescription>Detalles técnicos y administrativos del vehículo.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                        <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
-                        <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
-                        <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
-                        <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
-                        <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
-                        <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
-                        <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
-                        <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
-                    </div>
-                     <Separator className="my-6" />
-                     <div>
-                        <h4 className="font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5 text-muted-foreground"/>Observaciones</h4>
-                        <p className="text-muted-foreground text-sm whitespace-pre-wrap">{vehicle.observaciones || 'No hay observaciones registradas.'}</p>
-                     </div>
-                      {canManage && (
-                         <>
-                            <Separator className="my-6" />
-                            <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                                <h4 className="font-bold text-destructive mb-2">Zona Peligrosa</h4>
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" /> Eliminar Móvil
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span>.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
-                                                Sí, eliminar móvil
-                                            </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
+            <div className="grid gap-8 lg:grid-cols-3">
+                <div className="lg:col-span-2">
+                    <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
+                </div>
+                <div className="lg:col-span-1">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Ficha Técnica</CardTitle>
+                            <CardDescription>Detalles técnicos y administrativos del vehículo.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-6">
+                                <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
+                                <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
+                                <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
+                                <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
+                                <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
+                                <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
+                                <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
+                                <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
                             </div>
-                        </>
-                    )}
-                </CardContent>
-            </Card>
+                            <Separator className="my-6" />
+                            <div>
+                                <h4 className="font-semibold mb-2 flex items-center gap-2"><MessageSquare className="h-5 w-5 text-muted-foreground"/>Observaciones</h4>
+                                <p className="text-muted-foreground text-sm whitespace-pre-wrap">{vehicle.observaciones || 'No hay observaciones registradas.'}</p>
+                            </div>
+                            {canManage && (
+                                <>
+                                    <Separator className="my-6" />
+                                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                                        <h4 className="font-bold text-destructive mb-2">Zona Peligrosa</h4>
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="destructive">
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Eliminar Móvil
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span>.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">
+                                                        Sí, eliminar móvil
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </>
     )
 }

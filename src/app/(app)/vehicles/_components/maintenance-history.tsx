@@ -1,0 +1,133 @@
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { MaintenanceRecord, MaintenanceChecklistItem } from '@/lib/types';
+import { getMaintenanceRecordsByVehicle } from '@/services/maintenance.service';
+import { useToast } from '@/hooks/use-toast';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Check, X, Gauge, Calendar, PlusCircle } from 'lucide-react';
+import AddMaintenanceRecordDialog from './add-maintenance-record-dialog';
+import { Button } from '@/components/ui/button';
+
+interface MaintenanceHistoryProps {
+    vehicleId: string;
+    canEdit: boolean;
+    refreshSignal: boolean;
+    onDataChange: () => void;
+}
+
+export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, onDataChange }: MaintenanceHistoryProps) {
+    const [records, setRecords] = useState<MaintenanceRecord[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const fetchRecords = async () => {
+            setLoading(true);
+            try {
+                const data = await getMaintenanceRecordsByVehicle(vehicleId);
+                setRecords(data);
+            } catch (error) {
+                toast({ title: "Error", description: "No se pudieron cargar los registros de mantenimiento.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchRecords();
+    }, [vehicleId, toast, refreshSignal]);
+
+    const renderChecklist = (checklist: MaintenanceChecklistItem[]) => (
+        <ul className="space-y-2 mt-4">
+            {checklist.map((item, index) => (
+                <li key={index} className="flex items-center gap-2 text-sm">
+                    {item.checked ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                    <span className={item.checked ? 'text-foreground' : 'text-muted-foreground'}>{item.name}</span>
+                </li>
+            ))}
+        </ul>
+    );
+
+    if (loading) {
+        return <Skeleton className="h-96 w-full" />;
+    }
+
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="font-headline">Historial de Mantenimiento</CardTitle>
+                    <CardDescription>Servicios realizados en este móvil.</CardDescription>
+                </div>
+                 {canEdit && (
+                    <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={onDataChange}>
+                        <Button>
+                            <PlusCircle className="mr-2" />
+                            Registrar Servicio
+                        </Button>
+                    </AddMaintenanceRecordDialog>
+                )}
+            </CardHeader>
+            <CardContent>
+                {records.length > 0 ? (
+                    <Accordion type="single" collapsible className="w-full">
+                        {records.map(record => (
+                            <AccordionItem key={record.id} value={record.id}>
+                                <AccordionTrigger>
+                                    <div className="flex flex-col sm:flex-row justify-between w-full pr-4 text-left">
+                                        <div className="font-semibold text-base">{format(parseISO(record.date), 'PPP', { locale: es })}</div>
+                                        <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                            <Gauge className="h-4 w-4"/> {record.mileage.toLocaleString('es-AR')} km
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                <AccordionContent>
+                                    <div className="p-4 border-t bg-muted/50 rounded-b-lg">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 text-sm">
+                                            {record.nextServiceDate && (
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 text-muted-foreground"/>
+                                                    <div>
+                                                        <p className="font-medium">Próx. Servicio (Fecha):</p>
+                                                        <p className="text-muted-foreground">{format(parseISO(record.nextServiceDate), 'PPP', { locale: es })}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {record.nextServiceMileage && record.nextServiceMileage > 0 && (
+                                                 <div className="flex items-center gap-2">
+                                                    <Gauge className="h-4 w-4 text-muted-foreground"/>
+                                                    <div>
+                                                        <p className="font-medium">Próx. Servicio (KM):</p>
+                                                        <p className="text-muted-foreground">{record.nextServiceMileage.toLocaleString('es-AR')} km</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <h4 className="font-semibold mb-2">Checklist Realizado:</h4>
+                                        {renderChecklist(record.checklist)}
+                                        {record.observations && (
+                                            <>
+                                                <h4 className="font-semibold mt-4 mb-2">Observaciones:</h4>
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{record.observations}</p>
+                                            </>
+                                        )}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        ))}
+                    </Accordion>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-48 text-center border-2 border-dashed rounded-lg">
+                        <p className="text-muted-foreground">No hay registros de mantenimiento para este móvil.</p>
+                        {canEdit && <p className="text-sm text-muted-foreground mt-2">Use el botón "Registrar Servicio" para agregar el primero.</p>}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
