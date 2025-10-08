@@ -157,9 +157,9 @@ export default function VehicleDetailPage() {
             </PageHeader>
 
             <Tabs defaultValue="ficha" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 max-w-2xl mx-auto mb-6">
+                <TabsList className={cn("grid w-full max-w-2xl mx-auto mb-6", canManage ? "grid-cols-3" : "grid-cols-2")}>
                     <TabsTrigger value="ficha"><FileText className="mr-2 h-4 w-4"/>Ficha Técnica</TabsTrigger>
-                    <TabsTrigger value="checklist"><List className="mr-2 h-4 w-4"/>Checklist</TabsTrigger>
+                     {canManage && <TabsTrigger value="checklist"><List className="mr-2 h-4 w-4"/>Checklist</TabsTrigger>}
                     <TabsTrigger value="historial"><History className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ficha">
@@ -215,9 +215,11 @@ export default function VehicleDetailPage() {
                         </CardContent>
                     </Card>
                 </TabsContent>
-                <TabsContent value="checklist">
-                    <ChecklistManager vehicle={vehicle} canEdit={canEdit} onVehicleUpdated={handleDataChange} />
-                </TabsContent>
+                {canManage && (
+                    <TabsContent value="checklist">
+                        <ChecklistManager vehicle={vehicle} canEdit={canManage} onVehicleUpdated={handleDataChange} />
+                    </TabsContent>
+                )}
                 <TabsContent value="historial">
                     <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
                 </TabsContent>

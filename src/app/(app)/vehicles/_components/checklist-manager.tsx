@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Loader2, Save } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import Link from 'next/link';
 
 interface ChecklistManagerProps {
     vehicle: Vehicle;
@@ -107,7 +108,7 @@ export default function ChecklistManager({ vehicle, canEdit, onVehicleUpdated }:
                     <Alert>
                         <AlertTitle>No hay ítems de mantenimiento</AlertTitle>
                         <AlertDescription>
-                            No se encontraron ítems en la lista maestra. Un administrador debe agregarlos en la página de <a href="/maintenance" className="underline">Mantenimiento</a> para poder configurar los checklists.
+                            No se encontraron ítems en la lista maestra. Un administrador debe agregarlos en la página de <Link href="/maintenance" className="underline font-semibold">Items</Link> para poder configurar los checklists.
                         </AlertDescription>
                     </Alert>
                 )}
