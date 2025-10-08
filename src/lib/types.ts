@@ -169,6 +169,7 @@ export type AuditLogAction =
   | 'CREATE_WEEK' | 'UPDATE_WEEK' | 'DELETE_WEEK'
   | 'CREATE_TASK' | 'UPDATE_TASK' | 'DELETE_TASK'
   | 'CREATE_VEHICLE' | 'UPDATE_VEHICLE' | 'DELETE_VEHICLE'
+  | 'CREATE_MAINTENANCE_RECORD' | 'DELETE_MAINTENANCE_RECORD'
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE';
 
 export type AuditLog = {
@@ -181,3 +182,5 @@ export type AuditLog = {
     targetId: string;
     details?: Record<string, any>;
 };
+
+    

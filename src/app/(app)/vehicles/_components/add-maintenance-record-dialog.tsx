@@ -22,12 +22,13 @@ import { CalendarIcon, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { es } from "date-fns/locale";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AddMaintenanceRecordDialog({ children, vehicleId, onRecordAdded }: { children: React.ReactNode; vehicleId: string; onRecordAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -140,7 +141,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
                  </div>
                  <div className="space-y-2">
                     <Label htmlFor="mileage">Kilometraje Actual</Label>
-                    <Input id="mileage" type="number" value={mileage} onChange={e => setMileage(Number(e.target.value))} required />
+                    <Input id="mileage" type="number" value={mileage || ''} onChange={e => setMileage(Number(e.target.value))} required />
                  </div>
                  <div className="space-y-2">
                     <Label htmlFor="nextServiceDate">Próximo Servicio (Fecha)</Label>
@@ -156,7 +157,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
                  </div>
                  <div className="space-y-2">
                     <Label htmlFor="nextServiceMileage">Próximo Servicio (KM)</Label>
-                    <Input id="nextServiceMileage" type="number" value={nextServiceMileage} onChange={e => setNextServiceMileage(Number(e.target.value))} />
+                    <Input id="nextServiceMileage" type="number" value={nextServiceMileage || ''} onChange={e => setNextServiceMileage(Number(e.target.value))} />
                  </div>
               </div>
 
@@ -208,3 +209,4 @@ export default function AddMaintenanceRecordDialog({ children, vehicleId, onReco
   );
 }
 
+    

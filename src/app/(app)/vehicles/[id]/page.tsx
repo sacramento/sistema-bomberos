@@ -113,16 +113,14 @@ export default function VehicleDetailPage() {
                 <PageHeader title={<Skeleton className="h-9 w-64" />} description={<Skeleton className="h-5 w-48" />}>
                      <Skeleton className="h-10 w-24" />
                 </PageHeader>
-                 <Card>
-                    <CardHeader>
-                        <Skeleton className="h-8 w-40" />
-                        <Skeleton className="h-4 w-52" />
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <Skeleton className="h-48 w-full" />
-                         <Skeleton className="h-24 w-full" />
-                    </CardContent>
-                </Card>
+                 <div className="grid gap-8 lg:grid-cols-3">
+                    <div className="lg:col-span-2">
+                        <Skeleton className="h-96 w-full" />
+                    </div>
+                     <div className="lg:col-span-1">
+                        <Skeleton className="h-96 w-full" />
+                    </div>
+                </div>
             </>
         )
     }
@@ -189,7 +187,7 @@ export default function VehicleDetailPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span>.
+                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span> y todo su historial de mantenimiento.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -210,3 +208,5 @@ export default function VehicleDetailPage() {
         </>
     )
 }
+
+    

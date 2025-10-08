@@ -11,6 +11,7 @@ if (!db) {
 }
 
 const vehiclesCollection = collection(db, 'vehicles');
+const maintenanceRecordsCollection = collection(db, 'maintenance_records');
 
 // Helper to enrich vehicle data with full firefighter objects for the 'encargados'
 const docToVehicle = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Vehicle> => {
@@ -98,6 +99,21 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
 };
 
 export const deleteVehicle = async (id: string): Promise<void> => {
-    const docRef = doc(db, 'vehicles', id);
-    await deleteDoc(docRef);
-}
+    const batch = writeBatch(db);
+    
+    // 1. Delete the vehicle document
+    const vehicleDocRef = doc(db, 'vehicles', id);
+    batch.delete(vehicleDocRef);
+
+    // 2. Query for all maintenance records associated with this vehicle
+    const maintQuery = query(maintenanceRecordsCollection, where('vehicleId', '==', id));
+    const maintSnapshot = await getDocs(maintQuery);
+    maintSnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    // 3. Commit all deletions
+    await batch.commit();
+};
+
+    
