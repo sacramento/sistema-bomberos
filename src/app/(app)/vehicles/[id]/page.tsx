@@ -131,23 +131,25 @@ export default function VehicleDetailPage() {
     return (
         <>
             <PageHeader title={`Móvil ${vehicle.numeroMovil}`} description={`${vehicle.marca} ${vehicle.modelo}`}>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => router.push('/vehicles')}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Volver
-                    </Button>
-                    {canEdit && (
-                        <>
-                            <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={handleDataChange}>
-                                <Button>
-                                    <PlusCircle className="mr-2" />
-                                    Registrar Servicio
-                                </Button>
-                            </AddMaintenanceRecordDialog>
+                <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => router.push('/vehicles')}>
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver
+                        </Button>
+                        {canEdit && (
                             <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
-                               <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar</Button>
+                                <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar</Button>
                             </EditVehicleDialog>
-                        </>
+                        )}
+                    </div>
+                     {canEdit && (
+                        <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={handleDataChange}>
+                            <Button>
+                                <PlusCircle className="mr-2" />
+                                Registrar Servicio
+                            </Button>
+                        </AddMaintenanceRecordDialog>
                     )}
                 </div>
             </PageHeader>
