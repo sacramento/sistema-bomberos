@@ -4,6 +4,7 @@
 import { MaintenanceRecord } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { parseISO } from 'date-fns';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -16,12 +17,17 @@ const recordsCollection = collection(db, 'maintenance_records');
  * @param vehicleId The ID of the vehicle.
  */
 export const getMaintenanceRecordsByVehicle = async (vehicleId: string): Promise<MaintenanceRecord[]> => {
-    const q = query(recordsCollection, where('vehicleId', '==', vehicleId), orderBy('date', 'desc'));
+    // Simple query by vehicleId, no complex ordering on the server side.
+    const q = query(recordsCollection, where('vehicleId', '==', vehicleId));
     const querySnapshot = await getDocs(q);
     const records: MaintenanceRecord[] = [];
     querySnapshot.forEach((doc) => {
         records.push({ id: doc.id, ...doc.data() } as MaintenanceRecord);
     });
+
+    // Sort the records on the client/server side after fetching.
+    records.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+
     return records;
 };
 
