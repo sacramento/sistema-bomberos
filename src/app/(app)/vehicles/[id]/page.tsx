@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -48,7 +49,7 @@ export default function VehicleDetailPage() {
     const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
     const canEdit = useMemo(() => {
       if (canManage) return true;
-      if (activeRole === 'Encargado Móvil' && user?.id === vehicle?.encargadoId) return true;
+      if (activeRole === 'Encargado Móvil' && user?.id && vehicle?.encargadoIds.includes(user.id)) return true;
       return false;
     }, [canManage, activeRole, user, vehicle]);
 
@@ -110,6 +111,10 @@ export default function VehicleDetailPage() {
     }
 
     if (!vehicle) return null;
+    
+    const encargadosDisplay = vehicle.encargados && vehicle.encargados.length > 0
+        ? vehicle.encargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+        : 'Sin Asignar';
 
     return (
         <>
@@ -140,7 +145,7 @@ export default function VehicleDetailPage() {
                         <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
                         <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
                         <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
-                        <DetailItem icon={UserCircle} label="Encargado" value={vehicle.encargado ? `${vehicle.encargado.firstName} ${vehicle.encargado.lastName}` : 'Sin Asignar'} />
+                        <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
                     </div>
                      <Separator className="my-6" />
                      <div>

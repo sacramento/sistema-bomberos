@@ -79,10 +79,10 @@ export type Vehicle = {
   capacidadAgua: number;
   tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
   traccion: 'Trasera' | 'Delantera' | '4x4';
-  encargadoId: string; // Firefighter ID of the person in charge
+  encargadoIds: string[]; // Firefighter IDs of the people in charge
   observaciones: string;
   // Enriched properties for client side
-  encargado?: Firefighter | null;
+  encargados?: Firefighter[];
 }
 
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
@@ -147,6 +147,7 @@ export type AuditLogAction =
   | 'CREATE_COURSE' | 'UPDATE_COURSE' | 'DELETE_COURSE'
   | 'CREATE_WEEK' | 'UPDATE_WEEK' | 'DELETE_WEEK'
   | 'CREATE_TASK' | 'UPDATE_TASK' | 'DELETE_TASK'
+  | 'CREATE_VEHICLE' | 'UPDATE_VEHICLE' | 'DELETE_VEHICLE'
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE';
 
 export type AuditLog = {

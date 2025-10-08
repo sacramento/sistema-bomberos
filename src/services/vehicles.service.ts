@@ -12,11 +12,11 @@ if (!db) {
 
 const vehiclesCollection = collection(db, 'vehicles');
 
-// Helper to enrich vehicle data with full firefighter object for the 'encargado'
+// Helper to enrich vehicle data with full firefighter objects for the 'encargados'
 const docToVehicle = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Vehicle> => {
     const data = docSnap.data();
     
-    const encargado = firefighterMap.get(data.encargadoId) || null;
+    const encargados = (data.encargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
 
     const vehicle: Vehicle = {
         id: docSnap.id,
@@ -30,9 +30,9 @@ const docToVehicle = async (docSnap: any, firefighterMap: Map<string, Firefighte
         capacidadAgua: data.capacidadAgua,
         tipoVehiculo: data.tipoVehiculo,
         traccion: data.traccion,
-        encargadoId: data.encargadoId,
+        encargadoIds: data.encargadoIds,
         observaciones: data.observaciones,
-        encargado,
+        encargados,
     };
     return vehicle;
 }
@@ -62,16 +62,16 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     return null;
 }
 
-export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargado'>): Promise<string> => {
+export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>): Promise<string> => {
     // Ensure that enriched properties are not saved
-    const { encargado, ...dataToSave } = vehicleData;
+    const { encargados, ...dataToSave } = vehicleData;
     const docRef = await addDoc(vehiclesCollection, dataToSave);
     return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargado'>>): Promise<void> => {
+export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados'>>): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
-    const { encargado, ...dataToUpdate } = vehicleData;
+    const { encargados, ...dataToUpdate } = vehicleData;
     await updateDoc(docRef, dataToUpdate);
 };
 

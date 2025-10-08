@@ -26,18 +26,95 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
+const MultiFirefighterSelect = ({ 
+    title, 
+    selected, 
+    onSelectedChange,
+    firefighters,
+    disabled,
+}: { 
+    title: string;
+    selected: Firefighter[]; 
+    onSelectedChange: (selected: Firefighter[]) => void;
+    firefighters: Firefighter[];
+    disabled?: boolean;
+}) => {
+    const [open, setOpen] = useState(false);
+    
+    const handleSelect = (firefighter: Firefighter) => {
+        const isSelected = selected.some(s => s.id === firefighter.id);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
+        } else {
+            onSelectedChange([...selected, firefighter]);
+        }
+    };
+    
+    const getDisplayText = (f: Firefighter) => `${f.lastName}, ${f.firstName}`;
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto min-h-10"
+                    disabled={disabled}
+                >
+                    <div className="flex gap-1 flex-wrap">
+                        {selected.length > 0 ? (
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                        <CommandGroup>
+                            {firefighters.map((firefighter) => (
+                                <CommandItem
+                                    key={firefighter.id}
+                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    onSelect={() => {
+                                        handleSelect(firefighter);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {getDisplayText(firefighter)}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated }: { children: React.ReactNode; vehicle: Vehicle; onVehicleUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
-  const [openCombobox, setOpenCombobox] = useState(false);
   
   const { getActiveRole } = useAuth();
   const pathname = usePathname();
@@ -46,10 +123,12 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
   const canEditAllFields = activeRole === 'Master' || activeRole === 'Administrador';
 
   const [formData, setFormData] = useState(vehicle);
+  const [selectedEncargados, setSelectedEncargados] = useState<Firefighter[]>([]);
 
   useEffect(() => {
     if (open) {
       setFormData(vehicle);
+      setSelectedEncargados(vehicle.encargados || []);
     }
   }, [open, vehicle]);
 
@@ -76,16 +155,22 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
+  const handleEncargadosChange = (encargados: Firefighter[]) => {
+      setSelectedEncargados(encargados);
+  }
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.numeroMovil || !formData.marca || !formData.modelo || !formData.encargadoId) {
-        toast({ title: "Error", description: "Móvil, marca, modelo y encargado son campos obligatorios.", variant: "destructive" });
+    if (!formData.numeroMovil || !formData.marca || !formData.modelo || selectedEncargados.length === 0) {
+        toast({ title: "Error", description: "Móvil, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
         return;
     }
     setLoading(true);
     try {
-      const { encargado, ...dataToUpdate } = formData;
-      await updateVehicle(vehicle.id, dataToUpdate);
+      const { encargados, ...dataToUpdate } = formData;
+      const finalData = { ...dataToUpdate, encargadoIds: selectedEncargados.map(f => f.id) };
+
+      await updateVehicle(vehicle.id, finalData);
       toast({ title: "¡Éxito!", description: "La ficha del móvil ha sido actualizada." });
       onVehicleUpdated();
       setOpen(false);
@@ -145,29 +230,14 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     </Select>
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="encargadoId">Encargado</Label>
-                    <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between" disabled={!canEditAllFields}>
-                                {(formData.encargadoId && allFirefighters.length > 0) ? allFirefighters.find(f => f.id === formData.encargadoId)?.lastName : "Seleccionar encargado..."}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
-                            <Command>
-                                <CommandInput placeholder="Buscar bombero..." />
-                                <CommandList>
-                                <CommandEmpty>No se encontró.</CommandEmpty>
-                                {allFirefighters.map((firefighter) => (
-                                    <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { handleSelectChange('encargadoId', firefighter.id); setOpenCombobox(false); }}>
-                                        <Check className={cn("mr-2 h-4 w-4", formData.encargadoId === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                        {`${firefighter.lastName}, ${firefighter.firstName}`}
-                                    </CommandItem>
-                                ))}
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <Label htmlFor="encargadoIds">Encargado(s)</Label>
+                    <MultiFirefighterSelect
+                        title="encargados"
+                        selected={selectedEncargados}
+                        onSelectedChange={handleEncargadosChange}
+                        firefighters={allFirefighters}
+                        disabled={!canEditAllFields}
+                    />
                 </div>
             </div>
             <div className="space-y-4">
@@ -203,4 +273,3 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     </Dialog>
   );
 }
-

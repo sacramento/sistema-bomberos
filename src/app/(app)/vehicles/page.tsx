@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -18,6 +19,7 @@ import { usePathname } from "next/navigation";
 import AddVehicleDialog from "./_components/add-vehicle-dialog";
 import EditVehicleDialog from "./_components/edit-vehicle-dialog";
 import Link from "next/link";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -72,8 +74,36 @@ export default function VehiclesPage() {
 
   const canEditVehicle = (vehicle: Vehicle) => {
       if (canManage) return true;
-      if (activeRole === 'Encargado Móvil' && user?.id === vehicle.encargadoId) return true;
+      if (activeRole === 'Encargado Móvil' && user?.id && vehicle.encargadoIds?.includes(user.id)) return true;
       return false;
+  }
+
+  const renderEncargados = (vehicle: Vehicle) => {
+    if (!vehicle.encargados || vehicle.encargados.length === 0) {
+        return 'Sin asignar';
+    }
+    const firstEncargado = vehicle.encargados[0];
+    const remainingCount = vehicle.encargados.length - 1;
+
+    if (remainingCount > 0) {
+        return (
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <span className="cursor-pointer">
+                            {`${firstEncargado.lastName}, +${remainingCount}`}
+                        </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <ul className="list-disc pl-4">
+                            {vehicle.encargados.map(e => <li key={e.id}>{`${e.firstName} ${e.lastName}`}</li>)}
+                        </ul>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        );
+    }
+    return firstEncargado.lastName;
   }
 
   return (
@@ -100,7 +130,7 @@ export default function VehiclesPage() {
                 <TableHead>Móvil Nº</TableHead>
                 <TableHead>Marca y Modelo</TableHead>
                 <TableHead className="hidden md:table-cell">Cuartel</TableHead>
-                <TableHead className="hidden lg:table-cell">Encargado</TableHead>
+                <TableHead className="hidden lg:table-cell">Encargado(s)</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>
                 </TableHead>
@@ -131,7 +161,7 @@ export default function VehiclesPage() {
                     <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary">{vehicle.cuartel}</Badge>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">{vehicle.encargado?.lastName || 'Sin asignar'}</TableCell>
+                    <TableCell className="hidden lg:table-cell">{renderEncargados(vehicle)}</TableCell>
                     <TableCell>
                         <AlertDialog>
                             <DropdownMenu>
