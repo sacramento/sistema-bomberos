@@ -122,7 +122,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
 
   const canEditAllFields = activeRole === 'Master' || activeRole === 'Administrador';
 
-  const [formData, setFormData] = useState(vehicle);
+  const [formData, setFormData] = useState<Partial<Vehicle>>({});
   const [selectedEncargados, setSelectedEncargados] = useState<Firefighter[]>([]);
 
   useEffect(() => {
@@ -167,10 +167,10 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     }
     setLoading(true);
     try {
-      const { encargados, ...dataToUpdate } = formData;
-      const finalData = { ...dataToUpdate, encargadoIds: selectedEncargados.map(f => f.id) };
-
+      const finalData = { ...formData, encargadoIds: selectedEncargados.map(f => f.id) };
+      
       await updateVehicle(vehicle.id, finalData);
+
       toast({ title: "¡Éxito!", description: "La ficha del móvil ha sido actualizada." });
       onVehicleUpdated();
       setOpen(false);
@@ -195,25 +195,25 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="numeroMovil">Número de Móvil</Label>
-                    <Input id="numeroMovil" value={formData.numeroMovil} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    <Input id="numeroMovil" value={formData.numeroMovil || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="marca">Marca</Label>
-                    <Input id="marca" value={formData.marca} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    <Input id="marca" value={formData.marca || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="modelo">Modelo</Label>
-                    <Input id="modelo" value={formData.modelo} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    <Input id="modelo" value={formData.modelo || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="ano">Año</Label>
-                    <Input id="ano" type="number" value={formData.ano} onChange={handleInputChange} disabled={!canEditAllFields}/>
+                    <Input id="ano" type="number" value={formData.ano || 0} onChange={handleInputChange} disabled={!canEditAllFields}/>
                 </div>
             </div>
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="kilometraje">Kilometraje</Label>
-                    <Input id="kilometraje" type="number" value={formData.kilometraje} onChange={handleInputChange} />
+                    <Input id="kilometraje" type="number" value={formData.kilometraje || 0} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="cuartel">Cuartel</Label>
@@ -243,7 +243,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
             <div className="space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="capacidadAgua">Capacidad de Agua (L)</Label>
-                    <Input id="capacidadAgua" type="number" value={formData.capacidadAgua} onChange={handleInputChange} disabled={!canEditAllFields}/>
+                    <Input id="capacidadAgua" type="number" value={formData.capacidadAgua || 0} onChange={handleInputChange} disabled={!canEditAllFields}/>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
@@ -262,7 +262,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
             </div>
             <div className="space-y-2 md:col-span-2 lg:col-span-3">
                 <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea id="observaciones" value={formData.observaciones} onChange={handleInputChange} placeholder="Anotaciones sobre mantenimiento, estado general, etc." />
+                <Textarea id="observaciones" value={formData.observaciones || ''} onChange={handleInputChange} placeholder="Anotaciones sobre mantenimiento, estado general, etc." />
             </div>
           </div>
         </form>

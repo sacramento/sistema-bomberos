@@ -64,14 +64,19 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
 
 export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>): Promise<string> => {
     // Ensure that enriched properties are not saved
-    const { encargados, ...dataToSave } = vehicleData;
+    const dataToSave = { ...vehicleData };
+    // @ts-ignore
+    delete dataToSave.encargados;
     const docRef = await addDoc(vehiclesCollection, dataToSave);
     return docRef.id;
 };
 
 export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados'>>): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
-    const { encargados, ...dataToUpdate } = vehicleData;
+    // Ensure that enriched properties are not saved
+    const dataToUpdate = { ...vehicleData };
+    // @ts-ignore
+    delete dataToUpdate.encargados;
     await updateDoc(docRef, dataToUpdate);
 };
 
