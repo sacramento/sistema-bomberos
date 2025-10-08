@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -18,6 +17,7 @@ import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import AddVehicleDialog from "./_components/add-vehicle-dialog";
 import EditVehicleDialog from "./_components/edit-vehicle-dialog";
+import Link from "next/link";
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -120,7 +120,13 @@ export default function VehiclesPage() {
               ) : (
                 vehicles.map((vehicle: Vehicle) => (
                   <TableRow key={vehicle.id}>
-                    <TableCell className="font-medium">{vehicle.numeroMovil}</TableCell>
+                    <TableCell className="font-medium">
+                        <Button variant="link" asChild className="p-0 h-auto">
+                            <Link href={`/vehicles/${vehicle.id}`}>
+                                {vehicle.numeroMovil}
+                            </Link>
+                        </Button>
+                    </TableCell>
                     <TableCell>{`${vehicle.marca} ${vehicle.modelo}`}</TableCell>
                     <TableCell className="hidden md:table-cell">
                         <Badge variant="secondary">{vehicle.cuartel}</Badge>
