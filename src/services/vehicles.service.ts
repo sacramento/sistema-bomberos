@@ -63,6 +63,13 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
 }
 
 export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>): Promise<string> => {
+    // Check for uniqueness of numeroMovil
+    const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+        throw new Error(`El móvil con el número ${vehicleData.numeroMovil} ya existe.`);
+    }
+
     // Ensure that enriched properties are not saved
     const dataToSave = { ...vehicleData };
     // @ts-ignore
@@ -73,6 +80,16 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados'>
 
 export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados'>>): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
+
+    // If numeroMovil is being changed, check for uniqueness
+    if (vehicleData.numeroMovil) {
+        const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty && querySnapshot.docs[0].id !== id) {
+            throw new Error(`El número de móvil ${vehicleData.numeroMovil} ya está en uso por otro vehículo.`);
+        }
+    }
+    
     // Ensure that enriched properties are not saved
     const dataToUpdate = { ...vehicleData };
     // @ts-ignore
