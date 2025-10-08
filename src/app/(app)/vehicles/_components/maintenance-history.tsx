@@ -10,8 +10,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Check, X, Gauge, Calendar, PlusCircle, Trash2, Edit, MoreVertical } from 'lucide-react';
-import AddMaintenanceRecordDialog from './add-maintenance-record-dialog';
+import { Check, X, Gauge, Calendar, Trash2, MoreVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -74,19 +73,11 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div className="space-y-1">
+            <CardHeader className="flex-row items-center justify-between">
+                <div>
                     <CardTitle className="font-headline">Historial de Mantenimiento</CardTitle>
                     <CardDescription>Servicios realizados en este móvil, del más reciente al más antiguo.</CardDescription>
                 </div>
-                {canEdit && (
-                    <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={onDataChange}>
-                        <Button className="flex-shrink-0">
-                            <PlusCircle className="mr-2" />
-                            Registrar Servicio
-                        </Button>
-                    </AddMaintenanceRecordDialog>
-                )}
             </CardHeader>
             <CardContent>
                 {records.length > 0 ? (

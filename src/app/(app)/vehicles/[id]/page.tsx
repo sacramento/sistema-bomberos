@@ -10,7 +10,7 @@ import { getVehicleById } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import EditVehicleDialog from "../_components/edit-vehicle-dialog";
@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { deleteVehicle } from "@/services/vehicles.service";
 import { cn } from "@/lib/utils";
 import MaintenanceHistory from "../_components/maintenance-history";
+import AddMaintenanceRecordDialog from "../_components/add-maintenance-record-dialog";
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -133,12 +134,20 @@ export default function VehicleDetailPage() {
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push('/vehicles')}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Volver al Listado
+                        Volver
                     </Button>
                     {canEdit && (
-                        <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
-                           <Button><Edit className="mr-2 h-4 w-4" />Editar</Button>
-                        </EditVehicleDialog>
+                        <>
+                            <AddMaintenanceRecordDialog vehicleId={vehicleId} onRecordAdded={handleDataChange}>
+                                <Button>
+                                    <PlusCircle className="mr-2" />
+                                    Registrar Servicio
+                                </Button>
+                            </AddMaintenanceRecordDialog>
+                            <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
+                               <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar</Button>
+                            </EditVehicleDialog>
+                        </>
                     )}
                 </div>
             </PageHeader>
