@@ -4,12 +4,20 @@ import { Session, Firefighter, AttendanceStatus } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy, updateDoc, addDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
+import { cache } from 'react';
+
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
 }
 
 const sessionsCollection = collection(db, 'sessions');
+
+// Cache all firefighters for the duration of a single request
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
 
 // Helper to convert Firestore doc data to Session object
 // It fetches full Firefighter objects for instructors, assistants, and attendees
@@ -39,15 +47,11 @@ const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighte
 
 
 export const getSessions = async (): Promise<Session[]> => {
-    // Order sessions by date descending
     const q = query(sessionsCollection, orderBy('date', 'desc'));
     const querySnapshot = await getDocs(q);
 
-    // Fetch all firefighters once to avoid multiple reads
-    const allFirefighters = await getFirefighters();
-    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    const firefighterMap = await getAllFirefightersCached();
     
-    // Since docToSession is async, we need to handle the promises
     const sessionsPromises = querySnapshot.docs.map(doc => docToSession(doc, firefighterMap));
     const sessions = await Promise.all(sessionsPromises);
 
@@ -59,8 +63,7 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
-        const allFirefighters = await getFirefighters();
-        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+        const firefighterMap = await getAllFirefightersCached();
         return await docToSession(docSnap, firefighterMap);
     }
     return null;

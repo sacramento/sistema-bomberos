@@ -6,6 +6,7 @@ import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
+import { cache } from 'react';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -14,7 +15,19 @@ if (!db) {
 const vehiclesCollection = collection(db, 'vehicles');
 const maintenanceRecordsCollection = collection(db, 'maintenance_records');
 
-// Helper to enrich vehicle data with full firefighter objects for the 'encargados'
+// Cache data for the duration of a single request
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
+
+const getAllMaintenanceItemsCached = cache(async () => {
+    const items = await getMaintenanceItems();
+    return new Map(items.map(i => [i.id, i]));
+});
+
+
+// Helper to enrich vehicle data
 const docToVehicle = async (
     docSnap: any, 
     firefighterMap: Map<string, Firefighter>,
@@ -50,12 +63,10 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
     const q = query(vehiclesCollection, orderBy('numeroMovil', 'asc'));
     const querySnapshot = await getDocs(q);
 
-    const [allFirefighters, allMaintenanceItems] = await Promise.all([
-        getFirefighters(),
-        getMaintenanceItems()
+    const [firefighterMap, maintenanceItemMap] = await Promise.all([
+        getAllFirefightersCached(),
+        getAllMaintenanceItemsCached()
     ]);
-    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
-    const maintenanceItemMap = new Map(allMaintenanceItems.map(i => [i.id, i]));
     
     const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
     const vehicles = await Promise.all(vehiclesPromises);
@@ -68,19 +79,16 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const [allFirefighters, allMaintenanceItems] = await Promise.all([
-            getFirefighters(),
-            getMaintenanceItems()
+        const [firefighterMap, maintenanceItemMap] = await Promise.all([
+            getAllFirefightersCached(),
+            getAllMaintenanceItemsCached()
         ]);
-        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
-        const maintenanceItemMap = new Map(allMaintenanceItems.map(i => [i.id, i]));
         return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
     }
     return null;
 }
 
 export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>): Promise<string> => {
-    // Check for uniqueness of numeroMovil
     const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -89,7 +97,7 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
 
     const dataToSave = { 
         ...vehicleData,
-        maintenanceItemIds: vehicleData.maintenanceItemIds || [], // Ensure it's not undefined
+        maintenanceItemIds: vehicleData.maintenanceItemIds || [],
      };
     const docRef = await addDoc(vehiclesCollection, dataToSave);
     return docRef.id;
@@ -98,7 +106,6 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
 export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>>): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
 
-    // If numeroMovil is being changed, check for uniqueness
     if (vehicleData.numeroMovil) {
         const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
         const querySnapshot = await getDocs(q);
@@ -114,18 +121,14 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
 export const deleteVehicle = async (id: string): Promise<void> => {
     const batch = writeBatch(db);
     
-    // 1. Delete the vehicle document
     const vehicleDocRef = doc(db, 'vehicles', id);
     batch.delete(vehicleDocRef);
 
-    // 2. Query for all maintenance records associated with this vehicle
     const maintQuery = query(maintenanceRecordsCollection, where('vehicleId', '==', id));
     const maintSnapshot = await getDocs(maintQuery);
     maintSnapshot.forEach(doc => {
         batch.delete(doc.ref);
     });
 
-    // 3. Commit all deletions
     await batch.commit();
 };
-

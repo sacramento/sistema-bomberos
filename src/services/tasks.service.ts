@@ -6,12 +6,19 @@ import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { parseISO } from 'date-fns';
+import { cache } from 'react';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
 }
 
 const tasksCollection = collection(db, 'tasks');
+
+// Cache all firefighters for the duration of a single request
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
 
 const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Task> => {
     const data = docSnap.data();
@@ -20,13 +27,10 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 
     let createdAtString: string | null = null;
     if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-        // This is the most reliable way to check for a Firestore Timestamp
         createdAtString = data.createdAt.toDate().toISOString();
     } else if (typeof data.createdAt === 'string') {
-        // If it's already a string, use it directly
         createdAtString = data.createdAt;
     } else if (data.createdAt?.seconds) { 
-        // Fallback for plain object representation of Timestamp
         try {
             const timestamp = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds);
             createdAtString = timestamp.toDate().toISOString();
@@ -52,13 +56,11 @@ export const getAllTasks = async (): Promise<Task[]> => {
     const q = query(tasksCollection);
     const querySnapshot = await getDocs(q);
     
-    const allFirefighters = await getFirefighters();
-    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    const firefighterMap = await getAllFirefightersCached();
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
     let tasks = await Promise.all(tasksPromises);
 
-    // Sort by creation date descending (newest first) on the server-side after fetching.
     tasks.sort((a, b) => {
         const dateA = a.createdAt ? parseISO(a.createdAt).getTime() : 0;
         const dateB = b.createdAt ? parseISO(b.createdAt).getTime() : 0;
@@ -72,13 +74,11 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     const q = query(tasksCollection, where('weekId', '==', weekId));
     const querySnapshot = await getDocs(q);
     
-    const allFirefighters = await getFirefighters();
-    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    const firefighterMap = await getAllFirefightersCached();
     
     const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
     let tasks = await Promise.all(tasksPromises);
 
-    // Sort by title client-side
     tasks = tasks.sort((a, b) => a.title.localeCompare(b.title));
     return tasks;
 }
@@ -96,7 +96,6 @@ export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' |
     const docRef = doc(db, 'tasks', id);
     const dataToUpdate: any = { ...taskData };
     
-     // Prevent 'createdAt' from being overwritten on updates.
     delete dataToUpdate.createdAt;
     
     await updateDoc(docRef, dataToUpdate);

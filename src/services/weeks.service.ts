@@ -5,6 +5,7 @@ import { Week, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
+import { cache } from 'react';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -13,11 +14,17 @@ if (!db) {
 const weeksCollection = collection(db, 'weeks');
 const tasksCollection = collection(db, 'tasks');
 
+// Cache all firefighters for the duration of a single request
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
+
+
 // Helper to enrich week data with full firefighter objects
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
     
-    // Safely get firefighter objects, filtering out any that are not found (i.e., were deleted)
     const getFirefighterObjects = (ids: string[]): Firefighter[] => {
         if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
@@ -27,13 +34,11 @@ const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
     const driver = firefighterMap.get(data.driverId) || null;
     const members = getFirefighterObjects(data.memberIds || []);
 
-    // Reconstruct allMembers from the enriched, existing members to ensure consistency
     const allMembers: Firefighter[] = [];
     if (lead) allMembers.push(lead);
     if (driver) allMembers.push(driver);
     allMembers.push(...members);
     
-    // Remove duplicates, just in case
     const uniqueMembers = Array.from(new Map(allMembers.map(m => [m.id, m])).values());
 
     const week: Week = {
@@ -52,8 +57,7 @@ export const getWeeks = async (): Promise<Week[]> => {
     const q = query(weeksCollection, orderBy('periodStartDate', 'desc'));
     const querySnapshot = await getDocs(q);
 
-    const allFirefighters = await getFirefighters();
-    const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+    const firefighterMap = await getAllFirefightersCached();
     
     const weeksPromises = querySnapshot.docs.map(doc => docToWeek(doc, firefighterMap));
     const weeks = await Promise.all(weeksPromises);
@@ -66,8 +70,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const allFirefighters = await getFirefighters();
-        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
+        const firefighterMap = await getAllFirefightersCached();
         return await docToWeek(docSnap, firefighterMap);
     }
     return null;
@@ -75,7 +78,6 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
 
 
 export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>): Promise<string> => {
-    // Combine all unique IDs.
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     
     const dataToSave = {
@@ -85,9 +87,7 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
         periodEndDate: weekData.periodEndDate,
         leadId: weekData.leadId,
         driverId: weekData.driverId,
-        // The individual members list (without lead/driver) is primarily for editing convenience.
         memberIds: weekData.memberIds,
-        // This is the crucial field for reading and displaying the full team.
         allMemberIds: allMemberIds,
         observations: weekData.observations
     };
@@ -101,7 +101,6 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
 
     const dataToUpdate: any = { ...weekData };
 
-    // If roles or members change, recalculate allMemberIds
     if (weekData.leadId || weekData.driverId || weekData.memberIds) {
         const docSnap = await getDoc(docRef);
         const currentData = docSnap.data() as Week;
@@ -114,7 +113,6 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
         dataToUpdate.allMemberIds = allMemberIds;
     }
     
-    // Remove undefined fields so they don't overwrite existing data
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
     await updateDoc(docRef, dataToUpdate);
@@ -123,17 +121,14 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
 export const deleteWeek = async (id: string): Promise<void> => {
     const batch = writeBatch(db);
 
-    // 1. Delete the week itself
     const weekDocRef = doc(db, 'weeks', id);
     batch.delete(weekDocRef);
 
-    // 2. Find and delete all tasks associated with that week
     const tasksQuery = query(tasksCollection, where('weekId', '==', id));
     const tasksSnapshot = await getDocs(tasksQuery);
     tasksSnapshot.forEach(taskDoc => {
         batch.delete(taskDoc.ref);
     });
 
-    // 3. Commit the batch
     await batch.commit();
 }
