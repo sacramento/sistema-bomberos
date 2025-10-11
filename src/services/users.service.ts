@@ -46,6 +46,7 @@ export const getUserById = async (id: string): Promise<User | null> => {
 }
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
+    // Here, 'id' is the firefighter's legajo.
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -15,10 +14,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from "@/lib/types";
-import { addUser } from "@/services/users.service";
+import { useState, useEffect } from "react";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter } from "@/lib/types";
+import { addUser, getUsers } from "@/services/users.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
@@ -32,17 +36,45 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [loading, setLoading] = useState(false);
   
   // Form State
-  const [legajo, setLegajo] = useState('');
-  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [globalRole, setGlobalRole] = useState<GlobalRole | ''>('');
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
 
+  // Data for selection
+  const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
+  const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+
+
+  useEffect(() => {
+    const fetchAvailableFirefighters = async () => {
+        if (open) {
+            setDataLoading(true);
+            try {
+                const [allUsers, allFirefighters] = await Promise.all([getUsers(), getFirefighters()]);
+                const existingUserIds = new Set(allUsers.map(u => u.id));
+                const available = allFirefighters.filter(f => !existingUserIds.has(f.legajo));
+                setAvailableFirefighters(available);
+            } catch (error) {
+                 toast({
+                    title: "Error",
+                    description: "No se pudieron cargar los bomberos disponibles para crear usuarios.",
+                    variant: "destructive",
+                });
+            } finally {
+                setDataLoading(false);
+            }
+        }
+    };
+    fetchAvailableFirefighters();
+  }, [open, toast]);
+
+
   const resetForm = () => {
-    setLegajo('');
-    setName('');
+    setSelectedFirefighter(null);
     setPassword('');
     setGlobalRole('');
     setAsistenciaRole('Ninguno');
@@ -52,10 +84,10 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!legajo || !name || !password || !globalRole) {
+    if (!selectedFirefighter || !password || !globalRole) {
         toast({
             title: "Error",
-            description: "Por favor, complete todos los campos generales.",
+            description: "Debe seleccionar un bombero y completar la contraseña y el rol global.",
             variant: "destructive",
         });
         return;
@@ -67,7 +99,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         const isMaster = globalRole === 'Master';
 
         const newUser: Omit<User, 'id'> = {
-            name,
+            name: `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`,
             password,
             role: globalRole,
             roles: {
@@ -77,11 +109,11 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             }
         };
         
-        await addUser(legajo, newUser);
+        await addUser(selectedFirefighter.legajo, newUser);
 
         toast({
             title: "¡Éxito!",
-            description: "El nuevo usuario ha sido agregado.",
+            description: `El usuario para ${selectedFirefighter.lastName} ha sido agregado.`,
         });
         
         onUserAdded();
@@ -101,27 +133,50 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        setOpen(isOpen);
+        if (!isOpen) resetForm();
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Usuario</DialogTitle>
             <DialogDescription>
-              Complete los detalles generales y asigne roles para cada módulo.
+              Seleccione un bombero para crear su cuenta de usuario y asigne roles.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-6 py-4">
             {/* General Fields */}
             <div className="space-y-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="legajo" className="text-right">Legajo</Label>
-                  <Input id="legajo" placeholder="Ej: U-004" className="col-span-3" value={legajo} onChange={e => setLegajo(e.target.value)} required />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Nombre</Label>
-                  <Input id="name" placeholder="Ej: María López" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
-                </div>
+                 <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="firefighter-select" className="text-right">Bombero</Label>
+                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                        <PopoverTrigger asChild className="col-span-3">
+                            <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between" disabled={dataLoading}>
+                                {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}` : 'Seleccionar bombero...'}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[300px] p-0">
+                             <Command>
+                                <CommandInput placeholder="Buscar bombero..." />
+                                <CommandList>
+                                <CommandEmpty>No se encontraron bomberos sin usuario.</CommandEmpty>
+                                <CommandGroup>
+                                    {availableFirefighters.map((firefighter) => (
+                                    <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                        onSelect={() => { setSelectedFirefighter(firefighter); setComboboxOpen(false); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                        {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="password" className="text-right">Contraseña</Label>
                   <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
@@ -174,7 +229,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Usuario'}</Button>
+            <Button type="submit" disabled={loading || dataLoading}>{loading ? 'Guardando...' : 'Guardar Usuario'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
