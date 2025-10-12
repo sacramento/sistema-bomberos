@@ -397,44 +397,45 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 doc.text("Detalle de Registros de Asistencia", 14, currentY);
                 currentY += 8;
 
-                const groupedByFirehouse: { [key: string]: any[] } = attendanceReportData.details.reduce((acc, item) => {
-                    const firehouse = item.firefighter.firehouse || 'Sin Cuartel';
-                    if (!acc[firehouse]) {
-                        acc[firehouse] = [];
+                const sortedDetails = [...attendanceReportData.details].sort((a, b) => {
+                    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+                    const aIndex = firehouseOrder.indexOf(a.firefighter.firehouse);
+                    const bIndex = firehouseOrder.indexOf(b.firefighter.firehouse);
+                    
+                    if (aIndex !== bIndex) {
+                        if (aIndex === -1) return 1;
+                        if (bIndex === -1) return -1;
+                        return aIndex - bIndex;
                     }
-                    acc[firehouse].push(item);
-                    return acc;
-                }, {} as { [key: string]: any[] });
+                    return a.firefighter.legajo.localeCompare(b.firefighter.legajo);
+                });
 
                 const tableBody: any[] = [];
-                const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
-                
-                // Add sorted firehouses first
-                firehouseOrder.forEach(firehouse => {
-                    if (groupedByFirehouse[firehouse]) {
-                        tableBody.push([{ content: `--- ${firehouse} ---`, colSpan: 5, styles: { fontStyle: 'bold', halign: 'center' } }]);
-                        groupedByFirehouse[firehouse].forEach(item => {
-                            let name = `${item.firefighter.legajo} - ${item.firefighter.firstName} ${item.firefighter.lastName}`;
-                            if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
-                            else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
-                            tableBody.push([name, item.session.title, item.session.specialization, item.session.date, getStatusLabel(item.status)]);
-                        });
-                    }
-                });
+                let lastFirehouse = '';
 
-                // Add any other firehouses
-                Object.keys(groupedByFirehouse).forEach(firehouse => {
-                    if (!firehouseOrder.includes(firehouse)) {
-                         tableBody.push([{ content: `--- ${firehouse} ---`, colSpan: 5, styles: { fontStyle: 'bold', halign: 'center' } }]);
-                         groupedByFirehouse[firehouse].forEach(item => {
-                            let name = `${item.firefighter.legajo} - ${item.firefighter.firstName} ${item.firefighter.lastName}`;
-                            if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
-                            else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
-                            tableBody.push([name, item.session.title, item.session.specialization, item.session.date, getStatusLabel(item.status)]);
-                        });
+                sortedDetails.forEach(item => {
+                    const firehouse = item.firefighter.firehouse || 'Sin Cuartel';
+                    if (firehouse !== lastFirehouse) {
+                        tableBody.push([{ 
+                            content: `--- ${firehouse} ---`, 
+                            colSpan: 5, 
+                            styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } 
+                        }]);
+                        lastFirehouse = firehouse;
                     }
+                    
+                    let name = `${item.firefighter.legajo} - ${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                    if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
+                    else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
+                    
+                    tableBody.push([
+                        name, 
+                        item.session.title, 
+                        item.session.specialization, 
+                        item.session.date, 
+                        getStatusLabel(item.status)
+                    ]);
                 });
-
     
                 (doc as any).autoTable({
                     startY: currentY,
@@ -974,4 +975,3 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
-
