@@ -975,3 +975,4 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
