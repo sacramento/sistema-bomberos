@@ -398,14 +398,14 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 doc.text("Detalle de Registros de Asistencia", 14, currentY);
                 currentY += 8;
 
-                const sortedDetails = [...attendanceReportData.details].sort((a, b) => {
-                    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
-                    const aIndex = firehouseOrder.indexOf(a.firefighter.firehouse);
-                    const bIndex = firehouseOrder.indexOf(b.firefighter.firehouse);
+                 const sortedDetails = [...attendanceReportData.details].sort((a, b) => {
+                    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Sin Cuartel'];
+                    const aIndex = firehouseOrder.indexOf(a.firefighter.firehouse || 'Sin Cuartel');
+                    const bIndex = firehouseOrder.indexOf(b.firefighter.firehouse || 'Sin Cuartel');
                     
-                    if (aIndex !== bIndex) return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+                    if (aIndex !== bIndex) return aIndex - bIndex;
                     
-                    return a.firefighter.legajo.localeCompare(b.firefighter.legajo);
+                    return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
                 });
 
                 const tableBody: any[] = [];
