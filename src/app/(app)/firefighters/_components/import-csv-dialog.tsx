@@ -21,7 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
 
 // Define the required headers for the CSV file
-const REQUIRED_HEADERS = ['legajo', 'firstname', 'lastname', 'rank', 'firehouse'];
+const REQUIRED_HEADERS = ['legajo', 'nombre', 'apellido', 'rank', 'firehouse'];
 
 export default function ImportCsvDialog({
   children,
@@ -82,8 +82,8 @@ export default function ImportCsvDialog({
             
             return {
                 legajo: row.legajo.trim(),
-                firstName: row.firstname.trim(),
-                lastName: row.lastname.trim(),
+                firstName: row.nombre.trim(),
+                lastName: row.apellido.trim(),
                 rank: row.rank.trim().toUpperCase(),
                 firehouse: row.firehouse.trim(),
                 status: isValidStatus ? (statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase() as 'Active' | 'Inactive') : 'Active'
@@ -151,7 +151,7 @@ export default function ImportCsvDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, firstname, lastname, rank, firehouse</strong>. Opcionalmente puede incluir la columna `status` (valores: `Active` o `Inactive`); si se omite, el bombero se creará como `Active`.
+                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, nombre, apellido, rank, firehouse</strong>. Opcionalmente puede incluir la columna `status` (valores: `Active` o `Inactive`); si se omite, el bombero se creará como `Active`.
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
