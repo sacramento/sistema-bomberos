@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { deleteUser, getUsers } from "@/services/users.service";
 import { User } from "@/lib/types";
-import { MoreHorizontal, PlusCircle, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Wrench } from "lucide-react";
 import { useEffect, useState } from "react";
 import AddUserDialog from "./_components/add-user-dialog";
 import EditUserDialog from "./_components/edit-user-dialog";
@@ -25,11 +25,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
+import DataFixDialog from "./_components/data-fix-dialog";
 
 export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const { user } = useAuth();
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -75,12 +78,22 @@ export default function UsersPage() {
     return (
         <>
             <PageHeader title="Administración de Usuarios" description="Gestionar cuentas de usuario y roles.">
-                 <AddUserDialog onUserAdded={handleUserChange}>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Agregar Usuario
-                    </Button>
-                 </AddUserDialog>
+                 <div className="flex gap-2">
+                    {user?.role === 'Master' && (
+                        <DataFixDialog onFixComplete={handleUserChange}>
+                             <Button variant="destructive">
+                                <Wrench className="mr-2 h-4 w-4" />
+                                Corregir Nombres
+                            </Button>
+                        </DataFixDialog>
+                    )}
+                     <AddUserDialog onUserAdded={handleUserChange}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Agregar Usuario
+                        </Button>
+                     </AddUserDialog>
+                 </div>
             </PageHeader>
              <Card>
                 <CardHeader>
