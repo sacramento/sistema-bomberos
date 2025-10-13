@@ -403,9 +403,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     const bIndex = firehouseOrder.indexOf(b.firefighter.firehouse);
                     
                     if (aIndex !== bIndex) {
-                        if (aIndex === -1) return 1;
-                        if (bIndex === -1) return -1;
-                        return aIndex - bIndex;
+                        return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
                     }
                     return a.firefighter.legajo.localeCompare(b.firefighter.legajo);
                 });
@@ -975,4 +973,3 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
-
