@@ -376,8 +376,9 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
                  (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Bombero', 'Clases', '% Presentismo']],
+                    head: [['Legajo', 'Bombero', 'Clases', '% Presentismo']],
                     body: summaryTableData.map(item => [
+                        item.firefighterLegajo,
                         item.firefighter,
                         item.totalClasses,
                         item.presentPercentage
@@ -415,18 +416,19 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     if (firehouse !== lastFirehouse) {
                         tableBody.push([{ 
                             content: `--- ${firehouse} ---`, 
-                            colSpan: 5, 
+                            colSpan: 6, 
                             styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } 
                         }]);
                         lastFirehouse = firehouse;
                     }
                     
-                    let name = `${item.firefighter.legajo} - ${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                    let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
                     if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
                     else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
                     
                     tableBody.push([
-                        name, 
+                        item.firefighter.legajo,
+                        name,
                         item.session.title, 
                         item.session.specialization, 
                         item.session.date, 
@@ -436,7 +438,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
+                    head: [['Legajo', 'Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
                     body: tableBody,
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
@@ -601,7 +603,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             if (totalClasses === 0) {
                  return {
                     firefighterId: firefighter.id,
-                    firefighter: `${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`,
+                    firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                    firefighterLegajo: firefighter.legajo,
                     totalClasses: 0,
                     presentPercentage: 'N/A',
                 };
@@ -611,7 +614,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
             return {
                 firefighterId: firefighter.id,
-                firefighter: `${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`,
+                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                firefighterLegajo: firefighter.legajo,
                 totalClasses,
                 presentPercentage: `${percentage.toFixed(0)}%`,
             };
@@ -849,6 +853,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                         <Table>
                                             <TableHeader>
                                                 <TableRow>
+                                                    <TableHead>Legajo</TableHead>
                                                     <TableHead>Bombero</TableHead>
                                                     <TableHead>Clases</TableHead>
                                                     <TableHead>% Presentismo</TableHead>
@@ -857,7 +862,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                             <TableBody>
                                                 {summaryTableData.map((item) => (
                                                     <TableRow key={item.firefighterId}>
-                                                        <TableCell className="font-medium">{item.firefighter}</TableCell>
+                                                        <TableCell className="font-medium">{item.firefighterLegajo}</TableCell>
+                                                        <TableCell>{item.firefighter}</TableCell>
                                                         <TableCell>{item.totalClasses}</TableCell>
                                                         <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
                                                     </TableRow>
@@ -879,6 +885,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
+                                                <TableHead>Legajo</TableHead>
                                                 <TableHead>Bombero</TableHead>
                                                 <TableHead>Clase</TableHead>
                                                 <TableHead className="hidden sm:table-cell">Especialidad</TableHead>
@@ -892,7 +899,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                                 const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
                                                 return (
                                                     <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
-                                                        <TableCell className="font-medium">
+                                                        <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
+                                                        <TableCell>
                                                             <div className="flex items-center gap-2">
                                                                 <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
                                                                 {isInstructor && <Badge variant="destructive">I</Badge>}
