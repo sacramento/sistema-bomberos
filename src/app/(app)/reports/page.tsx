@@ -402,9 +402,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     const aIndex = firehouseOrder.indexOf(a.firefighter.firehouse);
                     const bIndex = firehouseOrder.indexOf(b.firefighter.firehouse);
                     
-                    if (aIndex !== bIndex) {
-                        return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
-                    }
+                    if (aIndex !== bIndex) return (aIndex === -1 ? 99 : aIndex) - (bIndex === -1 ? 99 : bIndex);
+                    
                     return a.firefighter.legajo.localeCompare(b.firefighter.legajo);
                 });
 
@@ -602,7 +601,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             if (totalClasses === 0) {
                  return {
                     firefighterId: firefighter.id,
-                    firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                    firefighter: `${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`,
                     totalClasses: 0,
                     presentPercentage: 'N/A',
                 };
@@ -612,7 +611,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
 
             return {
                 firefighterId: firefighter.id,
-                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                firefighter: `${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`,
                 totalClasses,
                 presentPercentage: `${percentage.toFixed(0)}%`,
             };
