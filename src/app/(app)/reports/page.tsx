@@ -568,7 +568,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         const netAbsences = Math.max(0, totalAbsences - statusCounts.recupero);
         const totalClassesForPercentage = effectiveAttendance + totalAbsences;
 
-        // 5. Prepare Pie Chart data - THIS IS THE CHANGED PART
+        // 5. Prepare Pie Chart data
         const pieData = [
             { name: 'Presente', value: statusCounts.present + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
             { name: 'Tarde', value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
@@ -604,10 +604,10 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             const absentCount = records.filter(d => d.status === 'absent' || d.status === 'excused').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
             
+            // For numeric display: total times they showed up
             const attendedClasses = presentCount + tardyCount + recuperoCount;
+            // For percentage calculation: total required classes
             const totalRequiredClasses = presentCount + tardyCount + absentCount;
-
-            const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
 
             if (totalRequiredClasses === 0) {
                  return {
@@ -615,11 +615,13 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     firefighterLegajo: firefighter.legajo,
                     firefighterFirehouse: firefighter.firehouse,
-                    totalClasses: 0,
+                    totalClasses: attendedClasses,
                     presentPercentage: 'N/A',
                 };
             }
             
+            // For weighted percentage calculation
+            const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
             const percentage = Math.min(100, (weightedPresent / totalRequiredClasses) * 100);
 
             return {
@@ -991,6 +993,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
 
 
