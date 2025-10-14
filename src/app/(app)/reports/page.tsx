@@ -523,20 +523,18 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         });
 
         for (const session of filteredSessions) {
-            const participantIds = new Set<string>();
-
-            // Add all types of participants, ensuring no duplicates
-            session.instructors.forEach(p => participantIds.add(p.id));
-            session.assistants.forEach(p => participantIds.add(p.id));
-            session.attendees.forEach(p => participantIds.add(p.id));
+             const allParticipantIds = new Set([
+                ...(session.instructorIds || []),
+                ...(session.assistantIds || []),
+                ...(session.attendeeIds || [])
+            ]);
             
-            for (const firefighterId of participantIds) {
+            for (const firefighterId of allParticipantIds) {
                 const firefighter = allFirefighters.find(f => f.id === firefighterId);
                 if (firefighter) {
                     const isInstructor = session.instructorIds?.includes(firefighterId);
                     const isAssistant = session.assistantIds?.includes(firefighterId);
                     
-                    // Instructors and assistants are always 'present' unless specified otherwise
                     let status = session.attendance?.[firefighterId];
                     if (!status && (isInstructor || isAssistant)) {
                         status = 'present';
@@ -619,9 +617,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             const absentCount = records.filter(d => d.status === 'absent' || d.status === 'excused').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
             
-            // For numeric display: total times they showed up
-            const attendedClasses = presentCount + tardyCount + recuperoCount;
-            // For percentage calculation: total required classes
+            // For numeric display: total classes they were required to attend
             const totalRequiredClasses = presentCount + tardyCount + absentCount;
 
             if (totalRequiredClasses === 0) {
@@ -630,7 +626,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                     firefighterLegajo: firefighter.legajo,
                     firefighterFirehouse: firefighter.firehouse,
-                    totalClasses: attendedClasses,
+                    totalClasses: 0,
                     presentPercentage: 'N/A',
                 };
             }
@@ -644,7 +640,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                 firefighterLegajo: firefighter.legajo,
                 firefighterFirehouse: firefighter.firehouse,
-                totalClasses: attendedClasses,
+                totalClasses: totalRequiredClasses,
                 presentPercentage: `${percentage.toFixed(0)}%`,
             };
         }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
@@ -1008,6 +1004,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
 
 
