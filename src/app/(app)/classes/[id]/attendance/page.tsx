@@ -74,7 +74,9 @@ export default function AttendancePage() {
                     if (data) {
                         const uniqueParticipants = new Map<string, Firefighter>();
                         [...data.instructors, ...data.assistants, ...data.attendees].forEach(p => {
-                            uniqueParticipants.set(p.id, p);
+                            if (p.status === 'Active') {
+                                uniqueParticipants.set(p.id, p);
+                            }
                         });
                         const participants = Array.from(uniqueParticipants.values());
                         setAllParticipants(participants);

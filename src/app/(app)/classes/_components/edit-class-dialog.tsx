@@ -223,6 +223,8 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
   
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+
   useEffect(() => {
     const fetchAllFirefighters = async () => {
         if (open) { // Fetch only when dialog is open
@@ -246,7 +248,7 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
         let filteredByGroup: Firefighter[] = [];
 
         if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-            let filtered = allFirefighters;
+            let filtered = activeFirefighters;
             
             if (selectedHierarchies.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
@@ -277,7 +279,7 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
 
         setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
     }
-  }, [step, allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [step, activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
   
   const resetForm = () => {
     setStep(1);
@@ -392,18 +394,18 @@ export default function EditClassDialog({ children, session, onClassUpdated }: {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label>Ayudantes (Opcional)</Label>
-               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
+               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
             <p className="text-xs text-muted-foreground">Los asistentes no pueden ser seleccionados como instructores o ayudantes y viceversa.</p>
           </div>
         );
       case 3:
          const instructorAndAssistantIds = new Set([...instructors.map(i => i.id), ...assistants.map(a => a.id)]);
-         const availableForManualAdd = allFirefighters.filter(f => !instructorAndAssistantIds.has(f.id));
+         const availableForManualAdd = activeFirefighters.filter(f => !instructorAndAssistantIds.has(f.id));
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">Modifique la lista de asistentes. Use los filtros para añadir grupos o edite la lista manualmente.</p>

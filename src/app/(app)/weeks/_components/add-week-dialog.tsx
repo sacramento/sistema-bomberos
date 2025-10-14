@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addWeek } from "@/services/weeks.service";
@@ -154,6 +155,8 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   const [observations, setObservations] = useState('');
   
   const progress = (step / totalSteps) * 100;
+  
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -284,15 +287,15 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Encargado de Semana</Label>
-              <SingleFirefighterSelect title="Encargado" selected={lead} onSelectedChange={setLead} firefighters={allFirefighters} />
+              <SingleFirefighterSelect title="Encargado" selected={lead} onSelectedChange={setLead} firefighters={activeFirefighters} />
             </div>
             <div className="space-y-2">
               <Label>Chofer</Label>
-              <SingleFirefighterSelect title="Chofer" selected={driver} onSelectedChange={setDriver} firefighters={allFirefighters.filter(f => f.id !== lead?.id)} />
+              <SingleFirefighterSelect title="Chofer" selected={driver} onSelectedChange={setDriver} firefighters={activeFirefighters.filter(f => f.id !== lead?.id)} />
             </div>
              <div className="space-y-2">
               <Label>Integrantes</Label>
-              <MultiFirefighterSelect title="integrantes" selected={members} onSelectedChange={setMembers} firefighters={allFirefighters} disabledIds={[lead?.id || '', driver?.id || '']} />
+              <MultiFirefighterSelect title="integrantes" selected={members} onSelectedChange={setMembers} firefighters={activeFirefighters} disabledIds={[lead?.id || '', driver?.id || '']} />
               <p className="text-xs text-muted-foreground">El encargado y el chofer ya están incluidos. Agregue aquí al resto del personal.</p>
             </div>
           </div>

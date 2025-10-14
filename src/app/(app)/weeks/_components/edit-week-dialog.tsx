@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateWeek } from "@/services/weeks.service";
@@ -154,6 +154,8 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   
   const progress = (step / totalSteps) * 100;
   
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+
   // Effect to reset form state when dialog is re-opened with a different week
   useEffect(() => {
     if (open) {
@@ -270,15 +272,15 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Encargado de Semana</Label>
-              <SingleFirefighterSelect title="Encargado" selected={lead} onSelectedChange={setLead} firefighters={allFirefighters} />
+              <SingleFirefighterSelect title="Encargado" selected={lead} onSelectedChange={setLead} firefighters={activeFirefighters} />
             </div>
             <div className="space-y-2">
               <Label>Chofer</Label>
-              <SingleFirefighterSelect title="Chofer" selected={driver} onSelectedChange={setDriver} firefighters={allFirefighters.filter(f => f.id !== lead?.id)} />
+              <SingleFirefighterSelect title="Chofer" selected={driver} onSelectedChange={setDriver} firefighters={activeFirefighters.filter(f => f.id !== lead?.id)} />
             </div>
              <div className="space-y-2">
               <Label>Integrantes</Label>
-              <MultiFirefighterSelect title="integrantes" selected={members} onSelectedChange={setMembers} firefighters={allFirefighters} disabledIds={[lead?.id || '', driver?.id || '']} />
+              <MultiFirefighterSelect title="integrantes" selected={members} onSelectedChange={setMembers} firefighters={activeFirefighters} disabledIds={[lead?.id || '', driver?.id || '']} />
             </div>
           </div>
         );
@@ -347,5 +349,3 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
     </Dialog>
   );
 }
-
-    

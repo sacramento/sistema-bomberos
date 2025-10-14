@@ -607,31 +607,28 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         if (relevantRecords.length === 0) return [];
         
         const firefighterIdsInFilter = new Set(relevantRecords.map(d => d.firefighter.id));
+        const activeFirefighterIds = new Set(allFirefighters.filter(f => f.status === 'Active').map(f => f.id));
+        
+        const finalFirefighterIds = Array.from(firefighterIdsInFilter).filter(id => activeFirefighterIds.has(id));
 
-        return Array.from(firefighterIdsInFilter).map(firefighterId => {
+        return finalFirefighterIds.map(firefighterId => {
             const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
             const records = relevantRecords.filter(d => d.firefighter.id === firefighterId);
             
             const presentCount = records.filter(d => d.status === 'present').length;
             const tardyCount = records.filter(d => d.status === 'tardy').length;
-            const absentCount = records.filter(d => d.status === 'absent' || d.status === 'excused').length;
+            const absentCount = records.filter(d => d.status === 'absent').length;
+            const excusedCount = records.filter(d => d.status === 'excused').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
             
-            // For numeric display: total classes they were required to attend
-            const totalRequiredClasses = presentCount + tardyCount + absentCount;
+            // Total de clases a las que fue convocado.
+            const totalRequiredClasses = presentCount + tardyCount + absentCount + excusedCount;
 
             if (totalRequiredClasses === 0) {
-                 return {
-                    firefighterId: firefighter.id,
-                    firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
-                    firefighterLegajo: firefighter.legajo,
-                    firefighterFirehouse: firefighter.firehouse,
-                    totalClasses: 0,
-                    presentPercentage: 'N/A',
-                };
+                 return null;
             }
             
-            // For weighted percentage calculation
+            // Para el cálculo del porcentaje, con `tardy` valiendo 0.6
             const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
             const percentage = Math.min(100, (weightedPresent / totalRequiredClasses) * 100);
 
@@ -651,7 +648,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         return allLeaves.filter(leave => {
             const firefighter = allFirefighters.find(f => f.id === leave.firefighterId);
             
-            // For 'Bombero' role, they can't see this tab anyway, but as a safeguard:
+            if (!firefighter || firefighter.status !== 'Active') return false;
+            
             if (activeRole === 'Bombero') return false;
 
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
@@ -762,7 +760,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                             <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
                                             Todos los integrantes
                                         </CommandItem>
-                                        {allFirefighters.map((firefighter) => (
+                                        {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (
                                         <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
                                             <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
                                             {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
@@ -1004,6 +1002,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
 
 

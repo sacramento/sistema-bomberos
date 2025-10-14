@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Leave, LeaveType } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addLeave } from "@/services/leaves.service";
@@ -45,6 +46,9 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
   const availableLeaveTypes = user?.role === 'Ayudantía'
     ? allLeaveTypes.filter(t => t !== 'Sanción')
     : allLeaveTypes;
+
+    const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -155,7 +159,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                         <CommandInput placeholder="Buscar integrante..." />
                         <CommandList>
                             <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                            {allFirefighters.map((firefighter) => (
+                            {activeFirefighters.map((firefighter) => (
                             <CommandItem
                                 key={firefighter.id}
                                 value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}

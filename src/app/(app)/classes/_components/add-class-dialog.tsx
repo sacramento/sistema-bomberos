@@ -223,6 +223,9 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+
+
   useEffect(() => {
     const fetchAllFirefighters = async () => {
         if (open) { // Fetch only when dialog is open
@@ -248,7 +251,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
         let filteredByGroup: Firefighter[] = [];
 
         if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-            let filtered = allFirefighters;
+            let filtered = activeFirefighters;
             
             if (selectedHierarchies.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
@@ -279,7 +282,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
 
         setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
     }
-  }, [step, allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [step, activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
   
   const resetForm = () => {
     setTitle('');
@@ -396,11 +399,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="instructor">Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={allFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
-              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={allFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
           </div>
         );
@@ -419,7 +422,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
               </div>
               <div className="col-span-1 md:col-span-2 space-y-2">
                 <Label>Agregar Integrantes Adicionales (Opcional)</Label>
-                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={allFirefighters} />
+                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeFirefighters} />
               </div>
             </div>
             <p className="text-xs text-muted-foreground pt-2">
