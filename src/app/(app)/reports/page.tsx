@@ -599,16 +599,17 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
             const records = relevantRecords.filter(d => d.firefighter.id === firefighterId);
             
-            const presentValue = records.filter(d => d.status === 'present').length;
-            const tardyValue = records.filter(d => d.status === 'tardy').length * 0.6;
+            const presentCount = records.filter(d => d.status === 'present').length;
+            const tardyCount = records.filter(d => d.status === 'tardy').length;
             const absentCount = records.filter(d => d.status === 'absent' || d.status === 'excused').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
-
-            const totalClasses = presentValue + tardyValue + absentCount;
             
-            const effectivePresent = presentValue + tardyValue + recuperoCount;
+            const attendedClasses = presentCount + tardyCount + recuperoCount;
+            const totalRequiredClasses = presentCount + tardyCount + absentCount;
 
-            if (totalClasses === 0) {
+            const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
+
+            if (totalRequiredClasses === 0) {
                  return {
                     firefighterId: firefighter.id,
                     firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
@@ -619,14 +620,14 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 };
             }
             
-            const percentage = Math.min(100, (effectivePresent / totalClasses) * 100);
+            const percentage = Math.min(100, (weightedPresent / totalRequiredClasses) * 100);
 
             return {
                 firefighterId: firefighter.id,
                 firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
                 firefighterLegajo: firefighter.legajo,
                 firefighterFirehouse: firefighter.firehouse,
-                totalClasses,
+                totalClasses: attendedClasses,
                 presentPercentage: `${percentage.toFixed(0)}%`,
             };
         }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
@@ -990,5 +991,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
 
