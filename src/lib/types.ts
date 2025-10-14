@@ -115,16 +115,17 @@ export type Material = {
   tipo: 'Lanza' | 'Manga' | 'Corte' | 'Combustion' | 'Hidraulica' | 'Golpe';
   especialidad: Specialization;
   ubicacion: {
-    type: 'camion' | 'deposito';
-    vehiculoId?: string;
-    baulera?: string;
+    type: 'vehiculo' | 'deposito';
+    vehiculoId?: string; // Firestore ID of the vehicle
+    baulera?: string; // Name/number of the storage compartment
     deposito?: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
   };
-  estado: 'En servicio' | 'Fuera de servicio';
+  estado: 'En Servicio' | 'Fuera de Servicio';
   cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
-  // Enriched
+  // Enriched properties for client side
   vehiculo?: Vehicle;
 }
+
 
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
@@ -192,6 +193,7 @@ export type AuditLogAction =
   | 'CREATE_TASK' | 'UPDATE_TASK' | 'DELETE_TASK'
   | 'CREATE_VEHICLE' | 'UPDATE_VEHICLE' | 'DELETE_VEHICLE'
   | 'CREATE_MAINTENANCE_RECORD' | 'DELETE_MAINTENANCE_RECORD'
+  | 'CREATE_MATERIAL' | 'UPDATE_MATERIAL' | 'DELETE_MATERIAL'
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE';
 
 export type AuditLog = {
