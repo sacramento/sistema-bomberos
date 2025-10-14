@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole } from "@/lib/types";
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +29,7 @@ const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno'];
+const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
@@ -41,6 +43,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
+  const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>('Ninguno');
 
   // Data for selection
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
@@ -80,6 +83,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setAsistenciaRole('Ninguno');
     setSemanasRole('Ninguno');
     setMovilidadRole('Ninguno');
+    setMaterialesRole('Ninguno');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -106,6 +110,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 asistencia: isMaster ? 'Administrador' : asistenciaRole,
                 semanas: isMaster ? 'Administrador' : semanasRole,
                 movilidad: isMaster ? 'Administrador' : movilidadRole,
+                materiales: isMaster ? 'Administrador' : materialesRole,
             }
         };
         
@@ -224,6 +229,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="materialesRole" className="text-right">Materiales</Label>
+              <Select onValueChange={(value) => setMaterialesRole(value as MaterialesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : materialesRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

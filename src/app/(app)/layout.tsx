@@ -25,6 +25,8 @@ import {
   Loader2,
   Truck,
   Wrench,
+  Package,
+  ScanLine
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,7 +42,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'general';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general';
 };
 
 export const navItems: NavItem[] = [
@@ -58,6 +60,9 @@ export const navItems: NavItem[] = [
   
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
   { href: '/maintenance', icon: Wrench, label: 'Items', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
+
+  { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
+  { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
   { href: '/admin/logs', icon: BookCopy, label: 'Bitácora', roles: ['Master'], module: 'general' },
@@ -85,6 +90,7 @@ function Sidebar() {
       asistencia: 'Asistencia',
       semanas: 'Semanas',
       movilidad: 'Movilidad',
+      materiales: 'Materiales',
       general: 'Administración'
   };
   const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";

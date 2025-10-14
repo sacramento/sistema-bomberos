@@ -108,9 +108,28 @@ export type MaintenanceItem = {
     name: string;
 };
 
+export type Material = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  tipo: 'Lanza' | 'Manga' | 'Corte' | 'Combustion' | 'Hidraulica' | 'Golpe';
+  especialidad: Specialization;
+  ubicacion: {
+    type: 'camion' | 'deposito';
+    vehiculoId?: string;
+    baulera?: string;
+    deposito?: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  };
+  estado: 'En servicio' | 'Fuera de servicio';
+  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  // Enriched
+  vehiculo?: Vehicle;
+}
+
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Ayudantía' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil' | 'Ninguno';
+export type MaterialesModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 
 export type GlobalRole = 'Master' | 'Usuario';
 
@@ -123,6 +142,7 @@ export type User = {
     asistencia: AttendanceModuleRole;
     semanas: WeekModuleRole;
     movilidad: MobilityModuleRole;
+    materiales: MaterialesModuleRole;
   };
 };
 

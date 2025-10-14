@@ -17,6 +17,7 @@ export const LoginOutputSchema = z.nullable(
       asistencia: z.enum(['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno']),
       semanas: z.enum(['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno']),
       movilidad: z.enum(['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno']),
+      materiales: z.enum(['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno']),
     }),
   })
 );

@@ -5,7 +5,7 @@ import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame } from 'lucide-react';
+import { ArrowRight, Flame, Package } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
@@ -17,13 +17,18 @@ const moduleDetails: Record<NavItem['module'], { title: string; description: str
     },
     semanas: {
         title: 'Semanas',
-        description: 'Organice guardias, personal и tareas semanales.',
+        description: 'Organice guardias, personal y tareas semanales.',
         icon: Flame
     },
     movilidad: {
         title: 'Movilidad',
         description: 'Coordine y registre los movimientos de la flota vehicular.',
         icon: Flame
+    },
+    materiales: {
+        title: 'Materiales',
+        description: 'Gestione el inventario de materiales y equipos de los cuarteles.',
+        icon: Package
     },
     general: {
         title: 'Administración',
@@ -48,7 +53,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'general'];
 
 
   return (

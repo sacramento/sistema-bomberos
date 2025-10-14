@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -129,6 +130,7 @@ export default function UsersPage() {
                                             <Badge variant="outline">A: {user.roles.asistencia}</Badge>
                                             <Badge variant="outline">S: {user.roles.semanas}</Badge>
                                             <Badge variant="outline">M: {user.roles.movilidad}</Badge>
+                                            <Badge variant="outline">Mat: {user.roles.materiales}</Badge>
                                         </>
                                     )}
                                </div>

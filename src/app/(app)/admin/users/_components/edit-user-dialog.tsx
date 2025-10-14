@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -25,6 +25,7 @@ const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno'];
+const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -38,6 +39,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>(user.roles.asistencia);
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>(user.roles.semanas);
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>(user.roles.movilidad);
+  const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>(user.roles.materiales);
   
   const imagePreview = `https://picsum.photos/seed/${user.id}/200`;
 
@@ -49,6 +51,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
       setAsistenciaRole(user.roles.asistencia);
       setSemanasRole(user.roles.semanas);
       setMovilidadRole(user.roles.movilidad);
+      setMaterialesRole(user.roles.materiales || 'Ninguno');
     }
   }, [open, user]);
 
@@ -71,6 +74,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 asistencia: isMaster ? 'Administrador' : asistenciaRole,
                 semanas: isMaster ? 'Administrador' : semanasRole,
                 movilidad: isMaster ? 'Administrador' : movilidadRole,
+                materiales: isMaster ? 'Administrador' : materialesRole,
             }
         };
 
@@ -166,6 +170,15 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 <SelectTrigger id="movilidadRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="materialesRole-edit" className="text-right">Materiales</Label>
+              <Select onValueChange={(value) => setMaterialesRole(value as MaterialesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : materialesRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger id="materialesRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

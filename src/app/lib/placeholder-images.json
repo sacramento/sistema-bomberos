@@ -1,0 +1,37 @@
+{
+    "vehicles": [
+        {
+            "id": "placeholder_vehicle_1",
+            "name": "Móvil 1",
+            "images": {
+                "conductor": "https://picsum.photos/seed/v1-conductor/600/400",
+                "acompanante": "https://picsum.photos/seed/v1-acompanante/600/400",
+                "frente": "https://picsum.photos/seed/v1-frente/600/400",
+                "trasero": "https://picsum.photos/seed/v1-trasero/600/400",
+                "techo": "https://picsum.photos/seed/v1-techo/600/400"
+            }
+        },
+        {
+            "id": "placeholder_vehicle_2",
+            "name": "Móvil 2",
+            "images": {
+                "conductor": "https://picsum.photos/seed/v2-conductor/600/400",
+                "acompanante": "https://picsum.photos/seed/v2-acompanante/600/400",
+                "frente": "https://picsum.photos/seed/v2-frente/600/400",
+                "trasero": "https://picsum.photos/seed/v2-trasero/600/400",
+                "techo": "https://picsum.photos/seed/v2-techo/600/400"
+            }
+        },
+        {
+            "id": "placeholder_vehicle_3",
+            "name": "Móvil 3",
+            "images": {
+                "conductor": "https://picsum.photos/seed/v3-conductor/600/400",
+                "acompanante": "https://picsum.photos/seed/v3-acompanante/600/400",
+                "frente": "https://picsum.photos/seed/v3-frente/600/400",
+                "trasero": "https://picsum.photos/seed/v3-trasero/600/400",
+                "techo": "https://picsum.photos/seed/v3-techo/600/400"
+            }
+        }
+    ]
+}

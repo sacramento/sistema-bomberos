@@ -1,4 +1,5 @@
 
+
 import { User } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
@@ -15,7 +16,8 @@ const docToUser = (docSnap: any): User => {
     const roles = data.roles || {
         asistencia: 'Ninguno',
         semanas: 'Ninguno',
-        movilidad: 'Ninguno'
+        movilidad: 'Ninguno',
+        materiales: 'Ninguno'
     };
     return {
         id: docSnap.id, 

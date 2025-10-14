@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole } from '@/lib/types';
+import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | 'Ninguno';
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -28,7 +28,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'general' | 'dashboard'> = {
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'dashboard'> = {
     '/sessions': 'asistencia',
     '/classes': 'asistencia',
     '/schedule': 'asistencia',
@@ -39,6 +39,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'gen
     '/weeks': 'semanas',
     '/vehicles': 'movilidad',
     '/maintenance': 'movilidad',
+    '/materials': 'materiales',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -55,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
         if (!parsedUser.roles) {
-            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno' };
         }
         setUser(parsedUser);
       }
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return 'Ninguno';
       if (user.role === 'Master') return 'Master';
 
-      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno' };
+      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno' };
       
       const moduleKey = Object.keys(pathToModule).find(key => currentPath.startsWith(key));
       const module = moduleKey ? pathToModule[moduleKey] : null;
@@ -107,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return roles.asistencia;
         case 'movilidad':
             return roles.movilidad;
+        case 'materiales':
+            return roles.materiales;
         case 'general':
         case 'dashboard':
           return user.role;
