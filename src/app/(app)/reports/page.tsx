@@ -510,7 +510,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     }
 
     const attendanceReportData = useMemo(() => {
-        // 1. Get all attendance records that match the date, class and specialization filters.
         let preliminaryRecords: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
         const filteredSessions = allSessions.filter(session => {
             if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
@@ -524,11 +523,27 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         });
 
         for (const session of filteredSessions) {
-            if (session.attendance) {
-                for (const firefighterId in session.attendance) {
-                    const firefighter = allFirefighters.find(f => f.id === firefighterId);
-                    if (firefighter) {
-                        preliminaryRecords.push({ firefighter, status: session.attendance[firefighterId], session });
+            const participantIds = new Set<string>();
+
+            // Add all types of participants, ensuring no duplicates
+            session.instructors.forEach(p => participantIds.add(p.id));
+            session.assistants.forEach(p => participantIds.add(p.id));
+            session.attendees.forEach(p => participantIds.add(p.id));
+            
+            for (const firefighterId of participantIds) {
+                const firefighter = allFirefighters.find(f => f.id === firefighterId);
+                if (firefighter) {
+                    const isInstructor = session.instructorIds?.includes(firefighterId);
+                    const isAssistant = session.assistantIds?.includes(firefighterId);
+                    
+                    // Instructors and assistants are always 'present' unless specified otherwise
+                    let status = session.attendance?.[firefighterId];
+                    if (!status && (isInstructor || isAssistant)) {
+                        status = 'present';
+                    }
+
+                    if (status) {
+                         preliminaryRecords.push({ firefighter, status, session });
                     }
                 }
             }
@@ -566,7 +581,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         const effectiveAttendance = (statusCounts.present * 1) + (statusCounts.tardy * 0.6) + statusCounts.recupero;
         const totalAbsences = statusCounts.absent + statusCounts.excused;
         const netAbsences = Math.max(0, totalAbsences - statusCounts.recupero);
-        const totalClassesForPercentage = effectiveAttendance + totalAbsences;
+        const totalClassesForPercentage = statusCounts.present + statusCounts.tardy + statusCounts.absent + statusCounts.excused;
 
         // 5. Prepare Pie Chart data
         const pieData = [
@@ -993,6 +1008,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
+
 
 
 
