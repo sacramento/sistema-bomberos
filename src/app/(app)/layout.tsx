@@ -60,8 +60,8 @@ export const navItems: NavItem[] = [
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
   { href: '/maintenance', icon: Wrench, label: 'Items', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
 
-  { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
+  { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -74,17 +74,15 @@ function Sidebar() {
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  if (!user || pathname === '/dashboard') {
-    return null;
-  }
-
+  // This hook now safely assumes 'user' exists because of the conditional render in AppLayout
   const currentModule = React.useMemo(() => {
-    // Find the navItem that is the best match for the current path
-    const bestMatch = navItems
-      .filter(item => pathname.startsWith(item.href))
-      .sort((a, b) => b.href.length - a.href.length)[0];
+    const bestMatch = [...navItems]
+      .sort((a,b) => b.href.length - a.href.length)
+      .find(item => pathname.startsWith(item.href));
     return bestMatch?.module;
   }, [pathname]);
+
+  if (!user) return null; // Guard against edge cases
   
   const moduleNavItems = navItems.filter(item => {
       const userRoleForItem = getActiveRole(item.href);
@@ -138,7 +136,12 @@ function Sidebar() {
                                 isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                             } else if (item.href === '/sessions') {
                                 isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
-                            } else {
+                            } else if (item.href === '/materials/vehicles') {
+                                isActive = pathname === item.href;
+                            } else if (item.href === '/materials') {
+                                isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles';
+                            }
+                             else {
                                 isActive = pathname.startsWith(item.href);
                             }
                             
@@ -165,7 +168,12 @@ function Sidebar() {
                     isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                 } else if (item.href === '/sessions') {
                     isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
-                } else {
+                } else if (item.href === '/materials/vehicles') {
+                    isActive = pathname === item.href;
+                } else if (item.href === '/materials') {
+                    isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles';
+                }
+                else {
                     isActive = pathname.startsWith(item.href);
                 }
                 
@@ -228,12 +236,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             return;
         }
         
-        // Don't run permission checks on the dashboard itself.
         if (pathname === '/dashboard') {
             return;
         }
 
-        // Find the nav item that best matches the current URL.
         const currentNavItem = [...navItems]
             .sort((a,b) => b.href.length - a.href.length)
             .find(item => pathname.startsWith(item.href));
@@ -245,8 +251,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else if (pathname !== '/') {
-             // If no specific nav item matches, but it's a valid path, we might still be in a module.
-             // This check is a fallback. The primary logic is the `currentNavItem` find.
              const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
             if (!moduleKey) {
                  console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
@@ -273,10 +277,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
 
     const isDashboard = pathname === '/dashboard';
+    const showSidebar = user && !isDashboard;
 
     return (
         <div className={cn("flex min-h-screen w-full bg-muted/40")}>
-            <Sidebar />
+            {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
                 <MobileNav navItems={availableNavItems} />
                 <main className={cn("flex-1 p-4 sm:p-6 md:p-8", "md:pt-8 pt-20", isDashboard && "p-0 pt-16 md:pt-0")}>
