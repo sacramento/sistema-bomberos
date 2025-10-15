@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -16,31 +15,7 @@ import { getVehicles } from '@/services/vehicles.service';
 import { Vehicle } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-
-// Define a structure for placeholder images that we can map to real vehicles
-const vehicleImagePlaceholders: Record<string, Record<string, string>> = {
-    "Móvil 1": {
-        "conductor": "https://picsum.photos/seed/v1-conductor/600/400",
-        "acompanante": "https://picsum.photos/seed/v1-acompanante/600/400",
-        "frente": "https://picsum.photos/seed/v1-frente/600/400",
-        "trasero": "https://picsum.photos/seed/v1-trasero/600/400",
-        "techo": "https://picsum.photos/seed/v1-techo/600/400"
-    },
-    "Móvil 2": {
-        "conductor": "https://picsum.photos/seed/v2-conductor/600/400",
-        "acompanante": "https://picsum.photos/seed/v2-acompanante/600/400",
-        "frente": "https://picsum.photos/seed/v2-frente/600/400",
-        "trasero": "https://picsum.photos/seed/v2-trasero/600/400",
-        "techo": "https://picsum.photos/seed/v2-techo/600/400"
-    },
-    "Móvil 3": {
-        "conductor": "https://picsum.photos/seed/v3-conductor/600/400",
-        "acompanante": "https://picsum.photos/seed/v3-acompanante/600/400",
-        "frente": "https://picsum.photos/seed/v3-frente/600/400",
-        "trasero": "https://picsum.photos/seed/v3-trasero/600/400",
-        "techo": "https://picsum.photos/seed/v3-techo/600/400"
-    }
-};
+import vehicleImages from '@/app/lib/placeholder-images.json';
 
 export default function MaterialVehiclesPage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -94,7 +69,7 @@ export default function MaterialVehiclesPage() {
 
             <div className="space-y-8">
                 {vehicles.length > 0 ? vehicles.map(vehicle => {
-                    const images = vehicleImagePlaceholders[vehicle.numeroMovil] || vehicleImagePlaceholders['Móvil 1'];
+                    const images = vehicleImages.vehicles.find(v => v.name === vehicle.numeroMovil)?.images || vehicleImages.vehicles[0].images;
                     return (
                         <Card key={vehicle.id} className="overflow-hidden">
                             <CardHeader>
@@ -126,8 +101,8 @@ export default function MaterialVehiclesPage() {
                                             </CarouselItem>
                                         ))}
                                     </CarouselContent>
-                                    <CarouselPrevious className="ml-16" />
-                                    <CarouselNext className="mr-16" />
+                                    <CarouselPrevious className="hidden md:flex ml-12" />
+                                    <CarouselNext className="hidden md:flex mr-12" />
                                 </Carousel>
                             </CardContent>
                         </Card>
@@ -143,4 +118,3 @@ export default function MaterialVehiclesPage() {
         </>
     );
 }
-
