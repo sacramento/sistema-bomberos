@@ -78,8 +78,13 @@ function Sidebar() {
     return null;
   }
 
-  const currentModuleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
-  const currentModule = currentModuleKey;
+  const currentModule = React.useMemo(() => {
+    // Find the navItem that is the best match for the current path
+    const bestMatch = navItems
+      .filter(item => pathname.startsWith(item.href))
+      .sort((a, b) => b.href.length - a.href.length)[0];
+    return bestMatch?.module;
+  }, [pathname]);
   
   const moduleNavItems = navItems.filter(item => {
       const userRoleForItem = getActiveRole(item.href);
@@ -240,7 +245,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else if (pathname !== '/') {
-            const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
+             // If no specific nav item matches, but it's a valid path, we might still be in a module.
+             // This check is a fallback. The primary logic is the `currentNavItem` find.
+             const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
             if (!moduleKey) {
                  console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
                  router.push('/dashboard');
