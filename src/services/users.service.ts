@@ -12,12 +12,13 @@ const usersCollection = collection(db, 'users');
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
-    // Se asegura que el objeto `roles` exista para evitar errores.
-    const roles = data.roles || {
-        asistencia: 'Ninguno',
-        semanas: 'Ninguno',
-        movilidad: 'Ninguno',
-        materiales: 'Ninguno'
+    // Se asegura que el objeto `roles` exista y tenga todas las propiedades.
+    const rolesData = data.roles || {};
+    const roles = {
+        asistencia: rolesData.asistencia || 'Ninguno',
+        semanas: rolesData.semanas || 'Ninguno',
+        movilidad: rolesData.movilidad || 'Ninguno',
+        materiales: rolesData.materiales || 'Ninguno'
     };
     return {
         id: docSnap.id, 
