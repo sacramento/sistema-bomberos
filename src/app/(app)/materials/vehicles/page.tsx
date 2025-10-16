@@ -70,7 +70,7 @@ export default function MaterialVehiclesPage() {
 
             <div className="space-y-8">
                 {vehicles.length > 0 ? vehicles.map(vehicle => {
-                    const images = vehicleImages.vehicles.find(v => v.name === vehicle.numeroMovil)?.images || vehicleImages.vehicles[0].images;
+                    const images = vehicleImages.vehicles.find(v => v.name === vehicle.numeroMovil)?.images || vehicleImages.vehicles.find(v => v.id === "placeholder_vehicle_1")!.images;
                     return (
                         <Card key={vehicle.id} className="overflow-hidden">
                             <CardHeader>
@@ -119,4 +119,3 @@ export default function MaterialVehiclesPage() {
         </>
     );
 }
-
