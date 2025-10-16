@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -101,8 +102,8 @@ export default function MaterialVehiclesPage() {
                                             </CarouselItem>
                                         ))}
                                     </CarouselContent>
-                                    <CarouselPrevious className="hidden md:flex ml-12" />
-                                    <CarouselNext className="hidden md:flex mr-12" />
+                                    <CarouselPrevious className="hidden md:flex" />
+                                    <CarouselNext className="hidden md:flex" />
                                 </Carousel>
                             </CardContent>
                         </Card>
@@ -118,3 +119,4 @@ export default function MaterialVehiclesPage() {
         </>
     );
 }
+
