@@ -146,7 +146,7 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="search" className="w-full">
+            <Tabs defaultValue="inventory" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
                     <TabsTrigger value="search">Búsqueda</TabsTrigger>
@@ -225,3 +225,5 @@ export default function MaterialsPage() {
         </>
     );
 }
+
+    
