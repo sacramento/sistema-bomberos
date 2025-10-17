@@ -45,7 +45,7 @@ export default function MaterialsPage() {
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterVehicle, setFilterVehicle] = useState('all');
     const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
-    const [activeTab, setActiveTab] = useState('search');
+    const [activeTab, setActiveTab] = useState('inventory');
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
@@ -75,7 +75,6 @@ export default function MaterialsPage() {
     useEffect(() => {
         fetchMaterialsAndVehicles();
         
-        // Fetch logo for PDF generation
         const fetchLogo = async () => {
              try {
                 const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
@@ -133,7 +132,6 @@ export default function MaterialsPage() {
         const doc = new jsPDF();
         
         try {
-            // PDF Header
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
@@ -144,14 +142,54 @@ export default function MaterialsPage() {
 
             let currentY = 45;
 
-            // Details Table
+            // --- Statistics Section ---
             doc.setFontSize(12);
             doc.setTextColor(40, 40, 40);
             doc.setFont('helvetica', 'bold');
-            if(generalFilteredMaterials.length > 0) {
+            doc.text("Estadísticas del Inventario", 14, currentY);
+            currentY += 8;
+
+            // Condition Table
+            const conditionTotal = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
+            const conditionBody = (['Bueno', 'Regular', 'Malo'] as const).map(cond => {
+                const count = statistics.byCondition?.[cond] || 0;
+                const percentage = conditionTotal > 0 ? (count / conditionTotal) * 100 : 0;
+                return [cond, count.toString(), `${percentage.toFixed(0)}%`];
+            });
+
+            (doc as any).autoTable({
+                startY: currentY,
+                head: [['Condición', 'Cantidad', 'Porcentaje']],
+                body: conditionBody,
+                theme: 'striped',
+                headStyles: { fillColor: '#6c757d' },
+                columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 30 }, 2: { cellWidth: 30 } },
+                margin: { left: 14, right: doc.internal.pageSize.getWidth() - 14 - 90 }
+            });
+
+            // Type Table
+            const typeBody = Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => [type, count.toString()]);
+            
+            (doc as any).autoTable({
+                startY: currentY,
+                head: [['Tipo de Material', 'Cantidad']],
+                body: typeBody,
+                theme: 'striped',
+                headStyles: { fillColor: '#6c757d' },
+                margin: { left: 14 + 90 + 5 }
+            });
+            currentY = (doc as any).lastAutoTable.finalY + 15;
+
+
+            // --- Main Inventory Table ---
+            if (generalFilteredMaterials.length > 0) {
+                 doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'bold');
                 doc.text("Inventario General Filtrado", 14, currentY);
-                currentY += 5;
-                 (doc as any).autoTable({
+                currentY += 8;
+
+                (doc as any).autoTable({
                     startY: currentY,
                     head: [['Código', 'Nombre', 'Ubicación', 'Cuartel', 'Estado', 'Condición']],
                     body: generalFilteredMaterials.map(item => [
@@ -237,7 +275,7 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                     <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
                     <TabsTrigger value="inventory">Inventario General</TabsTrigger>
@@ -370,7 +408,7 @@ export default function MaterialsPage() {
                             </CardContent>
                         </Card>
 
-                        <Card>
+                         <Card>
                             <CardHeader>
                                 <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
                                 <CardDescription>Resumen de los materiales filtrados.</CardDescription>
@@ -484,3 +522,5 @@ export default function MaterialsPage() {
         </>
     );
 }
+
+    
