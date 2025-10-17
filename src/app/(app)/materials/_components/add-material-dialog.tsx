@@ -26,7 +26,7 @@ const vehicleCompartments = [
     'Baulera 6', 'Baulera 7', 'Baulera 8', 'Baulera 9', 'Baulera 10'
 ];
 
-export default function AddMaterialDialog({ children, onMaterialAdded }: { children: React.ReactNode, onMaterialAdded: () => void }) {
+export default function AddMaterialDialog({ children, onMaterialAdded, initialData }: { children: React.ReactNode, onMaterialAdded: () => void, initialData?: Material | null }) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -46,16 +46,36 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
     const [baulera, setBaulera] = useState('');
     const [deposito, setDeposito] = useState<Material['cuartel'] | ''>('');
 
-    useEffect(() => {
-        if (open) {
-            getVehicles().then(setVehicles).catch(() => toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los vehículos." }));
-        }
-    }, [open, toast]);
-
     const resetForm = () => {
         setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
         setLocationType('deposito'); setVehiculoId(''); setBaulera(''); setDeposito('');
     };
+
+    useEffect(() => {
+        if (open) {
+            getVehicles().then(setVehicles).catch(() => toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los vehículos." }));
+            
+            if (initialData) {
+                // Pre-fill form for cloning
+                setNombre(initialData.nombre);
+                setTipo(initialData.tipo);
+                setEspecialidad(initialData.especialidad);
+                setCaracteristicas(initialData.caracteristicas || '');
+                setEstado(initialData.estado);
+                setCondicion(initialData.condicion || 'Bueno');
+                setCuartel(initialData.cuartel);
+                setLocationType(initialData.ubicacion.type);
+                setVehiculoId(initialData.ubicacion.vehiculoId || '');
+                setBaulera(initialData.ubicacion.baulera || '');
+                setDeposito(initialData.ubicacion.deposito || '');
+                // Leave 'codigo' empty
+                setCodigo('');
+            } else {
+                // Reset for new entry
+                resetForm();
+            }
+        }
+    }, [open, initialData, toast]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -73,7 +93,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
             await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion });
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
-            resetForm();
             setOpen(false);
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error al agregar", description: error.message });
@@ -82,14 +101,12 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
         }
     };
     
-    // Automatically set deposito to match cuartel when locationType is 'deposito'
     useEffect(() => {
         if (locationType === 'deposito') {
             setDeposito(cuartel);
         }
     }, [cuartel, locationType]);
     
-    // Automatically set cuartel based on selected vehicle
     useEffect(() => {
         if (locationType === 'vehiculo' && vehiculoId) {
             const selectedVehicle = vehicles.find(v => v.id === vehiculoId);
@@ -99,17 +116,21 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
         }
     }, [vehiculoId, vehicles, locationType]);
 
+    const isCloning = !!initialData;
+
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) resetForm(); setOpen(isOpen); }}>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">Agregar Nuevo Material</DialogTitle>
-                    <DialogDescription>Complete los detalles del nuevo ítem de inventario.</DialogDescription>
+                    <DialogTitle className="font-headline">{isCloning ? 'Clonar Material' : 'Agregar Nuevo Material'}</DialogTitle>
+                    <DialogDescription>
+                        {isCloning ? `Complete el código único para clonar "${initialData.nombre}". El resto de los datos han sido copiados.` : 'Complete los detalles del nuevo ítem de inventario.'}
+                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label htmlFor="codigo">Código</Label><Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required /></div>
+                        <div className="space-y-2"><Label htmlFor="codigo">Código (Único)</Label><Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ingrese un nuevo código" /></div>
                         <div className="space-y-2"><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar tipo..."/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar especialidad..." /></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
