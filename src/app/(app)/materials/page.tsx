@@ -63,7 +63,7 @@ export default function MaterialsPage() {
     const handleDelete = async (materialId: string) => {
         try {
             await deleteMaterial(materialId);
-            toast({ title: "Éxito", description: "El material ha sido eliminado." });
+            toast({ title: "¡Éxito!", description: "El material ha sido eliminado." });
             fetchMaterials();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
@@ -73,7 +73,7 @@ export default function MaterialsPage() {
     const filteredMaterials = useMemo(() => {
         let items = materials;
         // Search term applies to both tabs for simplicity, but filters only to inventory
-        if (searchTerm) {
+        if (searchTerm && !window.location.pathname.includes('search')) {
              items = items.filter(material => 
                 material.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
                 material.codigo.toLowerCase().includes(searchTerm.toLowerCase()));
