@@ -22,21 +22,6 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
     const pathname = usePathname();
     const { user, logout, getActiveRole } = useAuth();
     
-    if(!user || pathname === '/dashboard') return (
-        <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-sm md:hidden">
-             <div className="flex h-16 items-center justify-between px-4">
-                 <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-                    <Flame className="h-6 w-6 text-primary" />
-                    <span className="font-headline text-lg">SMA</span>
-                </Link>
-                <Button variant="ghost" size="icon" onClick={logout}>
-                    <LogOut className="h-5 w-5" />
-                    <span className="sr-only">Cerrar Sesión</span>
-                </Button>
-            </div>
-        </header>
-    );
-
     const currentModule = React.useMemo(() => {
         // Find the navItem that is the best match for the current path
         const bestMatch = [...navItems]
@@ -44,6 +29,23 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
           .find(item => pathname.startsWith(item.href));
         return bestMatch?.module;
       }, [pathname]);
+
+    if(!user || pathname === '/dashboard') {
+        return (
+            <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-sm md:hidden">
+                 <div className="flex h-16 items-center justify-between px-4">
+                     <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+                        <Flame className="h-6 w-6 text-primary" />
+                        <span className="font-headline text-lg">SMA</span>
+                    </Link>
+                    <Button variant="ghost" size="icon" onClick={logout}>
+                        <LogOut className="h-5 w-5" />
+                        <span className="sr-only">Cerrar Sesión</span>
+                    </Button>
+                </div>
+            </header>
+        );
+    }
   
     const moduleNavItems = accessibleNavItems.filter(item => {
         const userRoleForItem = getActiveRole(item.href);
