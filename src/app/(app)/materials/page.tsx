@@ -108,16 +108,16 @@ export default function MaterialsPage() {
     };
     
     const handleQrScan = (code: string) => {
+        setActiveTab('search'); // Switch to search tab
         const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
         if (foundMaterial) {
             setScannedMaterial(foundMaterial);
         } else {
             setSearchTerm(code);
-            setActiveTab('search');
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}.`,
+                description: `No se encontró el código: ${code}. Mostrando resultados de búsqueda.`,
             });
         }
     };
@@ -146,10 +146,14 @@ export default function MaterialsPage() {
             doc.setFontSize(12);
             doc.setTextColor(40, 40, 40);
             doc.setFont('helvetica', 'bold');
-            doc.text("Estadísticas del Inventario", 14, currentY);
-            currentY += 8;
+            doc.text("Estadísticas del Inventario Filtrado", 14, currentY);
+            currentY += 10;
 
             // Condition Table
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Resumen por Condición", 14, currentY);
+            currentY += 6;
             const conditionTotal = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
             const conditionBody = (['Bueno', 'Regular', 'Malo'] as const).map(cond => {
                 const count = statistics.byCondition?.[cond] || 0;
@@ -163,27 +167,29 @@ export default function MaterialsPage() {
                 body: conditionBody,
                 theme: 'striped',
                 headStyles: { fillColor: '#6c757d' },
-                columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 30 }, 2: { cellWidth: 30 } },
-                margin: { left: 14, right: doc.internal.pageSize.getWidth() - 14 - 90 }
             });
-
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+            
             // Type Table
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Resumen por Tipo de Material", 14, currentY);
+            currentY += 6;
             const typeBody = Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => [type, count.toString()]);
             
             (doc as any).autoTable({
                 startY: currentY,
-                head: [['Tipo de Material', 'Cantidad']],
+                head: [['Tipo', 'Cantidad']],
                 body: typeBody,
                 theme: 'striped',
                 headStyles: { fillColor: '#6c757d' },
-                margin: { left: 14 + 90 + 5 }
             });
             currentY = (doc as any).lastAutoTable.finalY + 15;
 
 
             // --- Main Inventory Table ---
             if (generalFilteredMaterials.length > 0) {
-                 doc.setFontSize(12);
+                doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
                 doc.text("Inventario General Filtrado", 14, currentY);
@@ -282,7 +288,7 @@ export default function MaterialsPage() {
                 </TabsList>
                 
                 <TabsContent value="search">
-                    <Card>
+                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Búsqueda Rápida de Material</CardTitle>
                             <CardDescription>
@@ -437,13 +443,14 @@ export default function MaterialsPage() {
                                 <div>
                                     <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
                                     <div className="space-y-2 text-sm max-h-48 overflow-y-auto pr-2">
-                                        {Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
+                                        {Object.keys(statistics.byType || {}).length > 0 ? Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
                                             <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
                                                 <span>{type}</span>
                                                 <span className="font-bold">{count}</span>
                                             </div>
-                                        ))}
-                                        {Object.keys(statistics.byType || {}).length === 0 && <p className="text-muted-foreground text-center">Sin datos</p>}
+                                        )) : (
+                                            <p className="text-muted-foreground text-center pt-10">Sin datos para los filtros aplicados</p>
+                                        )}
                                     </div>
                                 </div>
                             </CardContent>
