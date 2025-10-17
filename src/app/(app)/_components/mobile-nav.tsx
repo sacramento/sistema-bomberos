@@ -10,12 +10,13 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle 
 import type { NavItem } from "../layout";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { navItems } from "../layout";
 
 interface MobileNavProps {
     navItems: NavItem[];
 }
 
-export default function MobileNav({ navItems }: MobileNavProps) {
+export default function MobileNav({ navItems: accessibleNavItems }: MobileNavProps) {
     const pathname = usePathname();
     const { user, logout, getActiveRole } = useAuth();
     
@@ -34,9 +35,15 @@ export default function MobileNav({ navItems }: MobileNavProps) {
         </header>
     );
 
-    const currentModule = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
+    const currentModule = React.useMemo(() => {
+        // Find the navItem that is the best match for the current path
+        const bestMatch = [...navItems]
+          .sort((a, b) => b.href.length - a.href.length)
+          .find(item => pathname.startsWith(item.href));
+        return bestMatch?.module;
+      }, [pathname]);
   
-    const moduleNavItems = navItems.filter(item => {
+    const moduleNavItems = accessibleNavItems.filter(item => {
         const userRoleForItem = getActiveRole(item.href);
         // We use the passed `navItems` prop which is already filtered for accessibility
         return item.module === currentModule && item.roles.includes(userRoleForItem);
@@ -55,6 +62,7 @@ export default function MobileNav({ navItems }: MobileNavProps) {
       asistencia: 'Módulo Asistencia',
       semanas: 'Módulo Semanas',
       movilidad: 'Módulo Movilidad',
+      materiales: 'Módulo Materiales',
       general: 'Administración'
     };
     const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
@@ -85,6 +93,10 @@ export default function MobileNav({ navItems }: MobileNavProps) {
                                     isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
                                 } else if (item.href === '/sessions') {
                                     isActive = pathname.startsWith('/sessions') || pathname.startsWith('/classes');
+                                } else if (item.href === '/materials/vehicles') {
+                                    isActive = pathname === item.href;
+                                } else if (item.href === '/materials') {
+                                    isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles';
                                 } else {
                                     isActive = pathname.startsWith(item.href);
                                 }

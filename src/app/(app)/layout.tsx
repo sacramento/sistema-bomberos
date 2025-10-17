@@ -74,15 +74,13 @@ function Sidebar() {
   const { user, logout, getActiveRole } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   
-  // This hook now safely assumes 'user' exists because of the conditional render in AppLayout
   const currentModule = React.useMemo(() => {
+    // Find the navItem that is the best match for the current path
     const bestMatch = [...navItems]
       .sort((a,b) => b.href.length - a.href.length)
       .find(item => pathname.startsWith(item.href));
     return bestMatch?.module;
   }, [pathname]);
-
-  if (!user) return null; // Guard against edge cases
   
   const moduleNavItems = navItems.filter(item => {
       const userRoleForItem = getActiveRole(item.href);
@@ -106,7 +104,7 @@ function Sidebar() {
     return item.label;
   };
   
-  const userImage = `https://picsum.photos/seed/${user.id}/200`;
+  const userImage = `https://picsum.photos/seed/${user!.id}/200`;
   const userRoleDisplay = getActiveRole(pathname);
 
   return (
@@ -203,12 +201,12 @@ function Sidebar() {
            )}
            <div className={cn("flex items-center gap-3 p-2", isCollapsed && "justify-center")}>
             <Avatar className="size-9">
-              <AvatarImage src={userImage} alt={user.name} className="object-cover" />
-              <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+              <AvatarImage src={userImage} alt={user!.name} className="object-cover" />
+              <AvatarFallback>{user!.name.charAt(0)}</AvatarFallback>
             </Avatar>
             {!isCollapsed && (
               <div className="flex flex-col">
-                <p className="text-sm font-medium">{user.name}</p>
+                <p className="text-sm font-medium">{user!.name}</p>
                 <p className="text-xs text-muted-foreground">{userRoleDisplay}</p>
               </div>
             )}
@@ -251,11 +249,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                router.push('/dashboard'); 
             }
         } else if (pathname !== '/') {
-             const moduleKey = navItems.find(item => item.href.split('/')[1] && pathname.includes(item.href.split('/')[1]))?.module;
-            if (!moduleKey) {
+             // This case handles potential mismatches not caught by the primary logic
+             const isKnownPath = navItems.some(item => pathname.startsWith(item.href));
+             if (!isKnownPath) {
                  console.warn(`No module found for path: ${pathname}. Redirecting to dashboard.`);
                  router.push('/dashboard');
-            }
+             }
         }
 
     }, [user, loading, pathname, router, getActiveRole]);
@@ -277,7 +276,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
 
     const isDashboard = pathname === '/dashboard';
-    const showSidebar = user && !isDashboard;
+    const showSidebar = !isDashboard;
 
     return (
         <div className={cn("flex min-h-screen w-full bg-muted/40")}>
