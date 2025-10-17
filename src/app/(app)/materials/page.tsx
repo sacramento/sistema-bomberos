@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
+import { Switch } from "@/components/ui/switch";
 
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
@@ -48,6 +49,10 @@ export default function MaterialsPage() {
     const [activeTab, setActiveTab] = useState('inventory');
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+
+    const [includeConditionSummary, setIncludeConditionSummary] = useState(true);
+    const [includeTypeSummary, setIncludeTypeSummary] = useState(true);
+    const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -108,16 +113,17 @@ export default function MaterialsPage() {
     };
     
     const handleQrScan = (code: string) => {
-        setActiveTab('search'); // Switch to search tab
         const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
         if (foundMaterial) {
+            setSearchTerm(code); // Pre-fill search term to show context
             setScannedMaterial(foundMaterial);
         } else {
-            setSearchTerm(code);
+            setActiveTab('inventory'); // Switch to general inventory
+            setSearchTerm(code); // Put code in main search to show "not found"
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}. Mostrando resultados de búsqueda.`,
+                description: `No se encontró el código: ${code}.`,
             });
         }
     };
@@ -125,6 +131,11 @@ export default function MaterialsPage() {
     const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+
+        if (!includeConditionSummary && !includeTypeSummary && !includeInventoryDetails) {
+            toast({ title: "Contenido vacío", description: "Debe seleccionar al menos una sección para incluir en el reporte.", variant: "destructive" });
             return;
         }
 
@@ -140,59 +151,62 @@ export default function MaterialsPage() {
             doc.text("Reporte de Inventario", 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
-            let currentY = 45;
+            let currentY = 55;
 
             // --- Statistics Section ---
-            doc.setFontSize(12);
-            doc.setTextColor(40, 40, 40);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Estadísticas del Inventario Filtrado", 14, currentY);
-            currentY += 10;
-
-            // Condition Table
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Resumen por Condición", 14, currentY);
-            currentY += 6;
-            const conditionTotal = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
-            const conditionBody = (['Bueno', 'Regular', 'Malo'] as const).map(cond => {
-                const count = statistics.byCondition?.[cond] || 0;
-                const percentage = conditionTotal > 0 ? (count / conditionTotal) * 100 : 0;
-                return [cond, count.toString(), `${percentage.toFixed(0)}%`];
-            });
-
-            (doc as any).autoTable({
-                startY: currentY,
-                head: [['Condición', 'Cantidad', 'Porcentaje']],
-                body: conditionBody,
-                theme: 'striped',
-                headStyles: { fillColor: '#6c757d' },
-            });
-            currentY = (doc as any).lastAutoTable.finalY + 10;
-            
-            // Type Table
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Resumen por Tipo de Material", 14, currentY);
-            currentY += 6;
-            const typeBody = Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => [type, count.toString()]);
-            
-            (doc as any).autoTable({
-                startY: currentY,
-                head: [['Tipo', 'Cantidad']],
-                body: typeBody,
-                theme: 'striped',
-                headStyles: { fillColor: '#6c757d' },
-            });
-            currentY = (doc as any).lastAutoTable.finalY + 15;
-
-
-            // --- Main Inventory Table ---
-            if (generalFilteredMaterials.length > 0) {
+            if (includeConditionSummary) {
                 doc.setFontSize(12);
                 doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                doc.text("Inventario General Filtrado", 14, currentY);
+                doc.text("Resumen por Condición", 14, currentY);
+                currentY += 8;
+
+                const conditionTotal = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
+                const conditionBody = (['Bueno', 'Regular', 'Malo'] as const).map(cond => {
+                    const count = statistics.byCondition?.[cond] || 0;
+                    const percentage = conditionTotal > 0 ? (count / conditionTotal) * 100 : 0;
+                    return [cond, count.toString(), `${percentage.toFixed(0)}%`];
+                });
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Condición', 'Cantidad', 'Porcentaje']],
+                    body: conditionBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#6c757d' },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 12;
+            }
+
+            if (includeTypeSummary) {
+                 if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Resumen por Tipo de Material", 14, currentY);
+                currentY += 8;
+                const typeBody = Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => [type, count.toString()]);
+                
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Tipo', 'Cantidad']],
+                    body: typeBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#6c757d' },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 12;
+            }
+
+            if (includeConditionSummary || includeTypeSummary) {
+                currentY += 5; // Extra space before the main table
+            }
+
+            // --- Main Inventory Table ---
+            if (includeInventoryDetails && generalFilteredMaterials.length > 0) {
+                 if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(12);
+                doc.setTextColor(40, 40, 40);
+                doc.setFont('helvetica', 'bold');
+                doc.text("Detalle del Inventario", 14, currentY);
                 currentY += 8;
 
                 (doc as any).autoTable({
@@ -209,8 +223,9 @@ export default function MaterialsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
-            } else {
-                doc.text("No se encontraron materiales con los filtros aplicados.", 14, currentY);
+            } else if (includeInventoryDetails) {
+                 if (currentY > 250) { doc.addPage(); currentY = 20; }
+                doc.text("No se encontraron materiales con los filtros aplicados para el detalle.", 14, currentY);
             }
             doc.save(`reporte-inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
@@ -281,7 +296,7 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="inventory" value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                     <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
                     <TabsTrigger value="inventory">Inventario General</TabsTrigger>
@@ -507,6 +522,32 @@ export default function MaterialsPage() {
                                 <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
                             </CardHeader>
                             <CardContent>
+                                <div className="space-y-4 mb-6">
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="include-condition"
+                                            checked={includeConditionSummary}
+                                            onCheckedChange={setIncludeConditionSummary}
+                                        />
+                                        <Label htmlFor="include-condition">Incluir resumen por condición</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="include-type"
+                                            checked={includeTypeSummary}
+                                            onCheckedChange={setIncludeTypeSummary}
+                                        />
+                                        <Label htmlFor="include-type">Incluir resumen por tipo</Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Switch
+                                            id="include-details"
+                                            checked={includeInventoryDetails}
+                                            onCheckedChange={setIncludeInventoryDetails}
+                                        />
+                                        <Label htmlFor="include-details">Incluir detalle del inventario</Label>
+                                    </div>
+                                </div>
                                 <Button onClick={generatePdf} disabled={generatingPdf || generalFilteredMaterials.length === 0}>
                                     {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                     {generatingPdf ? "Generando..." : "Generar PDF"}
@@ -523,11 +564,10 @@ export default function MaterialsPage() {
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
                         setScannedMaterial(null);
+                        setSearchTerm(''); // Clear search term after closing dialog
                     }
                 }}
             />
         </>
     );
 }
-
-    
