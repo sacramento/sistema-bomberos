@@ -26,11 +26,23 @@ const vehicleCompartments = [
     'Baulera 6', 'Baulera 7', 'Baulera 8', 'Baulera 9', 'Baulera 10'
 ];
 
-export default function AddMaterialDialog({ children, onMaterialAdded, initialData }: { children: React.ReactNode, onMaterialAdded: () => void, initialData?: Material | null }) {
-    const [open, setOpen] = useState(false);
+interface AddMaterialDialogProps {
+    children?: React.ReactNode;
+    onMaterialAdded: () => void;
+    initialData?: Material | null;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+}
+
+export default function AddMaterialDialog({ children, onMaterialAdded, initialData, open: controlledOpen, onOpenChange: setControlledOpen }: AddMaterialDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const setOpen = setControlledOpen !== undefined ? setControlledOpen : setInternalOpen;
+
 
     // Form state
     const [codigo, setCodigo] = useState('');
@@ -117,10 +129,11 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     }, [vehiculoId, vehicles, locationType]);
 
     const isCloning = !!initialData;
+    const DialogComponent = children ? Dialog : 'div';
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
+            {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">{isCloning ? 'Clonar Material' : 'Agregar Nuevo Material'}</DialogTitle>

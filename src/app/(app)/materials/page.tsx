@@ -47,6 +47,7 @@ export default function MaterialsPage() {
     const [filterVehicle, setFilterVehicle] = useState('all');
     const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
     const [cloningMaterial, setCloningMaterial] = useState<Material | null>(null);
+    const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('search');
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -116,10 +117,11 @@ export default function MaterialsPage() {
     const handleQrScan = (code: string) => {
         const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
         if (foundMaterial) {
+            setActiveTab('search');
             setSearchTerm(code); // Pre-fill search term to show context
             setScannedMaterial(foundMaterial);
         } else {
-            setActiveTab('inventory'); // Switch to general inventory
+            setActiveTab('search'); // Switch to search tab
             setSearchTerm(code); // Put code in main search to show "not found"
             toast({
                 variant: "destructive",
@@ -127,6 +129,11 @@ export default function MaterialsPage() {
                 description: `No se encontró el código: ${code}.`,
             });
         }
+    };
+    
+    const handleCloneClick = (material: Material) => {
+        setCloningMaterial(material);
+        setIsCloneDialogOpen(true);
     };
 
     const generatePdf = async () => {
@@ -195,10 +202,6 @@ export default function MaterialsPage() {
                     headStyles: { fillColor: '#6c757d' },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 12;
-            }
-
-            if (includeConditionSummary || includeTypeSummary) {
-                currentY += 5; // Extra space before the main table
             }
 
             // --- Main Inventory Table ---
@@ -288,7 +291,7 @@ export default function MaterialsPage() {
         <>
             <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
                 {canManage && (
-                    <AddMaterialDialog onMaterialAdded={handleDataChange} initialData={null}>
+                    <AddMaterialDialog onMaterialAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Agregar Material
@@ -335,7 +338,7 @@ export default function MaterialsPage() {
                     {searchTerm && (
                         <Card className="mt-6">
                             <CardHeader>
-                                <CardTitle className="font-headline">Resultados de la Búsqueda</CardTitle>
+                                <CardTitle className="font-headline">Inventario Filtrado</CardTitle>
                                 <CardDescription>
                                     Mostrando {searchFilteredMaterials.length} resultados para "{searchTerm}".
                                 </CardDescription>
@@ -364,7 +367,7 @@ export default function MaterialsPage() {
                                                     {canManage && (
                                                         <TableCell>
                                                             <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog>
-                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setCloningMaterial(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
                                                             <DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
                                                         </TableCell>
                                                     )}
@@ -431,7 +434,6 @@ export default function MaterialsPage() {
                                 </div>
                             </CardContent>
                         </Card>
-
                          <Card>
                             <CardHeader>
                                 <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
@@ -507,7 +509,7 @@ export default function MaterialsPage() {
                                                     {canManage && (
                                                         <TableCell>
                                                             <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog>
-                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setCloningMaterial(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
                                                             <DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
                                                         </TableCell>
                                                     )}
@@ -563,10 +565,15 @@ export default function MaterialsPage() {
                 </TabsContent>
             </Tabs>
 
-            <AddMaterialDialog onMaterialAdded={handleDataChange} initialData={cloningMaterial}>
-                {/* This is a dummy trigger, the dialog is controlled by the cloningMaterial state */}
-                <button hidden onClick={() => setCloningMaterial(null)}></button>
-            </AddMaterialDialog>
+            <AddMaterialDialog 
+                open={isCloneDialogOpen}
+                onOpenChange={setIsCloneDialogOpen}
+                onMaterialAdded={() => {
+                    handleDataChange();
+                    setIsCloneDialogOpen(false); // Close dialog on success
+                }}
+                initialData={cloningMaterial}
+            />
             
             <MaterialDetailDialog
                 material={scannedMaterial}
