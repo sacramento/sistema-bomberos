@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import AddMaterialDialog from "./_components/add-material-dialog";
 import EditMaterialDialog from "./_components/edit-material-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import QrScannerDialog from "./_components/qr-scanner-dialog";
+
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
@@ -70,14 +72,36 @@ export default function MaterialsPage() {
             toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
         }
     };
+
+    const handleQrScan = (code: string) => {
+        setSearchCode(code);
+        toast({
+            title: "Código Escaneado",
+            description: `Buscando material con código: ${code}`,
+        });
+    };
     
     const inventoryFilteredMaterials = useMemo(() => {
-        return materials.filter(material => {
-            const typeMatch = filterType === 'all' || material.tipo === filterType;
-            const firehouseMatch = filterFirehouse === 'all' || material.cuartel === filterFirehouse;
-            return typeMatch && firehouseMatch;
-        });
-    }, [materials, filterType, filterFirehouse]);
+        let results = materials;
+        
+        if (searchTerm) {
+             const searchLower = searchTerm.toLowerCase();
+             results = results.filter(material => 
+                material.nombre.toLowerCase().includes(searchLower) || 
+                material.codigo.toLowerCase().includes(searchLower)
+            );
+        }
+
+        if (filterType !== 'all') {
+            results = results.filter(material => material.tipo === filterType);
+        }
+
+        if (filterFirehouse !== 'all') {
+            results = results.filter(material => material.cuartel === filterFirehouse);
+        }
+        
+        return results;
+    }, [materials, searchTerm, filterType, filterFirehouse]);
 
     const searchFilteredMaterials = useMemo(() => {
         if (!searchCode) return [];
@@ -94,7 +118,7 @@ export default function MaterialsPage() {
         return material.ubicacion.deposito;
     };
     
-    const renderMaterialTable = (materialList: Material[]) => (
+    const renderMaterialTable = (materialList: Material[], emptyMessage: string) => (
         <Table>
             <TableHeader>
                 <TableRow>
@@ -127,7 +151,7 @@ export default function MaterialsPage() {
                         </TableRow>
                     ))
                 ) : (
-                    <TableRow><TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
+                    <TableRow><TableCell colSpan={canManage ? 6 : 5} className="h-24 text-center">{emptyMessage}</TableCell></TableRow>
                 )}
             </TableBody>
         </Table>
@@ -146,18 +170,22 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="search" className="w-full">
+            <Tabs defaultValue="inventory" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
-                    <TabsTrigger value="search">Búsqueda</TabsTrigger>
+                    <TabsTrigger value="search">Búsqueda por QR</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="inventory">
-                    <Card>
+                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Filtros de Inventario</CardTitle>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                             <div className="space-y-2 lg:col-span-1">
+                                <Label htmlFor="search-term">Buscar por Nombre/Código</Label>
+                                <Input id="search-term" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
                             <div className="space-y-2">
                                 <Label>Filtrar por Tipo</Label>
                                 <Select value={filterType} onValueChange={setFilterType}>
@@ -189,7 +217,7 @@ export default function MaterialsPage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            {renderMaterialTable(inventoryFilteredMaterials)}
+                            {renderMaterialTable(inventoryFilteredMaterials, "No se encontraron materiales con los filtros aplicados.")}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -198,7 +226,7 @@ export default function MaterialsPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
-                            <CardDescription>Busque un material por su código o nombre.</CardDescription>
+                            <CardDescription>Busque un material por su código o utilice el escáner de QR.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex gap-2">
@@ -206,18 +234,20 @@ export default function MaterialsPage() {
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         id="search-material"
-                                        placeholder="Ingrese código o nombre..."
+                                        placeholder="Ingrese código..."
                                         className="pl-9"
                                         value={searchCode}
                                         onChange={(e) => setSearchCode(e.target.value)}
                                     />
                                 </div>
-                                <Button variant="outline" size="icon" disabled>
-                                    <QrCode className="h-5 w-5"/>
-                                    <span className="sr-only">Escanear QR</span>
-                                </Button>
+                                <QrScannerDialog onScan={handleQrScan}>
+                                    <Button variant="outline" size="icon">
+                                        <QrCode className="h-5 w-5"/>
+                                        <span className="sr-only">Escanear QR</span>
+                                    </Button>
+                                </QrScannerDialog>
                             </div>
-                            {renderMaterialTable(searchFilteredMaterials)}
+                            {renderMaterialTable(searchFilteredMaterials, "Ingrese un código para buscar o use el escáner QR.")}
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -225,5 +255,7 @@ export default function MaterialsPage() {
         </>
     );
 }
+
+    
 
     
