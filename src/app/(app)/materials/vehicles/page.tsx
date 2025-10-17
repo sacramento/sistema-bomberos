@@ -102,8 +102,8 @@ export default function MaterialVehiclesPage() {
                                             </CarouselItem>
                                         ))}
                                     </CarouselContent>
-                                    <CarouselPrevious className="hidden md:flex" />
-                                    <CarouselNext className="hidden md:flex" />
+                                    <CarouselPrevious />
+                                    <CarouselNext />
                                 </Carousel>
                             </CardContent>
                         </Card>
