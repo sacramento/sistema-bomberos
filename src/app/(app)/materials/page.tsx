@@ -42,7 +42,7 @@ export default function MaterialsPage() {
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterVehicle, setFilterVehicle] = useState('all');
     const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
-    const [activeTab, setActiveTab] = useState('inventory');
+    const [activeTab, setActiveTab] = useState('search');
 
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -92,43 +92,35 @@ export default function MaterialsPage() {
             setScannedMaterial(foundMaterial);
         } else {
             setSearchTerm(code);
-            setActiveTab('inventory'); // Switch to inventory tab to show search results
+            setActiveTab('search');
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}. Se ha aplicado un filtro en la lista de inventario.`,
+                description: `No se encontró el código: ${code}.`,
             });
         }
     };
-
-    const handleSearchTermChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newSearchTerm = e.target.value;
-        setSearchTerm(newSearchTerm);
-        if (newSearchTerm) {
-            setActiveTab('inventory');
-        }
-    }
     
-    const filteredMaterials = useMemo(() => {
+    const searchFilteredMaterials = useMemo(() => {
+        if (!searchTerm) return [];
+        return materials.filter(material => 
+            material.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            material.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [materials, searchTerm]);
+
+    const generalFilteredMaterials = useMemo(() => {
         return materials.filter(material => {
-            if (searchTerm && !(material.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || material.codigo.toLowerCase().includes(searchTerm.toLowerCase()))) return false;
             if (filterType !== 'all' && material.tipo !== filterType) return false;
             if (filterFirehouse !== 'all' && material.cuartel !== filterFirehouse) return false;
             if (filterSpecialization !== 'all' && material.especialidad !== filterSpecialization) return false;
             if (filterVehicle !== 'all' && material.ubicacion?.vehiculoId !== filterVehicle) return false;
             return true;
         });
-    }, [materials, searchTerm, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
+    }, [materials, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
 
     const statistics = useMemo(() => {
-        const listToAnalyze = materials.filter(material => {
-            if (filterType !== 'all' && material.tipo !== filterType) return false;
-            if (filterFirehouse !== 'all' && material.cuartel !== filterFirehouse) return false;
-            if (filterSpecialization !== 'all' && material.especialidad !== filterSpecialization) return false;
-            if (filterVehicle !== 'all' && material.ubicacion?.vehiculoId !== filterVehicle) return false;
-            return true;
-        });
-
+        const listToAnalyze = generalFilteredMaterials;
         const total = listToAnalyze.length;
         if (total === 0) {
             return {
@@ -148,7 +140,7 @@ export default function MaterialsPage() {
         }, {} as Record<Material['tipo'], number>);
 
         return { byCondition, byType };
-    }, [materials, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
+    }, [generalFilteredMaterials]);
 
     const renderLocation = (material: Material) => {
         if (material.ubicacion.type === 'vehiculo') {
@@ -170,18 +162,18 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs defaultValue="search" value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
-                    <TabsTrigger value="inventory">Inventario General</TabsTrigger>
                     <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
+                    <TabsTrigger value="inventory">Inventario General</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="search">
-                    <Card>
+                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Búsqueda Rápida de Material</CardTitle>
                              <CardDescription>
-                                Ingrese un código o nombre para buscar, o use el escáner QR. Los resultados se mostrarán en la pestaña "Inventario General".
+                                Ingrese un código o nombre para buscar, o use el escáner QR.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -190,7 +182,7 @@ export default function MaterialsPage() {
                                     <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={handleSearchTermChange} />
+                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -205,6 +197,50 @@ export default function MaterialsPage() {
                             </div>
                         </CardContent>
                     </Card>
+                     {searchTerm && (
+                         <Card className="mt-6">
+                            <CardHeader>
+                                <CardTitle className="font-headline">Resultados de la Búsqueda</CardTitle>
+                                <CardDescription>
+                                    Mostrando {searchFilteredMaterials.length} resultados para "{searchTerm}".
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Código</TableHead>
+                                            <TableHead>Nombre</TableHead>
+                                            <TableHead>Ubicación</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loading ? (
+                                            <TableRow><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                        ) : searchFilteredMaterials.length > 0 ? (
+                                            searchFilteredMaterials.map(material => (
+                                                <TableRow key={material.id}>
+                                                    <TableCell className="font-mono">{material.codigo}</TableCell>
+                                                    <TableCell className="font-medium">{material.nombre}</TableCell>
+                                                    <TableCell>{renderLocation(material)}</TableCell>
+                                                    <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
+                                                    {canManage && (
+                                                        <TableCell>
+                                                            <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                                                        </TableCell>
+                                                    )}
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                         </Card>
+                     )}
                 </TabsContent>
 
                 <TabsContent value="inventory">
@@ -215,7 +251,7 @@ export default function MaterialsPage() {
                                     <CardTitle className="font-headline">Filtros de Inventario</CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
                                         <div className="space-y-2">
                                             <Label>Tipo</Label>
                                             <Select value={filterType} onValueChange={setFilterType}>
@@ -262,9 +298,9 @@ export default function MaterialsPage() {
 
                             <Card>
                                 <CardHeader>
-                                    <CardTitle className="font-headline">Inventario Filtrado</CardTitle>
+                                    <CardTitle className="font-headline">Inventario General</CardTitle>
                                     <CardDescription>
-                                        Mostrando {filteredMaterials.length} de {materials.length} materiales.
+                                        Mostrando {generalFilteredMaterials.length} de {materials.length} materiales.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -283,8 +319,8 @@ export default function MaterialsPage() {
                                                 Array.from({ length: 5 }).map((_, i) => (
                                                     <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                                 ))
-                                            ) : filteredMaterials.length > 0 ? (
-                                                filteredMaterials.map(material => (
+                                            ) : generalFilteredMaterials.length > 0 ? (
+                                                generalFilteredMaterials.map(material => (
                                                     <TableRow key={material.id}>
                                                         <TableCell className="font-mono">{material.codigo}</TableCell>
                                                         <TableCell className="font-medium">{material.nombre}</TableCell>
@@ -309,7 +345,7 @@ export default function MaterialsPage() {
                             <Card>
                                 <CardHeader>
                                     <CardTitle className="font-headline">Estadísticas</CardTitle>
-                                    <CardDescription>Resumen de los materiales filtrados.</CardDescription>
+                                    <CardDescription>Resumen del inventario general.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
                                     <div>
