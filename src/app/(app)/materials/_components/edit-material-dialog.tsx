@@ -20,6 +20,12 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
+const vehicleCompartments = [
+    'Techo', 'Dotacion', 'Cabina',
+    'Baulera 1', 'Baulera 2', 'Baulera 3', 'Baulera 4', 'Baulera 5',
+    'Baulera 6', 'Baulera 7', 'Baulera 8', 'Baulera 9', 'Baulera 10'
+];
+
 export default function EditMaterialDialog({ children, material, onMaterialUpdated }: { children: React.ReactNode, material: Material, onMaterialUpdated: () => void }) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
@@ -130,7 +136,15 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         {locationType === 'vehiculo' && (
                             <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Seleccionar móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select></div>
-                                <div className="space-y-2"><Label htmlFor="baulera-edit">Baulera / Compartimento</Label><Input id="baulera-edit" value={baulera} onChange={(e) => setBaulera(e.target.value)} /></div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="baulera-edit">Ubicación en Móvil</Label>
+                                    <Select value={baulera} onValueChange={setBaulera}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar ubicación..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         )}
                     </div>
