@@ -18,6 +18,7 @@ const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustio
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
+const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
 export default function EditMaterialDialog({ children, material, onMaterialUpdated }: { children: React.ReactNode, material: Material, onMaterialUpdated: () => void }) {
     const [open, setOpen] = useState(false);
@@ -32,6 +33,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
+    const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
     const [locationType, setLocationType] = useState<'deposito' | 'vehiculo'>('deposito');
     const [vehiculoId, setVehiculoId] = useState('');
@@ -47,6 +49,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setEspecialidad(material.especialidad);
             setCaracteristicas(material.caracteristicas || '');
             setEstado(material.estado);
+            setCondicion(material.condicion || 'Bueno');
             setCuartel(material.cuartel);
             setLocationType(material.ubicacion.type);
             setVehiculoId(material.ubicacion.vehiculoId || '');
@@ -61,14 +64,14 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             ? { type: 'deposito' as const, deposito: cuartel as Material['cuartel'] } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        if (!codigo || !nombre || !tipo || !especialidad || !estado || !cuartel || (locationType === 'vehiculo' && (!vehiculoId || !baulera))) {
+        if (!codigo || !nombre || !tipo || !especialidad || !estado || !condicion || !cuartel || (locationType === 'vehiculo' && (!vehiculoId || !baulera))) {
             toast({ variant: "destructive", title: "Campos incompletos", description: "Por favor, complete todos los campos requeridos." });
             return;
         }
 
         setLoading(true);
         try {
-            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel });
+            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion });
             toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
             onMaterialUpdated();
             setOpen(false);
@@ -109,6 +112,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Cuartel</Label><Select value={cuartel} onValueChange={(v) => setCuartel(v as any)} disabled={locationType === 'vehiculo' && !!vehiculoId}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent></Select></div>
                     </div>
 

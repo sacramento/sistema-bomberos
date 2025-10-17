@@ -40,6 +40,7 @@ const docToMaterial = async (
         caracteristicas: data.caracteristicas,
         ubicacion: data.ubicacion,
         estado: data.estado,
+        condicion: data.condicion || 'Bueno', // Default to 'Bueno' if not present
         cuartel: data.cuartel,
         vehiculo: vehiculo,
     };

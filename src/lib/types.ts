@@ -123,6 +123,7 @@ export type Material = {
     deposito?: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
   };
   estado: 'En Servicio' | 'Fuera de Servicio';
+  condicion: 'Bueno' | 'Regular' | 'Malo';
   cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
   // Enriched properties for client side
   vehiculo?: Vehicle;

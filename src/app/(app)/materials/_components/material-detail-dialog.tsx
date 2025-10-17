@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Material } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText } from 'lucide-react';
+import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
@@ -40,6 +40,15 @@ const getStatusIcon = (status: Material['estado']) => {
     return status === 'En Servicio'
       ? <Check className="h-4 w-4 mr-2 text-green-600"/>
       : <X className="h-4 w-4 mr-2 text-red-600"/>;
+}
+
+const getCondicionClass = (condicion: Material['condicion']) => {
+    switch(condicion) {
+        case 'Bueno': return 'bg-green-100 text-green-800 border-green-200';
+        case 'Regular': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+        case 'Malo': return 'bg-red-100 text-red-800 border-red-200';
+        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
 }
 
 
@@ -93,6 +102,15 @@ export default function MaterialDetailDialog({
                     <Badge className={cn(getStatusClass(material.estado))}>
                         {getStatusIcon(material.estado)}
                         {material.estado}
+                    </Badge>
+                } 
+            />
+             <DetailItem 
+                icon={HeartPulse} 
+                label="Condición" 
+                value={
+                    <Badge className={cn(getCondicionClass(material.condicion))}>
+                        {material.condicion}
                     </Badge>
                 } 
             />
