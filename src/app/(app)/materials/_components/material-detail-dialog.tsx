@@ -10,8 +10,9 @@ import {
 } from '@/components/ui/dialog';
 import { Material } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield } from 'lucide-react';
+import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -74,7 +75,7 @@ export default function MaterialDetailDialog({
              <span className="font-mono text-sm">{material.codigo}</span>
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="space-y-4 py-4">
             <DetailItem 
                 icon={Package} 
                 label="Tipo" 
@@ -105,6 +106,16 @@ export default function MaterialDetailDialog({
                 label="Cuartel"
                 value={material.cuartel}
             />
+            {material.caracteristicas && (
+              <>
+                <Separator />
+                <DetailItem
+                    icon={FileText}
+                    label="Características"
+                    value={<p className="text-sm whitespace-pre-wrap">{material.caracteristicas}</p>}
+                />
+              </>
+            )}
         </div>
       </DialogContent>
     </Dialog>

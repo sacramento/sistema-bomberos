@@ -37,6 +37,7 @@ const docToMaterial = async (
         nombre: data.nombre,
         tipo: data.tipo,
         especialidad: data.especialidad,
+        caracteristicas: data.caracteristicas,
         ubicacion: data.ubicacion,
         estado: data.estado,
         cuartel: data.cuartel,

@@ -12,6 +12,7 @@ import { Material, Specialization, Vehicle } from "@/lib/types";
 import { addMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Textarea } from "@/components/ui/textarea";
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -29,6 +30,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
     const [nombre, setNombre] = useState('');
     const [tipo, setTipo] = useState<Material['tipo'] | ''>('');
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
+    const [caracteristicas, setCaracteristicas] = useState('');
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
     const [locationType, setLocationType] = useState<'deposito' | 'vehiculo'>('deposito');
@@ -43,7 +45,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
     }, [open, toast]);
 
     const resetForm = () => {
-        setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setEstado('En Servicio'); setCuartel('');
+        setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setEstado('En Servicio'); setCuartel('');
         setLocationType('deposito'); setVehiculoId(''); setBaulera(''); setDeposito('');
     };
 
@@ -60,7 +62,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
 
         setLoading(true);
         try {
-            await addMaterial({ codigo, nombre, tipo, especialidad, estado, ubicacion, cuartel });
+            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel });
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
             resetForm();
@@ -106,6 +108,12 @@ export default function AddMaterialDialog({ children, onMaterialAdded }: { child
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Cuartel</Label><Select value={cuartel} onValueChange={(v) => setCuartel(v as any)} disabled={locationType === 'vehiculo' && !!vehiculoId}><SelectTrigger><SelectValue placeholder="Seleccionar cuartel..." /></SelectTrigger><SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent></Select></div>
                     </div>
+
+                    <div className="space-y-2 col-span-1 md:col-span-2">
+                        <Label htmlFor="caracteristicas">Características</Label>
+                        <Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} placeholder="Modelo, N/S, vencimiento, etc." />
+                    </div>
+
                     <div className="space-y-3 pt-4 border-t">
                         <Label>Ubicación</Label>
                         <RadioGroup defaultValue="deposito" value={locationType} onValueChange={(v) => setLocationType(v as any)}>
