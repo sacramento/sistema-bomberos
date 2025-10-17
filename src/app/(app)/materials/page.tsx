@@ -23,6 +23,7 @@ import AddMaterialDialog from "./_components/add-material-dialog";
 import EditMaterialDialog from "./_components/edit-material-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
+import MaterialDetailDialog from "./_components/material-detail-dialog";
 
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
@@ -35,6 +36,7 @@ export default function MaterialsPage() {
     const [filterType, setFilterType] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [searchCode, setSearchCode] = useState('');
+    const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
 
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -74,11 +76,16 @@ export default function MaterialsPage() {
     };
 
     const handleQrScan = (code: string) => {
-        setSearchCode(code);
-        toast({
-            title: "Código Escaneado",
-            description: `Buscando material con código: ${code}`,
-        });
+        const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
+        if (foundMaterial) {
+            setScannedMaterial(foundMaterial);
+        } else {
+            toast({
+                variant: "destructive",
+                title: "Material no encontrado",
+                description: `No se encontró ningún material con el código: ${code}`,
+            });
+        }
     };
     
     const inventoryFilteredMaterials = useMemo(() => {
@@ -102,14 +109,6 @@ export default function MaterialsPage() {
         
         return results;
     }, [materials, searchTerm, filterType, filterFirehouse]);
-
-    const searchFilteredMaterials = useMemo(() => {
-        if (!searchCode) return [];
-        return materials.filter(material => {
-            const searchLower = searchCode.toLowerCase();
-            return material.nombre.toLowerCase().includes(searchLower) || material.codigo.toLowerCase().includes(searchLower);
-        });
-    }, [materials, searchCode]);
 
     const renderLocation = (material: Material) => {
         if (material.ubicacion.type === 'vehiculo') {
@@ -170,10 +169,10 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="inventory" className="w-full">
+            <Tabs defaultValue="search" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mb-4">
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
-                    <TabsTrigger value="search">Búsqueda por QR</TabsTrigger>
+                    <TabsTrigger value="search">Búsqueda</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="inventory">
@@ -225,37 +224,30 @@ export default function MaterialsPage() {
                 <TabsContent value="search">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
-                            <CardDescription>Busque un material por su código o utilice el escáner de QR.</CardDescription>
+                            <CardTitle className="font-headline">Búsqueda de Material por QR</CardTitle>
+                            <CardDescription>Utilice el escáner de QR para encontrar un material y ver sus detalles.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex gap-2">
-                                <div className="relative flex-grow">
-                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        id="search-material"
-                                        placeholder="Ingrese código..."
-                                        className="pl-9"
-                                        value={searchCode}
-                                        onChange={(e) => setSearchCode(e.target.value)}
-                                    />
-                                </div>
-                                <QrScannerDialog onScan={handleQrScan}>
-                                    <Button variant="outline" size="icon">
-                                        <QrCode className="h-5 w-5"/>
-                                        <span className="sr-only">Escanear QR</span>
-                                    </Button>
-                                </QrScannerDialog>
-                            </div>
-                            {renderMaterialTable(searchFilteredMaterials, "Ingrese un código para buscar o use el escáner QR.")}
+                        <CardContent className="flex items-center justify-center h-64">
+                            <QrScannerDialog onScan={handleQrScan}>
+                                <Button size="lg">
+                                    <QrCode className="mr-2 h-6 w-6"/>
+                                    Escanear Código QR
+                                </Button>
+                            </QrScannerDialog>
                         </CardContent>
                     </Card>
                 </TabsContent>
             </Tabs>
+            
+            <MaterialDetailDialog
+                material={scannedMaterial}
+                open={!!scannedMaterial}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setScannedMaterial(null);
+                    }
+                }}
+            />
         </>
     );
 }
-
-    
-
-    
