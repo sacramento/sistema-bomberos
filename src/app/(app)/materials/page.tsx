@@ -42,6 +42,7 @@ export default function MaterialsPage() {
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterVehicle, setFilterVehicle] = useState('all');
     const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
+    const [activeTab, setActiveTab] = useState('inventory');
 
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -68,7 +69,8 @@ export default function MaterialsPage() {
     
     useEffect(() => {
         fetchMaterialsAndVehicles();
-    }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleDataChange = () => {
         fetchMaterialsAndVehicles();
@@ -90,13 +92,22 @@ export default function MaterialsPage() {
             setScannedMaterial(foundMaterial);
         } else {
             setSearchTerm(code);
+            setActiveTab('inventory'); // Switch to inventory tab to show search results
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}. Se ha colocado en el campo de búsqueda.`,
+                description: `No se encontró el código: ${code}. Se ha aplicado un filtro en la lista de inventario.`,
             });
         }
     };
+
+    const handleSearchTermChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newSearchTerm = e.target.value;
+        setSearchTerm(newSearchTerm);
+        if (newSearchTerm) {
+            setActiveTab('inventory');
+        }
+    }
     
     const filteredMaterials = useMemo(() => {
         return materials.filter(material => {
@@ -159,7 +170,7 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="search" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                     <TabsTrigger value="inventory">Inventario General</TabsTrigger>
                     <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
@@ -168,9 +179,9 @@ export default function MaterialsPage() {
                 <TabsContent value="search">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
+                            <CardTitle className="font-headline">Búsqueda Rápida de Material</CardTitle>
                              <CardDescription>
-                                Ingrese un código o nombre para buscar un material específico, o use el escáner QR.
+                                Ingrese un código o nombre para buscar, o use el escáner QR. Los resultados se mostrarán en la pestaña "Inventario General".
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -179,7 +190,7 @@ export default function MaterialsPage() {
                                     <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={handleSearchTermChange} />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
@@ -191,44 +202,6 @@ export default function MaterialsPage() {
                                         </Button>
                                     </QrScannerDialog>
                                 </div>
-                            </div>
-                            <div className="pt-4 border-t">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Código</TableHead>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead>Ubicación</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            Array.from({ length: 3 }).map((_, i) => (
-                                                <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                            ))
-                                        ) : filteredMaterials.length > 0 ? (
-                                            filteredMaterials.map(material => (
-                                                <TableRow key={material.id}>
-                                                    <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                    <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                    <TableCell>{renderLocation(material)}</TableCell>
-                                                    <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                    {canManage && (
-                                                        <TableCell>
-                                                            <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                                                        </TableCell>
-                                                    )}
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
-                                                {searchTerm ? `No se encontraron materiales para "${searchTerm}".` : 'Escriba para buscar...'}
-                                            </TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
                             </div>
                         </CardContent>
                     </Card>
