@@ -25,6 +25,8 @@ import EditMaterialDialog from "./_components/edit-material-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import MaterialDetailDialog from "./_components/material-detail-dialog";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -81,7 +83,7 @@ export default function MaterialsPage() {
             toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
         }
     };
-
+    
     const handleQrScan = (code: string) => {
         const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
         if (foundMaterial) {
@@ -91,7 +93,7 @@ export default function MaterialsPage() {
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}. Se ha colocado en el campo de búsqueda por si desea buscar manualmente.`,
+                description: `No se encontró el código: ${code}. Se ha colocado en el campo de búsqueda.`,
             });
         }
     };
@@ -106,9 +108,16 @@ export default function MaterialsPage() {
             return true;
         });
     }, [materials, searchTerm, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
-    
+
     const statistics = useMemo(() => {
-        const listToAnalyze = searchTerm ? filteredMaterials : materials;
+        const listToAnalyze = materials.filter(material => {
+            if (filterType !== 'all' && material.tipo !== filterType) return false;
+            if (filterFirehouse !== 'all' && material.cuartel !== filterFirehouse) return false;
+            if (filterSpecialization !== 'all' && material.especialidad !== filterSpecialization) return false;
+            if (filterVehicle !== 'all' && material.ubicacion?.vehiculoId !== filterVehicle) return false;
+            return true;
+        });
+
         const total = listToAnalyze.length;
         if (total === 0) {
             return {
@@ -128,8 +137,7 @@ export default function MaterialsPage() {
         }, {} as Record<Material['tipo'], number>);
 
         return { byCondition, byType };
-    }, [filteredMaterials, materials, searchTerm]);
-
+    }, [materials, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
 
     const renderLocation = (material: Material) => {
         if (material.ubicacion.type === 'vehiculo') {
@@ -151,11 +159,19 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
+            <Tabs defaultValue="search" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
+                    <TabsTrigger value="inventory">Inventario General</TabsTrigger>
+                    <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="search">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Búsqueda y Filtros</CardTitle>
+                            <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
+                             <CardDescription>
+                                Ingrese un código o nombre para buscar un material específico, o use el escáner QR.
+                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -176,138 +192,191 @@ export default function MaterialsPage() {
                                     </QrScannerDialog>
                                 </div>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
-                                <div className="space-y-2">
-                                    <Label>Tipo</Label>
-                                    <Select value={filterType} onValueChange={setFilterType}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {materialTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Cuartel</Label>
-                                    <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Especialidad</Label>
-                                    <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todas</SelectItem>
-                                            {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Móvil</Label>
-                                    <Select value={filterVehicle} onValueChange={setFilterVehicle}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                            <div className="pt-4 border-t">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Código</TableHead>
+                                            <TableHead>Nombre</TableHead>
+                                            <TableHead>Ubicación</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {loading ? (
+                                            Array.from({ length: 3 }).map((_, i) => (
+                                                <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                            ))
+                                        ) : filteredMaterials.length > 0 ? (
+                                            filteredMaterials.map(material => (
+                                                <TableRow key={material.id}>
+                                                    <TableCell className="font-mono">{material.codigo}</TableCell>
+                                                    <TableCell className="font-medium">{material.nombre}</TableCell>
+                                                    <TableCell>{renderLocation(material)}</TableCell>
+                                                    <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
+                                                    {canManage && (
+                                                        <TableCell>
+                                                            <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                                                        </TableCell>
+                                                    )}
+                                                </TableRow>
+                                            ))
+                                        ) : (
+                                            <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">
+                                                {searchTerm ? `No se encontraron materiales para "${searchTerm}".` : 'Escriba para buscar...'}
+                                            </TableCell></TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
                             </div>
                         </CardContent>
                     </Card>
+                </TabsContent>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Inventario General</CardTitle>
-                            <CardDescription>
-                                Mostrando {filteredMaterials.length} de {materials.length} materiales.
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Código</TableHead>
-                                        <TableHead>Nombre</TableHead>
-                                        <TableHead>Ubicación</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                        {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                        ))
-                                    ) : filteredMaterials.length > 0 ? (
-                                        filteredMaterials.map(material => (
-                                            <TableRow key={material.id}>
-                                                <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                <TableCell>{renderLocation(material)}</TableCell>
-                                                <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                {canManage && (
-                                                    <TableCell>
-                                                        <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
-                <div className="lg:col-span-1 space-y-8">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
-                            <CardDescription>Resumen de todos los materiales.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div>
-                                <h4 className="font-semibold mb-3">Condición General</h4>
-                                <div className="space-y-2">
-                                    {(['Bueno', 'Regular', 'Malo'] as const).map(cond => {
-                                        const count = statistics.byCondition?.[cond] || 0;
-                                        const percentage = materials.length > 0 ? (count / materials.length) * 100 : 0;
-                                        const color = cond === 'Bueno' ? 'bg-green-500' : cond === 'Regular' ? 'bg-yellow-500' : 'bg-red-500';
-                                        return (
-                                            <div key={cond}>
-                                                <div className="flex justify-between text-sm mb-1">
-                                                    <span>{cond}</span>
-                                                    <span>{count} ({percentage.toFixed(0)}%)</span>
-                                                </div>
-                                                <Progress value={percentage} indicatorClassName={color} />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                            <div className="pt-6 border-t">
-                                <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
-                                <div className="space-y-2 text-sm">
-                                    {Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
-                                        <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
-                                            <span>{type}</span>
-                                            <span className="font-bold">{count}</span>
+                <TabsContent value="inventory">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        <div className="lg:col-span-2 space-y-8">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline">Filtros de Inventario</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div className="space-y-2">
+                                            <Label>Tipo</Label>
+                                            <Select value={filterType} onValueChange={setFilterType}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Todos</SelectItem>
+                                                    {materialTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
                                         </div>
-                                    ))}
-                                    {Object.keys(statistics.byType || {}).length === 0 && <p className="text-muted-foreground text-center">Sin datos</p>}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
+                                        <div className="space-y-2">
+                                            <Label>Cuartel</Label>
+                                            <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Todos</SelectItem>
+                                                    {firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Especialidad</Label>
+                                            <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Todas</SelectItem>
+                                                    {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Móvil</Label>
+                                            <Select value={filterVehicle} onValueChange={setFilterVehicle}>
+                                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Todos</SelectItem>
+                                                    {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline">Inventario Filtrado</CardTitle>
+                                    <CardDescription>
+                                        Mostrando {filteredMaterials.length} de {materials.length} materiales.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Código</TableHead>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead>Ubicación</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loading ? (
+                                                Array.from({ length: 5 }).map((_, i) => (
+                                                    <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                                ))
+                                            ) : filteredMaterials.length > 0 ? (
+                                                filteredMaterials.map(material => (
+                                                    <TableRow key={material.id}>
+                                                        <TableCell className="font-mono">{material.codigo}</TableCell>
+                                                        <TableCell className="font-medium">{material.nombre}</TableCell>
+                                                        <TableCell>{renderLocation(material)}</TableCell>
+                                                        <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
+                                                        {canManage && (
+                                                            <TableCell>
+                                                                <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                                                            </TableCell>
+                                                        )}
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        </div>
+                        <div className="lg:col-span-1 space-y-8">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="font-headline">Estadísticas</CardTitle>
+                                    <CardDescription>Resumen de los materiales filtrados.</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div>
+                                        <h4 className="font-semibold mb-3">Condición General</h4>
+                                        <div className="space-y-2">
+                                            {(['Bueno', 'Regular', 'Malo'] as const).map(cond => {
+                                                const count = statistics.byCondition?.[cond] || 0;
+                                                const total = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
+                                                const percentage = total > 0 ? (count / total) * 100 : 0;
+                                                const color = cond === 'Bueno' ? 'bg-green-500' : cond === 'Regular' ? 'bg-yellow-500' : 'bg-red-500';
+                                                return (
+                                                    <div key={cond}>
+                                                        <div className="flex justify-between text-sm mb-1">
+                                                            <span>{cond}</span>
+                                                            <span>{count} ({percentage.toFixed(0)}%)</span>
+                                                        </div>
+                                                        <Progress value={percentage} indicatorClassName={color} />
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    <div className="pt-6 border-t">
+                                        <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
+                                        <div className="space-y-2 text-sm">
+                                            {Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
+                                                <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
+                                                    <span>{type}</span>
+                                                    <span className="font-bold">{count}</span>
+                                                </div>
+                                            ))}
+                                            {Object.keys(statistics.byType || {}).length === 0 && <p className="text-muted-foreground text-center">Sin datos</p>}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </div>
+                </TabsContent>
+            </Tabs>
             
             <MaterialDetailDialog
                 material={scannedMaterial}
