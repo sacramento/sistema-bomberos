@@ -25,8 +25,6 @@ import EditMaterialDialog from "./_components/edit-material-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import MaterialDetailDialog from "./_components/material-detail-dialog";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
@@ -89,10 +87,11 @@ export default function MaterialsPage() {
         if (foundMaterial) {
             setScannedMaterial(foundMaterial);
         } else {
+            setSearchTerm(code);
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró ningún material con el código: ${code}`,
+                description: `No se encontró el código: ${code}. Se ha colocado en el campo de búsqueda por si desea buscar manualmente.`,
             });
         }
     };
@@ -109,7 +108,8 @@ export default function MaterialsPage() {
     }, [materials, searchTerm, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
     
     const statistics = useMemo(() => {
-        const total = filteredMaterials.length;
+        const listToAnalyze = searchTerm ? filteredMaterials : materials;
+        const total = listToAnalyze.length;
         if (total === 0) {
             return {
                 byCondition: { Bueno: 0, Regular: 0, Malo: 0 },
@@ -117,18 +117,18 @@ export default function MaterialsPage() {
             };
         }
 
-        const byCondition = filteredMaterials.reduce((acc, mat) => {
+        const byCondition = listToAnalyze.reduce((acc, mat) => {
             acc[mat.condicion] = (acc[mat.condicion] || 0) + 1;
             return acc;
         }, {} as Record<Material['condicion'], number>);
 
-        const byType = filteredMaterials.reduce((acc, mat) => {
+        const byType = listToAnalyze.reduce((acc, mat) => {
             acc[mat.tipo] = (acc[mat.tipo] || 0) + 1;
             return acc;
         }, {} as Record<Material['tipo'], number>);
 
         return { byCondition, byType };
-    }, [filteredMaterials]);
+    }, [filteredMaterials, materials, searchTerm]);
 
 
     const renderLocation = (material: Material) => {
@@ -140,7 +140,7 @@ export default function MaterialsPage() {
     
     return (
         <>
-            <PageHeader title="Gestión de Materiales" description="Inventario de materiales y equipos del cuartel.">
+            <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
                 {canManage && (
                     <AddMaterialDialog onMaterialAdded={handleDataChange}>
                         <Button>
@@ -151,173 +151,163 @@ export default function MaterialsPage() {
                 )}
             </PageHeader>
             
-            <Tabs defaultValue="inventory" className="w-full">
-                 <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
-                    <TabsTrigger value="inventory">Inventario</TabsTrigger>
-                    <TabsTrigger value="search">Búsqueda</TabsTrigger>
-                </TabsList>
-                 <TabsContent value="inventory">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div className="lg:col-span-2 space-y-8">
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Filtros de Inventario</CardTitle>
-                                </CardHeader>
-                                <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Tipo</Label>
-                                        <Select value={filterType} onValueChange={setFilterType}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos los Tipos</SelectItem>
-                                                {materialTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Cuartel</Label>
-                                        <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos los Cuarteles</SelectItem>
-                                                {firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Especialidad</Label>
-                                        <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todas</SelectItem>
-                                                {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Filtrar por Móvil</Label>
-                                        <Select value={filterVehicle} onValueChange={setFilterVehicle}>
-                                            <SelectTrigger><SelectValue /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">Todos</SelectItem>
-                                                {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Inventario General</CardTitle>
-                                    <CardDescription>
-                                        Mostrando {filteredMaterials.length} de {materials.length} materiales.
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Código</TableHead>
-                                                <TableHead>Nombre</TableHead>
-                                                <TableHead>Ubicación</TableHead>
-                                                <TableHead>Estado</TableHead>
-                                                {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {loading ? (
-                                                Array.from({ length: 5 }).map((_, i) => (
-                                                    <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                                ))
-                                            ) : filteredMaterials.length > 0 ? (
-                                                filteredMaterials.map(material => (
-                                                    <TableRow key={material.id}>
-                                                        <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                        <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                        <TableCell>{renderLocation(material)}</TableCell>
-                                                        <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                        {canManage && (
-                                                            <TableCell>
-                                                                <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                                                            </TableCell>
-                                                        )}
-                                                    </TableRow>
-                                                ))
-                                            ) : (
-                                                <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <div className="lg:col-span-1 space-y-8">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Estadísticas</CardTitle>
-                                    <CardDescription>Resumen de los materiales filtrados.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    <div>
-                                        <h4 className="font-semibold mb-3">Estado de Condición</h4>
-                                        <div className="space-y-2">
-                                            {(['Bueno', 'Regular', 'Malo'] as const).map(cond => {
-                                                const count = statistics.byCondition?.[cond] || 0;
-                                                const percentage = filteredMaterials.length > 0 ? (count / filteredMaterials.length) * 100 : 0;
-                                                const color = cond === 'Bueno' ? 'bg-green-500' : cond === 'Regular' ? 'bg-yellow-500' : 'bg-red-500';
-                                                return (
-                                                    <div key={cond}>
-                                                        <div className="flex justify-between text-sm mb-1">
-                                                            <span>{cond}</span>
-                                                            <span>{count} ({percentage.toFixed(0)}%)</span>
-                                                        </div>
-                                                        <Progress value={percentage} indicatorClassName={color} />
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                    <div className="pt-6 border-t">
-                                        <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
-                                        <div className="space-y-2 text-sm">
-                                            {Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
-                                                <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
-                                                    <span>{type}</span>
-                                                    <span className="font-bold">{count}</span>
-                                                </div>
-                                            ))}
-                                            {Object.keys(statistics.byType || {}).length === 0 && <p className="text-muted-foreground text-center">Sin datos</p>}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-                </TabsContent>
-                <TabsContent value="search">
-                     <Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                    <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
-                            <CardDescription>Encuentre un material por su nombre/código o escanee su código QR.</CardDescription>
+                            <CardTitle className="font-headline">Búsqueda y Filtros</CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-col sm:flex-row gap-4 items-center">
-                            <div className="w-full sm:w-auto flex-grow space-y-2">
-                                <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
-                                <Input id="search-term" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
+                                    <div className="relative">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Acción Rápida</Label>
+                                    <QrScannerDialog onScan={handleQrScan}>
+                                        <Button size="lg" variant="outline" className="w-full">
+                                            <QrCode className="mr-2 h-6 w-6"/>
+                                            Escanear Código QR
+                                        </Button>
+                                    </QrScannerDialog>
+                                </div>
                             </div>
-                            <div className="w-full sm:w-auto pt-2 sm:pt-6">
-                                <QrScannerDialog onScan={handleQrScan}>
-                                    <Button size="lg" variant="outline" className="w-full">
-                                        <QrCode className="mr-2 h-6 w-6"/>
-                                        Escanear Código QR
-                                    </Button>
-                                </QrScannerDialog>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t">
+                                <div className="space-y-2">
+                                    <Label>Tipo</Label>
+                                    <Select value={filterType} onValueChange={setFilterType}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            {materialTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Cuartel</Label>
+                                    <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            {firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Especialidad</Label>
+                                    <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todas</SelectItem>
+                                            {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Móvil</Label>
+                                    <Select value={filterVehicle} onValueChange={setFilterVehicle}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todos</SelectItem>
+                                            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
-                </TabsContent>
-            </Tabs>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Inventario General</CardTitle>
+                            <CardDescription>
+                                Mostrando {filteredMaterials.length} de {materials.length} materiales.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Código</TableHead>
+                                        <TableHead>Nombre</TableHead>
+                                        <TableHead>Ubicación</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                        ))
+                                    ) : filteredMaterials.length > 0 ? (
+                                        filteredMaterials.map(material => (
+                                            <TableRow key={material.id}>
+                                                <TableCell className="font-mono">{material.codigo}</TableCell>
+                                                <TableCell className="font-medium">{material.nombre}</TableCell>
+                                                <TableCell>{renderLocation(material)}</TableCell>
+                                                <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
+                                                {canManage && (
+                                                    <TableCell>
+                                                        <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+                <div className="lg:col-span-1 space-y-8">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
+                            <CardDescription>Resumen de todos los materiales.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div>
+                                <h4 className="font-semibold mb-3">Condición General</h4>
+                                <div className="space-y-2">
+                                    {(['Bueno', 'Regular', 'Malo'] as const).map(cond => {
+                                        const count = statistics.byCondition?.[cond] || 0;
+                                        const percentage = materials.length > 0 ? (count / materials.length) * 100 : 0;
+                                        const color = cond === 'Bueno' ? 'bg-green-500' : cond === 'Regular' ? 'bg-yellow-500' : 'bg-red-500';
+                                        return (
+                                            <div key={cond}>
+                                                <div className="flex justify-between text-sm mb-1">
+                                                    <span>{cond}</span>
+                                                    <span>{count} ({percentage.toFixed(0)}%)</span>
+                                                </div>
+                                                <Progress value={percentage} indicatorClassName={color} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                            <div className="pt-6 border-t">
+                                <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
+                                <div className="space-y-2 text-sm">
+                                    {Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
+                                        <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
+                                            <span>{type}</span>
+                                            <span className="font-bold">{count}</span>
+                                        </div>
+                                    ))}
+                                    {Object.keys(statistics.byType || {}).length === 0 && <p className="text-muted-foreground text-center">Sin datos</p>}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
             
             <MaterialDetailDialog
                 material={scannedMaterial}
