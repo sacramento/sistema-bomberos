@@ -650,7 +650,10 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             
             if (!firefighter || firefighter.status !== 'Active') return false;
             
-            if (activeRole === 'Bombero') return false;
+            if (isBomberoRole) {
+                // For 'Bombero', only show their own leaves, regardless of other filters
+                return leave.firefighterId === filterFirefighter;
+            }
 
             if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
 
@@ -678,7 +681,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             }
             return true;
         });
-    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, activeRole]);
+    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, isBomberoRole]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
@@ -819,15 +822,17 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         )
     }
 
+    const rolesWithLeaves = ['Ayudantía', 'Administrador', 'Master', 'Oficial', 'Bombero'];
+
     return (
         <>
             <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description={isBomberoRole ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia y licencias.'} />
             
             <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
-                 {user?.role !== 'Bombero' && (
+                 {rolesWithLeaves.includes(activeRole) && (
                     <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
                         <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
-                        {(activeRole === 'Ayudantía' || activeRole === 'Administrador' || activeRole === 'Master') && <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>}
+                        <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>
                     </TabsList>
                  )}
                 
@@ -980,7 +985,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
                 </TabsContent>
                 
-                {(user?.role === 'Ayudantía' || user?.role === 'Administrador' || user?.role === 'Oficial') && (
+                {rolesWithLeaves.includes(activeRole) && (
                     <TabsContent value="leaves">
                         <CommonFilters />
                         {leavesReportData.length > 0 ? (
@@ -992,8 +997,14 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                         <TableBody>{leavesReportData.map((leave) => (<TableRow key={leave.id}><TableCell className="font-medium">{leave.firefighterName}</TableCell><TableCell>{leave.type}</TableCell><TableCell>{format(parseISO(leave.startDate), "PPP", { locale: es })}</TableCell><TableCell>{format(parseISO(leave.endDate), "PPP", { locale: es })}</TableCell></TableRow>))}</TableBody>
                                     </Table>
                                 </CardContent>
-                                <CardHeader><CardTitle className="font-headline">Generar Reporte en PDF</CardTitle><CardDescription>Genere un PDF con los datos de licencias filtrados actualmente.</CardDescription></CardHeader>
-                                <CardContent><Button onClick={generateLeavesPdf} disabled={generatingPdf || leavesReportData.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}{generatingPdf ? "Generando..." : "Generar PDF de Licencias"}</Button></CardContent>
+                                {!isBomberoRole && (
+                                <CardFooter>
+                                    <Button onClick={generateLeavesPdf} disabled={generatingPdf || leavesReportData.length === 0}>
+                                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                        {generatingPdf ? "Generando..." : "Generar PDF de Licencias"}
+                                    </Button>
+                                </CardFooter>
+                                )}
                             </Card>
                         ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de licencias para los filtros seleccionados.</p></div> )}
                     </TabsContent>
@@ -1002,10 +1013,3 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
         </>
     );
 }
-
-
-
-
-
-
-
