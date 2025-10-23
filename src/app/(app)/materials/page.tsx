@@ -5,9 +5,10 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Specialization, Vehicle } from "@/lib/types";
+import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -39,6 +40,7 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('all');
@@ -61,17 +63,33 @@ export default function MaterialsPage() {
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
 
-    const fetchMaterialsAndVehicles = async () => {
+    const canManageGlobally = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+
+    const loggedInFirefighter = useMemo(() => {
+        if (!user) return null;
+        return allFirefighters.find(f => f.legajo === user.id);
+    }, [user, allFirefighters]);
+    
+    const canManageMaterial = (material: Material) => {
+        if (canManageGlobally) return true;
+        if (activeRole === 'Encargado' && loggedInFirefighter) {
+            return material.cuartel === loggedInFirefighter.firehouse;
+        }
+        return false;
+    }
+
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            const [materialsData, vehiclesData] = await Promise.all([
+            const [materialsData, vehiclesData, firefightersData] = await Promise.all([
                 getMaterials(),
-                getVehicles()
+                getVehicles(),
+                getFirefighters(),
             ]);
             setMaterials(materialsData);
             setVehicles(vehiclesData);
+            setAllFirefighters(firefightersData);
         } catch (error) {
              toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
         } finally {
@@ -80,7 +98,7 @@ export default function MaterialsPage() {
     };
     
     useEffect(() => {
-        fetchMaterialsAndVehicles();
+        fetchAllData();
         
         const fetchLogo = async () => {
              try {
@@ -101,14 +119,14 @@ export default function MaterialsPage() {
     }, []);
 
     const handleDataChange = () => {
-        fetchMaterialsAndVehicles();
+        fetchAllData();
     };
 
     const handleDelete = async (materialId: string) => {
         try {
             await deleteMaterial(materialId);
             toast({ title: "¡Éxito!", description: "El material ha sido eliminado." });
-            fetchMaterialsAndVehicles();
+            fetchAllData();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
         }
@@ -290,7 +308,7 @@ export default function MaterialsPage() {
     return (
         <>
             <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
-                {canManage && (
+                {canManageGlobally && (
                     <AddMaterialDialog onMaterialAdded={handleDataChange}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
@@ -351,12 +369,12 @@ export default function MaterialsPage() {
                                             <TableHead>Nombre</TableHead>
                                             <TableHead>Ubicación</TableHead>
                                             <TableHead>Estado</TableHead>
-                                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                            <TableHead><span className="sr-only">Acciones</span></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {loading ? (
-                                            <TableRow><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                         ) : searchFilteredMaterials.length > 0 ? (
                                             searchFilteredMaterials.map(material => (
                                                 <TableRow key={material.id}>
@@ -364,17 +382,42 @@ export default function MaterialsPage() {
                                                     <TableCell className="font-medium">{material.nombre}</TableCell>
                                                     <TableCell>{renderLocation(material)}</TableCell>
                                                     <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                    {canManage && (
-                                                        <TableCell>
-                                                            <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog>
-                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
-                                                            <DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                                                        </TableCell>
-                                                    )}
+                                                    <TableCell>
+                                                        <AlertDialog>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                    {canManageMaterial(material) && <>
+                                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                                        </EditMaterialDialog>
+                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                    </>}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
-                                            <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
@@ -491,13 +534,13 @@ export default function MaterialsPage() {
                                             <TableHead>Nombre</TableHead>
                                             <TableHead>Ubicación</TableHead>
                                             <TableHead>Estado</TableHead>
-                                            {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
+                                            <TableHead><span className="sr-only">Acciones</span></TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {loading ? (
                                             Array.from({ length: 5 }).map((_, i) => (
-                                                <TableRow key={i}><TableCell colSpan={canManage ? 5 : 4}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                                <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                             ))
                                         ) : generalFilteredMaterials.length > 0 ? (
                                             generalFilteredMaterials.map(material => (
@@ -506,17 +549,42 @@ export default function MaterialsPage() {
                                                     <TableCell className="font-medium">{material.nombre}</TableCell>
                                                     <TableCell>{renderLocation(material)}</TableCell>
                                                     <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                    {canManage && (
-                                                        <TableCell>
-                                                            <AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal /></Button></DropdownMenuTrigger><DropdownMenuContent><DropdownMenuLabel>Acciones</DropdownMenuLabel><EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem></EditMaterialDialog>
-                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
-                                                            <DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem></AlertDialogTrigger></DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Está seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>
-                                                        </TableCell>
-                                                    )}
+                                                    <TableCell>
+                                                        <AlertDialog>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent>
+                                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                    {canManageMaterial(material) && <>
+                                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
+                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                                        </EditMaterialDialog>
+                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                    </>}
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))
                                         ) : (
-                                            <TableRow><TableCell colSpan={canManage ? 5 : 4} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
+                                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
                                         )}
                                     </TableBody>
                                 </Table>
