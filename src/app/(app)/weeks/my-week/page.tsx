@@ -63,8 +63,6 @@ export default function MyWeekPage() {
     };
 
     const { weeksToShow, isRedirecting, canManage, loggedInFirefighter } = useMemo(() => {
-        let shouldRedirect = false;
-        
         if (loading || !user) {
             return { weeksToShow: [], isRedirecting: false, canManage: false, loggedInFirefighter: null };
         }
@@ -76,7 +74,11 @@ export default function MyWeekPage() {
 
         if (isPrivileged || activeRole === 'Oficial') {
             visibleWeeks = [...allWeeks];
+        } else if (activeRole === 'Encargado' && firefighterData) {
+            // Encargado sees all weeks from their firehouse
+            visibleWeeks = allWeeks.filter(week => week.firehouse === firefighterData.firehouse);
         } else {
+            // Bombero role sees only weeks they are a member of
             visibleWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
@@ -84,7 +86,8 @@ export default function MyWeekPage() {
 
         const sortedWeeks = visibleWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
         
-        if (!isPrivileged && activeRole !== 'Oficial') {
+        let shouldRedirect = false;
+        if (!isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             const today = new Date();
             const assignedWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
@@ -104,7 +107,7 @@ export default function MyWeekPage() {
             weeksToShow: sortedWeeks, 
             isRedirecting: shouldRedirect,
             canManage: canManageWeeks,
-            loggedInFirefighter: firefighterData
+            loggedInFirefighter: firefighterData || null
         };
 
     }, [allWeeks, allFirefighters, user, activeRole, loading, router, isPrivileged]);
@@ -143,7 +146,7 @@ export default function MyWeekPage() {
                 isLoading={loading} 
                 onDataChange={handleDataChange} 
                 canManageGenerally={canManage} 
-                loggedInFirefighter={loggedInFirefighter || null}
+                loggedInFirefighter={loggedInFirefighter}
             />
         </>
     );
