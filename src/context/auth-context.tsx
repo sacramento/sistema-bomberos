@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole } from '@/lib/types';
+import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | 'Ninguno';
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | AyudantiaModuleRole | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -28,18 +28,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'dashboard'> = {
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'ayudantia' | 'general' | 'dashboard'> = {
     '/sessions': 'asistencia',
     '/classes': 'asistencia',
     '/schedule': 'asistencia',
     '/firefighters': 'asistencia',
     '/courses': 'asistencia',
-    '/leaves': 'asistencia',
     '/reports': 'asistencia',
     '/weeks': 'semanas',
     '/vehicles': 'movilidad',
     '/maintenance': 'movilidad',
     '/materials': 'materiales',
+    '/leaves': 'ayudantia',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -110,6 +110,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return roles.movilidad;
         case 'materiales':
             return roles.materiales;
+        case 'ayudantia':
+            if(roles.asistencia === 'Ayudantía') return 'Ayudantía';
+            if(roles.asistencia === 'Oficial') return 'Oficial';
+            if(user.role === 'Master') return 'Master';
+            return 'Ninguno';
         case 'general':
         case 'dashboard':
           return user.role;

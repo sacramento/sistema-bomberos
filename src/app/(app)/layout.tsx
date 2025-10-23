@@ -42,7 +42,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia';
 };
 
 export const navItems: NavItem[] = [
@@ -50,7 +50,6 @@ export const navItems: NavItem[] = [
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
   
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
@@ -62,6 +61,8 @@ export const navItems: NavItem[] = [
 
   { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
+
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Ayudantía', 'Oficial'], module: 'ayudantia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -92,6 +93,7 @@ function Sidebar() {
       semanas: 'Semanas',
       movilidad: 'Movilidad',
       materiales: 'Materiales',
+      ayudantia: 'Ayudantía',
       general: 'Administración'
   };
   const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";

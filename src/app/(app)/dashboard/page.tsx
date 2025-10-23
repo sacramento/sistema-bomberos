@@ -5,14 +5,14 @@ import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame, Package } from 'lucide-react';
+import { ArrowRight, Flame, Package, ClipboardMinus } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
 const moduleDetails: Record<NavItem['module'], { title: string; description: string; icon: React.ElementType }> = {
     asistencia: {
         title: 'Asistencia',
-        description: 'Gestione clases, asistencias, licencias y reportes de capacitación.',
+        description: 'Gestione clases, asistencias y reportes de capacitación.',
         icon: Flame
     },
     semanas: {
@@ -29,6 +29,11 @@ const moduleDetails: Record<NavItem['module'], { title: string; description: str
         title: 'Materiales',
         description: 'Gestione el inventario de materiales y equipos de los cuarteles.',
         icon: Package
+    },
+    ayudantia: {
+        title: 'Ayudantía',
+        description: 'Gestione licencias y sanciones del personal.',
+        icon: ClipboardMinus
     },
     general: {
         title: 'Administración',
@@ -53,7 +58,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'ayudantia', 'general'];
 
 
   return (

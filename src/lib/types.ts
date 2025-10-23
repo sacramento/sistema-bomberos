@@ -45,7 +45,7 @@ export type Session = {
   attendance?: Record<string, AttendanceStatus>; // Firefighter ID -> Status
 };
 
-export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Sanción' | 'Enfermedad' | 'Estudio' | 'Maternidad';
+export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Enfermedad' | 'Estudio' | 'Maternidad';
 
 export type Leave = {
   id: string;
@@ -134,6 +134,7 @@ export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil' | 'Ninguno';
 export type MaterialesModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
+export type AyudantiaModuleRole = 'Ayudantía' | 'Oficial' | 'Master';
 
 export type GlobalRole = 'Master' | 'Usuario';
 

@@ -28,7 +28,7 @@ import { format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from "@/context/auth-context";
 
-const allLeaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Sanción', 'Enfermedad', 'Estudio', 'Maternidad'];
+const allLeaveTypes: LeaveType[] = ['Ordinaria', 'Extraordinaria', 'Enfermedad', 'Estudio', 'Maternidad'];
 
 export default function AddLeaveDialog({ children, onLeaveAdded }: { children: React.ReactNode; onLeaveAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -43,11 +43,9 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
 
   const [openCombobox, setOpenCombobox] = useState(false);
 
-  const availableLeaveTypes = user?.role === 'Ayudantía'
-    ? allLeaveTypes.filter(t => t !== 'Sanción')
-    : allLeaveTypes;
+  const availableLeaveTypes = allLeaveTypes;
 
-    const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
 
 
   useEffect(() => {
