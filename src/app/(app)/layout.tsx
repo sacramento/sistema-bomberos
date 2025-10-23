@@ -26,7 +26,8 @@ import {
   Truck,
   Wrench,
   Package,
-  ScanLine
+  ScanLine,
+  Gavel
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,6 +64,7 @@ export const navItems: NavItem[] = [
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Ayudantía', 'Oficial'], module: 'ayudantia' },
+  { href: '/sanctions', icon: Gavel, label: 'Sanciones', roles: ['Master', 'Ayudantía', 'Oficial'], module: 'ayudantia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },

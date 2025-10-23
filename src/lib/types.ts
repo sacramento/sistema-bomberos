@@ -56,6 +56,15 @@ export type Leave = {
   type: LeaveType;
 };
 
+export type Sanction = {
+  id: string;
+  firefighterId: string;
+  firefighterName: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+};
+
 export type Course = {
   id: string;
   firefighterId: string;
@@ -192,6 +201,7 @@ export type AuditLogAction =
   | 'CREATE_FIREFIGHTER' | 'UPDATE_FIREFIGHTER' | 'DELETE_FIREFIGHTER' | 'BATCH_IMPORT_FIREFIGHTERS'
   | 'CREATE_SESSION' | 'UPDATE_SESSION' | 'DELETE_SESSION' | 'UPDATE_ATTENDANCE'
   | 'CREATE_LEAVE' | 'UPDATE_LEAVE' | 'DELETE_LEAVE'
+  | 'CREATE_SANCTION' | 'UPDATE_SANCTION' | 'DELETE_SANCTION'
   | 'CREATE_COURSE' | 'UPDATE_COURSE' | 'DELETE_COURSE'
   | 'CREATE_WEEK' | 'UPDATE_WEEK' | 'DELETE_WEEK'
   | 'CREATE_TASK' | 'UPDATE_TASK' | 'DELETE_TASK'
