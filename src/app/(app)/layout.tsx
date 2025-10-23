@@ -50,8 +50,8 @@ export const navItems: NavItem[] = [
   { href: '/sessions', icon: LayoutDashboard, label: 'Dashboard Asistencia', roles: ['Master', 'Administrador', 'Oficial', 'Instructor'], module: 'asistencia' },
   { href: '/classes', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'asistencia' },
   { href: '/schedule', icon: CalendarDays, label: 'Cronograma', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
-  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial', 'Ayudantía'], module: 'asistencia' },
-  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero'], module: 'asistencia' },
+  { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial'], module: 'asistencia' },
+  { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Bombero'], module: 'asistencia' },
   
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
@@ -63,8 +63,9 @@ export const navItems: NavItem[] = [
   { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
-  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Ayudantía', 'Oficial'], module: 'ayudantia' },
-  { href: '/sanctions', icon: Gavel, label: 'Sanciones', roles: ['Master', 'Ayudantía', 'Oficial'], module: 'ayudantia' },
+  { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
+  { href: '/sanctions', icon: Gavel, label: 'Sanciones', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
+  { href: '/ayudantia-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
