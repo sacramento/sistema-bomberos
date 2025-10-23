@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useMemo } from "react";
-import { Week } from "@/lib/types";
+import { Week, Firefighter } from "@/lib/types";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,7 +27,8 @@ interface WeekListProps {
     weeks: Week[];
     isLoading?: boolean;
     onDataChange: () => void;
-    canManage: boolean;
+    canManageGenerally: boolean;
+    loggedInFirefighter: Firefighter | null;
 }
 
 const getBorderColor = (firehouse: Week['firehouse']) => {
@@ -38,15 +40,22 @@ const getBorderColor = (firehouse: Week['firehouse']) => {
     }
 };
 
-export default function WeekList({ weeks, isLoading, onDataChange, canManage }: WeekListProps) {
+export default function WeekList({ weeks, isLoading, onDataChange, canManageGenerally, loggedInFirefighter }: WeekListProps) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
 
-    const isPrivilegedUser = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const canUserManageWeek = (week: Week) => {
+        if (!canManageGenerally) return false;
+        if (activeRole === 'Master' || activeRole === 'Administrador') return true;
+        if (activeRole === 'Encargado') {
+            return loggedInFirefighter?.firehouse === week.firehouse;
+        }
+        return false;
+    };
 
-     const handleDeleteWeek = async (weekId: string) => {
+    const handleDeleteWeek = async (weekId: string) => {
         try {
             await deleteWeek(weekId);
             toast({ title: "Éxito", description: "La semana y sus tareas asociadas han sido eliminadas." });
@@ -55,7 +64,6 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
             toast({ title: "Error", description: error.message || "No se pudo eliminar la semana.", variant: "destructive" });
         }
     };
-
 
     if (isLoading) {
         return (
@@ -77,7 +85,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                 <div className="text-center">
                     <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
                      <p className="text-muted-foreground mt-2">
-                        {canManage
+                        {canManageGenerally
                          ? 'Cree una nueva semana para comenzar.'
                          : 'No estás asignado a ninguna semana en esta categoría.'
                         }
@@ -87,12 +95,12 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
         );
     }
 
-
     return (
         <div className="space-y-4">
             {weeks.map((week) => {
                  const isMember = user ? week.allMembers?.some(m => m.legajo === user.id) : false;
-                 const canViewDetails = canManage || isMember || activeRole === 'Oficial';
+                 const canViewDetails = canManageGenerally || isMember || activeRole === 'Oficial';
+                 const showManagementOptions = canUserManageWeek(week);
 
                 return (
                 <AlertDialog key={week.id}>
@@ -107,7 +115,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManage }: 
                                     </p>
                                 </div>
                                 <div className="flex-shrink-0">
-                                     {canManage && (
+                                     {showManagementOptions && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">

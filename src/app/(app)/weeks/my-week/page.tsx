@@ -7,8 +7,9 @@ import { PlusCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import AddWeekDialog from "../_components/add-week-dialog";
 import WeekList from "../_components/week-list";
-import { Week } from "@/lib/types";
+import { Week, Firefighter } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,12 +22,13 @@ export default function MyWeekPage() {
     const router = useRouter();
     const { toast } = useToast();
     const [allWeeks, setAllWeeks] = useState<Week[]>([]);
+    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
 
     const activeRole = getActiveRole(pathname);
     const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    const fetchAllWeeks = async () => {
+    const fetchAllData = async () => {
         if (!user) {
             setLoading(false);
             return;
@@ -34,8 +36,12 @@ export default function MyWeekPage() {
 
         setLoading(true);
         try {
-            const allWeeksData = await getWeeks();
-            setAllWeeks(allWeeksData);
+            const [weeksData, firefightersData] = await Promise.all([
+                getWeeks(),
+                getFirefighters()
+            ]);
+            setAllWeeks(weeksData);
+            setAllFirefighters(firefightersData);
         } catch (error) {
             toast({
                 title: "Error",
@@ -48,43 +54,38 @@ export default function MyWeekPage() {
     };
     
     useEffect(() => {
-        fetchAllWeeks();
+        fetchAllData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const handleDataChange = () => {
-        fetchAllWeeks();
+        fetchAllData();
     };
 
-    const { weeksToShow, isRedirecting, canManage } = useMemo(() => {
+    const { weeksToShow, isRedirecting, canManage, loggedInFirefighter } = useMemo(() => {
         let shouldRedirect = false;
         
         if (loading || !user) {
-            return { weeksToShow: [], isRedirecting: false, canManage: false };
+            return { weeksToShow: [], isRedirecting: false, canManage: false, loggedInFirefighter: null };
         }
 
-        // Determine who can manage weeks (edit/delete/clone)
+        const firefighterData = allFirefighters.find(f => f.legajo === user.id);
         const canManageWeeks = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado';
         
         let visibleWeeks: Week[] = [];
 
-        // Master, Admin, and Oficial see all weeks
         if (isPrivileged || activeRole === 'Oficial') {
             visibleWeeks = [...allWeeks];
         } else {
-            // Other roles (Bombero, Encargado) see only their assigned weeks
             visibleWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
         }
 
-        // Sort all visible weeks by date
         const sortedWeeks = visibleWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
         
-        // Auto-redirect logic for non-privileged users to their active week
         if (!isPrivileged && activeRole !== 'Oficial') {
             const today = new Date();
-            // Find active week only from the weeks they are assigned to
             const assignedWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
@@ -103,9 +104,10 @@ export default function MyWeekPage() {
             weeksToShow: sortedWeeks, 
             isRedirecting: shouldRedirect,
             canManage: canManageWeeks,
+            loggedInFirefighter: firefighterData
         };
 
-    }, [allWeeks, user, activeRole, loading, router, isPrivileged]);
+    }, [allWeeks, allFirefighters, user, activeRole, loading, router, isPrivileged]);
 
 
     if (loading || isRedirecting) {
@@ -136,7 +138,13 @@ export default function MyWeekPage() {
                 )}
             </PageHeader>
             
-            <WeekList weeks={weeksToShow} isLoading={loading} onDataChange={handleDataChange} canManage={canManage} />
+            <WeekList 
+                weeks={weeksToShow} 
+                isLoading={loading} 
+                onDataChange={handleDataChange} 
+                canManageGenerally={canManage} 
+                loggedInFirefighter={loggedInFirefighter || null}
+            />
         </>
     );
 }

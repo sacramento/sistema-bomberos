@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Week, Task } from "@/lib/types";
+import { Week, Task, Firefighter } from "@/lib/types";
 import { getWeekById, updateWeek } from "@/services/weeks.service";
 import { getTasksByWeek, updateTask, deleteTask } from "@/services/tasks.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { format, parseISO } from 'date-fns';
@@ -45,18 +46,26 @@ export default function WeekDetailPage() {
 
     const [week, setWeek] = useState<Week | null>(null);
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [observations, setObservations] = useState('');
     const [savingObservations, setSavingObservations] = useState(false);
 
     const activeRole = getActiveRole(pathname);
+
+    const loggedInFirefighter = useMemo(() => {
+        if (!user || !allFirefighters.length) return null;
+        return allFirefighters.find(f => f.legajo === user.id);
+    }, [user, allFirefighters]);
     
     const canManage = useMemo(() => {
         if (!user || !week) return false;
         if (activeRole === 'Master' || activeRole === 'Administrador') return true;
-        if (activeRole === 'Encargado' && user.id === week.leadId) return true;
+        if (activeRole === 'Encargado') {
+            return loggedInFirefighter?.firehouse === week.firehouse;
+        }
         return false;
-    }, [user, week, activeRole]);
+    }, [user, week, activeRole, loggedInFirefighter]);
 
     const canView = useMemo(() => {
         if (canManage) return true;
@@ -70,11 +79,16 @@ export default function WeekDetailPage() {
         if (weekId) {
             setLoading(true);
             try {
-                const weekData = await getWeekById(weekId);
+                 const [weekData, taskData, firefightersData] = await Promise.all([
+                    getWeekById(weekId),
+                    getTasksByWeek(weekId),
+                    getFirefighters()
+                ]);
+
                 setWeek(weekData);
+                setAllFirefighters(firefightersData);
                 if (weekData) {
                     setObservations(weekData.observations || '');
-                    const taskData = await getTasksByWeek(weekData.id);
                     setTasks(taskData);
                 }
             } catch (error) {
@@ -370,5 +384,3 @@ export default function WeekDetailPage() {
         </>
     )
 }
-
-    
