@@ -28,7 +28,7 @@ export default function LeavesPage() {
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Ayudantía', [activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchLeaves = async () => {
         setLoading(true);

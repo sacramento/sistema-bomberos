@@ -127,10 +127,11 @@ export default function UsersPage() {
                                <div className="flex flex-wrap gap-1">
                                     {user.role === 'Usuario' && user.roles && (
                                         <>
-                                            <Badge variant="outline">A: {user.roles.asistencia}</Badge>
-                                            <Badge variant="outline">S: {user.roles.semanas}</Badge>
-                                            <Badge variant="outline">M: {user.roles.movilidad}</Badge>
+                                            <Badge variant="outline">Asis: {user.roles.asistencia}</Badge>
+                                            <Badge variant="outline">Sem: {user.roles.semanas}</Badge>
+                                            <Badge variant="outline">Mov: {user.roles.movilidad}</Badge>
                                             <Badge variant="outline">Mat: {user.roles.materiales}</Badge>
+                                            <Badge variant="outline">Ayu: {user.roles.ayudantia}</Badge>
                                         </>
                                     )}
                                </div>

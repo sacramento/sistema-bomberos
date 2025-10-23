@@ -40,6 +40,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/maintenance': 'movilidad',
     '/materials': 'materiales',
     '/leaves': 'ayudantia',
+    '/sanctions': 'ayudantia',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -56,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
         if (!parsedUser.roles) {
-            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno' };
+            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno' };
         }
         setUser(parsedUser);
       }
@@ -96,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return 'Ninguno';
       if (user.role === 'Master') return 'Master';
 
-      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno' };
+      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno' };
       
       const moduleKey = Object.keys(pathToModule).find(key => currentPath.startsWith(key));
       const module = moduleKey ? pathToModule[moduleKey] : null;
@@ -111,10 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'materiales':
             return roles.materiales;
         case 'ayudantia':
-            if(roles.asistencia === 'Ayudantía') return 'Ayudantía';
-            if(roles.asistencia === 'Oficial') return 'Oficial';
-            if(user.role === 'Master') return 'Master';
-            return 'Ninguno';
+            return roles.ayudantia;
         case 'general':
         case 'dashboard':
           return user.role;

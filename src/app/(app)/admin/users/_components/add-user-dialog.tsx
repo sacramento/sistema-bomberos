@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole } from "@/lib/types";
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
@@ -26,10 +26,11 @@ import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
-const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Ayudantía', 'Bombero', 'Ninguno'];
+const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno'];
 const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
+const ayudantiaRoles: AyudantiaModuleRole[] = ['Administrador', 'Oficial', 'Ninguno'];
 
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
@@ -44,6 +45,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
   const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>('Ninguno');
+  const [ayudantiaRole, setAyudantiaRole] = useState<AyudantiaModuleRole>('Ninguno');
 
   // Data for selection
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
@@ -84,6 +86,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setSemanasRole('Ninguno');
     setMovilidadRole('Ninguno');
     setMaterialesRole('Ninguno');
+    setAyudantiaRole('Ninguno');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -111,6 +114,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 semanas: isMaster ? 'Administrador' : semanasRole,
                 movilidad: isMaster ? 'Administrador' : movilidadRole,
                 materiales: isMaster ? 'Administrador' : materialesRole,
+                ayudantia: isMaster ? 'Administrador' : ayudantiaRole,
             }
         };
         
@@ -238,6 +242,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="ayudantiaRole" className="text-right">Ayudantía</Label>
+              <Select onValueChange={(value) => setAyudantiaRole(value as AyudantiaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : ayudantiaRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {ayudantiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

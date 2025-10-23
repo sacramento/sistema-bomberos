@@ -18,7 +18,7 @@ export default function CoursesPage() {
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Ayudantía', [activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const handleDataChange = () => {
         setRefreshSignal(prev => !prev);

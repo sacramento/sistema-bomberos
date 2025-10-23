@@ -28,7 +28,7 @@ export default function SanctionsPage() {
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
-    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Ayudantía', [activeRole]);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchSanctions = async () => {
         setLoading(true);
