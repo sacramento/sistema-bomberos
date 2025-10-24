@@ -54,6 +54,9 @@ export default function MaterialsPage() {
     const [activeTab, setActiveTab] = useState('search');
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    
+    // State for deletion
+    const [deleteTarget, setDeleteTarget] = useState('all'); // 'all' or vehicle.id
     const [confirmationText, setConfirmationText] = useState('');
 
 
@@ -135,10 +138,12 @@ export default function MaterialsPage() {
         }
     };
 
-    const handleDeleteAll = async () => {
+    const handleBulkDelete = async () => {
+        const target = deleteTarget === 'all' ? undefined : deleteTarget;
         try {
-            const count = await deleteAllMaterials();
-            toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales.` });
+            const count = await deleteAllMaterials(target);
+            const targetName = target ? `del Móvil ${vehicles.find(v => v.id === target)?.numeroMovil}` : 'totales';
+            toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales ${targetName}.` });
             setConfirmationText('');
             fetchAllData();
         } catch (error: any) {
@@ -655,36 +660,58 @@ export default function MaterialsPage() {
                             <Card className="border-destructive/50">
                                 <CardHeader>
                                     <CardTitle className="font-headline text-destructive">Zona Peligrosa</CardTitle>
-                                    <CardDescription>Esta acción es irreversible y eliminará todos los materiales del inventario.</CardDescription>
+                                    <CardDescription>Esta acción es irreversible y eliminará materiales del inventario.</CardDescription>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="space-y-4">
+                                     <div>
+                                        <Label htmlFor="delete-target">Seleccionar qué eliminar</Label>
+                                        <Select value={deleteTarget} onValueChange={setDeleteTarget}>
+                                            <SelectTrigger id="delete-target">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos los materiales</SelectItem>
+                                                {vehicles.map(v => (
+                                                    <SelectItem key={v.id} value={v.id}>Solo del Móvil {v.numeroMovil}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button variant="destructive">
                                                 <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar Todos los Materiales
+                                                Eliminar Materiales Seleccionados
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
                                                 <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Se eliminarán permanentemente **todos** los materiales del inventario. Para confirmar, escriba "ELIMINAR" en el campo de abajo.
-                                                </AlertDialogDescription>
-                                                <Input 
-                                                    id="delete-confirm" 
-                                                    type="text" 
-                                                    placeholder='Escriba ELIMINAR para confirmar'
-                                                    value={confirmationText}
-                                                    onChange={(e) => setConfirmationText(e.target.value)}
-                                                />
+                                                {deleteTarget === 'all' ? (
+                                                    <>
+                                                        <AlertDialogDescription>
+                                                            Esta acción no se puede deshacer. Se eliminarán permanentemente **TODOS** los materiales del inventario. Para confirmar, escriba "ELIMINAR TODO" en el campo de abajo.
+                                                        </AlertDialogDescription>
+                                                        <Input 
+                                                            id="delete-confirm" 
+                                                            type="text" 
+                                                            placeholder='Escriba ELIMINAR TODO para confirmar'
+                                                            value={confirmationText}
+                                                            onChange={(e) => setConfirmationText(e.target.value)}
+                                                        />
+                                                    </>
+                                                ) : (
+                                                    <AlertDialogDescription>
+                                                        Esta acción no se puede deshacer. Se eliminarán permanentemente todos los materiales asignados al **Móvil {vehicles.find(v => v.id === deleteTarget)?.numeroMovil}**.
+                                                    </AlertDialogDescription>
+                                                )}
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel onClick={() => setConfirmationText('')}>Cancelar</AlertDialogCancel>
                                                 <AlertDialogAction 
-                                                    onClick={handleDeleteAll} 
+                                                    onClick={handleBulkDelete} 
                                                     variant="destructive"
-                                                    disabled={confirmationText !== 'ELIMINAR'}
+                                                    disabled={deleteTarget === 'all' && confirmationText !== 'ELIMINAR TODO'}
                                                 >
                                                     Confirmar Eliminación
                                                 </AlertDialogAction>

@@ -123,8 +123,20 @@ export const deleteMaterial = async (id: string): Promise<void> => {
     await deleteDoc(docRef);
 };
 
-export const deleteAllMaterials = async (): Promise<number> => {
-    const querySnapshot = await getDocs(materialsCollection);
+export const deleteAllMaterials = async (vehicleId?: string): Promise<number> => {
+    let q;
+    if (vehicleId) {
+        // Query for materials assigned to a specific vehicle
+        q = query(materialsCollection, 
+            where('ubicacion.type', '==', 'vehiculo'), 
+            where('ubicacion.vehiculoId', '==', vehicleId)
+        );
+    } else {
+        // Query for all materials
+        q = query(materialsCollection);
+    }
+
+    const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
         return 0;
     }
