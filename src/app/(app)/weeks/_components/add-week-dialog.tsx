@@ -32,9 +32,9 @@ import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 
 const stationOptions = [
-    { value: 'Cuartel 1', label: 'Cuartel 1' },
-    { value: 'Cuartel 2', label: 'Cuartel 2' },
-    { value: 'Cuartel 3', label: 'Cuartel 3' },
+    { value: 'Deposito C1', label: 'Deposito C1' },
+    { value: 'Deposito C2', label: 'Deposito C2' },
+    { value: 'Deposito C3', label: 'Deposito C3' },
 ];
 
 // Reusable component for selecting a single firefighter
@@ -199,7 +199,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
 
   const handleNext = () => {
     if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
-      toast({ title: "Campos incompletos", description: "Por favor, complete nombre, cuartel y fecha de inicio.", variant: "destructive" });
+      toast({ title: "Campos incompletos", description: "Por favor, complete nombre, depósito y fecha de inicio.", variant: "destructive" });
       return;
     }
     if (step === 2 && (!lead || !driver)) {
@@ -258,9 +258,9 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
               <Input id="name" placeholder="Ej: Semana 1, Guardia Roja" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
              <div className="space-y-2">
-                <Label>Cuartel</Label>
+                <Label>Depósito</Label>
                  <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} required>
-                    <SelectTrigger><SelectValue placeholder="Seleccione un cuartel" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Seleccione un depósito" /></SelectTrigger>
                     <SelectContent>
                         {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                     </SelectContent>
@@ -307,7 +307,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
-                   <p><strong>Cuartel:</strong> {firehouse}</p>
+                   <p><strong>Depósito:</strong> {firehouse}</p>
                    <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
                    <p><strong>Encargado:</strong> {lead?.lastName || 'No asignado'}</p>
                    <p><strong>Chofer:</strong> {driver?.lastName || 'No asignado'}</p>

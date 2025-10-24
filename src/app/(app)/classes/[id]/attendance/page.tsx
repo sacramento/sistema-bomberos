@@ -114,16 +114,16 @@ export default function AttendancePage() {
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
         const officials = allParticipants.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => a.id.localeCompare(b.id));
-        const c1Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 1').sort((a,b) => a.id.localeCompare(b.id));
-        const c2Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 2').sort((a,b) => a.id.localeCompare(b.id));
-        const c3Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 3').sort((a,b) => a.id.localeCompare(b.id));
+        const c1Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Deposito C1').sort((a,b) => a.id.localeCompare(b.id));
+        const c2Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Deposito C2').sort((a,b) => a.id.localeCompare(b.id));
+        const c3Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Deposito C3').sort((a,b) => a.id.localeCompare(b.id));
         const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => a.id.localeCompare(b.id));
 
         const groups = [];
         if (officials.length > 0) groups.push({ title: 'OFICIALES Y SUBOFICIALES', firefighters: officials });
-        if (c1Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 1', firefighters: c1Bombers });
-        if (c2Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 2', firefighters: c2Bombers });
-        if (c3Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 3', firefighters: c3Bombers });
+        if (c1Bombers.length > 0) groups.push({ title: 'BOMBEROS DEPOSITO C1', firefighters: c1Bombers });
+        if (c2Bombers.length > 0) groups.push({ title: 'BOMBEROS DEPOSITO C2', firefighters: c2Bombers });
+        if (c3Bombers.length > 0) groups.push({ title: 'BOMBEROS DEPOSITO C3', firefighters: c3Bombers });
         if (aspirantes.length > 0) groups.push({ title: 'ASPIRANTES', firefighters: aspirantes });
 
         return groups;
@@ -352,7 +352,7 @@ export default function AttendancePage() {
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Legajo y Nombre</TableHead>
-                                            <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
+                                            <TableHead className="hidden sm:table-cell">Depósito</TableHead>
                                             <TableHead>Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>

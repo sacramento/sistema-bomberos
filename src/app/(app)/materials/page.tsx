@@ -35,7 +35,7 @@ import { Switch } from "@/components/ui/switch";
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
-const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const firehouses: Material['cuartel'][] = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
 
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -233,7 +233,7 @@ export default function MaterialsPage() {
 
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Ubicación', 'Cuartel', 'Estado', 'Condición']],
+                    head: [['Código', 'Nombre', 'Ubicación', 'Depósito', 'Estado', 'Condición']],
                     body: generalFilteredMaterials.map(item => [
                         item.codigo,
                         item.nombre,
@@ -302,7 +302,7 @@ export default function MaterialsPage() {
         if (material.ubicacion.type === 'vehiculo') {
             return `Móvil ${material.vehiculo?.numeroMovil || '?'} (B: ${material.ubicacion.baulera})`;
         }
-        return material.ubicacion.deposito;
+        return `Depósito ${material.ubicacion.deposito}`;
     };
     
     return (
@@ -445,7 +445,7 @@ export default function MaterialsPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Cuartel</Label>
+                                        <Label>Depósito</Label>
                                         <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>

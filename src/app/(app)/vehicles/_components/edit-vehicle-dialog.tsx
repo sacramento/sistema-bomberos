@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
-const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const cuarteles = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
 
 const MultiFirefighterSelect = ({ 
     title, 
@@ -216,7 +216,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     <Input id="kilometraje" type="number" value={formData.kilometraje || 0} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="cuartel">Cuartel</Label>
+                    <Label htmlFor="cuartel">Depósito</Label>
                     <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)} disabled={!canEditAllFields}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>

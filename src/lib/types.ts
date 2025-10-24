@@ -84,7 +84,7 @@ export type Vehicle = {
   modelo: string;
   ano: number;
   kilometraje: number;
-  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  cuartel: 'Deposito C1' | 'Deposito C2' | 'Deposito C3';
   especialidad: Specialization;
   capacidadAgua: number;
   tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
@@ -129,11 +129,11 @@ export type Material = {
     type: 'vehiculo' | 'deposito';
     vehiculoId?: string; // Firestore ID of the vehicle
     baulera?: string; // Name/number of the storage compartment
-    deposito?: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+    deposito?: 'Deposito C1' | 'Deposito C2' | 'Deposito C3';
   };
   estado: 'En Servicio' | 'Fuera de Servicio';
   condicion: 'Bueno' | 'Regular' | 'Malo';
-  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  cuartel: 'Deposito C1' | 'Deposito C2' | 'Deposito C3';
   // Enriched properties for client side
   vehiculo?: Vehicle;
 }
@@ -169,7 +169,7 @@ export type LoggedInUser = Omit<User, 'password'> | null;
 export type Week = {
     id: string;
     name: string;
-    firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+    firehouse: 'Deposito C1' | 'Deposito C2' | 'Deposito C3';
     periodStartDate: string;
     periodEndDate: string;
     leadId: string; // Firefighter ID of the week lead

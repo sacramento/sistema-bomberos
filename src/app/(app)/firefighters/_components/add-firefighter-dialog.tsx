@@ -152,17 +152,17 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firehouse" className="text-right">
-                Cuartel
+                Depósito
               </Label>
               <Select onValueChange={setFirehouse} value={firehouse} required>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccione un cuartel" />
+                  <SelectValue placeholder="Seleccione un depósito" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
-                  <SelectItem value="Cuartel 2">Cuartel 2</SelectItem>
-                  <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
-                   {existingFirehouses.filter(h => !['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(h)).map(house => (
+                  <SelectItem value="Deposito C1">Deposito C1</SelectItem>
+                  <SelectItem value="Deposito C2">Deposito C2</SelectItem>
+                  <SelectItem value="Deposito C3">Deposito C3</SelectItem>
+                   {existingFirehouses.filter(h => !['Deposito C1', 'Deposito C2', 'Deposito C3'].includes(h)).map(house => (
                     <SelectItem key={house} value={house}>{house}</SelectItem>
                   ))}
                 </SelectContent>

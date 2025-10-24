@@ -107,7 +107,7 @@ export default function FirefightersPage() {
                 <TableHead>Legajo</TableHead>
                 <TableHead>Nombre Completo</TableHead>
                 <TableHead className="hidden md:table-cell">Rango</TableHead>
-                <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
+                <TableHead className="hidden sm:table-cell">Depósito</TableHead>
                 <TableHead>Estado</TableHead>
                 {canManage && (
                     <TableHead>

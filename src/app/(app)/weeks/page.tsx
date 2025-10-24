@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -43,9 +44,9 @@ export default function WeeksDashboardPage() {
     const { activeWeeksSummary, weeksToShow } = useMemo(() => {
         const today = new Date();
         const activeSummary: Record<string, string> = {
-            'Cuartel 1': 'Ninguna',
-            'Cuartel 2': 'Ninguna',
-            'Cuartel 3': 'Ninguna'
+            'Deposito C1': 'Ninguna',
+            'Deposito C2': 'Ninguna',
+            'Deposito C3': 'Ninguna'
         };
 
         weeks.forEach(week => {
@@ -60,7 +61,7 @@ export default function WeeksDashboardPage() {
         });
 
         const grouped = weeks.reduce((acc, week) => {
-            const firehouse = week.firehouse || 'Sin Cuartel';
+            const firehouse = week.firehouse || 'Sin Depósito';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
             }
@@ -81,13 +82,13 @@ export default function WeeksDashboardPage() {
         };
     }, [weeks]);
 
-    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+    const firehouseOrder = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
     
     return (
         <>
             <PageHeader 
                 title="Semanas de Guardia" 
-                description="Listado de solo lectura de las últimas 4 semanas de guardia, agrupadas por cuartel."
+                description="Listado de solo lectura de las últimas 4 semanas de guardia, agrupadas por depósito."
             />
             
             <Card className="mb-8">
@@ -124,7 +125,8 @@ export default function WeeksDashboardPage() {
                                 weeks={weeksToShow[firehouse]} 
                                 isLoading={loading} 
                                 onDataChange={handleDataChange}
-                                canManage={false} // This view is always read-only
+                                canManageGenerally={false} 
+                                loggedInFirefighter={null}
                             />
                         </div>
                     )

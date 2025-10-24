@@ -24,9 +24,9 @@ import { cn } from "@/lib/utils";
 
 const getCuartelBadgeClass = (cuartel: Vehicle['cuartel']) => {
     switch (cuartel) {
-        case 'Cuartel 1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
-        case 'Cuartel 2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
-        case 'Cuartel 3': return 'bg-green-600 text-white hover:bg-green-600/90';
+        case 'Deposito C1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
+        case 'Deposito C2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
+        case 'Deposito C3': return 'bg-green-600 text-white hover:bg-green-600/90';
         default: return 'bg-secondary text-secondary-foreground';
     }
 }
@@ -139,7 +139,7 @@ export default function VehiclesPage() {
               <TableRow>
                 <TableHead>Móvil Nº</TableHead>
                 <TableHead>Marca y Modelo</TableHead>
-                <TableHead className="hidden md:table-cell">Cuartel</TableHead>
+                <TableHead className="hidden md:table-cell">Depósito</TableHead>
                 <TableHead className="hidden lg:table-cell">Encargado(s)</TableHead>
                 <TableHead>
                   <span className="sr-only">Acciones</span>

@@ -32,9 +32,9 @@ import { es } from 'date-fns/locale';
 import { Progress } from "@/components/ui/progress";
 
 const stationOptions = [
-    { value: 'Cuartel 1', label: 'Cuartel 1' },
-    { value: 'Cuartel 2', label: 'Cuartel 2' },
-    { value: 'Cuartel 3', label: 'Cuartel 3' },
+    { value: 'Deposito C1', label: 'Deposito C1' },
+    { value: 'Deposito C2', label: 'Deposito C2' },
+    { value: 'Deposito C3', label: 'Deposito C3' },
 ];
 
 const SingleFirefighterSelect = ({
@@ -186,7 +186,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   
   const handleNext = () => {
     if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
-      toast({ title: "Campos incompletos", description: "Por favor, complete nombre, cuartel y fecha de inicio.", variant: "destructive" });
+      toast({ title: "Campos incompletos", description: "Por favor, complete nombre, depósito y fecha de inicio.", variant: "destructive" });
       return;
     }
     if (step === 2 && (!lead || !driver)) {
@@ -243,7 +243,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
               <Input id="name-edit" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
              <div className="space-y-2">
-                <Label>Cuartel</Label>
+                <Label>Depósito</Label>
                  <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} required>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -291,7 +291,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                 <h4 className="font-bold text-base">Revisar y Guardar Cambios</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
-                   <p><strong>Cuartel:</strong> {firehouse}</p>
+                   <p><strong>Depósito:</strong> {firehouse}</p>
                    <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
                    <p><strong>Encargado:</strong> {lead?.lastName || 'No asignado'}</p>
                    <p><strong>Chofer:</strong> {driver?.lastName || 'No asignado'}</p>
