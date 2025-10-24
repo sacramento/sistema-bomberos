@@ -122,7 +122,7 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'Lanza' | 'Manga' | 'Corte' | 'Combustion' | 'Hidraulica' | 'Golpe';
+  tipo: 'PROTECCIÓN' | 'RESPIRACIÓN' | 'MÉDICO' | 'HERRAMIENTAS' | 'RESCATE (EQUIPOS)' | 'EXTINCIÓN' | 'ILUMINACIÓN' | 'COMUNICACIÓN' | 'ACCESO' | 'LOGÍSTICA' | 'DOCUMENTACIÓN' | 'SEÑALIZACIÓN';
   especialidad: Specialization;
   caracteristicas?: string;
   ubicacion: {

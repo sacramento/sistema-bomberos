@@ -34,7 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import ImportMaterialsDialog from "./_components/import-materials-dialog";
 
 
-const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
+const materialTypes: Material['tipo'][] = ['PROTECCIÓN', 'RESPIRACIÓN', 'MÉDICO', 'HERRAMIENTAS', 'RESCATE (EQUIPOS)', 'EXTINCIÓN', 'ILUMINACIÓN', 'COMUNICACIÓN', 'ACCESO', 'LOGÍSTICA', 'DOCUMENTACIÓN', 'SEÑALIZACIÓN'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
 

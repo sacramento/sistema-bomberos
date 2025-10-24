@@ -14,7 +14,7 @@ import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 
-const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
+const materialTypes: Material['tipo'][] = ['PROTECCIÓN', 'RESPIRACIÓN', 'MÉDICO', 'HERRAMIENTAS', 'RESCATE (EQUIPOS)', 'EXTINCIÓN', 'ILUMINACIÓN', 'COMUNICACIÓN', 'ACCESO', 'LOGÍSTICA', 'DOCUMENTACIÓN', 'SEÑALIZACIÓN'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
