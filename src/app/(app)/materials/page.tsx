@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
-import { getMaterials, deleteMaterial } from "@/services/materials.service";
+import { getMaterials, deleteMaterial, deleteAllMaterials } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,8 @@ export default function MaterialsPage() {
     const [activeTab, setActiveTab] = useState('search');
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    const [confirmationText, setConfirmationText] = useState('');
+
 
     const [includeConditionSummary, setIncludeConditionSummary] = useState(true);
     const [includeTypeSummary, setIncludeTypeSummary] = useState(true);
@@ -132,6 +134,17 @@ export default function MaterialsPage() {
             toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
         }
     };
+
+    const handleDeleteAll = async () => {
+        try {
+            const count = await deleteAllMaterials();
+            toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales.` });
+            setConfirmationText('');
+            fetchAllData();
+        } catch (error: any) {
+             toast({ title: "Error", description: error.message || "No se pudieron eliminar los materiales.", variant: "destructive" });
+        }
+    }
     
     const handleQrScan = (code: string) => {
         const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
@@ -638,6 +651,49 @@ export default function MaterialsPage() {
                                 </Button>
                             </CardContent>
                         </Card>
+                        {canManageGlobally && (
+                            <Card className="border-destructive/50">
+                                <CardHeader>
+                                    <CardTitle className="font-headline text-destructive">Zona Peligrosa</CardTitle>
+                                    <CardDescription>Esta acción es irreversible y eliminará todos los materiales del inventario.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Eliminar Todos los Materiales
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción no se puede deshacer. Se eliminarán permanentemente **todos** los materiales del inventario. Para confirmar, escriba "ELIMINAR" en el campo de abajo.
+                                                </AlertDialogDescription>
+                                                <Input 
+                                                    id="delete-confirm" 
+                                                    type="text" 
+                                                    placeholder='Escriba ELIMINAR para confirmar'
+                                                    value={confirmationText}
+                                                    onChange={(e) => setConfirmationText(e.target.value)}
+                                                />
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel onClick={() => setConfirmationText('')}>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction 
+                                                    onClick={handleDeleteAll} 
+                                                    variant="destructive"
+                                                    disabled={confirmationText !== 'ELIMINAR'}
+                                                >
+                                                    Confirmar Eliminación
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
                 </TabsContent>
             </Tabs>

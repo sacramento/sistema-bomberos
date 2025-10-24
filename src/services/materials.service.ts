@@ -70,7 +70,7 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     return docRef.id;
 };
 
-export const batchAddMaterials = async (materials: Omit<Material, 'id' | 'vehiculo' | 'numero_movil'>[]): Promise<void> => {
+export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string })[]): Promise<void> => {
     if (!materials || materials.length === 0) {
         return;
     }
@@ -82,13 +82,13 @@ export const batchAddMaterials = async (materials: Omit<Material, 'id' | 'vehicu
     for (const material of materials) {
         const materialToSave: any = { ...material };
         
-        if (material.ubicacion.type === 'vehiculo' && (material as any).numero_movil) {
-            const vehicle = vehicleMapByNumber.get((material as any).numero_movil);
+        if (material.ubicacion.type === 'vehiculo' && material.numero_movil) {
+            const vehicle = vehicleMapByNumber.get(material.numero_movil);
             if (vehicle) {
                 materialToSave.ubicacion.vehiculoId = vehicle.id;
                 materialToSave.cuartel = vehicle.cuartel; // Automatically set the firehouse based on the vehicle
             } else {
-                console.warn(`Vehículo con número "${(material as any).numero_movil}" no encontrado. El material "${material.nombre}" no será asignado a un vehículo.`);
+                console.warn(`Vehículo con número "${material.numero_movil}" no encontrado. El material "${material.nombre}" no será asignado a un vehículo.`);
                 materialToSave.ubicacion.type = 'deposito';
                 materialToSave.ubicacion.deposito = materialToSave.cuartel;
             }
@@ -122,3 +122,18 @@ export const deleteMaterial = async (id: string): Promise<void> => {
     const docRef = doc(db, 'materials', id);
     await deleteDoc(docRef);
 };
+
+export const deleteAllMaterials = async (): Promise<number> => {
+    const querySnapshot = await getDocs(materialsCollection);
+    if (querySnapshot.empty) {
+        return 0;
+    }
+
+    const batch = writeBatch(db);
+    querySnapshot.forEach(doc => {
+        batch.delete(doc.ref);
+    });
+
+    await batch.commit();
+    return querySnapshot.size;
+}
