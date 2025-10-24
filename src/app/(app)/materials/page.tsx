@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -31,6 +31,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { Switch } from "@/components/ui/switch";
+import ImportMaterialsDialog from "./_components/import-materials-dialog";
 
 
 const materialTypes: Material['tipo'][] = ['Lanza', 'Manga', 'Corte', 'Combustion', 'Hidraulica', 'Golpe'];
@@ -309,12 +310,20 @@ export default function MaterialsPage() {
         <>
             <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
                 {canManageGlobally && (
-                    <AddMaterialDialog onMaterialAdded={handleDataChange}>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Agregar Material
-                        </Button>
-                    </AddMaterialDialog>
+                    <div className='flex gap-2'>
+                        <ImportMaterialsDialog onImportSuccess={handleDataChange}>
+                             <Button variant="outline">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar CSV
+                            </Button>
+                        </ImportMaterialsDialog>
+                        <AddMaterialDialog onMaterialAdded={handleDataChange}>
+                            <Button>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Agregar Material
+                            </Button>
+                        </AddMaterialDialog>
+                    </div>
                 )}
             </PageHeader>
             

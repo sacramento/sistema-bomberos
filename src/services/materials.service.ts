@@ -70,6 +70,21 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     return docRef.id;
 };
 
+export const batchAddMaterials = async (materials: Omit<Material, 'id' | 'vehiculo'>[]): Promise<void> => {
+    if (!materials || materials.length === 0) {
+        return;
+    }
+
+    const batch = writeBatch(db);
+
+    for (const material of materials) {
+        const docRef = doc(collection(db, 'materials')); 
+        batch.set(docRef, material);
+    }
+
+    await batch.commit();
+}
+
 export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>): Promise<void> => {
     const docRef = doc(db, 'materials', id);
 
