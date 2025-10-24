@@ -23,7 +23,7 @@ import { FileText, Loader2, Upload } from 'lucide-react';
 
 const REQUIRED_HEADERS = [
     'codigo', 'nombre', 'tipo', 'especialidad', 'cuartel', 'estado', 
-    'condicion', 'ubicacion_tipo', 'ubicacion_id', 'ubicacion_baulera', 'caracteristicas'
+    'condicion', 'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
 ];
 
 export default function ImportMaterialsDialog({
@@ -81,7 +81,7 @@ export default function ImportMaterialsDialog({
 
         const materialsToUpload = results.data.map(row => {
             const ubicacion = row.ubicacion_tipo === 'vehiculo'
-                ? { type: 'vehiculo' as const, vehiculoId: row.ubicacion_id, baulera: row.ubicacion_baulera }
+                ? { type: 'vehiculo' as const, baulera: row.ubicacion_baulera }
                 : { type: 'deposito' as const, deposito: row.cuartel };
 
             return {
@@ -94,7 +94,8 @@ export default function ImportMaterialsDialog({
                 condicion: row.condicion.trim(),
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
-            } as Omit<Material, 'id' | 'vehiculo'>;
+                numero_movil: row.numero_movil?.trim() || '' // Temporary field for processing
+            } as Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string };
         });
         
         if (materialsToUpload.length === 0) {
@@ -158,7 +159,8 @@ export default function ImportMaterialsDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas (sin tildes): <strong>{REQUIRED_HEADERS.join(', ')}</strong>.
+                    El archivo CSV debe contener las siguientes columnas (en minúscula y sin tildes): <strong>codigo, nombre, tipo, especialidad, cuartel, estado, condicion, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas</strong>.
+                    <p className="mt-2 text-xs">Si `ubicacion_tipo` es `vehiculo`, complete `numero_movil` y `ubicacion_baulera`. Si es `deposito`, puede dejarlos vacíos.</p>
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">

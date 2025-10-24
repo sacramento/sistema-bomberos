@@ -70,20 +70,38 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     return docRef.id;
 };
 
-export const batchAddMaterials = async (materials: Omit<Material, 'id' | 'vehiculo'>[]): Promise<void> => {
+export const batchAddMaterials = async (materials: Omit<Material, 'id' | 'vehiculo' | 'numero_movil'>[]): Promise<void> => {
     if (!materials || materials.length === 0) {
         return;
     }
 
     const batch = writeBatch(db);
+    const allVehicles = await getVehicles();
+    const vehicleMapByNumber = new Map(allVehicles.map(v => [v.numeroMovil, v]));
 
     for (const material of materials) {
-        const docRef = doc(collection(db, 'materials')); 
-        batch.set(docRef, material);
+        const materialToSave: any = { ...material };
+        
+        if (material.ubicacion.type === 'vehiculo' && (material as any).numero_movil) {
+            const vehicle = vehicleMapByNumber.get((material as any).numero_movil);
+            if (vehicle) {
+                materialToSave.ubicacion.vehiculoId = vehicle.id;
+                materialToSave.cuartel = vehicle.cuartel; // Automatically set the firehouse based on the vehicle
+            } else {
+                console.warn(`Vehículo con número "${(material as any).numero_movil}" no encontrado. El material "${material.nombre}" no será asignado a un vehículo.`);
+                materialToSave.ubicacion.type = 'deposito';
+                materialToSave.ubicacion.deposito = materialToSave.cuartel;
+            }
+        }
+        delete materialToSave.numero_movil; // Remove the temporary field before saving
+
+        const newDocRef = doc(collection(db, 'materials')); 
+        batch.set(newDocRef, materialToSave);
     }
 
     await batch.commit();
 }
+
 
 export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>): Promise<void> => {
     const docRef = doc(db, 'materials', id);
