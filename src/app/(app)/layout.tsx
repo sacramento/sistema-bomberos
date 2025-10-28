@@ -59,6 +59,7 @@ export const navItems: NavItem[] = [
   
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
   { href: '/maintenance', icon: Wrench, label: 'Items', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
+  { href: '/mobility-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad' },
 
   { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },

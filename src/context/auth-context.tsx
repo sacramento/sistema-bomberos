@@ -38,6 +38,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/weeks': 'semanas',
     '/vehicles': 'movilidad',
     '/maintenance': 'movilidad',
+    '/mobility-reports': 'movilidad',
     '/materials': 'materiales',
     '/leaves': 'ayudantia',
     '/sanctions': 'ayudantia',
