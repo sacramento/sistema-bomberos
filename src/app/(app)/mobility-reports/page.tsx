@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Download, Loader2, Check, ChevronsUpDown, Gauge } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Check, ChevronsUpDown, Gauge, X } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -326,5 +326,3 @@ export default function MobilityReportsPage() {
         </>
     );
 }
-
-    
