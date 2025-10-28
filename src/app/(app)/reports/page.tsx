@@ -840,7 +840,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     <CommonFilters />
                     {attendanceReportData.details.length > 0 ? (
                         <div className="space-y-8">
-                             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                                  {summaryCards.map((card, index) => (
                                     <Card key={index}>
                                         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -853,7 +853,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                                     </Card>
                                  ))}
                             </div>
-                            <div className="grid gap-8 lg:grid-cols-5">
+                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                                 <Card className="lg:col-span-2">
                                     <CardHeader>
                                         <CardTitle className="font-headline">Distribución de Estados</CardTitle>
