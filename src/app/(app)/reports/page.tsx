@@ -161,7 +161,6 @@ export default function ReportsPage() {
     // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
-    const [allLeaves, setAllLeaves] = useState<Leave[]>([]);
 
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -171,7 +170,6 @@ export default function ReportsPage() {
     const [filterStation, setFilterStation] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
-    const [activeTab, setActiveTab] = useState("attendance");
     
     // PDF Content Switches
     const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
@@ -185,14 +183,12 @@ export default function ReportsPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [sessionsData, firefightersData, leavesData] = await Promise.all([
+                const [sessionsData, firefightersData] = await Promise.all([
                     getSessions(),
                     getFirefighters(),
-                    getLeaves()
                 ]);
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
-                setAllLeaves(leavesData);
 
                 if (isBomberoRole && user) {
                     const firefighterUser = firefightersData.find(f => f.legajo === user.id);
@@ -465,49 +461,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             setGeneratingPdf(false);
         }
     };
-    
-     const generateLeavesPdf = async () => {
-         if (!logoDataUrl) {
-             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
-        }
-
-        setGeneratingPdf(true);
-        const doc = new jsPDF();
-        
-        try {
-            doc.setFillColor(220, 53, 69); 
-            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
-            doc.setFontSize(22);
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Licencias", 14, 22);
-            
-            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
-
-            doc.setFontSize(11);
-            doc.setTextColor(108, 117, 125);
-            doc.setFont('helvetica', 'normal');
-            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
-            doc.text(dateText, 14, 45);
-
-            let currentY = 55;
-            
-            if(leavesReportData.length > 0) {
-                 (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Bombero', 'Tipo', 'Desde', 'Hasta']],
-                    body: leavesReportData.map(item => [item.firefighterName, item.type, format(new Date(item.startDate), "PPP", { locale: es }), format(new Date(item.endDate), "PPP", { locale: es })]),
-                    theme: 'striped',
-                    headStyles: { fillColor: '#333333' },
-                });
-            }
-            doc.save(`reporte-licencias-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        } catch (error) {
-            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
-        } finally {
-            setGeneratingPdf(false);
-        }
-    }
 
     const attendanceReportData = useMemo(() => {
         let preliminaryRecords: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
@@ -644,45 +597,6 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     }, [attendanceReportData.details, allFirefighters]);
 
 
-    const leavesReportData = useMemo(() => {
-        return allLeaves.filter(leave => {
-            const firefighter = allFirefighters.find(f => f.id === leave.firefighterId);
-            
-            if (!firefighter || firefighter.status !== 'Active') return false;
-            
-            if (isBomberoRole) {
-                // For 'Bombero', only show their own leaves, regardless of other filters
-                return leave.firefighterId === filterFirefighter;
-            }
-
-            if (filterFirefighter !== 'all' && leave.firefighterId !== filterFirefighter) return false;
-
-            if (firefighter) {
-                if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
-                if (filterHierarchy.length > 0) {
-                     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-                    const hierarchyMatch = filterHierarchy.some(h => {
-                        if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
-                        if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
-                        if (h === 'suboficiales_oficiales' && [...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return true;
-                        return false;
-                    });
-                    if (!hierarchyMatch) return false;
-                }
-            }
-
-            if (filterDate?.from) {
-                const leaveStartDate = startOfDay(parseISO(leave.startDate));
-                const leaveEndDate = endOfDay(parseISO(leave.endDate));
-                const filterStartDate = startOfDay(filterDate.from);
-                const filterEndDate = endOfDay(filterDate.to ?? filterDate.from);
-                if (leaveStartDate > filterEndDate || leaveEndDate < filterStartDate) return false;
-            }
-            return true;
-        });
-    }, [allLeaves, allFirefighters, filterFirefighter, filterDate, filterHierarchy, filterStation, isBomberoRole]);
-
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
     }, [allSessions]);
@@ -784,31 +698,26 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                         </div>
                     </>
                 )}
-                {activeTab === 'attendance' && (
-                    <>
-                        <div className="space-y-2">
-                            <Label>Especialidad</Label>
-                            <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las especialidades</SelectItem>
-                                    {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Clase Específica</Label>
-                            <Select value={filterClass} onValueChange={setFilterClass}>
-                                <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las clases</SelectItem>
-                                    {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </>
-                )}
-                
+                <div className="space-y-2">
+                    <Label>Especialidad</Label>
+                    <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las especialidades</SelectItem>
+                            {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
+                    <Label>Clase Específica</Label>
+                    <Select value={filterClass} onValueChange={setFilterClass}>
+                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las clases</SelectItem>
+                            {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
             </CardContent>
         </Card>
     );
@@ -816,200 +725,163 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     if (loading) {
         return (
             <>
-                <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description="Genere y exporte reportes de asistencia y actividad." />
+                <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes de Asistencia'} description="Genere y exporte reportes de asistencia y actividad." />
                 <Skeleton className="w-full h-96" />
             </>
         )
     }
 
-    const rolesWithLeaves = ['Ayudantía', 'Administrador', 'Master', 'Oficial', 'Bombero'];
-
     return (
         <>
-            <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description={isBomberoRole ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia y licencias.'} />
+            <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes de Asistencia'} description={isBomberoRole ? 'Aquí puede ver y exportar su historial de asistencia.' : 'Filtre y analice los datos de asistencia.'} />
             
-            <Tabs defaultValue="attendance" className="w-full" onValueChange={setActiveTab}>
-                 {rolesWithLeaves.includes(activeRole) && (
-                    <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-4">
-                        <TabsTrigger value="attendance"><UserCheck className="mr-2 h-4 w-4"/>Asistencia</TabsTrigger>
-                        <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>
-                    </TabsList>
-                 )}
-                
-                <TabsContent value="attendance">
-                    <CommonFilters />
-                    {attendanceReportData.details.length > 0 ? (
-                        <div className="space-y-8">
-                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                                 {summaryCards.map((card, index) => (
-                                    <Card key={index}>
-                                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                                             <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="text-2xl font-bold">{card.value}</div>
-                                        </CardContent>
-                                    </Card>
-                                 ))}
-                            </div>
-                            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                                <Card className="lg:col-span-2">
-                                    <CardHeader>
-                                        <CardTitle className="font-headline">Distribución de Estados</CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <ChartContainer config={{}} className="h-[250px] w-full">
-                                             <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                                    <Pie data={attendanceReportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
-                                                        {attendanceReportData.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                                                    </Pie>
-                                                    <Legend />
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </ChartContainer>
-                                    </CardContent>
-                                </Card>
-                                 <Card className="lg:col-span-3">
-                                     <CardHeader>
-                                        <CardTitle className="font-headline">Resumen por Bombero</CardTitle>
-                                     </CardHeader>
-                                     <CardContent className="max-h-[300px] overflow-y-auto">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Legajo</TableHead>
-                                                    <TableHead>Bombero</TableHead>
-                                                    <TableHead>Clases</TableHead>
-                                                    <TableHead>% Presentismo</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {summaryTableData.map((item) => (
-                                                    <TableRow key={item.firefighterId}>
-                                                        <TableCell className="font-medium">{item.firefighterLegajo}</TableCell>
-                                                        <TableCell>{item.firefighter}</TableCell>
-                                                        <TableCell>{item.totalClasses}</TableCell>
-                                                        <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                     </CardContent>
-                                 </Card>
-                            </div>
-                            
-                             <Card className="mt-8">
+            <CommonFilters />
+            {attendanceReportData.details.length > 0 ? (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        {summaryCards.map((card, index) => (
+                        <Card key={index}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                                <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{card.value}</div>
+                            </CardContent>
+                        </Card>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                        <Card className="lg:col-span-2">
+                            <CardHeader>
+                                <CardTitle className="font-headline">Distribución de Estados</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ChartContainer config={{}} className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie data={attendanceReportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
+                                                {attendanceReportData.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                                            </Pie>
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            </CardContent>
+                        </Card>
+                            <Card className="lg:col-span-3">
                                 <CardHeader>
-                                    <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
-                                    <CardDescription>
-                                        Todos los registros individuales que coinciden con los filtros aplicados.
-                                    </CardDescription>
+                                <CardTitle className="font-headline">Resumen por Bombero</CardTitle>
                                 </CardHeader>
-                                <CardContent className="max-h-[400px] overflow-y-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Legajo</TableHead>
-                                                <TableHead>Bombero</TableHead>
-                                                <TableHead>Clase</TableHead>
-                                                <TableHead className="hidden sm:table-cell">Especialidad</TableHead>
-                                                <TableHead className="hidden md:table-cell">Fecha</TableHead>
-                                                <TableHead>Estado</TableHead>
+                                <CardContent className="max-h-[300px] overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Legajo</TableHead>
+                                            <TableHead>Bombero</TableHead>
+                                            <TableHead>Clases</TableHead>
+                                            <TableHead>% Presentismo</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {summaryTableData.map((item) => (
+                                            <TableRow key={item.firefighterId}>
+                                                <TableCell className="font-medium">{item.firefighterLegajo}</TableCell>
+                                                <TableCell>{item.firefighter}</TableCell>
+                                                <TableCell>{item.totalClasses}</TableCell>
+                                                <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
                                             </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {attendanceReportData.details.map((item, index) => {
-                                                const isInstructor = item.session.instructorIds?.includes(item.firefighter.id);
-                                                const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
-                                                return (
-                                                    <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
-                                                        <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex items-center gap-2">
-                                                                <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
-                                                                {isInstructor && <Badge variant="destructive">I</Badge>}
-                                                                {isAssistant && <Badge variant="secondary">A</Badge>}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>{item.session.title}</TableCell>
-                                                        <TableCell className="hidden sm:table-cell">{item.session.specialization}</TableCell>
-                                                        <TableCell className="hidden md:table-cell">{item.session.date}</TableCell>
-                                                        <TableCell>
-                                                             <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
-                                                                {getStatusLabel(item.status)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                        ))}
+                                    </TableBody>
+                                </Table>
                                 </CardContent>
                             </Card>
+                    </div>
+                    
+                        <Card className="mt-8">
+                        <CardHeader>
+                            <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
+                            <CardDescription>
+                                Todos los registros individuales que coinciden con los filtros aplicados.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="max-h-[400px] overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Legajo</TableHead>
+                                        <TableHead>Bombero</TableHead>
+                                        <TableHead>Clase</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Especialidad</TableHead>
+                                        <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {attendanceReportData.details.map((item, index) => {
+                                        const isInstructor = item.session.instructorIds?.includes(item.firefighter.id);
+                                        const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
+                                        return (
+                                            <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
+                                                <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
+                                                        {isInstructor && <Badge variant="destructive">I</Badge>}
+                                                        {isAssistant && <Badge variant="secondary">A</Badge>}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{item.session.title}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">{item.session.specialization}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{item.session.date}</TableCell>
+                                                <TableCell>
+                                                        <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
+                                                        {getStatusLabel(item.status)}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
 
 
-                            <Card className="mt-8">
-                                <CardHeader>
-                                    <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
-                                    <CardDescription>Seleccione qué contenido incluir en la exportación del PDF.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex flex-col space-y-4 mb-4">
-                                        <div className="flex items-center space-x-2">
-                                            <Switch
-                                                id="include-summary-pdf"
-                                                checked={includeSummaryInPdf}
-                                                onCheckedChange={setIncludeSummaryInPdf}
-                                            />
-                                            <Label htmlFor="include-summary-pdf">Incluir resumen por porcentaje</Label>
-                                        </div>
-                                         <div className="flex items-center space-x-2">
-                                            <Switch
-                                                id="include-details-pdf"
-                                                checked={includeDetailsInPdf}
-                                                onCheckedChange={setIncludeDetailsInPdf}
-                                            />
-                                            <Label htmlFor="include-details-pdf">Incluir detalle de asistencia por clase</Label>
-                                        </div>
-                                    </div>
-                                    <Button onClick={generatePdf} disabled={generatingPdf}>
-                                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                        {generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
-                </TabsContent>
-                
-                {rolesWithLeaves.includes(activeRole) && (
-                    <TabsContent value="leaves">
-                        <CommonFilters />
-                        {leavesReportData.length > 0 ? (
-                             <Card>
-                                <CardHeader><CardTitle className="font-headline">Detalle de Licencias</CardTitle><CardDescription>Todas las licencias registradas para los filtros aplicados.</CardDescription></CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader><TableRow><TableHead>Bombero</TableHead><TableHead>Tipo</TableHead><TableHead>Desde</TableHead><TableHead>Hasta</TableHead></TableRow></TableHeader>
-                                        <TableBody>{leavesReportData.map((leave) => (<TableRow key={leave.id}><TableCell className="font-medium">{leave.firefighterName}</TableCell><TableCell>{leave.type}</TableCell><TableCell>{format(parseISO(leave.startDate), "PPP", { locale: es })}</TableCell><TableCell>{format(parseISO(leave.endDate), "PPP", { locale: es })}</TableCell></TableRow>))}</TableBody>
-                                    </Table>
-                                </CardContent>
-                                {!isBomberoRole && (
-                                <CardFooter>
-                                    <Button onClick={generateLeavesPdf} disabled={generatingPdf || leavesReportData.length === 0}>
-                                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                        {generatingPdf ? "Generando..." : "Generar PDF de Licencias"}
-                                    </Button>
-                                </CardFooter>
-                                )}
-                            </Card>
-                        ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de licencias para los filtros seleccionados.</p></div> )}
-                    </TabsContent>
-                )}
-            </Tabs>
+                    <Card className="mt-8">
+                        <CardHeader>
+                            <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
+                            <CardDescription>Seleccione qué contenido incluir en la exportación del PDF.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col space-y-4 mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="include-summary-pdf"
+                                        checked={includeSummaryInPdf}
+                                        onCheckedChange={setIncludeSummaryInPdf}
+                                    />
+                                    <Label htmlFor="include-summary-pdf">Incluir resumen por porcentaje</Label>
+                                </div>
+                                    <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="include-details-pdf"
+                                        checked={includeDetailsInPdf}
+                                        onCheckedChange={setIncludeDetailsInPdf}
+                                    />
+                                    <Label htmlFor="include-details-pdf">Incluir detalle de asistencia por clase</Label>
+                                </div>
+                            </div>
+                            <Button onClick={generatePdf} disabled={generatingPdf}>
+                                {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                {generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
         </>
     );
 }
+
