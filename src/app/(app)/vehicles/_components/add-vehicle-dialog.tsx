@@ -29,7 +29,7 @@ import { Badge } from "@/components/ui/badge";
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
-const cuarteles = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
+const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
 const MultiFirefighterSelect = ({ 
     title, 
@@ -119,7 +119,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     modelo: '',
     ano: new Date().getFullYear(),
     kilometraje: 0,
-    cuartel: 'Deposito C1',
+    cuartel: 'Cuartel 1',
     especialidad: 'FUEGO',
     capacidadAgua: 0,
     tipoVehiculo: 'Liviana',
@@ -166,7 +166,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         modelo: '',
         ano: new Date().getFullYear(),
         kilometraje: 0,
-        cuartel: 'Deposito C1',
+        cuartel: 'Cuartel 1',
         especialidad: 'FUEGO',
         capacidadAgua: 0,
         tipoVehiculo: 'Liviana',

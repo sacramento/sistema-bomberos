@@ -36,7 +36,7 @@ import ImportMaterialsDialog from "./_components/import-materials-dialog";
 
 const materialTypes: Material['tipo'][] = ['PROTECCIÓN', 'RESPIRACIÓN', 'MÉDICO', 'HERRAMIENTAS', 'RESCATE (EQUIPOS)', 'EXTINCIÓN', 'ILUMINACIÓN', 'COMUNICACIÓN', 'ACCESO', 'LOGÍSTICA', 'DOCUMENTACIÓN', 'SEÑALIZACIÓN'];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
-const firehouses: Material['cuartel'][] = ['Deposito C1', 'Deposito C2', 'Deposito C3'];
+const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
@@ -252,7 +252,7 @@ export default function MaterialsPage() {
 
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Ubicación', 'Depósito', 'Estado', 'Condición']],
+                    head: [['Código', 'Nombre', 'Ubicación', 'Cuartel', 'Estado', 'Condición']],
                     body: generalFilteredMaterials.map(item => [
                         item.codigo,
                         item.nombre,
@@ -477,7 +477,7 @@ export default function MaterialsPage() {
                                         </Select>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Depósito</Label>
+                                        <Label>Cuartel</Label>
                                         <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
                                             <SelectTrigger><SelectValue /></SelectTrigger>
                                             <SelectContent>

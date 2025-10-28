@@ -122,22 +122,22 @@ export default function ClassesPage() {
     if (suboficialesOficialesCount / totalAttendees > 0.8) return 'border-red-500';
     
     // Prioridad 3: Clase General (contiene al menos uno de cada cuartel)
-    const firehouseCounts: Record<string, number> = { 'Deposito C1': 0, 'Deposito C2': 0, 'Deposito C3': 0 };
+    const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
     attendees.forEach(a => {
         if (firehouseCounts.hasOwnProperty(a.firehouse)) {
             firehouseCounts[a.firehouse]++;
         }
     });
-    const hasC1 = firehouseCounts['Deposito C1'] > 0;
-    const hasC2 = firehouseCounts['Deposito C2'] > 0;
-    const hasC3 = firehouseCounts['Deposito C3'] > 0;
+    const hasC1 = firehouseCounts['Cuartel 1'] > 0;
+    const hasC2 = firehouseCounts['Cuartel 2'] > 0;
+    const hasC3 = firehouseCounts['Cuartel 3'] > 0;
 
     if (hasC1 && hasC2 && hasC3) return 'border-gray-500';
 
     // Prioridad 4: Mayoría de Cuartel
-    if (firehouseCounts['Deposito C1'] / totalAttendees > 0.6) return 'border-yellow-500';
-    if (firehouseCounts['Deposito C2'] / totalAttendees > 0.6) return 'border-blue-500';
-    if (firehouseCounts['Deposito C3'] / totalAttendees > 0.6) return 'border-orange-500';
+    if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) return 'border-yellow-500';
+    if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'border-blue-500';
+    if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'border-orange-500';
     
     // Último Recurso
     return 'border-gray-500';
@@ -391,16 +391,16 @@ export default function ClassesPage() {
                       </Select>
                   </div>
                    <div className="space-y-2">
-                       <Label>Depósito</Label>
+                       <Label>Cuartel</Label>
                         <Select value={filterStation} onValueChange={setFilterStation}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Todos los depósitos" />
+                                <SelectValue placeholder="Todos los cuarteles" />
                             </SelectTrigger>
                             <SelectContent>
-                               <SelectItem value="all">Todos los Depósitos</SelectItem>
-                               <SelectItem value="Deposito C1">Deposito C1</SelectItem>
-                               <SelectItem value="Deposito C2">Deposito C2</SelectItem>
-                               <SelectItem value="Deposito C3">Deposito C3</SelectItem>
+                               <SelectItem value="all">Todos los Cuarteles</SelectItem>
+                               <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
+                               <SelectItem value="Cuartel 2">Cuartel 2</SelectItem>
+                               <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>

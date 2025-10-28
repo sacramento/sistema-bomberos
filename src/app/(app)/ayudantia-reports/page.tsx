@@ -32,9 +32,9 @@ const hierarchyOptions = [
 ];
 
 const stationOptions = [
-    { value: 'Deposito C1', label: 'Deposito C1' },
-    { value: 'Deposito C2', label: 'Deposito C2' },
-    { value: 'Deposito C3', label: 'Deposito C3' },
+    { value: 'Cuartel 1', label: 'Cuartel 1' },
+    { value: 'Cuartel 2', label: 'Cuartel 2' },
+    { value: 'Cuartel 3', label: 'Cuartel 3' },
 ];
 
 const MultiSelectFilter = ({
@@ -257,8 +257,8 @@ export default function AyudantiaReportsPage() {
                         <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
                     </div>
                     <div className="space-y-2">
-                        <Label>Depósito</Label>
-                        <MultiSelectFilter title="Depósitos" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
+                        <Label>Cuartel</Label>
+                        <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
                     </div>
                 </CardContent>
             </Card>

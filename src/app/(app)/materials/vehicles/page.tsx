@@ -75,7 +75,7 @@ export default function MaterialVehiclesPage() {
                         <Card key={vehicle.id} className="overflow-hidden">
                             <CardHeader>
                                 <CardTitle className="font-headline text-xl">{vehicle.numeroMovil}</CardTitle>
-                                <CardDescription>{vehicle.marca} {vehicle.modelo} - Depósito: {vehicle.cuartel}</CardDescription>
+                                <CardDescription>{vehicle.marca} {vehicle.modelo} - Cuartel: {vehicle.cuartel}</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <Carousel opts={{ loop: true }} className="w-full max-w-4xl mx-auto">

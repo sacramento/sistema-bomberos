@@ -31,9 +31,9 @@ interface DetailItemProps {
 
 const getCuartelBadgeClass = (cuartel: Vehicle['cuartel']) => {
     switch (cuartel) {
-        case 'Deposito C1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
-        case 'Deposito C2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
-        case 'Deposito C3': return 'bg-green-600 text-white hover:bg-green-600/90';
+        case 'Cuartel 1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
+        case 'Cuartel 2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
+        case 'Cuartel 3': return 'bg-green-600 text-white hover:bg-green-600/90';
         default: return 'bg-secondary text-secondary-foreground';
     }
 }
@@ -171,7 +171,7 @@ export default function VehicleDetailPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
                                 <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
-                                <DetailItem icon={MapPin} label="Depósito" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
+                                <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
                                 <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
                                 <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
                                 <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />

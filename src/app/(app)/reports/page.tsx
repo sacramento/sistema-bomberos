@@ -45,9 +45,9 @@ const hierarchyOptions = [
 ];
 
 const stationOptions = [
-    { value: 'Deposito C1', label: 'Deposito C1' },
-    { value: 'Deposito C2', label: 'Deposito C2' },
-    { value: 'Deposito C3', label: 'Deposito C3' },
+    { value: 'Cuartel 1', label: 'Cuartel 1' },
+    { value: 'Cuartel 2', label: 'Cuartel 2' },
+    { value: 'Cuartel 3', label: 'Cuartel 3' },
 ];
 
 const PIE_CHART_COLORS = {
@@ -379,7 +379,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 let lastSummaryFirehouse = '';
 
                 sortedSummary.forEach(item => {
-                    const firehouse = item.firefighterFirehouse || 'Sin Depósito';
+                    const firehouse = item.firefighterFirehouse || 'Sin Cuartel';
                     if (firehouse !== lastSummaryFirehouse) {
                         summaryBody.push([{ content: `--- ${firehouse} ---`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
                         lastSummaryFirehouse = firehouse;
@@ -412,8 +412,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 currentY += 8;
 
                  const sortedDetails = [...attendanceReportData.details].sort((a, b) => {
-                    const firehouseA = a.firefighter.firehouse || 'Sin Depósito';
-                    const firehouseB = b.firefighter.firehouse || 'Sin Depósito';
+                    const firehouseA = a.firefighter.firehouse || 'Sin Cuartel';
+                    const firehouseB = b.firefighter.firehouse || 'Sin Cuartel';
                     if (firehouseA !== firehouseB) {
                         return firehouseA.localeCompare(firehouseB);
                     }
@@ -424,7 +424,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 let lastDetailFirehouse = '';
 
                 sortedDetails.forEach(item => {
-                    const firehouse = item.firefighter.firehouse || 'Sin Depósito';
+                    const firehouse = item.firefighter.firehouse || 'Sin Cuartel';
                     if (firehouse !== lastDetailFirehouse) {
                         detailBody.push([{ content: `--- ${firehouse} ---`, colSpan: 6, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
                         lastDetailFirehouse = firehouse;
@@ -779,8 +779,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                             <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
                         </div>
                         <div className="space-y-2">
-                            <Label>Depósito</Label>
-                            <MultiSelectFilter title="Depósitos" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
+                            <Label>Cuartel</Label>
+                            <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
                         </div>
                     </>
                 )}
