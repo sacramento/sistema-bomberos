@@ -112,25 +112,21 @@ export default function MobilityReportsPage() {
             return;
         }
 
-        const selectedVehicleForTitle = allVehicles.find(v => v.id === filterVehicle);
         setGeneratingPdf(true);
         const doc = new jsPDF();
         
         try {
             // PDF Header
-            doc.setFillColor(220, 53, 69);
+            doc.setFillColor(34, 43, 54); // Dark gray
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            const title = selectedVehicleForTitle 
-                ? `Reporte de Mantenimiento - Móvil ${selectedVehicleForTitle.numeroMovil}`
-                : 'Reporte General de Mantenimiento';
-            doc.text(title, 14, 22);
+            doc.text("Reporte de Mantenimiento", 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             let currentY = 50;
-            
+
             const recordsByVehicle = filteredRecords.reduce((acc, record) => {
                 (acc[record.vehicleId] = acc[record.vehicleId] || []).push(record);
                 return acc;
@@ -138,28 +134,68 @@ export default function MobilityReportsPage() {
 
             for (const vehicleId in recordsByVehicle) {
                 if (currentY > 20) currentY += 5;
-                if (currentY > 250) { doc.addPage(); currentY = 20; }
                 
                 const vehicle = allVehicles.find(v => v.id === vehicleId);
                 const records = recordsByVehicle[vehicleId];
                 
+                if (currentY > 240) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(16);
+                doc.setTextColor(40, 40, 40);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Móvil ${vehicle?.numeroMovil || 'Desconocido'}`, 14, currentY);
+                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, 14, currentY);
                 currentY += 10;
                 
-                (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Fecha', 'Kilometraje', 'Observaciones']],
-                    body: records.map(item => [
-                        format(parseISO(item.date), 'P', { locale: es }),
-                        item.mileage.toLocaleString('es-AR'),
-                        item.observations || 'N/A'
-                    ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: '#333333' },
-                });
-                currentY = (doc as any).lastAutoTable.finalY;
+                for (const record of records) {
+                    if (currentY > 240) { doc.addPage(); currentY = 20; }
+                    
+                    doc.setLineWidth(0.5);
+                    doc.setDrawColor(220, 220, 220); // Light gray border
+                    doc.roundedRect(14, currentY, doc.internal.pageSize.getWidth() - 28, 1, 1, 1, 'S'); // Placeholder for content height
+                    
+                    let contentStartY = currentY;
+                    currentY += 8;
+
+                    // Date and Mileage
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(`Fecha de Servicio: ${format(parseISO(record.date), 'P', { locale: es })}`, 20, currentY);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(`Kilometraje: ${record.mileage.toLocaleString('es-AR')} km`, doc.internal.pageSize.getWidth() / 2 + 10, currentY);
+                    currentY += 8;
+                    
+                    // Checklist
+                    if (record.checklist && record.checklist.length > 0) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.text("Checklist Realizado:", 20, currentY);
+                        currentY += 6;
+                        (doc as any).autoTable({
+                            startY: currentY,
+                            body: record.checklist.map(item => [item.name, item.checked ? 'Sí' : 'No']),
+                            margin: { left: 20, right: 20 },
+                            theme: 'grid',
+                            headStyles: { fillColor: '#f8f9fa', textColor: '#343a40', fontStyle: 'bold' },
+                            columnStyles: { 1: { halign: 'center' } },
+                        });
+                        currentY = (doc as any).lastAutoTable.finalY + 5;
+                    }
+                    
+                    // Observations
+                    if (record.observations) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.text("Observaciones:", 20, currentY);
+                        currentY += 5;
+                        doc.setFont('helvetica', 'normal');
+                        const splitText = doc.splitTextToSize(record.observations, doc.internal.pageSize.getWidth() - 40);
+                        doc.text(splitText, 20, currentY);
+                        currentY += splitText.length * 4 + 5;
+                    }
+
+                    // Draw the rounded rectangle with correct height
+                    let finalContentHeight = currentY - contentStartY - 5;
+                    doc.setDrawColor(220, 220, 220);
+                    doc.roundedRect(14, contentStartY, doc.internal.pageSize.getWidth() - 28, finalContentHeight, 3, 3, 'S');
+                    currentY += 5;
+                }
             }
 
             if (filteredRecords.length === 0) {
@@ -173,6 +209,7 @@ export default function MobilityReportsPage() {
             setGeneratingPdf(false);
         }
     };
+
 
     return (
         <>
