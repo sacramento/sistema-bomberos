@@ -44,11 +44,11 @@ const stationOptions = [
 ];
 
 const LEAVE_CHART_COLORS: Record<LeaveType, string> = {
-    Ordinaria: "#3B82F6",       // blue-500
-    Extraordinaria: "#8B5CF6", // violet-500
-    Enfermedad: "#FBBF24",     // yellow-400
-    Estudio: "#10B981",        // emerald-500
-    Maternidad: "#EC4899",     // pink-500
+    Ordinaria: "#22C55E",      // green-500 (from Asistencia)
+    Extraordinaria: "#3B82F6", // blue-500 (from Asistencia)
+    Enfermedad: "#FBBF24",     // yellow-400 (from Asistencia)
+    Estudio: "#8B5CF6",        // violet-500 (from Asistencia)
+    Maternidad: "#EF4444",     // red-500 (from Asistencia)
 };
 
 
