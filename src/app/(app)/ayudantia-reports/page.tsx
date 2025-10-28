@@ -7,14 +7,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, ChevronsUpDown, Check, Loader2, ClipboardMinus, Gavel } from "lucide-react";
+import { Calendar as CalendarIcon, Download, ChevronsUpDown, Check, Loader2, ClipboardMinus, Gavel, UserX, UserCheck } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Firefighter, Leave, Sanction } from "@/lib/types";
+import { Firefighter, Leave, Sanction, LeaveType } from "@/lib/types";
 import { getLeaves } from "@/services/leaves.service";
 import { getSanctions } from "@/services/sanctions.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -27,6 +27,9 @@ import { Badge } from "@/components/ui/badge";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Switch } from "@/components/ui/switch";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -39,6 +42,14 @@ const stationOptions = [
     { value: 'Cuartel 2', label: 'Cuartel 2' },
     { value: 'Cuartel 3', label: 'Cuartel 3' },
 ];
+
+const LEAVE_CHART_COLORS: Record<LeaveType, string> = {
+    Ordinaria: "#3B82F6", // blue-500
+    Extraordinaria: "#8B5CF6", // violet-500
+    Enfermedad: "#FBBF24", // yellow-400
+    Estudio: "#10B981", // emerald-500
+    Maternidad: "#EC4899", // pink-500
+};
 
 const MultiSelectFilter = ({
     title,
@@ -161,7 +172,34 @@ export default function AyudantiaReportsPage() {
         setFiltersApplied(isFilterActive);
     }, [filterDate, filterHierarchy, filterStation, filterFirefighter]);
 
+    const summaryStats = useMemo(() => {
+        const today = new Date();
+        const activeLeavesToday = allLeaves.filter(l => isWithinInterval(today, { start: parseISO(l.startDate), end: parseISO(l.endDate) })).length;
+        const activeSanctionsToday = allSanctions.filter(s => isWithinInterval(today, { start: parseISO(s.startDate), end: parseISO(s.endDate) })).length;
+        
+        const leavesByType = allLeaves.reduce((acc, leave) => {
+            acc[leave.type] = (acc[leave.type] || 0) + 1;
+            return acc;
+        }, {} as Record<LeaveType, number>);
+
+        const pieData = Object.entries(leavesByType).map(([name, value]) => ({
+            name,
+            value,
+            fill: LEAVE_CHART_COLORS[name as LeaveType] || '#ccc'
+        })).filter(item => item.value > 0);
+
+        return {
+            totalLeaves: allLeaves.length,
+            totalSanctions: allSanctions.length,
+            activeLeavesToday,
+            activeSanctionsToday,
+            pieData
+        }
+    }, [allLeaves, allSanctions]);
+
     const filteredData = useMemo(() => {
+        if (!filtersApplied) return { leaves: [], sanctions: [] };
+
         const applyFilters = <T extends Leave | Sanction>(items: T[]): T[] => {
             return items.filter(item => {
                 const firefighter = allFirefighters.find(f => f.id === item.firefighterId);
@@ -197,7 +235,7 @@ export default function AyudantiaReportsPage() {
             leaves: applyFilters(allLeaves) as Leave[],
             sanctions: applyFilters(allSanctions) as Sanction[],
         };
-    }, [allLeaves, allSanctions, allFirefighters, filterDate, filterHierarchy, filterStation, filterFirefighter]);
+    }, [filtersApplied, allLeaves, allSanctions, allFirefighters, filterDate, filterHierarchy, filterStation, filterFirefighter]);
 
     const generatePdf = async () => {
         if (!includeLeaves && !includeSanctions) {
@@ -278,7 +316,6 @@ export default function AyudantiaReportsPage() {
         }
     };
 
-
     if (loading) {
         return (
             <>
@@ -333,6 +370,50 @@ export default function AyudantiaReportsPage() {
             </CardContent>
         </Card>
     );
+    
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+        if (percent < 0.05) return null; // Don't render label for tiny slices
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
+
+    const renderSummary = () => (
+        <div className="space-y-8">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Licencias Activas Hoy</CardTitle><UserX className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.activeLeavesToday}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Sanciones Activas Hoy</CardTitle><Gavel className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.activeSanctionsToday}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Licencias</CardTitle><ClipboardMinus className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.totalLeaves}</div></CardContent></Card>
+                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Sanciones</CardTitle><Gavel className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.totalSanctions}</div></CardContent></Card>
+            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Distribución de Tipos de Licencia</CardTitle>
+                    <CardDescription>Resumen de todas las licencias registradas en el sistema.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <ChartContainer config={{}} className="h-64 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={renderCustomizedLabel}>
+                                    {summaryStats.pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                </Pie>
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                </CardContent>
+            </Card>
+        </div>
+    );
 
     return (
         <div className="space-y-8">
@@ -384,12 +465,7 @@ export default function AyudantiaReportsPage() {
                     <TabsContent value="sanctions">{renderSanctionTable()}</TabsContent>
                 </Tabs>
             ) : (
-                <Card className="text-center py-16">
-                    <CardHeader>
-                        <CardTitle className="font-headline">Comience su Búsqueda</CardTitle>
-                        <CardDescription>Aplique uno o más filtros para ver los resultados.</CardDescription>
-                    </CardHeader>
-                </Card>
+                renderSummary()
             )}
             
              <Card>
@@ -412,9 +488,9 @@ export default function AyudantiaReportsPage() {
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         {generatingPdf ? "Generando..." : "Generar PDF"}
                     </Button>
+                     {!filtersApplied && <p className="text-sm text-muted-foreground">Aplique al menos un filtro para poder generar un reporte.</p>}
                 </CardContent>
             </Card>
         </div>
     );
 }
-
