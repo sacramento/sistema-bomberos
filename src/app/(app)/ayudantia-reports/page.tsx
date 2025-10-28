@@ -44,12 +44,13 @@ const stationOptions = [
 ];
 
 const LEAVE_CHART_COLORS: Record<LeaveType, string> = {
-    Ordinaria: "#3B82F6", // blue-500
+    Ordinaria: "#3B82F6",       // blue-500
     Extraordinaria: "#8B5CF6", // violet-500
-    Enfermedad: "#FBBF24", // yellow-400
-    Estudio: "#10B981", // emerald-500
-    Maternidad: "#EC4899", // pink-500
+    Enfermedad: "#FBBF24",     // yellow-400
+    Estudio: "#10B981",        // emerald-500
+    Maternidad: "#EC4899",     // pink-500
 };
+
 
 const MultiSelectFilter = ({
     title,
@@ -399,7 +400,7 @@ export default function AyudantiaReportsPage() {
                     <CardDescription>Resumen de todas las licencias registradas en el sistema.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ChartContainer config={{}} className="h-64 w-full">
+                     <ChartContainer config={{}} className="h-64 w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
