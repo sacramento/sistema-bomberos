@@ -26,6 +26,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Switch } from "@/components/ui/switch";
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -112,6 +113,11 @@ export default function AyudantiaReportsPage() {
     const [filterStation, setFilterStation] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
+    const [filtersApplied, setFiltersApplied] = useState(false);
+    
+    // PDF Export Options
+    const [includeLeaves, setIncludeLeaves] = useState(true);
+    const [includeSanctions, setIncludeSanctions] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -148,6 +154,12 @@ export default function AyudantiaReportsPage() {
         fetchData();
         fetchLogo();
     }, [toast]);
+    
+    useEffect(() => {
+        // Track if any filter is active
+        const isFilterActive = filterDate !== undefined || filterHierarchy.length > 0 || filterStation.length > 0 || filterFirefighter !== 'all';
+        setFiltersApplied(isFilterActive);
+    }, [filterDate, filterHierarchy, filterStation, filterFirefighter]);
 
     const filteredData = useMemo(() => {
         const applyFilters = <T extends Leave | Sanction>(items: T[]): T[] => {
@@ -187,56 +199,78 @@ export default function AyudantiaReportsPage() {
         };
     }, [allLeaves, allSanctions, allFirefighters, filterDate, filterHierarchy, filterStation, filterFirefighter]);
 
-    const generatePdf = async (type: 'leaves' | 'sanctions') => {
+    const generatePdf = async () => {
+        if (!includeLeaves && !includeSanctions) {
+            toast({ title: "Acción requerida", description: "Debe seleccionar al menos un tipo de reporte para exportar.", variant: "destructive" });
+            return;
+        }
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
         }
 
         setGeneratingPdf(true);
         const doc = new jsPDF();
+        let currentY = 20; // Initial Y position
+        const pageHeight = doc.internal.pageSize.height;
         
         try {
-            const title = type === 'leaves' ? 'Reporte de Licencias' : 'Reporte de Sanciones';
-            const data = type === 'leaves' ? filteredData.leaves : filteredData.sanctions;
+            const addHeader = (title: string) => {
+                doc.setFillColor(220, 53, 69);
+                doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+                doc.setFontSize(22);
+                doc.setTextColor(255, 255, 255);
+                doc.setFont('helvetica', 'bold');
+                doc.text(title, 14, 22);
+                doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+                currentY = 45;
+            };
+
+            const addFilterInfo = () => {
+                const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+                doc.setFontSize(11);
+                doc.setTextColor(108, 117, 125);
+                doc.setFont('helvetica', 'normal');
+                doc.text(dateText, 14, currentY);
+                currentY += 10;
+            };
+
+            let title = 'Reporte de Ayudantía';
+            if (includeLeaves && !includeSanctions) title = 'Reporte de Licencias';
+            if (!includeLeaves && includeSanctions) title = 'Reporte de Sanciones';
+            addHeader(title);
+            addFilterInfo();
             
-            doc.setFillColor(220, 53, 69);
-            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
-            doc.setFontSize(22);
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.text(title, 14, 22);
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
-
-            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
-            doc.setFontSize(11);
-            doc.setTextColor(108, 117, 125);
-            doc.setFont('helvetica', 'normal');
-            doc.text(dateText, 14, 45);
-
-            let currentY = 55;
-
-            if (data.length > 0) {
-                 const head = type === 'leaves' 
-                    ? [['Bombero', 'Tipo', 'Desde', 'Hasta']]
-                    : [['Bombero', 'Motivo', 'Desde', 'Hasta']];
-                
-                const body = data.map(item => type === 'leaves'
-                    ? [item.firefighterName, (item as Leave).type, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })]
-                    : [item.firefighterName, (item as Sanction).reason, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })]
+            const addTable = (sectionTitle: string, head: any[], body: any[]) => {
+                if (body.length > 0) {
+                     if (currentY > 20) doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(0,0,0); doc.text(sectionTitle, 14, currentY); currentY += 8;
+                    (doc as any).autoTable({
+                        startY: currentY,
+                        head: head,
+                        body: body,
+                        theme: 'striped',
+                        headStyles: { fillColor: '#333333' },
+                        didDrawPage: (data: any) => { currentY = data.cursor.y + 15; }
+                    });
+                    currentY = (doc as any).lastAutoTable.finalY + 15;
+                }
+            };
+            
+            if (includeLeaves) {
+                addTable('Licencias', 
+                    [['Bombero', 'Tipo', 'Desde', 'Hasta']], 
+                    filteredData.leaves.map(item => [item.firefighterName, item.type, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })])
                 );
-
-                 (doc as any).autoTable({
-                    startY: currentY,
-                    head: head,
-                    body: body,
-                    theme: 'striped',
-                    headStyles: { fillColor: '#333333' },
-                });
-            } else {
-                 doc.text("No se encontraron registros con los filtros aplicados.", 14, currentY);
             }
             
-            doc.save(`reporte-${type}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            if (includeSanctions) {
+                if (includeLeaves && filteredData.sanctions.length > 0 && currentY > pageHeight - 50) { doc.addPage(); addHeader(title); addFilterInfo(); }
+                addTable('Sanciones', 
+                    [['Bombero', 'Motivo', 'Desde', 'Hasta']], 
+                    filteredData.sanctions.map(item => [item.firefighterName, item.reason, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })])
+                );
+            }
+
+            doc.save(`reporte-ayudantia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
@@ -340,28 +374,43 @@ export default function AyudantiaReportsPage() {
                 </CardContent>
             </Card>
 
-            <Tabs defaultValue="leaves" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
-                    <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>
-                    <TabsTrigger value="sanctions"><Gavel className="mr-2 h-4 w-4"/>Sanciones</TabsTrigger>
-                </TabsList>
-                <TabsContent value="leaves">{renderLeaveTable()}</TabsContent>
-                <TabsContent value="sanctions">{renderSanctionTable()}</TabsContent>
-            </Tabs>
+            {filtersApplied ? (
+                 <Tabs defaultValue="leaves" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
+                        <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>
+                        <TabsTrigger value="sanctions"><Gavel className="mr-2 h-4 w-4"/>Sanciones</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="leaves">{renderLeaveTable()}</TabsContent>
+                    <TabsContent value="sanctions">{renderSanctionTable()}</TabsContent>
+                </Tabs>
+            ) : (
+                <Card className="text-center py-16">
+                    <CardHeader>
+                        <CardTitle className="font-headline">Comience su Búsqueda</CardTitle>
+                        <CardDescription>Aplique uno o más filtros para ver los resultados.</CardDescription>
+                    </CardHeader>
+                </Card>
+            )}
             
              <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Exportar Reportes</CardTitle>
-                    <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
+                    <CardTitle className="font-headline">Exportar Reporte</CardTitle>
+                    <CardDescription>Seleccione qué incluir y genere un archivo PDF con los resultados filtrados.</CardDescription>
                 </CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-4">
-                    <Button onClick={() => generatePdf('leaves')} disabled={generatingPdf || filteredData.leaves.length === 0} className="w-full sm:w-auto">
+                <CardContent className="space-y-4">
+                     <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="include-leaves" checked={includeLeaves} onCheckedChange={setIncludeLeaves} />
+                            <Label htmlFor="include-leaves">Incluir Licencias</Label>
+                        </div>
+                         <div className="flex items-center space-x-2">
+                            <Switch id="include-sanctions" checked={includeSanctions} onCheckedChange={setIncludeSanctions}/>
+                            <Label htmlFor="include-sanctions">Incluir Sanciones</Label>
+                        </div>
+                    </div>
+                    <Button onClick={generatePdf} disabled={generatingPdf || !filtersApplied}>
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {generatingPdf ? "Generando..." : "Exportar Licencias"}
-                    </Button>
-                    <Button onClick={() => generatePdf('sanctions')} disabled={generatingPdf || filteredData.sanctions.length === 0} className="w-full sm:w-auto">
-                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {generatingPdf ? "Generando..." : "Exportar Sanciones"}
+                        {generatingPdf ? "Generando..." : "Generar PDF"}
                     </Button>
                 </CardContent>
             </Card>
