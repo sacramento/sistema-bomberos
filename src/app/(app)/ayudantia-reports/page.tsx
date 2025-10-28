@@ -24,6 +24,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -96,6 +98,8 @@ const MultiSelectFilter = ({
 export default function AyudantiaReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     // Raw Data
     const [allLeaves, setAllLeaves] = useState<Leave[]>([]);
@@ -127,11 +131,26 @@ export default function AyudantiaReportsPage() {
                 setLoading(false);
             }
         };
+        const fetchLogo = async () => {
+             try {
+                const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLogoDataUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+             } catch (error) {
+                 console.error("Failed to load logo for PDF", error);
+             }
+        }
+
         fetchData();
+        fetchLogo();
     }, [toast]);
 
     const filteredData = useMemo(() => {
-        const applyFilters = (items: (Leave | Sanction)[]) => {
+        const applyFilters = <T extends Leave | Sanction>(items: T[]): T[] => {
             return items.filter(item => {
                 const firefighter = allFirefighters.find(f => f.id === item.firefighterId);
                 if (!firefighter || firefighter.status !== 'Active') return false;
@@ -167,6 +186,64 @@ export default function AyudantiaReportsPage() {
             sanctions: applyFilters(allSanctions) as Sanction[],
         };
     }, [allLeaves, allSanctions, allFirefighters, filterDate, filterHierarchy, filterStation, filterFirefighter]);
+
+    const generatePdf = async (type: 'leaves' | 'sanctions') => {
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" }); return;
+        }
+
+        setGeneratingPdf(true);
+        const doc = new jsPDF();
+        
+        try {
+            const title = type === 'leaves' ? 'Reporte de Licencias' : 'Reporte de Sanciones';
+            const data = type === 'leaves' ? filteredData.leaves : filteredData.sanctions;
+            
+            doc.setFillColor(220, 53, 69);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text(title, 14, 22);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+
+            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+            doc.setFontSize(11);
+            doc.setTextColor(108, 117, 125);
+            doc.setFont('helvetica', 'normal');
+            doc.text(dateText, 14, 45);
+
+            let currentY = 55;
+
+            if (data.length > 0) {
+                 const head = type === 'leaves' 
+                    ? [['Bombero', 'Tipo', 'Desde', 'Hasta']]
+                    : [['Bombero', 'Motivo', 'Desde', 'Hasta']];
+                
+                const body = data.map(item => type === 'leaves'
+                    ? [item.firefighterName, (item as Leave).type, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })]
+                    : [item.firefighterName, (item as Sanction).reason, format(parseISO(item.startDate), "P", { locale: es }), format(parseISO(item.endDate), "P", { locale: es })]
+                );
+
+                 (doc as any).autoTable({
+                    startY: currentY,
+                    head: head,
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333333' },
+                });
+            } else {
+                 doc.text("No se encontraron registros con los filtros aplicados.", 14, currentY);
+            }
+            
+            doc.save(`reporte-${type}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
 
     if (loading) {
         return (
@@ -224,7 +301,7 @@ export default function AyudantiaReportsPage() {
     );
 
     return (
-        <>
+        <div className="space-y-8">
             <PageHeader title="Reportes de Ayudantía" description="Filtre y visualice los registros de licencias y sanciones del personal." />
             <Card className="mb-8">
                 <CardHeader>
@@ -271,6 +348,24 @@ export default function AyudantiaReportsPage() {
                 <TabsContent value="leaves">{renderLeaveTable()}</TabsContent>
                 <TabsContent value="sanctions">{renderSanctionTable()}</TabsContent>
             </Tabs>
-        </>
+            
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Exportar Reportes</CardTitle>
+                    <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4">
+                    <Button onClick={() => generatePdf('leaves')} disabled={generatingPdf || filteredData.leaves.length === 0} className="w-full sm:w-auto">
+                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingPdf ? "Generando..." : "Exportar Licencias"}
+                    </Button>
+                    <Button onClick={() => generatePdf('sanctions')} disabled={generatingPdf || filteredData.sanctions.length === 0} className="w-full sm:w-auto">
+                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingPdf ? "Generando..." : "Exportar Sanciones"}
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
+
