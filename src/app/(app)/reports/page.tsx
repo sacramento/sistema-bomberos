@@ -8,14 +8,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2, ClipboardMinus, Percent } from "lucide-react";
+import { Calendar as CalendarIcon, Download, UserCheck, UserX, Clock, ShieldAlert, ChevronsUpDown, Check, Loader2, ClipboardMinus, Percent, GraduationCap, Users } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Session, Firefighter, AttendanceStatus, Course } from "@/lib/types";
+import { Session, Firefighter, AttendanceStatus, Course, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getCourses } from "@/services/courses.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -36,7 +36,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePathname } from 'next/navigation';
 
 
-const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -57,6 +57,20 @@ const PIE_CHART_COLORS = {
     excused: "#8B5CF6", // violet-500
     recupero: "#3B82F6", // blue-500
 };
+
+const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
+    RESCATE: "#3B82F6", // blue-500
+    FUEGO: "#EF4444", // red-500
+    APH: "#22C55E", // green-500
+    HAZ-MAT: "#F97316", // orange-500
+    FORESTAL: "#16A34A", // green-600
+    BUCEO: "#0EA5E9", // sky-500
+    PAE: "#FBBF24", // yellow-400
+    GORA: "#A855F7", // purple-500
+    KAIZEN: "#6366F1", // indigo-500
+    VARIOS: "#64748B", // slate-500
+};
+
 
 const getStatusClass = (status: AttendanceStatus) => {
     switch (status) {
@@ -898,6 +912,21 @@ function CoursesReportTab() {
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
+    
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        if (percent === 0) return null;
+
+        return (
+            <text x={x} y={y} fill={'#333'} textAnchor="middle" dominantBaseline="central" style={{ fontSize: '14px', fontWeight: 'bold', paintOrder: 'stroke', stroke: '#fff', strokeWidth: '3px', strokeLinecap: 'butt', strokeLinejoin: 'miter' }}>
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -1010,10 +1039,36 @@ function CoursesReportTab() {
             return true;
         });
     }, [allCourses, filterDate, filterSpecialization, filterFirefighter]);
+    
+    const summaryStats = useMemo(() => {
+        const coursesByType = filteredCourses.reduce((acc, course) => {
+            acc[course.specialization] = (acc[course.specialization] || 0) + 1;
+            return acc;
+        }, {} as Record<Specialization, number>);
+
+        const pieData = Object.entries(coursesByType).map(([name, value]) => ({
+            name,
+            value,
+            fill: SPECIALIZATION_CHART_COLORS[name as Specialization] || '#ccc'
+        })).filter(item => item.value > 0);
+
+        return {
+            totalCourses: filteredCourses.length,
+            uniqueFirefighters: new Set(filteredCourses.map(c => c.firefighterId)).size,
+            pieData
+        }
+
+    }, [filteredCourses]);
+
 
     if (loading) {
         return <Skeleton className="w-full h-96" />;
     }
+    
+    const summaryCards = [
+        { title: "Cursos Registrados", value: summaryStats.totalCourses, icon: GraduationCap, color: "text-blue-500" },
+        { title: "Integrantes Capacitados", value: summaryStats.uniqueFirefighters, icon: Users, color: "text-green-500" },
+    ];
 
     return (
         <div className="space-y-8">
@@ -1078,42 +1133,75 @@ function CoursesReportTab() {
                 </CardContent>
             </Card>
 
-            {filteredCourses.length > 0 ? (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Resultados del Reporte</CardTitle>
-                        <CardDescription>Se encontraron {filteredCourses.length} cursos con los filtros aplicados.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Bombero</TableHead>
-                                    <TableHead className="hidden sm:table-cell">Legajo</TableHead>
-                                    <TableHead>Curso</TableHead>
-                                    <TableHead className="hidden md:table-cell">Lugar</TableHead>
-                                    <TableHead className="hidden lg:table-cell">Fecha</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredCourses.map((course) => (
-                                    <TableRow key={course.id}>
-                                        <TableCell className="font-medium">{course.firefighterName}</TableCell>
-                                        <TableCell className="hidden sm:table-cell">{course.firefighterLegajo}</TableCell>
-                                        <TableCell>{course.title}</TableCell>
-                                        <TableCell className="hidden md:table-cell">{course.location}</TableCell>
-                                        <TableCell className="hidden lg:table-cell">{format(parseISO(course.startDate), "P", { locale: es })} - {format(parseISO(course.endDate), "P", { locale: es })}</TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            ) : (
-                <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                    <p className="text-muted-foreground">No hay cursos para los filtros seleccionados.</p>
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                 <div className="lg:col-span-2 space-y-4">
+                     {summaryCards.map((card, index) => (
+                        <Card key={index}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                                <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{card.value}</div>
+                            </CardContent>
+                        </Card>
+                     ))}
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Distribución por Especialidad</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ChartContainer config={{}} className="h-[250px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                    <PieChart>
+                                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                        <Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
+                                            {summaryStats.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                                        </Pie>
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        </CardContent>
+                    </Card>
+                 </div>
+                 <div className="lg:col-span-3">
+                    {filteredCourses.length > 0 ? (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="font-headline">Resultados del Reporte</CardTitle>
+                                <CardDescription>Se encontraron {filteredCourses.length} cursos con los filtros aplicados.</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Bombero</TableHead>
+                                            <TableHead className="hidden sm:table-cell">Curso</TableHead>
+                                            <TableHead className="hidden md:table-cell">Lugar</TableHead>
+                                            <TableHead className="hidden lg:table-cell">Fecha</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredCourses.map((course) => (
+                                            <TableRow key={course.id}>
+                                                <TableCell className="font-medium">{course.firefighterName}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">{course.title}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{course.location}</TableCell>
+                                                <TableCell className="hidden lg:table-cell">{format(parseISO(course.startDate), "P", { locale: es })}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg">
+                            <p className="text-muted-foreground">No hay cursos para los filtros seleccionados.</p>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
             
             <Card>
                 <CardHeader>
