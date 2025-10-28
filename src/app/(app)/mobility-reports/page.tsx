@@ -143,18 +143,22 @@ export default function MobilityReportsPage() {
     
                 if (currentY > 240) { doc.addPage(); currentY = 20; }
                 
-                doc.setFillColor(243, 244, 246); // gray-100
-                doc.roundedRect(PADDING, currentY, CONTENT_WIDTH, 12, 3, 3, 'F');
                 doc.setFontSize(16);
                 doc.setTextColor(23, 37, 84); // gray-900
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, PADDING + 5, currentY + 8);
-                currentY += 18;
-    
+                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, PADDING, currentY);
+                currentY += 2;
+                
+                doc.setFillColor(51, 51, 51); // Dark gray for separator
+                doc.rect(PADDING, currentY, CONTENT_WIDTH, 0.5, 'F');
+                currentY += 8;
+
                 for (const record of records) {
                     const checklistYStart = currentY;
-                    let checklistHeight = 0;
                     
+                    doc.setFillColor(243, 244, 246); // gray-100
+                    const recordHeaderY = currentY;
+
                     // --- Record Header ---
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
@@ -169,9 +173,14 @@ export default function MobilityReportsPage() {
                         const COLUMN_WIDTH = CONTENT_WIDTH / COLUMNS;
                         let itemY = currentY;
                         let maxColHeight = 0;
+                        const itemHeightMultiplier = 3.5;
 
                         record.checklist.forEach((item, index) => {
                             const col = index % COLUMNS;
+                             if (col === 0 && index > 0) {
+                                itemY += maxColHeight;
+                                maxColHeight = 0;
+                            }
                             const x = PADDING + (col * COLUMN_WIDTH);
 
                             doc.setFontSize(9);
@@ -183,14 +192,10 @@ export default function MobilityReportsPage() {
                             const textLines = doc.splitTextToSize(item.name, COLUMN_WIDTH - 8);
                             doc.text(textLines, x + 5, itemY);
                             
-                            const itemHeight = textLines.length * 3.5;
+                            const itemHeight = textLines.length * itemHeightMultiplier;
                             maxColHeight = Math.max(maxColHeight, itemHeight);
-
-                            if (col === COLUMNS - 1) {
-                                itemY += maxColHeight;
-                                maxColHeight = 0;
-                            }
                         });
+                        itemY += maxColHeight;
                         currentY = itemY;
                     }
                     
@@ -210,12 +215,15 @@ export default function MobilityReportsPage() {
                         currentY += splitText.length * 3.5 + 4;
                     }
 
+                    // Background for the record
+                    const recordHeight = currentY - recordHeaderY -2;
+                    doc.setFillColor(248, 250, 252); // gray-50
+                    doc.roundedRect(PADDING, recordHeaderY - 5, CONTENT_WIDTH, recordHeight, 3, 3, 'F');
+
                     if (currentY > 260) {
                         doc.addPage();
                         currentY = 20;
                     } else if (records.indexOf(record) < records.length - 1) {
-                        doc.setDrawColor(229, 231, 235); // gray-200
-                        doc.line(PADDING, currentY, PAGE_WIDTH - PADDING, currentY);
                         currentY += 6;
                     }
                 }
@@ -388,3 +396,5 @@ export default function MobilityReportsPage() {
         </>
     );
 }
+
+    
