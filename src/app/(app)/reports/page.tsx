@@ -62,7 +62,7 @@ const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
     RESCATE: "#3B82F6", // blue-500
     FUEGO: "#EF4444", // red-500
     APH: "#22C55E", // green-500
-    HAZ-MAT: "#F97316", // orange-500
+    'HAZ-MAT': "#F97316", // orange-500
     FORESTAL: "#16A34A", // green-600
     BUCEO: "#0EA5E9", // sky-500
     PAE: "#FBBF24", // yellow-400
@@ -1133,46 +1133,46 @@ function CoursesReportTab() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-                 <div className="lg:col-span-2 space-y-4">
-                     {summaryCards.map((card, index) => (
-                        <Card key={index}>
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                                <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+             {filteredCourses.length > 0 ? (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                         {summaryCards.map((card, index) => (
+                            <Card key={index} className="lg:col-span-2">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                                    <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{card.value}</div>
+                                </CardContent>
+                            </Card>
+                         ))}
+                    </div>
+                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                        <Card className="lg:col-span-2">
+                            <CardHeader>
+                                <CardTitle className="font-headline">Distribución por Especialidad</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold">{card.value}</div>
+                                <ChartContainer config={{}} className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
+                                                {summaryStats.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                                            </Pie>
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
                             </CardContent>
                         </Card>
-                     ))}
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Distribución por Especialidad</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <ChartContainer config={{}} className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                        <Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
-                                            {summaryStats.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
-                                        </Pie>
-                                        <Legend />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-                 </div>
-                 <div className="lg:col-span-3">
-                    {filteredCourses.length > 0 ? (
-                        <Card>
+                        <Card className="lg:col-span-3">
                             <CardHeader>
                                 <CardTitle className="font-headline">Resultados del Reporte</CardTitle>
                                 <CardDescription>Se encontraron {filteredCourses.length} cursos con los filtros aplicados.</CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="max-h-[300px] overflow-y-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -1195,26 +1195,25 @@ function CoursesReportTab() {
                                 </Table>
                             </CardContent>
                         </Card>
-                    ) : (
-                        <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg">
-                            <p className="text-muted-foreground">No hay cursos para los filtros seleccionados.</p>
-                        </div>
-                    )}
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Exportar Reporte</CardTitle>
+                            <CardDescription>Genere un archivo PDF con los resultados de la búsqueda actual.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Button onClick={generatePdf} disabled={generatingPdf || filteredCourses.length === 0}>
+                                {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                {generatingPdf ? "Generando..." : "Generar PDF"}
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </div>
-            </div>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Exportar Reporte</CardTitle>
-                    <CardDescription>Genere un archivo PDF con los resultados de la búsqueda actual.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button onClick={generatePdf} disabled={generatingPdf || filteredCourses.length === 0}>
-                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {generatingPdf ? "Generando..." : "Generar PDF"}
-                    </Button>
-                </CardContent>
-            </Card>
+            ) : (
+                <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                    <p className="text-muted-foreground">No se encontraron cursos con los filtros aplicados.</p>
+                </div>
+            )}
         </div>
     );
 }
@@ -1243,3 +1242,4 @@ export default function ReportsPage() {
       </>
     );
 }
+
