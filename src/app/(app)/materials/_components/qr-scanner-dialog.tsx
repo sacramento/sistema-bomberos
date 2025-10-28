@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -106,25 +105,27 @@ export default function QrScannerDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-md p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle className="font-headline">Escanear Código QR</DialogTitle>
           <DialogDescription>Apunte la cámara al código QR del material.</DialogDescription>
         </DialogHeader>
-        <div className="p-4 rounded-lg bg-black">
-          <video ref={videoRef} className="w-full aspect-video rounded-md" autoPlay muted playsInline />
+        <div className="p-0 rounded-lg bg-black overflow-hidden">
+          <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
           {!hasCameraPermission && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertTitle>Cámara No Disponible</AlertTitle>
-              <AlertDescription>
-                Habilite los permisos de cámara para escanear.
-              </AlertDescription>
-            </Alert>
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+              <Alert variant="destructive" className="m-4">
+                <AlertTitle>Cámara No Disponible</AlertTitle>
+                <AlertDescription>
+                  Habilite los permisos de cámara para escanear.
+                </AlertDescription>
+              </Alert>
+            </div>
           )}
           <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
-        <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+        <DialogFooter className="p-6 pt-4">
+            <Button variant="outline" onClick={() => setOpen(false)} className="w-full">Cancelar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

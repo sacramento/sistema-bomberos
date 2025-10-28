@@ -333,15 +333,15 @@ export default function MaterialsPage() {
         <>
             <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
                 {canManageGlobally && (
-                    <div className='flex gap-2'>
+                    <div className='flex flex-col sm:flex-row gap-2'>
                         <ImportMaterialsDialog onImportSuccess={handleDataChange}>
-                             <Button variant="outline">
+                             <Button variant="outline" className="w-full">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Importar CSV
                             </Button>
                         </ImportMaterialsDialog>
                         <AddMaterialDialog onMaterialAdded={handleDataChange}>
-                            <Button>
+                            <Button className="w-full">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Agregar Material
                             </Button>
@@ -394,6 +394,7 @@ export default function MaterialsPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
+                                <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -453,6 +454,7 @@ export default function MaterialsPage() {
                                         )}
                                     </TableBody>
                                 </Table>
+                                </div>
                             </CardContent>
                         </Card>
                     )}
@@ -560,6 +562,7 @@ export default function MaterialsPage() {
                             </CardHeader>
                             <CardContent>
                                 {filtersAreActive ? (
+                                    <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
@@ -621,6 +624,7 @@ export default function MaterialsPage() {
                                             )}
                                         </TableBody>
                                     </Table>
+                                    </div>
                                 ) : (
                                     <div className="text-center py-10 border-2 border-dashed rounded-lg">
                                         <p className="text-muted-foreground">Por favor, aplique un filtro para ver los materiales.</p>
