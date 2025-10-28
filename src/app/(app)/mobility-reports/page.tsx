@@ -143,16 +143,14 @@ export default function MobilityReportsPage() {
     
                 if (currentY > 240) { doc.addPage(); currentY = 20; }
                 
-                doc.setFontSize(16);
-                doc.setTextColor(40, 40, 40); // Dark text color for title
+                // Vehicle Title with background stripe
+                doc.setFillColor(52, 58, 64); // Dark gray
+                doc.rect(0, currentY -5, doc.internal.pageSize.getWidth(), 10, 'F');
+                doc.setFontSize(14);
+                doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, PADDING, currentY);
-                currentY += 2;
-                
-                doc.setDrawColor(220, 220, 220); // Light gray for separator line
-                doc.setLineWidth(0.5);
-                doc.line(PADDING, currentY, PAGE_WIDTH - PADDING, currentY);
-                currentY += 8;
+                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, PADDING, currentY + 2);
+                currentY += 12;
 
                 for (const record of records) {
                     if (currentY > 260) {
@@ -161,12 +159,12 @@ export default function MobilityReportsPage() {
                     }
                     
                     const recordHeaderY = currentY;
-                    doc.setFillColor(248, 250, 252); // gray-50 for background
+                    doc.setFillColor(248, 249, 250); // Light gray background for the card
                     
                     // --- Record Header ---
                     doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
-                    doc.setTextColor(100, 116, 139); // gray-500 for secondary info
+                    doc.setTextColor(108, 117, 125);
                     doc.text(`Servicio del ${format(parseISO(record.date), 'P', { locale: es })}`, PADDING + 2, currentY);
                     doc.text(`Kilometraje: ${record.mileage.toLocaleString('es-AR')} km`, PAGE_WIDTH / 2, currentY);
                     currentY += 8;
@@ -177,7 +175,7 @@ export default function MobilityReportsPage() {
                         const COLUMN_WIDTH = (CONTENT_WIDTH / COLUMNS) - 5;
                         let itemY = currentY;
                         let maxColHeight = 0;
-                        const itemHeightMultiplier = 4; // Adjusted for better spacing
+                        const itemHeightMultiplier = 4;
 
                         record.checklist.forEach((item, index) => {
                             const col = index % COLUMNS;
@@ -228,7 +226,7 @@ export default function MobilityReportsPage() {
                     }
 
                     const recordHeight = currentY - recordHeaderY + 2;
-                    doc.setFillColor(248, 250, 252); // gray-50
+                    doc.setFillColor(248, 249, 250); // gray-50
                     doc.roundedRect(PADDING, recordHeaderY - 5, CONTENT_WIDTH, recordHeight, 3, 3, 'F');
                     
                     if (records.indexOf(record) < records.length - 1) {
@@ -406,3 +404,5 @@ export default function MobilityReportsPage() {
         </>
     );
 }
+
+    
