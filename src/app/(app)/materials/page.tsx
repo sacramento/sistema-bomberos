@@ -294,6 +294,11 @@ export default function MaterialsPage() {
         });
     }, [materials, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
 
+    const filtersAreActive = useMemo(() => {
+        return filterType !== 'all' || filterFirehouse !== 'all' || filterSpecialization !== 'all' || filterVehicle !== 'all';
+    }, [filterType, filterFirehouse, filterSpecialization, filterVehicle]);
+
+
     const statistics = useMemo(() => {
         const listToAnalyze = generalFilteredMaterials;
         const total = listToAnalyze.length;
@@ -383,7 +388,7 @@ export default function MaterialsPage() {
                     {searchTerm && (
                         <Card className="mt-6">
                             <CardHeader>
-                                <CardTitle className="font-headline">Inventario Filtrado</CardTitle>
+                                <CardTitle className="font-headline">Resultados de la Búsqueda</CardTitle>
                                 <CardDescription>
                                     Mostrando {searchFilteredMaterials.length} resultados para "{searchTerm}".
                                 </CardDescription>
@@ -507,7 +512,7 @@ export default function MaterialsPage() {
                          <Card>
                             <CardHeader>
                                 <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
-                                <CardDescription>Resumen de los materiales filtrados.</CardDescription>
+                                <CardDescription>Resumen de los materiales según los filtros aplicados.</CardDescription>
                             </CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
@@ -548,73 +553,79 @@ export default function MaterialsPage() {
 
                         <Card>
                             <CardHeader>
-                                <CardTitle className="font-headline">Inventario General</CardTitle>
+                                <CardTitle className="font-headline">Inventario Detallado</CardTitle>
                                 <CardDescription>
-                                    Mostrando {generalFilteredMaterials.length} de {materials.length} materiales.
+                                    {filtersAreActive ? `Mostrando ${generalFilteredMaterials.length} de ${materials.length} materiales.` : 'Aplique un filtro para ver el listado de materiales.'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Código</TableHead>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead>Ubicación</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead><span className="sr-only">Acciones</span></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            Array.from({ length: 5 }).map((_, i) => (
-                                                <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                            ))
-                                        ) : generalFilteredMaterials.length > 0 ? (
-                                            generalFilteredMaterials.map(material => (
-                                                <TableRow key={material.id}>
-                                                    <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                    <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                    <TableCell>{renderLocation(material)}</TableCell>
-                                                    <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                    <TableCell>
-                                                        <AlertDialog>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent>
-                                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                                    {canManageMaterial(material) && <>
-                                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
-                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                                        </EditMaterialDialog>
-                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <AlertDialogTrigger asChild>
-                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                                        </AlertDialogTrigger>
-                                                                    </>}
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
+                                {filtersAreActive ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Código</TableHead>
+                                                <TableHead>Nombre</TableHead>
+                                                <TableHead>Ubicación</TableHead>
+                                                <TableHead>Estado</TableHead>
+                                                <TableHead><span className="sr-only">Acciones</span></TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {loading ? (
+                                                Array.from({ length: 5 }).map((_, i) => (
+                                                    <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                                ))
+                                            ) : generalFilteredMaterials.length > 0 ? (
+                                                generalFilteredMaterials.map(material => (
+                                                    <TableRow key={material.id}>
+                                                        <TableCell className="font-mono">{material.codigo}</TableCell>
+                                                        <TableCell className="font-medium">{material.nombre}</TableCell>
+                                                        <TableCell>{renderLocation(material)}</TableCell>
+                                                        <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
+                                                        <TableCell>
+                                                            <AlertDialog>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                        {canManageMaterial(material) && <>
+                                                                            <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
+                                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                                            </EditMaterialDialog>
+                                                                            <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                                            <DropdownMenuSeparator />
+                                                                            <AlertDialogTrigger asChild>
+                                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                                            </AlertDialogTrigger>
+                                                                        </>}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))
+                                            ) : (
+                                                <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
+                                            )}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <div className="text-center py-10 border-2 border-dashed rounded-lg">
+                                        <p className="text-muted-foreground">Por favor, aplique un filtro para ver los materiales.</p>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -650,7 +661,7 @@ export default function MaterialsPage() {
                                         <Label htmlFor="include-details">Incluir detalle del inventario</Label>
                                     </div>
                                 </div>
-                                <Button onClick={generatePdf} disabled={generatingPdf || generalFilteredMaterials.length === 0}>
+                                <Button onClick={generatePdf} disabled={generatingPdf || !filtersAreActive}>
                                     {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                                     {generatingPdf ? "Generando..." : "Generar PDF"}
                                 </Button>
