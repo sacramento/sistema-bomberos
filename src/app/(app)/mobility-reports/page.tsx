@@ -111,99 +111,124 @@ export default function MobilityReportsPage() {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
             return;
         }
-
+    
         setGeneratingPdf(true);
         const doc = new jsPDF();
-        
+    
         try {
             // PDF Header
-            doc.setFillColor(34, 43, 54); // Dark gray
+            doc.setFillColor(34, 43, 54);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Mantenimiento", 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
-
+    
             let currentY = 50;
-
+            const PADDING = 14;
+            const PAGE_WIDTH = doc.internal.pageSize.getWidth();
+            const CONTENT_WIDTH = PAGE_WIDTH - (PADDING * 2);
+    
             const recordsByVehicle = filteredRecords.reduce((acc, record) => {
                 (acc[record.vehicleId] = acc[record.vehicleId] || []).push(record);
                 return acc;
             }, {} as Record<string, MaintenanceRecord[]>);
-
+    
             for (const vehicleId in recordsByVehicle) {
                 if (currentY > 20) currentY += 5;
-                
+    
                 const vehicle = allVehicles.find(v => v.id === vehicleId);
                 const records = recordsByVehicle[vehicleId];
-                
+    
                 if (currentY > 240) { doc.addPage(); currentY = 20; }
-                doc.setFontSize(16);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, 14, currentY);
-                currentY += 10;
                 
+                doc.setFillColor(243, 244, 246); // gray-100
+                doc.roundedRect(PADDING, currentY, CONTENT_WIDTH, 12, 3, 3, 'F');
+                doc.setFontSize(16);
+                doc.setTextColor(23, 37, 84); // gray-900
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Móvil: ${vehicle?.numeroMovil || 'Desconocido'} (${vehicle?.marca} ${vehicle?.modelo})`, PADDING + 5, currentY + 8);
+                currentY += 18;
+    
                 for (const record of records) {
-                    if (currentY > 240) { doc.addPage(); currentY = 20; }
+                    const checklistYStart = currentY;
+                    let checklistHeight = 0;
                     
-                    doc.setLineWidth(0.5);
-                    doc.setDrawColor(220, 220, 220); // Light gray border
-                    doc.roundedRect(14, currentY, doc.internal.pageSize.getWidth() - 28, 1, 1, 1, 'S'); // Placeholder for content height
-                    
-                    let contentStartY = currentY;
-                    currentY += 8;
-
-                    // Date and Mileage
-                    doc.setFontSize(12);
+                    // --- Record Header ---
+                    doc.setFontSize(11);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`Fecha de Servicio: ${format(parseISO(record.date), 'P', { locale: es })}`, 20, currentY);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text(`Kilometraje: ${record.mileage.toLocaleString('es-AR')} km`, doc.internal.pageSize.getWidth() / 2 + 10, currentY);
+                    doc.setTextColor(100, 116, 139); // gray-500
+                    doc.text(`Servicio del ${format(parseISO(record.date), 'P', { locale: es })}`, PADDING, currentY);
+                    doc.text(`Kilometraje: ${record.mileage.toLocaleString('es-AR')} km`, PAGE_WIDTH / 2, currentY);
                     currentY += 8;
                     
-                    // Checklist
+                    // --- Checklist (Compact) ---
                     if (record.checklist && record.checklist.length > 0) {
-                        doc.setFont('helvetica', 'bold');
-                        doc.text("Checklist Realizado:", 20, currentY);
-                        currentY += 6;
-                        (doc as any).autoTable({
-                            startY: currentY,
-                            body: record.checklist.map(item => [item.name, item.checked ? 'Sí' : 'No']),
-                            margin: { left: 20, right: 20 },
-                            theme: 'grid',
-                            headStyles: { fillColor: '#f8f9fa', textColor: '#343a40', fontStyle: 'bold' },
-                            columnStyles: { 1: { halign: 'center' } },
+                        const COLUMNS = 2;
+                        const COLUMN_WIDTH = CONTENT_WIDTH / COLUMNS;
+                        let itemY = currentY;
+                        let maxColHeight = 0;
+
+                        record.checklist.forEach((item, index) => {
+                            const col = index % COLUMNS;
+                            const x = PADDING + (col * COLUMN_WIDTH);
+
+                            doc.setFontSize(9);
+                            doc.setTextColor(item.checked ? 22 : 173, item.checked ? 107: 20, item.checked ? 74 : 20); // green-700 or red-700
+                            doc.text(item.checked ? '✔' : '✘', x, itemY);
+                            
+                            doc.setFontSize(9);
+                            doc.setTextColor(40, 40, 40);
+                            const textLines = doc.splitTextToSize(item.name, COLUMN_WIDTH - 8);
+                            doc.text(textLines, x + 5, itemY);
+                            
+                            const itemHeight = textLines.length * 3.5;
+                            maxColHeight = Math.max(maxColHeight, itemHeight);
+
+                            if (col === COLUMNS - 1) {
+                                itemY += maxColHeight;
+                                maxColHeight = 0;
+                            }
                         });
-                        currentY = (doc as any).lastAutoTable.finalY + 5;
+                        currentY = itemY;
                     }
                     
-                    // Observations
+                    // --- Observations ---
                     if (record.observations) {
+                         currentY += (currentY === checklistYStart + 8 ? 0 : 4);
+                        doc.setFontSize(10);
                         doc.setFont('helvetica', 'bold');
-                        doc.text("Observaciones:", 20, currentY);
+                        doc.setTextColor(100, 116, 139);
+                        doc.text("Observaciones:", PADDING, currentY);
                         currentY += 5;
+                        doc.setFontSize(9);
+                        doc.setTextColor(40, 40, 40);
                         doc.setFont('helvetica', 'normal');
-                        const splitText = doc.splitTextToSize(record.observations, doc.internal.pageSize.getWidth() - 40);
-                        doc.text(splitText, 20, currentY);
-                        currentY += splitText.length * 4 + 5;
+                        const splitText = doc.splitTextToSize(record.observations, CONTENT_WIDTH);
+                        doc.text(splitText, PADDING, currentY);
+                        currentY += splitText.length * 3.5 + 4;
                     }
 
-                    // Draw the rounded rectangle with correct height
-                    let finalContentHeight = currentY - contentStartY - 5;
-                    doc.setDrawColor(220, 220, 220);
-                    doc.roundedRect(14, contentStartY, doc.internal.pageSize.getWidth() - 28, finalContentHeight, 3, 3, 'S');
-                    currentY += 5;
+                    if (currentY > 260) {
+                        doc.addPage();
+                        currentY = 20;
+                    } else if (records.indexOf(record) < records.length - 1) {
+                        doc.setDrawColor(229, 231, 235); // gray-200
+                        doc.line(PADDING, currentY, PAGE_WIDTH - PADDING, currentY);
+                        currentY += 6;
+                    }
                 }
+                 currentY += 5;
             }
-
+    
             if (filteredRecords.length === 0) {
                  doc.text("No se encontraron registros para los filtros aplicados.", 14, currentY);
             }
-
+    
             doc.save(`reporte-movilidad-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
+            console.error(error);
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
             setGeneratingPdf(false);
