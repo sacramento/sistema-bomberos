@@ -235,10 +235,10 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="kilometraje">Kilometraje</Label>
-                    <Input id="kilometraje" type="number" value={formData.kilometraje} onChange={handleInputChange} />
+                    <Input id="kilometraje" type="text" inputMode="numeric" pattern="[0-9]*" value={formData.kilometraje || ''} onChange={e => setFormData(prev => ({ ...prev, kilometraje: Number(e.target.value.replace(/\D/g, '')) }))} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="cuartel">Depósito</Label>
+                    <Label htmlFor="cuartel">Cuartel</Label>
                     <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
                         <SelectContent>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
@@ -265,7 +265,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
             <div className="space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="capacidadAgua">Capacidad de Agua (L)</Label>
-                    <Input id="capacidadAgua" type="number" value={formData.capacidadAgua} onChange={handleInputChange} />
+                    <Input id="capacidadAgua" type="text" inputMode="numeric" pattern="[0-9]*" value={formData.capacidadAgua || ''} onChange={e => setFormData(prev => ({ ...prev, capacidadAgua: Number(e.target.value.replace(/\D/g, '')) }))} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
