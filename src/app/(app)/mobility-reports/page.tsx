@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Download, Loader2, Check, ChevronsUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Check, ChevronsUpDown, Gauge } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -22,6 +22,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
@@ -50,12 +51,9 @@ export default function MobilityReportsPage() {
         const fetchInitialData = async () => {
             setLoading(true);
             try {
-                const [vehiclesData] = await Promise.all([
-                    getVehicles()
-                ]);
+                const vehiclesData = await getVehicles();
                 setAllVehicles(vehiclesData);
 
-                // Fetch all records for all vehicles initially to allow filtering
                 const recordPromises = vehiclesData.map(v => getMaintenanceRecordsByVehicle(v.id));
                 const allRecordsArrays = await Promise.all(recordPromises);
                 const flattenedRecords = allRecordsArrays.flat();
@@ -97,13 +95,8 @@ export default function MobilityReportsPage() {
         const filteredVehicleIds = new Set(filteredVehicles.map(v => v.id));
 
         return allRecords.filter(record => {
-            // First, filter by the master vehicle filters
             if (!filteredVehicleIds.has(record.vehicleId)) return false;
-
-            // Then, apply specific vehicle selection if any
             if (filterVehicle !== 'all' && record.vehicleId !== filterVehicle) return false;
-
-            // Finally, filter by date
             if (filterDate?.from) {
                 const recordDate = parseISO(record.date);
                 const toDate = filterDate.to ?? filterDate.from;
@@ -120,7 +113,6 @@ export default function MobilityReportsPage() {
         }
 
         const selectedVehicleForTitle = allVehicles.find(v => v.id === filterVehicle);
-
         setGeneratingPdf(true);
         const doc = new jsPDF();
         
@@ -145,9 +137,7 @@ export default function MobilityReportsPage() {
             }, {} as Record<string, MaintenanceRecord[]>);
 
             for (const vehicleId in recordsByVehicle) {
-                if (currentY > 20) {
-                     currentY += 5;
-                }
+                if (currentY > 20) currentY += 5;
                 if (currentY > 250) { doc.addPage(); currentY = 20; }
                 
                 const vehicle = allVehicles.find(v => v.id === vehicleId);
@@ -171,7 +161,6 @@ export default function MobilityReportsPage() {
                 });
                 currentY = (doc as any).lastAutoTable.finalY;
             }
-
 
             if (filteredRecords.length === 0) {
                  doc.text("No se encontraron registros para los filtros aplicados.", 14, currentY);
@@ -278,34 +267,42 @@ export default function MobilityReportsPage() {
                 </CardHeader>
                 <CardContent>
                     {filteredRecords.length > 0 ? (
-                       <div className="space-y-4">
+                        <Accordion type="single" collapsible className="w-full">
                             {filteredRecords.map(record => {
                                 const vehicle = allVehicles.find(v => v.id === record.vehicleId);
                                 return (
-                                <details key={record.id} className="border p-4 rounded-lg">
-                                    <summary className="font-semibold cursor-pointer flex justify-between">
-                                        <span>Móvil {vehicle?.numeroMovil} - Servicio del {format(parseISO(record.date), 'P', { locale: es })}</span>
-                                        <span className="text-muted-foreground">{record.mileage.toLocaleString('es-AR')} km</span>
-                                    </summary>
-                                    <div className="mt-4 pl-4 border-l-2">
-                                        <h4 className="font-semibold text-sm mb-2">Checklist:</h4>
-                                        <ul className="list-disc pl-5 text-sm space-y-1">
-                                            {record.checklist.map(item => (
-                                                <li key={item.name} className={item.checked ? '' : 'text-muted-foreground'}>
-                                                    {item.name}: <span className="font-semibold">{item.checked ? 'Realizado' : 'No Realizado'}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        {record.observations && (
-                                            <>
-                                                <h4 className="font-semibold text-sm mt-4 mb-2">Observaciones:</h4>
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{record.observations}</p>
-                                            </>
-                                        )}
-                                    </div>
-                                </details>
-                            )})}
-                       </div>
+                                    <AccordionItem key={record.id} value={record.id}>
+                                        <AccordionTrigger>
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full pr-4 text-left">
+                                                <div className="font-semibold text-base">Móvil {vehicle?.numeroMovil} - Servicio del {format(parseISO(record.date), 'P', { locale: es })}</div>
+                                                <div className="text-sm text-muted-foreground flex items-center gap-2">
+                                                    <Gauge className="h-4 w-4"/> {record.mileage.toLocaleString('es-AR')} km
+                                                </div>
+                                            </div>
+                                        </AccordionTrigger>
+                                        <AccordionContent>
+                                            <div className="p-4 border-t bg-muted/50 rounded-b-lg">
+                                                <h4 className="font-semibold mb-2">Checklist:</h4>
+                                                <ul className="space-y-2 mt-4 columns-1 md:columns-2">
+                                                    {record.checklist.map((item, index) => (
+                                                        <li key={index} className="flex items-center gap-2 text-sm break-inside-avoid">
+                                                            {item.checked ? <Check className="h-4 w-4 text-green-500" /> : <X className="h-4 w-4 text-red-500" />}
+                                                            <span className={item.checked ? 'text-foreground' : 'text-muted-foreground'}>{item.name}</span>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                {record.observations && (
+                                                    <>
+                                                        <h4 className="font-semibold mt-4 mb-2">Observaciones:</h4>
+                                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">{record.observations}</p>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )
+                            })}
+                        </Accordion>
                     ) : (
                         <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg">
                             <p className="text-muted-foreground">No hay registros de mantenimiento para los filtros seleccionados.</p>
