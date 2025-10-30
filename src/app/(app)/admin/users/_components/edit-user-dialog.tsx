@@ -104,8 +104,8 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="font-headline">Editar Usuario</DialogTitle>
             <DialogDescription>
@@ -113,7 +113,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-6 py-4">
+          <div className="flex-grow overflow-y-auto py-4 pr-4 grid gap-6">
             <div className="flex flex-col items-center">
               <Avatar className="h-24 w-24"><AvatarImage src={imagePreview} alt={user.name} className="object-cover"/><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar>
             </div>
@@ -196,7 +196,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
           </DialogFooter>
         </form>

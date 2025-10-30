@@ -147,15 +147,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         if (!isOpen) resetForm();
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Usuario</DialogTitle>
             <DialogDescription>
               Seleccione un bombero para crear su cuenta de usuario y asigne roles.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-6 py-4">
+          <div className="flex-grow overflow-y-auto py-4 pr-4 grid gap-6">
             {/* General Fields */}
             <div className="space-y-4">
                  <div className="grid grid-cols-4 items-center gap-4">
@@ -255,7 +255,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
               </Select>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="submit" disabled={loading || dataLoading}>{loading ? 'Guardando...' : 'Guardar Usuario'}</Button>
           </DialogFooter>
         </form>
