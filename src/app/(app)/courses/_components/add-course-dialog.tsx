@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Course, Session } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { batchAddCourses } from "@/services/courses.service";
@@ -117,6 +117,8 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
   const [location, setLocation] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+
   useEffect(() => {
     const fetchAllFirefighters = async () => {
         if (open) {
@@ -212,7 +214,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
                     title="participantes"
                     selected={selectedFirefighters}
                     onSelectedChange={setSelectedFirefighters}
-                    firefighters={allFirefighters}
+                    firefighters={activeFirefighters}
                 />
             </div>
             <div className="space-y-2">

@@ -24,6 +24,8 @@ const ranks = [
     'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR',
     'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'
 ];
+const statuses: Firefighter['status'][] = ['Active', 'Inactive', 'Auxiliar'];
+
 
 export default function AddFirefighterDialog({ children, onFirefighterAdded }: { children: React.ReactNode; onFirefighterAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -34,6 +36,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   const [lastName, setLastName] = useState('');
   const [rank, setRank] = useState<Firefighter['rank'] | ''>('');
   const [firehouse, setFirehouse] = useState('');
+  const [status, setStatus] = useState<Firefighter['status']>('Active');
   const [existingFirehouses, setExistingFirehouses] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -59,11 +62,12 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
     setLastName('');
     setRank('');
     setFirehouse('');
+    setStatus('Active');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!legajo || !firstName || !lastName || !rank || !firehouse) {
+    if (!legajo || !firstName || !lastName || !rank || !firehouse || !status) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos.",
@@ -75,19 +79,20 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
     setLoading(true);
 
     try {
-        const newFirefighterData: Omit<Firefighter, 'id' | 'status'> = {
+        const newFirefighterData: Omit<Firefighter, 'id'> = {
             legajo,
             firstName,
             lastName,
             rank: rank as Firefighter['rank'],
             firehouse,
+            status,
         };
         
         await addFirefighter(newFirefighterData);
 
         toast({
             title: "¡Éxito!",
-            description: "El nuevo bombero ha sido agregado a la lista.",
+            description: "El nuevo integrante ha sido agregado a la lista.",
         });
         
         onFirefighterAdded(); // Callback to refresh the list
@@ -109,12 +114,12 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="font-headline">Agregar Nuevo Bombero</DialogTitle>
+            <DialogTitle className="font-headline">Agregar Nuevo Integrante</DialogTitle>
             <DialogDescription>
-              Ingrese los detalles del nuevo bombero. Haga clic en guardar cuando haya terminado.
+              Ingrese los detalles del nuevo integrante. Haga clic en guardar cuando haya terminado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -169,9 +174,24 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
                 </SelectContent>
               </Select>
             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Estado
+              </Label>
+              <Select onValueChange={(value) => setStatus(value as Firefighter['status'])} value={status} required>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccione un estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map(s => (
+                    <SelectItem key={s} value={s}>{s === 'Active' ? 'Activo' : s === 'Inactive' ? 'Inactivo' : 'Auxiliar'}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Bombero'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Integrante'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

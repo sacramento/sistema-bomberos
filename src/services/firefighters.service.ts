@@ -1,4 +1,5 @@
 
+
 import { Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, addDoc, query, where } from 'firebase/firestore';
@@ -20,7 +21,7 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
 };
 
 
-export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | 'status'>): Promise<string> => {
+export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id'>): Promise<string> => {
     const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
     const querySnapshot = await getDocs(q);
 
@@ -28,10 +29,10 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id' | '
         throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
-    // Ensure status is always set to 'Active' on creation and legajo is included
+    // Ensure status is always set if not provided, default to 'Active'
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData,
-        status: 'Active'
+        status: firefighterData.status || 'Active'
     };
 
     const docRef = await addDoc(firefightersCollection, newFirefighter);

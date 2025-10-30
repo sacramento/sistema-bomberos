@@ -27,7 +27,7 @@ const ranks = [
     'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'
 ];
 
-const statuses = ['Active', 'Inactive'];
+const statuses: Firefighter['status'][] = ['Active', 'Inactive', 'Auxiliar'];
 
 export default function EditFirefighterDialog({ children, firefighter, onFirefighterUpdated }: { children: React.ReactNode; firefighter: Firefighter; onFirefighterUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -97,7 +97,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
         
         toast({
             title: "¡Éxito!",
-            description: "El bombero ha sido actualizado.",
+            description: "Los datos del integrante han sido actualizados.",
         });
         
         onFirefighterUpdated();
@@ -107,7 +107,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
         console.error(error);
         toast({
             title: "Error",
-            description: error.message || "No se pudo actualizar el bombero. Intente de nuevo.",
+            description: error.message || "No se pudo actualizar el integrante. Intente de nuevo.",
             variant: "destructive",
         });
     } finally {
@@ -121,9 +121,9 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle className="font-headline">Editar Bombero</DialogTitle>
+            <DialogTitle className="font-headline">Editar Integrante</DialogTitle>
             <DialogDescription>
-              Modifique los detalles del bombero. Haga clic en guardar cuando haya terminado.
+              Modifique los detalles del integrante. Haga clic en guardar cuando haya terminado.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -195,7 +195,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
                 </SelectTrigger>
                 <SelectContent>
                   {statuses.map(s => (
-                    <SelectItem key={s} value={s}>{s === 'Active' ? 'Activo' : 'Inactivo'}</SelectItem>
+                    <SelectItem key={s} value={s}>{s === 'Active' ? 'Activo' : s === 'Inactive' ? 'Inactivo' : 'Auxiliar'}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

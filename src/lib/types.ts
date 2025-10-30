@@ -22,7 +22,7 @@ export type Firefighter = {
     | 'COMANDANTE MAYOR'
     | 'COMANDANTE GENERAL';
   firehouse: string;
-  status: 'Active' | 'Inactive';
+  status: 'Active' | 'Inactive' | 'Auxiliar';
 };
 
 export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";

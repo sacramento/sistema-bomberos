@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth-context';
 import { usePathname } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 export default function FirefightersPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
@@ -76,9 +77,23 @@ export default function FirefightersPage() {
     }
   };
 
+  const getStatusBadge = (status: Firefighter['status']) => {
+    switch (status) {
+        case 'Active':
+            return <Badge className="bg-green-600">Activo</Badge>;
+        case 'Inactive':
+            return <Badge variant="destructive">Inactivo</Badge>;
+        case 'Auxiliar':
+            return <Badge variant="secondary">Auxiliar</Badge>;
+        default:
+            return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+
   return (
     <>
-      <PageHeader title="Lista de Bomberos" description="Gestione los bomberos de su departamento.">
+      <PageHeader title="Lista de Integrantes" description="Gestione los integrantes del departamento.">
         {canManage && (
             <div className="flex flex-col sm:flex-row gap-2">
                 <ImportCsvDialog onImportSuccess={handleDataChange}>
@@ -90,7 +105,7 @@ export default function FirefightersPage() {
                 <AddFirefighterDialog onFirefighterAdded={handleDataChange}>
                 <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Agregar Bombero
+                    Agregar Integrante
                 </Button>
                 </AddFirefighterDialog>
             </div>
@@ -98,7 +113,7 @@ export default function FirefightersPage() {
       </PageHeader>
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Todos los Bomberos</CardTitle>
+          <CardTitle className="font-headline">Todos los Integrantes</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -136,9 +151,7 @@ export default function FirefightersPage() {
                     <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
                     <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
                     <TableCell>
-                      <Badge variant={firefighter.status === 'Active' ? 'default' : 'destructive'} className={firefighter.status === 'Active' ? 'bg-green-600' : ''}>
-                        {firefighter.status === 'Active' ? 'Activo' : 'Inactivo'}
-                      </Badge>
+                      {getStatusBadge(firefighter.status)}
                     </TableCell>
                     {canManage && (
                         <TableCell>
@@ -170,7 +183,7 @@ export default function FirefightersPage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Esto eliminará permanentemente al bombero <span className="font-semibold">{`${firefighter.firstName} ${firefighter.lastName}`}</span>.
+                                    Esta acción no se puede deshacer. Esto eliminará permanentemente al integrante <span className="font-semibold">{`${firefighter.firstName} ${firefighter.lastName}`}</span>.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
