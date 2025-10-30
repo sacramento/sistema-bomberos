@@ -27,7 +27,8 @@ import {
   Wrench,
   Package,
   ScanLine,
-  Gavel
+  Gavel,
+  Archive,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -66,6 +67,7 @@ export const navItems: NavItem[] = [
 
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
   { href: '/sanctions', icon: Gavel, label: 'Sanciones', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
+  { href: '/inventory', icon: Archive, label: 'Inventario General', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
   { href: '/ayudantia-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
