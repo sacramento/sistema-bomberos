@@ -17,42 +17,34 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
     const attendees = session.attendees;
     if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500' };
 
-    const totalAttendees = attendees.length;
-    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+    const ranks = new Set(attendees.map(a => a.rank));
+    const firehouses = new Set(attendees.map(a => a.firehouse));
 
-    // Prioridad 1: Aspirantes
-    const aspirantesCount = attendees.filter(a => a.rank === 'ASPIRANTE').length;
-    if (aspirantesCount / totalAttendees > 0.8) return { name: 'Aspirantes', className: 'border-green-500' };
-
-    // Prioridad 2: Jerarquía de Oficiales y Suboficiales
-    const suboficialesOficialesCount = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-    if (suboficialesOficialesCount / totalAttendees > 0.8) return { name: 'Oficiales', className: 'border-red-500' };
-
-    // Prioridad 3: Conteo por Cuartel
-    const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
-    attendees.forEach(a => {
-        if (firehouseCounts.hasOwnProperty(a.firehouse)) {
-            firehouseCounts[a.firehouse]++;
-        }
-    });
-
-    const hasC1 = firehouseCounts['Cuartel 1'] > 0;
-    const hasC2 = firehouseCounts['Cuartel 2'] > 0;
-    const hasC3 = firehouseCounts['Cuartel 3'] > 0;
-    const distinctFirehouses = [hasC1, hasC2, hasC3].filter(Boolean).length;
-
-    if (distinctFirehouses > 1) {
-        return { name: 'Varios Cuarteles', className: 'border-gray-500' };
+    const isOnlyAspirantes = ranks.size === 1 && ranks.has('ASPIRANTE');
+    if (isOnlyAspirantes) {
+        return { name: 'Aspirantes', className: 'border-green-500' };
     }
 
-    // Prioridad 4: Mayoría de Cuartel
-    if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) return { name: 'Cuartel 1', className: 'border-yellow-500' };
-    if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return { name: 'Cuartel 2', className: 'border-blue-500' };
-    if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return { name: 'Cuartel 3', className: 'border-green-500' };
-
-    // Último Recurso
-    return { name: 'General', className: 'border-gray-500' };
+    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+    const allOfficerRanks = new Set([...suboficialRanks, ...oficialRanks]);
+    const isOnlyOfficers = attendees.every(a => allOfficerRanks.has(a.rank));
+    if (isOnlyOfficers) {
+        return { name: 'Oficiales', className: 'border-red-500' };
+    }
+    
+    const isSingleFirehouse = firehouses.size === 1;
+    if (isSingleFirehouse) {
+        const firehouse = firehouses.values().next().value;
+        switch(firehouse) {
+            case 'Cuartel 1': return { name: 'Cuartel 1', className: 'border-yellow-500' };
+            case 'Cuartel 2': return { name: 'Cuartel 2', className: 'border-blue-500' };
+            case 'Cuartel 3': return { name: 'Cuartel 3', className: 'border-orange-500' };
+        }
+    }
+    
+    // If it's not a single homogenous group, it's mixed.
+    return { name: 'Varios Cuarteles', className: 'border-gray-500' };
 };
 
 
