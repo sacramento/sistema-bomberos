@@ -20,11 +20,12 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
     const ranks = new Set(attendees.map(a => a.rank));
     const firehouses = new Set(attendees.map(a => a.firehouse));
 
-    const isOnlyAspirantes = ranks.size === 1 && ranks.has('ASPIRANTE');
-    if (isOnlyAspirantes) {
+    // Case 1: Only Aspirantes
+    if (ranks.size === 1 && ranks.has('ASPIRANTE')) {
         return { name: 'Aspirantes', className: 'border-green-500' };
     }
 
+    // Case 2: Only Officers/Sub-officers
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     const allOfficerRanks = new Set([...suboficialRanks, ...oficialRanks]);
@@ -33,17 +34,18 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
         return { name: 'Oficiales', className: 'border-red-500' };
     }
     
+    // Case 3: Homogenous firehouse group
     const isSingleFirehouse = firehouses.size === 1;
     if (isSingleFirehouse) {
         const firehouse = firehouses.values().next().value;
         switch(firehouse) {
             case 'Cuartel 1': return { name: 'Cuartel 1', className: 'border-yellow-500' };
             case 'Cuartel 2': return { name: 'Cuartel 2', className: 'border-blue-500' };
-            case 'Cuartel 3': return { name: 'Cuartel 3', className: 'border-orange-500' };
+            case 'Cuartel 3': return { name: 'Cuartel 3', className: 'border-green-500' };
         }
     }
     
-    // If it's not a single homogenous group, it's mixed.
+    // Default/Fallback: Mixed group
     return { name: 'Varios Cuarteles', className: 'border-gray-500' };
 };
 
