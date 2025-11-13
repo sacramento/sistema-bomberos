@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useMemo } from "react";
 import { ClothingItem, Firefighter, ClothingCategory, ClothingSubCategory, ClothingItemType } from "@/lib/types";
@@ -56,7 +57,7 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
     };
 
     const handleCategoryChange = (value: ClothingCategory) => {
-        setFormData(prev => ({ ...prev, category: value, subCategory: undefined, type: undefined }));
+        setFormData(prev => ({ ...prev, category: value, subCategory: undefined, type: prev.type }));
     }
 
     const availableSubCategories = useMemo(() => {
@@ -79,6 +80,9 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
                 subCategory: formData.subCategory,
                 type: formData.type,
                 size: formData.size,
+                brand: formData.brand,
+                model: formData.model,
+                observations: formData.observations,
                 state: formData.state,
                 firefighterId: selectedFirefighter?.id,
                 deliveredAt: selectedFirefighter ? new Date().toISOString() : undefined,
@@ -99,50 +103,55 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
     return (
         <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
+            <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Agregar Prenda al Inventario</DialogTitle>
                     <DialogDescription>Complete los detalles de la nueva prenda.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="space-y-2"><Label htmlFor="code">Código (Único)</Label><Input id="code" value={formData.code || ''} onChange={(e) => handleInputChange('code', e.target.value)} required /></div>
+                        <div className="space-y-2"><Label>Categoría</Label><Select value={formData.category} onValueChange={(v) => handleCategoryChange(v as any)} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Sub-Categoría</Label><Select value={formData.subCategory} onValueChange={(v) => handleInputChange('subCategory', v as any)} disabled={!formData.category} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{availableSubCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={formData.type} onValueChange={(v) => handleInputChange('type', v as any)} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{allItemTypes.sort().map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label htmlFor="size">Talle</Label><Input id="size" value={formData.size || ''} onChange={(e) => handleInputChange('size', e.target.value)} required /></div>
-                        
-                        <div className="space-y-2"><Label>Categoría</Label><Select value={formData.category} onValueChange={(v) => handleCategoryChange(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Sub-Categoría</Label><Select value={formData.subCategory} onValueChange={(v) => handleInputChange('subCategory', v as any)} disabled={!formData.category}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{availableSubCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2 md:col-span-2"><Label>Tipo de Prenda</Label><Select value={formData.type} onValueChange={(v) => handleInputChange('type', v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{allItemTypes.sort().map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                        
-                        <div className="space-y-2"><Label>Estado</Label><Select value={formData.state} onValueChange={(v) => handleInputChange('state', v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Asignar a Bombero (Opcional)</Label>
-                         <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between">
-                                    {selectedFirefighter ? `${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar bombero..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0">
-                                <Command>
-                                    <CommandInput placeholder="Buscar bombero..." />
-                                    <CommandList><CommandEmpty>No se encontraron bomberos.</CommandEmpty>
-                                    <CommandItem onSelect={() => setSelectedFirefighter(null)}>
-                                        <Check className={cn("mr-2 h-4 w-4", !selectedFirefighter ? "opacity-100" : "opacity-0")} />
-                                        Dejar en Depósito
-                                    </CommandItem>
-                                    <CommandGroup>
-                                        {firefighters.map((firefighter) => (
-                                            <CommandItem key={firefighter.id} value={`${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
-                                                <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                                {`${firefighter.lastName}, ${firefighter.firstName}`}
-                                            </CommandItem>
-                                        ))}
-                                    </CommandGroup></CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
+                        <div className="space-y-2"><Label>Estado</Label><Select value={formData.state} onValueChange={(v) => handleInputChange('state', v as any)} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="brand">Marca (Opcional)</Label><Input id="brand" value={formData.brand || ''} onChange={(e) => handleInputChange('brand', e.target.value)} /></div>
+                        <div className="space-y-2"><Label htmlFor="model">Modelo (Opcional)</Label><Input id="model" value={formData.model || ''} onChange={(e) => handleInputChange('model', e.target.value)} /></div>
+
+                        <div className="space-y-2 md:col-span-3">
+                            <Label>Asignar a Bombero (Opcional)</Label>
+                             <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between">
+                                        {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar bombero (o dejar en Depósito)..."}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar por nombre o legajo..." />
+                                        <CommandList><CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                                        <CommandItem onSelect={() => { setSelectedFirefighter(null); setFirefighterComboboxOpen(false); }}>
+                                            <Check className={cn("mr-2 h-4 w-4", !selectedFirefighter ? "opacity-100" : "opacity-0")} />
+                                            Dejar en Depósito
+                                        </CommandItem>
+                                        <CommandGroup>
+                                            {firefighters.map((firefighter) => (
+                                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
+                                                    <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup></CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                         <div className="space-y-2 md:col-span-3">
+                            <Label htmlFor="observations">Observaciones (Opcional)</Label>
+                            <Textarea id="observations" value={formData.observations || ''} onChange={(e) => handleInputChange('observations', e.target.value)} placeholder="Detalles de la entrega, estado, etc."/>
+                        </div>
                     </div>
                 </form>
                 <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2"/> : null} {loading ? "Guardando..." : "Guardar Prenda"}</Button></DialogFooter>

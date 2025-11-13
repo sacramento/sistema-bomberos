@@ -36,6 +36,9 @@ const docToClothingItem = async (
         subCategory: data.subCategory,
         type: data.type,
         size: data.size,
+        brand: data.brand,
+        model: data.model,
+        observations: data.observations,
         state: data.state,
         firefighterId: data.firefighterId,
         deliveredAt: data.deliveredAt,
@@ -62,8 +65,16 @@ export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firef
     if (!querySnapshot.empty) {
         throw new Error(`La prenda con el código ${itemData.code} ya existe.`);
     }
+    
+    // Ensure optional fields that are empty strings are saved as undefined
+    const dataToSave = {
+        ...itemData,
+        brand: itemData.brand || undefined,
+        model: itemData.model || undefined,
+        observations: itemData.observations || undefined,
+    };
 
-    const docRef = await addDoc(clothingCollection, itemData);
+    const docRef = await addDoc(clothingCollection, dataToSave);
     return docRef.id;
 };
 
@@ -78,7 +89,15 @@ export const updateClothingItem = async (id: string, itemData: Partial<Omit<Clot
         }
     }
     
-    await updateDoc(docRef, itemData);
+    // Ensure optional fields that are empty strings are saved as undefined
+    const dataToUpdate = {
+        ...itemData,
+        brand: itemData.brand || undefined,
+        model: itemData.model || undefined,
+        observations: itemData.observations || undefined,
+    };
+
+    await updateDoc(docRef, dataToUpdate);
 };
 
 export const deleteClothingItem = async (id: string): Promise<void> => {
