@@ -24,10 +24,9 @@ const docToClothingItem = async (
 ): Promise<ClothingItem> => {
     const data = docSnap.data();
     
-    let firefighter: Firefighter | undefined = undefined;
-    if (data.firefighterId) {
-        firefighter = firefighterMap.get(data.firefighterId);
-    }
+    const firefighter: Firefighter | undefined = data.firefighterId 
+        ? firefighterMap.get(data.firefighterId) 
+        : undefined;
     
     const item: ClothingItem = {
         id: docSnap.id,
@@ -67,12 +66,18 @@ export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firef
     }
     
     // Ensure optional fields that are empty strings are saved as undefined
-    const dataToSave = {
-        ...itemData,
-        brand: itemData.brand || undefined,
-        model: itemData.model || undefined,
-        observations: itemData.observations || undefined,
-    };
+    const dataToSave: any = { ...itemData };
+    for (const key in dataToSave) {
+        if (dataToSave[key as keyof typeof dataToSave] === '') {
+            dataToSave[key as keyof typeof dataToSave] = undefined;
+        }
+    }
+    
+    // If no firefighter is assigned, ensure fighterId is not present
+    if (!itemData.firefighterId) {
+        delete dataToSave.firefighterId;
+    }
+
 
     const docRef = await addDoc(clothingCollection, dataToSave);
     return docRef.id;
@@ -90,12 +95,16 @@ export const updateClothingItem = async (id: string, itemData: Partial<Omit<Clot
     }
     
     // Ensure optional fields that are empty strings are saved as undefined
-    const dataToUpdate = {
-        ...itemData,
-        brand: itemData.brand || undefined,
-        model: itemData.model || undefined,
-        observations: itemData.observations || undefined,
-    };
+    const dataToUpdate: any = { ...itemData };
+     for (const key in dataToUpdate) {
+        if (dataToUpdate[key as keyof typeof dataToUpdate] === '') {
+            dataToUpdate[key as keyof typeof dataToUpdate] = undefined;
+        }
+    }
+    
+     if (!itemData.firefighterId) {
+        dataToUpdate.firefighterId = null;
+    }
 
     await updateDoc(docRef, dataToUpdate);
 };
