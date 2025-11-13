@@ -20,6 +20,7 @@ const docToUser = (docSnap: any): User => {
         movilidad: rolesData.movilidad || 'Ninguno',
         materiales: rolesData.materiales || 'Ninguno',
         ayudantia: rolesData.ayudantia || 'Ninguno',
+        roperia: rolesData.roperia || 'Ninguno',
     };
     return {
         id: docSnap.id, 

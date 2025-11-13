@@ -18,6 +18,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import AddClothingItemDialog from "./_components/add-clothing-item-dialog";
 import EditClothingItemDialog from "./_components/edit-clothing-item-dialog";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 export default function ClothingPage() {
     const [items, setItems] = useState<ClothingItem[]>([]);
@@ -25,6 +27,11 @@ export default function ClothingPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const { toast } = useToast();
+    const { getActiveRole } = useAuth();
+    const pathname = usePathname();
+
+    const activeRole = getActiveRole(pathname);
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado', [activeRole]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -81,17 +88,28 @@ export default function ClothingPage() {
         }
     }
 
+    if (activeRole === 'Bombero') {
+        return (
+            <>
+                <PageHeader title="Inventario de Ropa" description="Acceso denegado."/>
+                <p>No tienes permiso para acceder a esta sección.</p>
+            </>
+        )
+    }
+
     return (
         <>
             <PageHeader title="Inventario de Ropa" description="Gestione el equipamiento personal de cada bombero.">
-                <div className='flex flex-col sm:flex-row gap-2'>
-                    <AddClothingItemDialog onSave={handleDataChange} firefighters={firefighters}>
-                        <Button className="w-full">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Agregar Prenda
-                        </Button>
-                    </AddClothingItemDialog>
-                </div>
+                {canManage && (
+                    <div className='flex flex-col sm:flex-row gap-2'>
+                        <AddClothingItemDialog onSave={handleDataChange} firefighters={firefighters}>
+                            <Button className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Agregar Prenda
+                            </Button>
+                        </AddClothingItemDialog>
+                    </div>
+                )}
             </PageHeader>
             <Card>
                 <CardHeader>
@@ -117,13 +135,13 @@ export default function ClothingPage() {
                                 <TableHead>Talle</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead>Asignado a</TableHead>
-                                <TableHead><span className="sr-only">Acciones</span></TableHead>
+                                {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 Array.from({ length: 10 }).map((_, i) => (
-                                    <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                    <TableRow key={i}><TableCell colSpan={canManage ? 7 : 6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                 ))
                             ) : filteredItems.length > 0 ? (
                                 filteredItems.map(item => (
@@ -134,38 +152,40 @@ export default function ClothingPage() {
                                         <TableCell>{item.size}</TableCell>
                                         <TableCell>{getStateBadge(item.state)}</TableCell>
                                         <TableCell>{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito'}</TableCell>
-                                        <TableCell>
-                                            <AlertDialog>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <EditClothingItemDialog item={item} onSave={handleDataChange} firefighters={firefighters}>
-                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                        </EditClothingItemDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                        </AlertDialogTrigger>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente la prenda con código "{item.code}".</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(item.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </TableCell>
+                                        {canManage && (
+                                            <TableCell>
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent>
+                                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                            <EditClothingItemDialog item={item} onSave={handleDataChange} firefighters={firefighters}>
+                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                            </EditClothingItemDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                            <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente la prenda con código "{item.code}".</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(item.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        )}
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={7} className="h-24 text-center">No se encontraron prendas.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManage ? 7 : 6} className="h-24 text-center">No se encontraron prendas.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>

@@ -18,7 +18,7 @@ export const LoginOutputSchema = z.nullable(
       movilidad: z.enum(['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno']),
       materiales: z.enum(['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno']),
       ayudantia: z.enum(['Administrador', 'Oficial', 'Ninguno']),
-      roperia: z.enum(['Master', 'Administrador', 'Encargado']),
+      roperia: z.enum(['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno']),
     }),
   })
 );

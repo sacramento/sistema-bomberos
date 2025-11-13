@@ -156,7 +156,7 @@ export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bomber
 export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil' | 'Ninguno';
 export type MaterialesModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type AyudantiaModuleRole = 'Administrador' | 'Oficial' | 'Ninguno';
-export type RoperiaModuleRole = 'Master';
+export type RoperiaModuleRole = 'Administrador' | 'Encargado' | 'Oficial' | 'Bombero' | 'Ninguno';
 
 
 export type GlobalRole = 'Master' | 'Usuario';

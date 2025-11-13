@@ -20,6 +20,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 const clothingItemTypes: ClothingItem['type'][] = [
     'Mameluco', 'Borcego', 'Pantalon', 'Remera', 'Tricota',
@@ -53,6 +55,11 @@ export default function ClothingReportsPage() {
     const [filterState, setFilterState] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
 
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
+    const isBomberoRole = activeRole === 'Bombero';
+
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
@@ -63,6 +70,16 @@ export default function ClothingReportsPage() {
                 ]);
                 setAllItems(itemsData);
                 setAllFirefighters(firefightersData);
+
+                if (isBomberoRole && user) {
+                    const firefighterUser = firefightersData.find(f => f.legajo === user.id);
+                    if(firefighterUser) {
+                        setFilterFirefighter(firefighterUser.id);
+                    } else {
+                        // User is a 'Bombero' but not in the firefighters list, show no data.
+                        setFilterFirefighter('__NOT_FOUND__');
+                    }
+                }
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -70,7 +87,8 @@ export default function ClothingReportsPage() {
             }
         };
         fetchData();
-    }, [toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [toast, user, isBomberoRole]);
 
     const filteredItems = useMemo(() => {
         return allItems.filter(item => {
@@ -154,7 +172,7 @@ export default function ClothingReportsPage() {
 
     return (
         <div className="space-y-8">
-            <PageHeader title="Reportes de Ropería" description="Filtre y visualice el estado y la asignación del inventario de ropa." />
+            <PageHeader title={isBomberoRole ? "Mi Ropería" : "Reportes de Ropería"} description="Filtre y visualice el estado y la asignación del inventario de ropa." />
             
             <Card>
                 <CardHeader>
@@ -164,9 +182,9 @@ export default function ClothingReportsPage() {
                     <div className="space-y-2">
                         <Label>Bombero Específico</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild>
+                            <PopoverTrigger asChild disabled={isBomberoRole}>
                                 <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los bomberos"}
+                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}, ${allFirefighters.find(f => f.id === filterFirefighter)?.firstName}` : "Todos los bomberos"}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
@@ -224,12 +242,14 @@ export default function ClothingReportsPage() {
                 </CardContent>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total de Prendas</CardTitle><Shirt className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.totalItems}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas en Depósito</CardTitle><Archive className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.itemsInDeposit}</div></CardContent></Card>
-                <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas Asignadas</CardTitle><User className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.itemsGivenOut}</div></CardContent></Card>
-                 <Card className="border-red-500/50"><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas de Baja</CardTitle><User className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{summaryStats.itemsDecommissioned}</div></CardContent></Card>
-            </div>
+            {!isBomberoRole && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total de Prendas</CardTitle><Shirt className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.totalItems}</div></CardContent></Card>
+                    <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas en Depósito</CardTitle><Archive className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.itemsInDeposit}</div></CardContent></Card>
+                    <Card><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas Asignadas</CardTitle><User className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold">{summaryStats.itemsGivenOut}</div></CardContent></Card>
+                    <Card className="border-red-500/50"><CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Prendas de Baja</CardTitle><User className="h-4 w-4 text-muted-foreground"/></CardHeader><CardContent><div className="text-2xl font-bold text-red-600">{summaryStats.itemsDecommissioned}</div></CardContent></Card>
+                </div>
+            )}
             
              <Card>
                 <CardHeader>

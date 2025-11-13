@@ -62,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
         if (!parsedUser.roles) {
-            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Master' };
+            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Ninguno' };
         }
         setUser(parsedUser);
       }
@@ -102,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return 'Ninguno';
       if (user.role === 'Master') return 'Master';
 
-      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Master' };
+      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Ninguno' };
       
       const moduleKey = Object.keys(pathToModule).find(key => currentPath.startsWith(key));
       const module = moduleKey ? pathToModule[moduleKey] : null;

@@ -71,8 +71,8 @@ export const navItems: NavItem[] = [
   { href: '/inventory', icon: Archive, label: 'Inventario', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
   { href: '/ayudantia-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
 
-  { href: '/clothing', icon: Shirt, label: 'Inventario Ropa', roles: ['Master'], module: 'roperia' },
-  { href: '/clothing-reports', icon: BarChart3, label: 'Reportes Ropa', roles: ['Master'], module: 'roperia' },
+  { href: '/clothing', icon: Shirt, label: 'Inventario Ropa', roles: ['Master', 'Administrador', 'Encargado', 'Oficial'], module: 'roperia' },
+  { href: '/clothing-reports', icon: BarChart3, label: 'Reportes Ropa', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'roperia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -113,6 +113,9 @@ function Sidebar() {
     const itemActiveRole = getActiveRole(item.href);
     if (item.href === '/reports' && itemActiveRole === 'Bombero') {
       return 'Mi Reporte';
+    }
+     if (item.href === '/clothing-reports' && itemActiveRole === 'Bombero') {
+      return 'Mi Ropería';
     }
     return item.label;
   };

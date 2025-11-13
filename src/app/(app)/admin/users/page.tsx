@@ -132,6 +132,7 @@ export default function UsersPage() {
                                             <Badge variant="outline">Mov: {user.roles.movilidad}</Badge>
                                             <Badge variant="outline">Mat: {user.roles.materiales}</Badge>
                                             <Badge variant="outline">Ayu: {user.roles.ayudantia}</Badge>
+                                            <Badge variant="outline">Rop: {user.roles.roperia}</Badge>
                                         </>
                                     )}
                                </div>
