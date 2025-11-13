@@ -26,8 +26,8 @@ const subCategoriesByCategory: Record<ClothingCategory, ClothingSubCategory[]> =
 };
 
 const allItemTypes: ClothingItemType[] = [
-    'Mameluco', 'Borcegos', 'Pantalon', 'Remera', 'Tricota', 'Gorra', 
-    'Camisa', 'Campera', 'Borceguies', 'Gorro', 'Corbata', 'Cinto',
+    'Mameluco', 'Borcegos', 'Pantalon', 'Remera', 'Tricota',
+    'Camisa', 'Campera', 'Gorro', 'Corbata', 'Cinto',
     'Casco', 'Chaqueton', 'Pantalon de Incendio', 'Botas', 'Guantes', 'Esclavina'
 ];
 
