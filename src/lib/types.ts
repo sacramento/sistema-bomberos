@@ -241,9 +241,9 @@ export type AuditLog = {
 export type ClothingCategory = 'Fajina' | 'Media Gala' | 'Servicios';
 export type ClothingSubCategory = 'General' | 'Incendio' | 'Rescate' | 'Forestal' | 'GORA' | 'Buceo';
 export type ClothingItemType = 
-    'Mameluco' | 'Borcegos' | 'Pantalon' | 'Remera' | 'Tricota' |
+    'Mameluco' | 'Borcego' | 'Pantalon' | 'Remera' | 'Tricota' |
     'Camisa' | 'Campera' | 'Gorro' | 'Corbata' | 'Cinto' |
-    'Casco' | 'Chaqueton' | 'Pantalon de Incendio' | 'Botas' | 'Guantes' | 'Esclavina';
+    'Casco' | 'Chaqueton' | 'Bota' | 'Guante' | 'Esclavina';
 
 export type ClothingItem = {
     id: string;

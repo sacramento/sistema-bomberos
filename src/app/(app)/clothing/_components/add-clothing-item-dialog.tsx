@@ -26,9 +26,9 @@ const subCategoriesByCategory: Record<ClothingCategory, ClothingSubCategory[]> =
 };
 
 const allItemTypes: ClothingItemType[] = [
-    'Mameluco', 'Borcegos', 'Pantalon', 'Remera', 'Tricota',
+    'Mameluco', 'Borcego', 'Pantalon', 'Remera', 'Tricota',
     'Camisa', 'Campera', 'Gorro', 'Corbata', 'Cinto',
-    'Casco', 'Chaqueton', 'Pantalon de Incendio', 'Botas', 'Guantes', 'Esclavina'
+    'Casco', 'Chaqueton', 'Bota', 'Guante', 'Esclavina'
 ];
 
 interface AddClothingItemDialogProps {
