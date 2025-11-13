@@ -333,7 +333,7 @@ export default function ClothingReportsPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                                 <Command>
-                                    <CommandInput placeholder="Buscar bombero..." />
+                                    <CommandInput placeholder="Buscar por nombre o legajo..." />
                                     <CommandList>
                                         <CommandEmpty>No se encontró el bombero.</CommandEmpty>
                                         <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
@@ -341,7 +341,7 @@ export default function ClothingReportsPage() {
                                             Todos los bomberos
                                         </CommandItem>
                                         {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (
-                                            <CommandItem key={firefighter.id} value={`${firefighter.lastName}, ${firefighter.firstName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false); }}>
+                                            <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName}, ${firefighter.firstName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false); }}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
                                                 {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                             </CommandItem>
