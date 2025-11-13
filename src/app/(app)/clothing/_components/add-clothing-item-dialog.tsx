@@ -24,15 +24,11 @@ const subCategoriesByCategory: Record<ClothingCategory, ClothingSubCategory[]> =
     'Servicios': ['Incendio', 'Rescate', 'Forestal', 'GORA', 'Buceo']
 };
 
-const itemTypesBySubCategory: Record<ClothingSubCategory, ClothingItemType[]> = {
-    'General': ['Mameluco', 'Borcegos', 'Pantalon', 'Remera', 'Tricota', 'Gorra', 'Camisa', 'Campera', 'Borceguies', 'Gorro', 'Corbata', 'Cinto'],
-    'Incendio': ['Casco', 'Chaqueton', 'Pantalon de Incendio', 'Botas', 'Guantes', 'Esclavina'],
-    'Rescate': [],
-    'Forestal': [],
-    'GORA': [],
-    'Buceo': []
-};
-
+const allItemTypes: ClothingItemType[] = [
+    'Mameluco', 'Borcegos', 'Pantalon', 'Remera', 'Tricota', 'Gorra', 
+    'Camisa', 'Campera', 'Borceguies', 'Gorro', 'Corbata', 'Cinto',
+    'Casco', 'Chaqueton', 'Pantalon de Incendio', 'Botas', 'Guantes', 'Esclavina'
+];
 
 interface AddClothingItemDialogProps {
     children: React.ReactNode;
@@ -66,11 +62,6 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
     const availableSubCategories = useMemo(() => {
         return formData.category ? subCategoriesByCategory[formData.category] : [];
     }, [formData.category]);
-    
-    const availableItemTypes = useMemo(() => {
-        return formData.subCategory ? itemTypesBySubCategory[formData.subCategory] : [];
-    }, [formData.subCategory]);
-
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -120,7 +111,7 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
                         
                         <div className="space-y-2"><Label>Categoría</Label><Select value={formData.category} onValueChange={(v) => handleCategoryChange(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Sub-Categoría</Label><Select value={formData.subCategory} onValueChange={(v) => handleInputChange('subCategory', v as any)} disabled={!formData.category}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{availableSubCategories.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={formData.type} onValueChange={(v) => handleInputChange('type', v as any)} disabled={!formData.subCategory}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{availableItemTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2 md:col-span-2"><Label>Tipo de Prenda</Label><Select value={formData.type} onValueChange={(v) => handleInputChange('type', v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{allItemTypes.sort().map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         
                         <div className="space-y-2"><Label>Estado</Label><Select value={formData.state} onValueChange={(v) => handleInputChange('state', v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     </div>
