@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Archive, User, Shirt } from "lucide-react";
+import { Check, ChevronsUpDown, Archive, User, Shirt, Download, Loader2, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -22,6 +22,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import { format } from 'date-fns';
 
 const clothingItemTypes: ClothingItem['type'][] = [
     'Mameluco', 'Borcego', 'Pantalon', 'Remera', 'Tricota',
@@ -43,6 +46,9 @@ const CONDITION_CHART_COLORS: Record<ClothingItem['state'], string> = {
 export default function ClothingReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [generatingFicha, setGeneratingFicha] = useState(false);
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     // Raw Data
     const [allItems, setAllItems] = useState<ClothingItem[]>([]);
@@ -86,7 +92,21 @@ export default function ClothingReportsPage() {
                 setLoading(false);
             }
         };
+        const fetchLogo = async () => {
+             try {
+                const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLogoDataUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+             } catch (error) {
+                 console.error("Failed to load logo for PDF", error);
+             }
+        }
         fetchData();
+        fetchLogo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [toast, user, isBomberoRole]);
 
@@ -135,6 +155,129 @@ export default function ClothingReportsPage() {
         }
     }, [filteredItems]);
     
+    const generateGeneralPdf = async () => {
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+
+        setGeneratingPdf(true);
+        const doc = new jsPDF();
+        
+        try {
+            doc.setFillColor(220, 53, 69);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Reporte de Ropería", 14, 22);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            
+            let currentY = 50;
+
+            doc.setFontSize(12);
+            doc.setTextColor(40, 40, 40);
+            doc.text("Detalle de Inventario Filtrado", 14, currentY);
+            currentY += 8;
+
+            (doc as any).autoTable({
+                startY: currentY,
+                head: [['Código', 'Tipo', 'Talle', 'Asignado a', 'Condición']],
+                body: filteredItems.map(item => [
+                    item.code,
+                    item.type,
+                    item.size,
+                    item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito',
+                    item.state,
+                ]),
+                theme: 'striped',
+                headStyles: { fillColor: '#333333' },
+            });
+            
+            doc.save(`reporte-roperia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+        } finally {
+            setGeneratingPdf(false);
+        }
+    }
+    
+    const generateFichaPdf = async () => {
+        const firefighter = allFirefighters.find(f => f.id === filterFirefighter);
+        if (!firefighter) {
+            toast({ title: "Acción requerida", description: "Seleccione un bombero para generar su ficha.", variant: "destructive" });
+            return;
+        }
+         if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+
+        setGeneratingFicha(true);
+        const doc = new jsPDF();
+        
+        try {
+            // Header
+            doc.addImage(logoDataUrl, 'PNG', 14, 12, 25, 25);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Ficha de Equipamiento Personal", doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' });
+            
+            // Firefighter Info
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Bombero:`, 14, 50);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`${firefighter.firstName} ${firefighter.lastName}`, 38, 50);
+
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Legajo:`, 120, 50);
+            doc.setFont('helvetica', 'bold');
+            doc.text(firefighter.legajo, 140, 50);
+            
+            // Table
+            const body = filteredItems.map(item => [
+                item.code,
+                `${item.category}/${item.subCategory}`,
+                item.type,
+                item.size,
+                item.state
+            ]);
+
+            (doc as any).autoTable({
+                startY: 60,
+                head: [['Código', 'Categoría', 'Tipo', 'Talle', 'Condición']],
+                body: body,
+                theme: 'grid',
+                headStyles: { fillColor: '#333333' },
+            });
+            
+            let finalY = (doc as any).lastAutoTable.finalY + 20;
+            if (finalY > 250) {
+                doc.addPage();
+                finalY = 20;
+            }
+
+            // Signature
+            doc.setFontSize(10);
+            doc.text("Recibí conforme el equipamiento detallado en la presente ficha.", 14, finalY);
+            
+            finalY += 30;
+            doc.line(14, finalY, 80, finalY);
+            doc.text("Firma del Bombero", 16, finalY + 5);
+
+            doc.line(130, finalY, 196, finalY);
+            doc.text("Aclaración", 132, finalY + 5);
+
+            doc.save(`ficha-${firefighter.lastName}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear la ficha.", variant: "destructive" });
+        } finally {
+            setGeneratingFicha(false);
+        }
+    }
+
+
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
         if (percent < 0.05) return null; // Don't render label for tiny slices
@@ -157,7 +300,7 @@ export default function ClothingReportsPage() {
             Malo: 'bg-orange-600',
             Baja: 'bg-red-600',
         };
-        return <Badge variant="default" className={stateClasses[state]}>{state}</Badge>;
+        return <Badge variant="default" className={cn(stateClasses[state], 'hover:' + stateClasses[state])}>{state}</Badge>;
     }
 
 
@@ -296,6 +439,24 @@ export default function ClothingReportsPage() {
                         </TableBody>
                     </Table>
                 </CardContent>
+            </Card>
+
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Exportar a PDF</CardTitle>
+                    <CardDescription>Genere documentos a partir de los datos filtrados.</CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-col sm:flex-row gap-4">
+                    <Button onClick={generateGeneralPdf} disabled={generatingPdf}>
+                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingPdf ? "Generando..." : "Reporte General"}
+                    </Button>
+                    <Button onClick={generateFichaPdf} disabled={generatingFicha || filterFirefighter === 'all'}>
+                        {generatingFicha ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSignature className="mr-2 h-4 w-4" />}
+                        {generatingFicha ? "Generando..." : "Ficha de Bombero"}
+                    </Button>
+                </CardContent>
+                 {filterFirefighter === 'all' && <CardFooter><p className="text-sm text-muted-foreground">Seleccione un bombero específico en los filtros para habilitar la generación de ficha.</p></CardFooter>}
             </Card>
         </div>
     );
