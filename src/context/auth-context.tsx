@@ -3,7 +3,7 @@
 
 import { login as loginFlow } from '@/ai/auth-flow';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
-import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole } from '@/lib/types';
+import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -15,7 +15,7 @@ import {
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
-export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | AyudantiaModuleRole | 'Ninguno';
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | AyudantiaModuleRole | RoperiaModuleRole | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -28,7 +28,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'ayudantia' | 'general' | 'dashboard'> = {
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'ayudantia' | 'roperia' | 'general' | 'dashboard'> = {
     '/sessions': 'asistencia',
     '/classes': 'asistencia',
     '/schedule': 'asistencia',
@@ -44,6 +44,8 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/sanctions': 'ayudantia',
     '/inventory': 'ayudantia',
     '/ayudantia-reports': 'ayudantia',
+    '/clothing': 'roperia',
+    '/clothing-reports': 'roperia',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -60,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
         if (!parsedUser.roles) {
-            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno' };
+            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Master' };
         }
         setUser(parsedUser);
       }
@@ -100,7 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!user) return 'Ninguno';
       if (user.role === 'Master') return 'Master';
 
-      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno' };
+      const roles = user.roles || { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Master' };
       
       const moduleKey = Object.keys(pathToModule).find(key => currentPath.startsWith(key));
       const module = moduleKey ? pathToModule[moduleKey] : null;
@@ -116,6 +118,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return roles.materiales;
         case 'ayudantia':
             return roles.ayudantia;
+        case 'roperia':
+            return roles.roperia;
         case 'general':
         case 'dashboard':
           return user.role;

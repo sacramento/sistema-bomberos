@@ -29,6 +29,7 @@ import {
   ScanLine,
   Gavel,
   Archive,
+  Shirt,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -44,7 +45,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia';
 };
 
 export const navItems: NavItem[] = [
@@ -69,6 +70,9 @@ export const navItems: NavItem[] = [
   { href: '/sanctions', icon: Gavel, label: 'Sanciones', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
   { href: '/inventory', icon: Archive, label: 'Inventario', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
   { href: '/ayudantia-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
+
+  { href: '/clothing', icon: Shirt, label: 'Inventario Ropa', roles: ['Master'], module: 'roperia' },
+  { href: '/clothing-reports', icon: BarChart3, label: 'Reportes Ropa', roles: ['Master'], module: 'roperia' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -99,6 +103,7 @@ function Sidebar() {
       semanas: 'Semanas',
       movilidad: 'Movilidad',
       materiales: 'Materiales',
+      roperia: 'Ropería',
       ayudantia: 'Ayudantía',
       general: 'Administración'
   };

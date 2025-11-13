@@ -5,11 +5,11 @@ import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame, Package, ClipboardMinus } from 'lucide-react';
+import { ArrowRight, Flame, Package, ClipboardMinus, Shirt } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
-const moduleDetails: Record<NavItem['module'], { title: string; description: string; icon: React.ElementType }> = {
+const moduleDetails: Record<string, { title: string; description: string; icon: React.ElementType }> = {
     asistencia: {
         title: 'Asistencia',
         description: 'Gestione clases, asistencias y reportes de capacitación.',
@@ -29,6 +29,11 @@ const moduleDetails: Record<NavItem['module'], { title: string; description: str
         title: 'Materiales',
         description: 'Gestione el inventario de materiales y equipos de los cuarteles.',
         icon: Package
+    },
+    roperia: {
+        title: 'Ropería',
+        description: 'Controle el inventario de ropa y equipo personal.',
+        icon: Shirt
     },
     ayudantia: {
         title: 'Ayudantía',
@@ -58,7 +63,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'ayudantia', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'general'];
 
 
   return (
