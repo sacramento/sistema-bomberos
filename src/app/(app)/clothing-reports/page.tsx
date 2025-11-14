@@ -4,7 +4,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useState, useEffect, useMemo } from "react";
-import { ClothingItem, Firefighter } from "@/lib/types";
+import { ClothingItem, Firefighter, ClothingCategory, ClothingSubCategory } from "@/lib/types";
 import { getClothingItems } from "@/services/clothing.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,13 @@ import { usePathname } from "next/navigation";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
+
+const clothingCategories: ClothingCategory[] = ['Fajina', 'Media Gala', 'Servicios'];
+const subCategoriesByCategory: Record<ClothingCategory, ClothingSubCategory[]> = {
+    'Fajina': ['General'],
+    'Media Gala': ['General'],
+    'Servicios': ['Incendio', 'Rescate', 'Forestal', 'GORA', 'Buceo']
+};
 
 const clothingItemTypes: ClothingItem['type'][] = [
     'Mameluco', 'Borcego', 'Pantalon', 'Remera', 'Tricota',
@@ -57,6 +64,8 @@ export default function ClothingReportsPage() {
     // Filters
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterType, setFilterType] = useState('all');
+    const [filterCategory, setFilterCategory] = useState<ClothingCategory | 'all'>('all');
+    const [filterSubCategory, setFilterSubCategory] = useState<ClothingSubCategory | 'all'>('all');
     const [filterCuartel, setFilterCuartel] = useState('all');
     const [filterState, setFilterState] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -114,6 +123,8 @@ export default function ClothingReportsPage() {
         return allItems.filter(item => {
             if (filterType !== 'all' && item.type !== filterType) return false;
             if (filterState !== 'all' && item.state !== filterState) return false;
+            if (filterCategory !== 'all' && item.category !== filterCategory) return false;
+            if (filterSubCategory !== 'all' && item.subCategory !== filterSubCategory) return false;
 
             const firefighter = allFirefighters.find(f => f.id === item.firefighterId);
             
@@ -128,7 +139,7 @@ export default function ClothingReportsPage() {
 
             return true;
         });
-    }, [allItems, allFirefighters, filterType, filterState, filterCuartel, filterFirefighter]);
+    }, [allItems, allFirefighters, filterType, filterState, filterCategory, filterSubCategory, filterCuartel, filterFirefighter]);
 
     const summaryStats = useMemo(() => {
         const itemsInDeposit = filteredItems.filter(item => !item.firefighterId).length;
@@ -321,7 +332,7 @@ export default function ClothingReportsPage() {
                 <CardHeader>
                     <CardTitle className="font-headline">Filtros del Reporte</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label>Bombero Específico</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -358,6 +369,26 @@ export default function ClothingReportsPage() {
                             <SelectContent>
                                 <SelectItem value="all">Todos los tipos</SelectItem>
                                 {clothingItemTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Categoría</Label>
+                        <Select value={filterCategory} onValueChange={(v) => { setFilterCategory(v as any); setFilterSubCategory('all'); }}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las categorías</SelectItem>
+                                {clothingCategories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Sub-Categoría</Label>
+                        <Select value={filterSubCategory} onValueChange={(v) => setFilterSubCategory(v as any)} disabled={filterCategory !== 'Servicios'}>
+                            <SelectTrigger><SelectValue/></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las sub-categorías</SelectItem>
+                                {filterCategory === 'Servicios' && subCategoriesByCategory.Servicios.map(subCat => <SelectItem key={subCat} value={subCat}>{subCat}</SelectItem>)}
                             </SelectContent>
                         </Select>
                     </div>
@@ -461,3 +492,4 @@ export default function ClothingReportsPage() {
         </div>
     );
 }
+
