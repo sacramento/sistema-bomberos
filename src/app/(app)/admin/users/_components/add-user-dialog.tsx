@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/context/auth-context";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
@@ -38,6 +39,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { user: actor } = useAuth();
   
   // Form State
   const [password, setPassword] = useState('');
@@ -102,6 +104,10 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         });
         return;
     }
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
     
     setLoading(true);
 
@@ -122,7 +128,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             }
         };
         
-        await addUser(selectedFirefighter.legajo, newUser);
+        await addUser(selectedFirefighter.legajo, newUser, actor);
 
         toast({
             title: "¡Éxito!",

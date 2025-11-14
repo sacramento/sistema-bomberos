@@ -20,6 +20,7 @@ import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleR
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/context/auth-context";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
@@ -33,6 +34,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { user: actor } = useAuth();
 
   // Form State
   const [name, setName] = useState(user.name);
@@ -67,6 +69,10 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
         toast({ title: "Error", description: "El nombre y el rol global son obligatorios.", variant: "destructive" });
         return;
     }
+     if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
     
     setLoading(true);
 
@@ -90,7 +96,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             updatedData.password = password;
         }
         
-        await updateUser(user.id, updatedData);
+        await updateUser(user.id, updatedData, actor);
 
         toast({ title: "¡Éxito!", description: "El usuario ha sido actualizado." });
         

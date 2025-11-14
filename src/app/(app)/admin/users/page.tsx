@@ -32,7 +32,7 @@ export default function UsersPage() {
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { user: actor } = useAuth();
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -59,8 +59,12 @@ export default function UsersPage() {
     };
 
     const handleDelete = async (userId: string) => {
+        if (!actor) {
+             toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+             return;
+        }
         try {
-            await deleteUser(userId);
+            await deleteUser(userId, actor);
             toast({
                 title: "Éxito",
                 description: "El usuario ha sido eliminado."

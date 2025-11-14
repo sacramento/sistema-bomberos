@@ -1,8 +1,9 @@
 
 
-import { User } from '@/lib/types';
+import { User, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -50,7 +51,7 @@ export const getUserById = async (id: string): Promise<User | null> => {
     return null;
 }
 
-export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<void> => {
+export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser): Promise<void> => {
     // Here, 'id' is the firefighter's legajo.
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
@@ -60,9 +61,11 @@ export const addUser = async (id: string, userData: Omit<User, 'id'>): Promise<v
     }
 
     await setDoc(docRef, userData);
+    
+    await logAction(actor, 'CREATE_USER', { entity: 'user', id }, userData);
 };
 
-export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>): Promise<void> => {
+export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
 
@@ -71,9 +74,12 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
     }
 
     await updateDoc(docRef, userData);
+
+    await logAction(actor, 'UPDATE_USER', { entity: 'user', id }, userData);
 };
 
-export const deleteUser = async (id: string): Promise<void> => {
+export const deleteUser = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'users', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_USER', { entity: 'user', id });
 };
