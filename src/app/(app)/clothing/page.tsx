@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import AddClothingItemDialog from "./_components/add-clothing-item-dialog";
 import EditClothingItemDialog from "./_components/edit-clothing-item-dialog";
+import QrScannerDialog from "./_components/qr-scanner-dialog";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 
@@ -68,6 +69,18 @@ export default function ClothingPage() {
         }
     };
 
+    const handleQrScan = (code: string) => {
+        setSearchTerm(code);
+        const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
+        if (!foundItem) {
+            toast({
+                variant: "destructive",
+                title: "Prenda no encontrada",
+                description: `No se encontró la prenda con el código: ${code}.`,
+            });
+        }
+    };
+
     const filteredItems = useMemo(() => {
         if (!searchTerm) return items;
         return items.filter(item => 
@@ -114,14 +127,22 @@ export default function ClothingPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Listado de Prendas</CardTitle>
-                    <div className="relative mt-2">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Buscar por código, tipo o bombero..." 
-                            className="pl-9" 
-                            value={searchTerm} 
-                            onChange={(e) => setSearchTerm(e.target.value)} 
-                        />
+                    <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                                placeholder="Buscar por código, tipo o bombero..." 
+                                className="pl-9" 
+                                value={searchTerm} 
+                                onChange={(e) => setSearchTerm(e.target.value)} 
+                            />
+                        </div>
+                        <QrScannerDialog onScan={handleQrScan}>
+                            <Button variant="outline" className="w-full sm:w-auto">
+                                <QrCode className="mr-2 h-4 w-4" />
+                                Escanear QR
+                            </Button>
+                        </QrScannerDialog>
                     </div>
                 </CardHeader>
                 <CardContent>
