@@ -159,8 +159,9 @@ export default function ImportMaterialsDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas (en minúscula y sin tildes): <strong>codigo, nombre, tipo, especialidad, cuartel, estado, condicion, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas</strong>.
-                    <p className="mt-2 text-xs">Si `ubicacion_tipo` es `vehiculo`, complete `numero_movil` y `ubicacion_baulera`. Si es `deposito`, puede dejarlos vacíos.</p>
+                    <p>El orden de las columnas no importa, pero los títulos deben ser exactos y en minúscula (sin tildes).</p>
+                    <p className='mt-2'><strong>Columnas obligatorias:</strong> {REQUIRED_HEADERS.join(', ')}.</p>
+                    <p className="mt-2 text-xs">Si `ubicacion_tipo` es `vehiculo`, complete `numero_movil` y `ubicacion_baulera`. Si es `deposito`, los campos `numero_movil` y `ubicacion_baulera` pueden quedar vacíos.</p>
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
