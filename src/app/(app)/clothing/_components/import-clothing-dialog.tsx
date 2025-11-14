@@ -150,7 +150,7 @@ export default function ImportClothingDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    <p>Los títulos de las columnas deben ser exactos y en minúscula (sin tildes).</p>
+                    <p>Los títulos de las columnas deben ser exactos y en minúscula (sin tildes). El orden de las columnas no afecta la importación.</p>
                     <p className='mt-2'><strong>Columnas obligatorias:</strong> codigo, categoria, subcategoria, tipo, talle, estado, legajo_bombero.</p>
                     <p className='mt-1'><strong>Columnas opcionales:</strong> marca, modelo, observaciones.</p>
                     <p className="mt-2 text-xs">Para prendas en depósito, la columna `legajo_bombero` debe estar presente pero la celda puede quedar vacía.</p>
