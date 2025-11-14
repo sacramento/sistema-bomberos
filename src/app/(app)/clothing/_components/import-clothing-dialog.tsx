@@ -20,7 +20,7 @@ import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
 
-const REQUIRED_HEADERS = ['code', 'category', 'subcategory', 'type', 'size', 'state', 'firefighter_legajo'];
+const REQUIRED_HEADERS = ['codigo', 'categoria', 'subcategoria', 'tipo', 'talle', 'estado', 'legajo_bombero'];
 
 export default function ImportClothingDialog({
   children,
@@ -77,17 +77,17 @@ export default function ImportClothingDialog({
 
         const clothingToUpload = results.data.map(row => {
             return {
-                code: row.code.trim(),
-                category: row.category.trim(),
-                subCategory: row.subcategory.trim(),
-                type: row.type.trim(),
-                size: row.size.trim(),
-                state: row.state.trim(),
-                brand: row.brand?.trim() || undefined,
-                model: row.model?.trim() || undefined,
-                observations: row.observations?.trim() || undefined,
-                firefighterLegajo: row.firefighter_legajo?.trim() || undefined,
-            } as Omit<ClothingItem, 'id' | 'firefighter' | 'firefighterId'> & { firefighterLegajo?: string };
+                codigo: row.codigo.trim(),
+                categoria: row.categoria.trim(),
+                subcategoria: row.subcategoria.trim(),
+                tipo: row.tipo.trim(),
+                talle: row.talle.trim(),
+                estado: row.estado.trim(),
+                marca: row.marca?.trim() || undefined,
+                modelo: row.modelo?.trim() || undefined,
+                observaciones: row.observaciones?.trim() || undefined,
+                legajo_bombero: row.legajo_bombero?.trim() || undefined,
+            }
         });
         
         if (clothingToUpload.length === 0) {
@@ -141,7 +141,7 @@ export default function ImportClothingDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importar Prendas desde CSV</DialogTitle>
           <DialogDescription>
-            Seleccione un archivo .csv para cargar prendas en lote.
+            Seleccione un archivo .csv para cargar prendas en lote. El orden de las columnas no importa, solo los títulos.
           </DialogDescription>
         </DialogHeader>
         
@@ -150,10 +150,10 @@ export default function ImportClothingDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    <p>El orden de las columnas no importa, pero los títulos deben ser exactos y en minúscula.</p>
-                    <p className='mt-2'><strong>Columnas obligatorias:</strong> code, category, subcategory, type, size, state, firefighter_legajo.</p>
-                    <p className='mt-1'><strong>Columnas opcionales:</strong> brand, model, observations.</p>
-                    <p className="mt-2 text-xs">Para prendas en depósito, la columna `firefighter_legajo` debe estar presente pero la celda puede quedar vacía.</p>
+                    <p>Los títulos de las columnas deben ser exactos y en minúscula (sin tildes).</p>
+                    <p className='mt-2'><strong>Columnas obligatorias:</strong> codigo, categoria, subcategoria, tipo, talle, estado, legajo_bombero.</p>
+                    <p className='mt-1'><strong>Columnas opcionales:</strong> marca, modelo, observaciones.</p>
+                    <p className="mt-2 text-xs">Para prendas en depósito, la columna `legajo_bombero` debe estar presente pero la celda puede quedar vacía.</p>
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">

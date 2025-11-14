@@ -88,7 +88,20 @@ export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firef
     return docRef.id;
 };
 
-export const batchAddClothingItems = async (items: (Omit<ClothingItem, 'id' | 'firefighter' | 'firefighterId'> & { firefighterLegajo?: string })[]): Promise<void> => {
+type ClothingImportRow = {
+    codigo: string;
+    categoria: string;
+    subcategoria: string;
+    tipo: string;
+    talle: string;
+    estado: string;
+    marca?: string;
+    modelo?: string;
+    observaciones?: string;
+    legajo_bombero?: string;
+}
+
+export const batchAddClothingItems = async (items: ClothingImportRow[]): Promise<void> => {
     if (!items || items.length === 0) {
         return;
     }
@@ -98,28 +111,38 @@ export const batchAddClothingItems = async (items: (Omit<ClothingItem, 'id' | 'f
     const existingCodesQuery = await getDocs(query(clothingCollection));
     const existingCodes = new Set(existingCodesQuery.docs.map(doc => doc.data().code));
     
-    for (const item of items) {
-        if (existingCodes.has(item.code)) {
-            console.warn(`Skipping item with duplicate code: ${item.code}`);
+    for (const row of items) {
+        if (existingCodes.has(row.codigo)) {
+            console.warn(`Skipping item with duplicate code: ${row.codigo}`);
             continue; // Skip this item
         }
 
         const newDocRef = doc(collection(db, 'clothing'));
-        const { firefighterLegajo, ...itemData } = item;
-        const dataToSave: any = { ...itemData };
+        
+        const dataToSave: Partial<Omit<ClothingItem, 'id' | 'firefighter'>> = {
+            code: row.codigo,
+            category: row.categoria as any,
+            subCategory: row.subcategoria as any,
+            type: row.tipo as any,
+            size: row.talle,
+            state: row.estado as any,
+            brand: row.marca || undefined,
+            model: row.modelo || undefined,
+            observations: row.observaciones || undefined
+        };
 
-        if (firefighterLegajo) {
-            const firefighter = firefighterMap.get(firefighterLegajo);
+        if (row.legajo_bombero) {
+            const firefighter = firefighterMap.get(row.legajo_bombero);
             if (firefighter) {
                 dataToSave.firefighterId = firefighter.id;
                 dataToSave.deliveredAt = new Date().toISOString();
             } else {
-                console.warn(`Firefighter with legajo "${firefighterLegajo}" not found. Item "${item.code}" will be in storage.`);
+                console.warn(`Firefighter with legajo "${row.legajo_bombero}" not found. Item "${row.codigo}" will be in storage.`);
             }
         }
         
         batch.set(newDocRef, dataToSave);
-        existingCodes.add(item.code); // Add to set to prevent duplicates within the same batch
+        existingCodes.add(row.codigo); // Add to set to prevent duplicates within the same batch
     }
 
     await batch.commit();
