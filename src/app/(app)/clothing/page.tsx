@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Copy } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Copy, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { getClothingItems, deleteClothingItem } from "@/services/clothing.service";
@@ -21,6 +21,7 @@ import EditClothingItemDialog from "./_components/edit-clothing-item-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
+import ImportClothingDialog from "./_components/import-clothing-dialog";
 
 export default function ClothingPage() {
     const [items, setItems] = useState<ClothingItem[]>([]);
@@ -115,6 +116,12 @@ export default function ClothingPage() {
             <PageHeader title="Inventario de Ropa" description="Gestione el equipamiento personal de cada bombero.">
                 {canManage && (
                     <div className='flex flex-col sm:flex-row gap-2'>
+                        <ImportClothingDialog onImportSuccess={handleDataChange}>
+                            <Button variant="outline" className="w-full">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Importar CSV
+                            </Button>
+                        </ImportClothingDialog>
                         <AddClothingItemDialog onSave={handleDataChange} firefighters={firefighters}>
                             <Button className="w-full">
                                 <PlusCircle className="mr-2 h-4 w-4" />
