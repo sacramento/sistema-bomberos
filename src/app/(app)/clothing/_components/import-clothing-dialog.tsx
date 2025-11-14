@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -21,7 +20,7 @@ import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
 
-const REQUIRED_HEADERS = ['code', 'category', 'subcategory', 'type', 'size', 'state'];
+const REQUIRED_HEADERS = ['code', 'category', 'subcategory', 'type', 'size', 'state', 'firefighter_legajo'];
 
 export default function ImportClothingDialog({
   children,
@@ -151,8 +150,10 @@ export default function ImportClothingDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las columnas: <strong>code, category, subcategory, type, size, state</strong>.
-                    <p className="mt-2 text-xs">Opcionalmente puede incluir: <strong>brand, model, observations, firefighter_legajo</strong>.</p>
+                    <p>El orden de las columnas no importa, pero los títulos deben ser exactos y en minúscula.</p>
+                    <p className='mt-2'><strong>Columnas obligatorias:</strong> code, category, subcategory, type, size, state, firefighter_legajo.</p>
+                    <p className='mt-1'><strong>Columnas opcionales:</strong> brand, model, observations.</p>
+                    <p className="mt-2 text-xs">Para prendas en depósito, la columna `firefighter_legajo` debe estar presente pero la celda puede quedar vacía.</p>
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
