@@ -78,15 +78,21 @@ export default function ClothingPage() {
 
     const handleSearch = (term: string) => {
         setSearchTerm(term);
-        const results = items.filter(item => 
-            item.code.toLowerCase().includes(term.toLowerCase()) || 
-            item.type.toLowerCase().includes(term.toLowerCase()) ||
-            item.firefighter?.lastName.toLowerCase().includes(term.toLowerCase())
-        );
 
-        if (results.length === 1) {
-            setDetailItem(results[0]);
+        if (!term) {
+            setDetailItem(null);
+            return;
         }
+
+        // Prioritize exact code match to show modal
+        const exactCodeMatch = items.find(item => item.code.toLowerCase() === term.toLowerCase());
+        if (exactCodeMatch) {
+            setDetailItem(exactCodeMatch);
+            return; // Stop further processing to show the modal
+        }
+
+        // If no exact code match, proceed with broader search but don't show modal
+        setDetailItem(null); 
     };
 
     const handleQrScan = (code: string) => {
@@ -111,8 +117,9 @@ export default function ClothingPage() {
 
     const filteredItems = useMemo(() => {
         if (!searchTerm) return [];
+        // This list is only shown when no exact code match is found
         return items.filter(item => 
-            item.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.firefighter?.lastName.toLowerCase().includes(searchTerm.toLowerCase())
         );
@@ -198,7 +205,7 @@ export default function ClothingPage() {
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}><TableCell colSpan={canManage ? 7 : 6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                 ))
-                            ) : filteredItems.length > 0 ? (
+                            ) : filteredItems.length > 0 && !detailItem ? (
                                 filteredItems.map(item => (
                                     <TableRow key={item.id}>
                                         <TableCell className="font-mono">{item.code}</TableCell>
@@ -266,6 +273,8 @@ export default function ClothingPage() {
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
                         setDetailItem(null);
+                        // Optional: clear search term after closing dialog if you want a fresh state
+                        // setSearchTerm(''); 
                     }
                 }}
             />
