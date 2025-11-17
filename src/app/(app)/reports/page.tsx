@@ -383,24 +383,51 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 doc.setFont('helvetica', 'bold');
                 doc.text("Resumen de Asistencia por Bombero", 14, currentY);
                 currentY += 8;
-                
-                const sortedSummary = [...summaryTableData].sort((a,b) => (a.firefighterFirehouse || '').localeCompare(b.firefighterFirehouse || ''));
-                const summaryBody: any[] = [];
-                let lastSummaryFirehouse = '';
 
-                sortedSummary.forEach(item => {
-                    const firehouse = item.firefighterFirehouse || 'Sin Cuartel';
-                    if (firehouse !== lastSummaryFirehouse) {
-                        summaryBody.push([{ content: `--- ${firehouse} ---`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
-                        lastSummaryFirehouse = firehouse;
+                // Sort and group for PDF
+                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+                const groupedForPdf: { group: string; items: any[] }[] = [
+                    { group: 'Oficiales y Suboficiales', items: [] },
+                    { group: 'Bomberos Cuartel 1', items: [] },
+                    { group: 'Bomberos Cuartel 2', items: [] },
+                    { group: 'Bomberos Cuartel 3', items: [] },
+                    { group: 'Aspirantes', items: [] }
+                ];
+
+                summaryTableData.forEach(item => {
+                    const firefighter = allFirefighters.find(f => f.id === item.firefighterId);
+                    if (!firefighter) return;
+
+                    if (oficialRanks.includes(firefighter.rank) || suboficialRanks.includes(firefighter.rank)) {
+                        groupedForPdf[0].items.push(item);
+                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 1') {
+                        groupedForPdf[1].items.push(item);
+                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 2') {
+                        groupedForPdf[2].items.push(item);
+                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 3') {
+                        groupedForPdf[3].items.push(item);
+                    } else if (firefighter.rank === 'ASPIRANTE') {
+                        groupedForPdf[4].items.push(item);
                     }
-                    summaryBody.push([
-                        item.firefighterLegajo,
-                        item.firefighter,
-                        item.totalClasses,
-                        item.presentPercentage
-                    ]);
                 });
+
+                const summaryBody: any[] = [];
+                groupedForPdf.forEach(group => {
+                    if (group.items.length > 0) {
+                        summaryBody.push([{ content: `--- ${group.group} ---`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
+                        group.items.sort((a,b) => a.firefighterLegajo.localeCompare(b.firefighterLegajo, undefined, { numeric: true })).forEach(item => {
+                             summaryBody.push([
+                                item.firefighterLegajo,
+                                item.firefighter,
+                                item.totalClasses,
+                                item.presentPercentage
+                            ]);
+                        })
+                    }
+                });
+
 
                  (doc as any).autoTable({
                     startY: currentY,
@@ -420,39 +447,23 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 doc.setFont('helvetica', 'bold');
                 doc.text("Detalle de Registros de Asistencia", 14, currentY);
                 currentY += 8;
-
-                 const sortedDetails = [...attendanceReportData.details].sort((a, b) => {
-                    const firehouseA = a.firefighter.firehouse || 'Sin Cuartel';
-                    const firehouseB = b.firefighter.firehouse || 'Sin Cuartel';
-                    if (firehouseA !== firehouseB) {
-                        return firehouseA.localeCompare(firehouseB);
-                    }
-                    return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
-                });
-
-                const detailBody: any[] = [];
-                let lastDetailFirehouse = '';
-
-                sortedDetails.forEach(item => {
-                    const firehouse = item.firefighter.firehouse || 'Sin Cuartel';
-                    if (firehouse !== lastDetailFirehouse) {
-                        detailBody.push([{ content: `--- ${firehouse} ---`, colSpan: 6, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
-                        lastDetailFirehouse = firehouse;
-                    }
-                    
-                    let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
-                    if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
-                    else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
-                    
-                    detailBody.push([
-                        item.firefighter.legajo,
-                        name,
-                        item.session.title, 
-                        item.session.specialization, 
-                        item.session.date, 
-                        getStatusLabel(item.status)
-                    ]);
-                });
+                
+                const detailBody = attendanceReportData.details
+                    .sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true }))
+                    .map(item => {
+                        let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                        if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
+                        else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
+                        
+                        return [
+                            item.firefighter.legajo,
+                            name,
+                            item.session.title, 
+                            item.session.specialization, 
+                            item.session.date, 
+                            getStatusLabel(item.status)
+                        ]
+                    });
     
                 (doc as any).autoTable({
                     startY: currentY,
@@ -607,7 +618,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                 totalClasses: totalRequiredClasses,
                 presentPercentage: `${percentage.toFixed(0)}%`,
             };
-        }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => a.firefighter.localeCompare(b.firefighter));
+        }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => (a.firefighterLegajo || '').localeCompare(b.firefighterLegajo || '', undefined, { numeric: true }));
     }, [attendanceReportData.details, allFirefighters]);
 
 
@@ -1243,3 +1254,6 @@ export default function ReportsPage() {
     );
 }
 
+
+
+    
