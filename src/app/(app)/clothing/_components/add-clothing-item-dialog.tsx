@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ClothingItem, Firefighter, ClothingCategory, ClothingSubCategory, ClothingItemType } from "@/lib/types";
 import { addClothingItem } from "@/services/clothing.service";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -32,15 +32,22 @@ const allItemTypes: ClothingItemType[] = [
 ];
 
 interface AddClothingItemDialogProps {
-    children: React.ReactNode;
+    children?: React.ReactNode;
     onSave: () => void;
     firefighters: Firefighter[];
+    initialData?: ClothingItem | null;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
 }
 
-export default function AddClothingItemDialog({ children, onSave, firefighters }: AddClothingItemDialogProps) {
-    const [open, setOpen] = useState(false);
+export default function AddClothingItemDialog({ children, onSave, firefighters, initialData, open: controlledOpen, onOpenChange: setControlledOpen }: AddClothingItemDialogProps) {
+    const [internalOpen, setInternalOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+
+    const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+    const setOpen = setControlledOpen !== undefined ? setControlledOpen : setInternalOpen;
+
 
     // Form state
     const [formData, setFormData] = useState<Partial<Omit<ClothingItem, 'id' | 'firefighter'>>>({ state: 'Bueno' });
@@ -51,6 +58,27 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
         setFormData({ state: 'Bueno' });
         setSelectedFirefighter(null);
     };
+    
+     useEffect(() => {
+        if (open) {
+            if (initialData) {
+                // Pre-fill form for cloning
+                setFormData({
+                    category: initialData.category,
+                    subCategory: initialData.subCategory,
+                    type: initialData.type,
+                    size: initialData.size,
+                    brand: initialData.brand,
+                    model: initialData.model,
+                    state: initialData.state,
+                });
+                setSelectedFirefighter(initialData.firefighter || null);
+            } else {
+                // Reset for new entry
+                resetForm();
+            }
+        }
+    }, [open, initialData]);
 
     const handleInputChange = (field: keyof typeof formData, value: any) => {
         setFormData(prev => ({ ...prev, [field]: value }));
@@ -99,14 +127,18 @@ export default function AddClothingItemDialog({ children, onSave, firefighters }
             setLoading(false);
         }
     };
+    
+    const isCloning = !!initialData;
 
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
-            <DialogTrigger asChild>{children}</DialogTrigger>
+        <Dialog open={open} onOpenChange={setOpen}>
+            {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">Agregar Prenda al Inventario</DialogTitle>
-                    <DialogDescription>Complete los detalles de la nueva prenda.</DialogDescription>
+                    <DialogTitle className="font-headline">{isCloning ? `Clonar Prenda "${initialData.type}"` : 'Agregar Prenda al Inventario'}</DialogTitle>
+                    <DialogDescription>
+                        {isCloning ? 'Complete un nuevo código único. El resto de los datos han sido copiados.' : 'Complete los detalles de la nueva prenda.'}
+                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

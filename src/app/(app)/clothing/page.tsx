@@ -22,12 +22,18 @@ import QrScannerDialog from "./_components/qr-scanner-dialog";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import ImportClothingDialog from "./_components/import-clothing-dialog";
+import ClothingDetailDialog from "./_components/clothing-detail-dialog";
+
 
 export default function ClothingPage() {
     const [items, setItems] = useState<ClothingItem[]>([]);
     const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [scannedItem, setScannedItem] = useState<ClothingItem | null>(null);
+    const [cloningItem, setCloningItem] = useState<ClothingItem | null>(null);
+    const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+    
     const { toast } = useToast();
     const { getActiveRole } = useAuth();
     const pathname = usePathname();
@@ -71,9 +77,12 @@ export default function ClothingPage() {
     };
 
     const handleQrScan = (code: string) => {
-        setSearchTerm(code);
         const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
-        if (!foundItem) {
+        if (foundItem) {
+            setSearchTerm(code);
+            setScannedItem(foundItem);
+        } else {
+            setSearchTerm(code);
             toast({
                 variant: "destructive",
                 title: "Prenda no encontrada",
@@ -81,9 +90,14 @@ export default function ClothingPage() {
             });
         }
     };
+    
+     const handleCloneClick = (item: ClothingItem) => {
+        setCloningItem(item);
+        setIsCloneDialogOpen(true);
+    };
 
     const filteredItems = useMemo(() => {
-        if (!searchTerm) return items;
+        if (!searchTerm) return [];
         return items.filter(item => 
             item.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
             item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -102,7 +116,7 @@ export default function ClothingPage() {
         }
     }
 
-    if (activeRole === 'Bombero') {
+    if (activeRole === 'Bombero' || activeRole === 'Oficial') {
         return (
             <>
                 <PageHeader title="Inventario de Ropa" description="Acceso denegado."/>
@@ -133,7 +147,7 @@ export default function ClothingPage() {
             </PageHeader>
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Listado de Prendas</CardTitle>
+                    <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
                     <div className="flex flex-col sm:flex-row gap-4 mt-2">
                         <div className="relative flex-grow">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -168,7 +182,7 @@ export default function ClothingPage() {
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                Array.from({ length: 10 }).map((_, i) => (
+                                Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}><TableCell colSpan={canManage ? 7 : 6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                 ))
                             ) : filteredItems.length > 0 ? (
@@ -192,6 +206,7 @@ export default function ClothingPage() {
                                                             <EditClothingItemDialog item={item} onSave={handleDataChange} firefighters={firefighters}>
                                                                 <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
                                                             </EditClothingItemDialog>
+                                                            <DropdownMenuItem onSelect={() => handleCloneClick(item)}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
                                                             <AlertDialogTrigger asChild>
                                                                 <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
                                                             </AlertDialogTrigger>
@@ -213,13 +228,34 @@ export default function ClothingPage() {
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow><TableCell colSpan={canManage ? 7 : 6} className="h-24 text-center">No se encontraron prendas.</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={canManage ? 7 : 6} className="h-24 text-center">{searchTerm ? 'No se encontraron prendas con ese criterio.' : 'Realice una búsqueda o escanee un código QR para ver los resultados.'}</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
                     </div>
                 </CardContent>
             </Card>
+
+            <AddClothingItemDialog 
+                open={isCloneDialogOpen}
+                onOpenChange={setIsCloneDialogOpen}
+                onSave={() => {
+                    handleDataChange();
+                    setIsCloneDialogOpen(false);
+                }}
+                firefighters={firefighters}
+                initialData={cloningItem}
+            />
+
+            <ClothingDetailDialog
+                item={scannedItem}
+                open={!!scannedItem}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) {
+                        setScannedItem(null);
+                    }
+                }}
+            />
         </>
     );
 }
