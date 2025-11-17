@@ -30,7 +30,7 @@ export default function ClothingPage() {
     const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [scannedItem, setScannedItem] = useState<ClothingItem | null>(null);
+    const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
     const [cloningItem, setCloningItem] = useState<ClothingItem | null>(null);
     const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
     
@@ -76,13 +76,26 @@ export default function ClothingPage() {
         }
     };
 
+    const handleSearch = (term: string) => {
+        setSearchTerm(term);
+        const results = items.filter(item => 
+            item.code.toLowerCase().includes(term.toLowerCase()) || 
+            item.type.toLowerCase().includes(term.toLowerCase()) ||
+            item.firefighter?.lastName.toLowerCase().includes(term.toLowerCase())
+        );
+
+        if (results.length === 1) {
+            setDetailItem(results[0]);
+        }
+    };
+
     const handleQrScan = (code: string) => {
         const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
+        setSearchTerm(code); // Update search term to show context
         if (foundItem) {
-            setSearchTerm(code);
-            setScannedItem(foundItem);
+            setDetailItem(foundItem); // Open modal with details
         } else {
-            setSearchTerm(code);
+            setDetailItem(null); // Ensure modal is closed
             toast({
                 variant: "destructive",
                 title: "Prenda no encontrada",
@@ -155,7 +168,7 @@ export default function ClothingPage() {
                                 placeholder="Buscar por código, tipo o bombero..." 
                                 className="pl-9" 
                                 value={searchTerm} 
-                                onChange={(e) => setSearchTerm(e.target.value)} 
+                                onChange={(e) => handleSearch(e.target.value)} 
                             />
                         </div>
                         <QrScannerDialog onScan={handleQrScan}>
@@ -248,11 +261,11 @@ export default function ClothingPage() {
             />
 
             <ClothingDetailDialog
-                item={scannedItem}
-                open={!!scannedItem}
+                item={detailItem}
+                open={!!detailItem}
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
-                        setScannedItem(null);
+                        setDetailItem(null);
                     }
                 }}
             />
