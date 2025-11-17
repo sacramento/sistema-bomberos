@@ -48,7 +48,7 @@ export default function MaterialsPage() {
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterVehicle, setFilterVehicle] = useState('all');
-    const [scannedMaterial, setScannedMaterial] = useState<Material | null>(null);
+    const [detailItem, setDetailItem] = useState<Material | null>(null);
     const [cloningMaterial, setCloningMaterial] = useState<Material | null>(null);
     const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('search');
@@ -150,22 +150,33 @@ export default function MaterialsPage() {
              toast({ title: "Error", description: error.message || "No se pudieron eliminar los materiales.", variant: "destructive" });
         }
     }
-    
-    const handleQrScan = (code: string) => {
-        const foundMaterial = materials.find(m => m.codigo.toLowerCase() === code.toLowerCase());
-        if (foundMaterial) {
-            setActiveTab('search');
-            setSearchTerm(code); // Pre-fill search term to show context
-            setScannedMaterial(foundMaterial);
+
+    const handleSearch = (code: string) => {
+        if (!code) {
+            setDetailItem(null);
+            return;
+        }
+        const exactCodeMatch = materials.find(item => item.codigo.toLowerCase() === code.toLowerCase());
+        if (exactCodeMatch) {
+            setDetailItem(exactCodeMatch);
         } else {
-            setActiveTab('search'); // Switch to search tab
-            setSearchTerm(code); // Put code in main search to show "not found"
+            setDetailItem(null);
             toast({
                 variant: "destructive",
                 title: "Material no encontrado",
-                description: `No se encontró el código: ${code}.`,
+                description: `No se encontró el material con el código: ${code}.`,
             });
         }
+    };
+    
+    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        handleSearch(searchTerm);
+    }
+    
+    const handleQrScan = (code: string) => {
+        setSearchTerm(code);
+        handleSearch(code);
     };
     
     const handleCloneClick = (material: Material) => {
@@ -276,14 +287,6 @@ export default function MaterialsPage() {
         }
     };
     
-    const searchFilteredMaterials = useMemo(() => {
-        if (!searchTerm) return [];
-        return materials.filter(material => 
-            material.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            material.codigo.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [materials, searchTerm]);
-
     const generalFilteredMaterials = useMemo(() => {
         return materials.filter(material => {
             if (filterType !== 'all' && material.tipo !== filterType) return false;
@@ -359,105 +362,38 @@ export default function MaterialsPage() {
                 <TabsContent value="search">
                      <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Búsqueda Rápida de Material</CardTitle>
-                            <CardDescription>
-                                Ingrese un código o nombre para buscar, o use el escáner QR.
+                            <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
+                             <CardDescription>
+                                Ingrese un código para buscar, o use el escáner QR.
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
-                                    <div className="relative">
+                        <CardContent>
+                             <form onSubmit={handleFormSubmit} className="space-y-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="relative flex-grow">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        <Input 
+                                            id="search-term"
+                                            placeholder="Buscar por código..." 
+                                            className="pl-9" 
+                                            value={searchTerm} 
+                                            onChange={(e) => setSearchTerm(e.target.value)} 
+                                        />
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Acción Rápida</Label>
                                     <QrScannerDialog onScan={handleQrScan}>
-                                        <Button size="lg" variant="outline" className="w-full">
-                                            <QrCode className="mr-2 h-6 w-6"/>
-                                            Escanear Código QR
+                                        <Button variant="outline" type="button" className="w-full sm:w-auto">
+                                            <QrCode className="mr-2 h-4 w-4" />
+                                            Escanear QR
                                         </Button>
                                     </QrScannerDialog>
+                                    <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
                                 </div>
-                            </div>
+                            </form>
                         </CardContent>
                     </Card>
-                    {searchTerm && (
-                        <Card className="mt-6">
-                            <CardHeader>
-                                <CardTitle className="font-headline">Resultados de la Búsqueda</CardTitle>
-                                <CardDescription>
-                                    Mostrando {searchFilteredMaterials.length} resultados para "{searchTerm}".
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Código</TableHead>
-                                            <TableHead>Nombre</TableHead>
-                                            <TableHead>Ubicación</TableHead>
-                                            <TableHead>Estado</TableHead>
-                                            <TableHead><span className="sr-only">Acciones</span></TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {loading ? (
-                                            <TableRow><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                        ) : searchFilteredMaterials.length > 0 ? (
-                                            searchFilteredMaterials.map(material => (
-                                                <TableRow key={material.id}>
-                                                    <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                    <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                    <TableCell>{renderLocation(material)}</TableCell>
-                                                    <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                    <TableCell>
-                                                        <AlertDialog>
-                                                            <DropdownMenu>
-                                                                <DropdownMenuTrigger asChild>
-                                                                    <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                                </DropdownMenuTrigger>
-                                                                <DropdownMenuContent>
-                                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                                    {canManageMaterial(material) && <>
-                                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
-                                                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                                        </EditMaterialDialog>
-                                                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleCloneClick(material); }}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
-                                                                        <AlertDialogTrigger asChild>
-                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                                        </AlertDialogTrigger>
-                                                                    </>}
-                                                                </DropdownMenuContent>
-                                                            </DropdownMenu>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        ) : (
-                                            <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                    <div className="mt-6 text-center text-muted-foreground py-16 border-2 border-dashed rounded-lg">
+                        <p>Realice una búsqueda o escanee un código QR para ver los detalles de un material.</p>
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="inventory">
@@ -751,11 +687,11 @@ export default function MaterialsPage() {
             />
             
             <MaterialDetailDialog
-                material={scannedMaterial}
-                open={!!scannedMaterial}
+                material={detailItem}
+                open={!!detailItem}
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
-                        setScannedMaterial(null);
+                        setDetailItem(null);
                         setSearchTerm(''); // Clear search term after closing dialog
                     }
                 }}
