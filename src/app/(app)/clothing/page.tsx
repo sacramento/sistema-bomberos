@@ -76,28 +76,38 @@ export default function ClothingPage() {
         }
     };
 
-    const handleSearch = (term: string) => {
-        setSearchTerm(term);
-
-        if (!term) {
+    const handleSearch = (code: string) => {
+        setSearchTerm(code);
+        if (!code) {
             setDetailItem(null);
             return;
         }
 
-        // Prioritize exact code match to show modal
-        const exactCodeMatch = items.find(item => item.code.toLowerCase() === term.toLowerCase());
+        const exactCodeMatch = items.find(item => item.code.toLowerCase() === code.toLowerCase());
         if (exactCodeMatch) {
             setDetailItem(exactCodeMatch);
-            return; // Stop further processing to show the modal
+        } else {
+            setDetailItem(null);
         }
-
-        // If no exact code match, proceed with broader search but don't show modal
-        setDetailItem(null); 
     };
 
+    // This function will be triggered when the search form is submitted
+    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        handleSearch(searchTerm);
+        if (!items.some(item => item.code.toLowerCase() === searchTerm.toLowerCase())) {
+            toast({
+                variant: "destructive",
+                title: "Prenda no encontrada",
+                description: `No se encontró la prenda con el código: ${searchTerm}.`,
+            });
+        }
+    }
+
+
     const handleQrScan = (code: string) => {
-        const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
         setSearchTerm(code); // Update search term to show context
+        const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
         if (foundItem) {
             setDetailItem(foundItem); // Open modal with details
         } else {
@@ -114,27 +124,6 @@ export default function ClothingPage() {
         setCloningItem(item);
         setIsCloneDialogOpen(true);
     };
-
-    const filteredItems = useMemo(() => {
-        if (!searchTerm) return [];
-        // This list is only shown when no exact code match is found
-        return items.filter(item => 
-            item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.firefighter?.lastName.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [items, searchTerm]);
-
-    const getStateBadge = (state: ClothingItem['state']) => {
-        switch(state) {
-            case 'Nuevo': return <Badge variant="default" className="bg-sky-500">Nuevo</Badge>;
-            case 'Bueno': return <Badge variant="default" className="bg-green-600">Bueno</Badge>;
-            case 'Regular': return <Badge variant="secondary" className="bg-yellow-500 text-black">Regular</Badge>;
-            case 'Malo': return <Badge variant="destructive" className="bg-orange-600">Malo</Badge>;
-            case 'Baja': return <Badge variant="destructive">Baja</Badge>;
-            default: return <Badge variant="outline">{state}</Badge>;
-        }
-    }
 
     if (activeRole === 'Bombero' || activeRole === 'Oficial') {
         return (
@@ -168,90 +157,30 @@ export default function ClothingPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
-                    <div className="flex flex-col sm:flex-row gap-4 mt-2">
-                        <div className="relative flex-grow">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Buscar por código, tipo o bombero..." 
-                                className="pl-9" 
-                                value={searchTerm} 
-                                onChange={(e) => handleSearch(e.target.value)} 
-                            />
+                    <form onSubmit={handleFormSubmit}>
+                        <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                            <div className="relative flex-grow">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Buscar por código..." 
+                                    className="pl-9" 
+                                    value={searchTerm} 
+                                    onChange={(e) => setSearchTerm(e.target.value)} 
+                                />
+                            </div>
+                            <QrScannerDialog onScan={handleQrScan}>
+                                <Button variant="outline" type="button" className="w-full sm:w-auto">
+                                    <QrCode className="mr-2 h-4 w-4" />
+                                    Escanear QR
+                                </Button>
+                            </QrScannerDialog>
+                             <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
                         </div>
-                        <QrScannerDialog onScan={handleQrScan}>
-                            <Button variant="outline" className="w-full sm:w-auto">
-                                <QrCode className="mr-2 h-4 w-4" />
-                                Escanear QR
-                            </Button>
-                        </QrScannerDialog>
-                    </div>
+                    </form>
                 </CardHeader>
                 <CardContent>
-                     <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Código</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Categoría</TableHead>
-                                <TableHead>Talle</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead>Asignado a</TableHead>
-                                {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i}><TableCell colSpan={canManage ? 7 : 6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                ))
-                            ) : filteredItems.length > 0 && !detailItem ? (
-                                filteredItems.map(item => (
-                                    <TableRow key={item.id}>
-                                        <TableCell className="font-mono">{item.code}</TableCell>
-                                        <TableCell className="font-medium">{item.type}</TableCell>
-                                        <TableCell>{item.category}/{item.subCategory}</TableCell>
-                                        <TableCell>{item.size}</TableCell>
-                                        <TableCell>{getStateBadge(item.state)}</TableCell>
-                                        <TableCell>{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito'}</TableCell>
-                                        {canManage && (
-                                            <TableCell>
-                                                <AlertDialog>
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger asChild>
-                                                            <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent>
-                                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                            <EditClothingItemDialog item={item} onSave={handleDataChange} firefighters={firefighters}>
-                                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                            </EditClothingItemDialog>
-                                                            <DropdownMenuItem onSelect={() => handleCloneClick(item)}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                    <AlertDialogContent>
-                                                        <AlertDialogHeader>
-                                                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                            <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente la prenda con código "{item.code}".</AlertDialogDescription>
-                                                        </AlertDialogHeader>
-                                                        <AlertDialogFooter>
-                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                            <AlertDialogAction onClick={() => handleDelete(item.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                        </AlertDialogFooter>
-                                                    </AlertDialogContent>
-                                                </AlertDialog>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={canManage ? 7 : 6} className="h-24 text-center">{searchTerm ? 'No se encontraron prendas con ese criterio.' : 'Realice una búsqueda o escanee un código QR para ver los resultados.'}</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                     <div className="text-center text-muted-foreground py-16 border-2 border-dashed rounded-lg">
+                        <p>Realice una búsqueda o escanee un código QR para ver los detalles de una prenda.</p>
                     </div>
                 </CardContent>
             </Card>
@@ -273,8 +202,7 @@ export default function ClothingPage() {
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
                         setDetailItem(null);
-                        // Optional: clear search term after closing dialog if you want a fresh state
-                        // setSearchTerm(''); 
+                        setSearchTerm(''); // Clear search term after closing dialog
                     }
                 }}
             />
