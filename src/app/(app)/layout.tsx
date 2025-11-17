@@ -64,6 +64,7 @@ export const navItems: NavItem[] = [
   { href: '/mobility-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad' },
 
   { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
+  { href: '/materials-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales'},
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
   { href: '/leaves', icon: ClipboardMinus, label: 'Licencias', roles: ['Master', 'Administrador', 'Oficial'], module: 'ayudantia' },
@@ -153,7 +154,7 @@ function Sidebar() {
                             } else if (item.href === '/materials/vehicles') {
                                 isActive = pathname === item.href;
                             } else if (item.href === '/materials') {
-                                isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles';
+                                isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles' && pathname !== '/materials-reports';
                             }
                              else {
                                 isActive = pathname.startsWith(item.href);
@@ -185,7 +186,7 @@ function Sidebar() {
                 } else if (item.href === '/materials/vehicles') {
                     isActive = pathname === item.href;
                 } else if (item.href === '/materials') {
-                    isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles';
+                    isActive = pathname.startsWith('/materials') && pathname !== '/materials/vehicles' && pathname !== '/materials-reports';
                 }
                 else {
                     isActive = pathname.startsWith(item.href);
