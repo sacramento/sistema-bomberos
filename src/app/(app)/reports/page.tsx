@@ -36,7 +36,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePathname } from 'next/navigation';
 
 
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -59,16 +59,17 @@ const PIE_CHART_COLORS = {
 };
 
 const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
-    RESCATE: "#3B82F6", // blue-500
-    FUEGO: "#EF4444", // red-500
-    APH: "#22C55E", // green-500
-    'HAZ-MAT': "#F97316", // orange-500
-    FORESTAL: "#16A34A", // green-600
-    BUCEO: "#0EA5E9", // sky-500
-    PAE: "#FBBF24", // yellow-400
-    GORA: "#A855F7", // purple-500
-    KAIZEN: "#6366F1", // indigo-500
-    VARIOS: "#64748B", // slate-500
+    'RESCATE VEHICULAR': "#3B82F6",
+    'RESCATE URBANO': "#1D4ED8",
+    FUEGO: "#EF4444",
+    APH: "#22C55E",
+    'HAZ-MAT': "#F97316",
+    FORESTAL: "#16A34A",
+    BUCEO: "#0EA5E9",
+    PAE: "#FBBF24",
+    GORA: "#A855F7",
+    KAIZEN: "#6366F1",
+    VARIOS: "#64748B",
 };
 
 
