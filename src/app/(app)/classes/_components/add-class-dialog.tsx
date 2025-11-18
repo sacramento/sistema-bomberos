@@ -27,7 +27,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addSession } from "@/services/sessions.service";
 import { Progress } from "@/components/ui/progress";
 
-const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },

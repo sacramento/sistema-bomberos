@@ -29,7 +29,7 @@ import { es } from 'date-fns/locale';
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 
 const MultiSelectFirefighter = ({ 
     title, 

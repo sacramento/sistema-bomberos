@@ -37,7 +37,7 @@ import { usePathname } from 'next/navigation';
 import { es } from 'date-fns/locale';
 
 
-const specializations = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 
 const hierarchyOptions = [
     { value: 'bomberos', label: 'Bomberos' },
