@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const itemTypes: GeneralInventoryItem['tipo'][] = ['Moviliario', 'electronica', 'herramientas'];
 const cuarteles: GeneralInventoryItem['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Comision'];
-const ubicaciones: GeneralInventoryItem['ubicacion'][] = ['Baño', 'Matera', 'Cocina', 'Roperia', 'Cadetes', 'Deposito', 'Jefatura', 'Cambiaderos', 'Patio', 'Playón', 'Guardia'];
+const ubicaciones: GeneralInventoryItem['ubicacion'][] = ['Baño', 'Matera', 'Cocina', 'Roperia', 'Cadetes', 'Deposito', 'Jefatura', 'Cambiaderos', 'Patio', 'Playón', 'Guardia', 'Ayudantia'];
 const estados: GeneralInventoryItem['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: GeneralInventoryItem['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
