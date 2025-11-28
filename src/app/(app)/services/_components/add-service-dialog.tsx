@@ -329,8 +329,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                    <Separator className="my-2"/>
                    <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
                    <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
-                   <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
-                   <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
+                   <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.label).join(', ') || 'N/A'}</p>
+                   <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.label).join(', ') || 'N/A'}</p>
                    <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>
                    <Separator className="my-2"/>
                    <p><strong>Colaboración:</strong> {collaboration || 'Ninguna'}</p>
