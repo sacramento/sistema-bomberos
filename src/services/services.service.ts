@@ -34,7 +34,7 @@ const docToService = async (
     const data = docSnap.data();
     
     const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
-        if (!ids) return [];
+        if (!ids) return []; // Ensure we handle cases where the array might not exist
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
@@ -42,6 +42,10 @@ const docToService = async (
         ...iv,
         vehicle: vehicleMap.get(iv.vehicleId)
     }));
+    
+    // Safely access IDs, providing an empty array as a fallback
+    const onDutyIds = data.onDutyIds || [];
+    const offDutyIds = data.offDutyIds || [];
 
     const service: Service = {
         id: docSnap.id,
@@ -56,16 +60,16 @@ const docToService = async (
         summonMethods: data.summonMethods || [],
         commandId: data.commandId,
         serviceChiefId: data.serviceChiefId,
-        onDutyIds: data.onDutyIds || [],
-        offDutyIds: data.offDutyIds || [],
+        onDutyIds: onDutyIds,
+        offDutyIds: offDutyIds,
         interveningVehicles: data.interveningVehicles || [],
         collaboration: data.collaboration,
         recognition: data.recognition,
         observations: data.observations,
         command: firefighterMap.get(data.commandId),
         serviceChief: firefighterMap.get(data.serviceChiefId),
-        onDutyPersonnel: getFirefighterObjects(data.onDutyIds),
-        offDutyPersonnel: getFirefighterObjects(data.offDutyIds),
+        onDutyPersonnel: getFirefighterObjects(onDutyIds),
+        offDutyPersonnel: getFirefighterObjects(offDutyIds),
         enrichedInterveningVehicles: enrichedInterveningVehicles,
     };
     return service;
