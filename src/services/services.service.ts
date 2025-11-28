@@ -2,7 +2,7 @@
 'use server';
 
 import { db } from '@/lib/firebase/firestore';
-import { Service, Firefighter, Vehicle } from '@/lib/types';
+import { Service, Firefighter, Vehicle, InterveningVehicle } from '@/lib/types';
 import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getVehicles } from './vehicles.service';
@@ -33,24 +33,39 @@ const docToService = async (
 ): Promise<Service> => {
     const data = docSnap.data();
     
-    const getFirefighterObjects = (ids: string[]): Firefighter[] => {
+    const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
         if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
-    const interveningVehicles = (data.interveningVehicles || []).map((iv: any) => ({
+    const interveningVehicles: InterveningVehicle[] = (data.interveningVehicles || []).map((iv: any) => ({
         ...iv,
         vehicle: vehicleMap.get(iv.vehicleId)
     }));
 
     const service: Service = {
         id: docSnap.id,
-        ...data,
+        cuartel: data.cuartel,
+        year: data.year,
+        manualId: data.manualId,
+        date: data.date,
+        startTime: data.startTime,
+        endTime: data.endTime,
+        serviceType: data.serviceType,
+        address: data.address,
+        summonMethods: data.summonMethods || [],
+        commandId: data.commandId,
+        serviceChiefId: data.serviceChiefId,
+        onDutyIds: data.onDutyIds || [],
+        offDutyIds: data.offDutyIds || [],
+        interveningVehicles: interveningVehicles,
+        collaboration: data.collaboration,
+        recognition: data.recognition,
+        observations: data.observations,
         command: firefighterMap.get(data.commandId),
         serviceChief: firefighterMap.get(data.serviceChiefId),
-        onDutyPersonnel: getFirefighterObjects(data.onDutyIds || []),
-        offDutyPersonnel: getFirefighterObjects(data.offDutyIds || []),
-        interveningVehicles
+        onDutyPersonnel: getFirefighterObjects(data.onDutyIds),
+        offDutyPersonnel: getFirefighterObjects(data.offDutyIds),
     };
     return service;
 }
