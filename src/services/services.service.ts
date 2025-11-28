@@ -33,13 +33,13 @@ const docToService = async (
 ): Promise<Service> => {
     const data = docSnap.data();
     
-    const getFirefighterObjects = (ids: string[]): Firefighter[] => {
+    const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
         if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
-    const interveningVehiclesData = data.interveningVehicles || [];
-    const enrichedInterveningVehicles: InterveningVehicle[] = interveningVehiclesData.map((iv: any) => ({
+    const interveningVehiclesData: any[] = data.interveningVehicles || [];
+    const enrichedInterveningVehicles: InterveningVehicle[] = interveningVehiclesData.map((iv) => ({
         ...iv,
         vehicle: vehicleMap.get(iv.vehicleId)
     }));
