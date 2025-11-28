@@ -50,6 +50,13 @@ export default function ServicesPage() {
         return `${service.cuartel}-${year}/${manualId}`;
     }
 
+    const getTotalPersonnel = (service: Service) => {
+        const onDutyCount = service.onDutyIds?.length || 0;
+        const offDutyCount = service.offDutyIds?.length || 0;
+        // Add command and service chief
+        return 2 + onDutyCount + offDutyCount;
+    }
+
     return (
         <>
             <PageHeader title="Registro de Servicios" description="Gestione todas las intervenciones y servicios del departamento.">
@@ -89,7 +96,7 @@ export default function ServicesPage() {
                                         </div>
                                     </CardHeader>
                                      <CardFooter className="text-xs text-muted-foreground">
-                                        {`Fecha: ${service.date} | Personal: ${[service.commandId, service.serviceChiefId, ...service.onDutyIds, ...service.offDutyIds].length}`}
+                                        {`Fecha: ${service.date} | Personal: ${getTotalPersonnel(service)}`}
                                     </CardFooter>
                                 </Card>
                            ))}
