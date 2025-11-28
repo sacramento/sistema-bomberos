@@ -56,7 +56,7 @@ const SingleFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -118,7 +118,7 @@ const MultiSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron opciones.</CommandEmpty>
                         <CommandGroup>
@@ -153,6 +153,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [serviceId, setServiceId] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType | ''>('');
   const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [address, setAddress] = useState('');
   const [selectedSummonMethods, setSelectedSummonMethods] = useState<SummonMethod[]>([]);
   const [command, setCommand] = useState<Firefighter | null>(null);
@@ -197,7 +199,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const resetForm = () => {
     // Reset all state variables
     setCuartel(''); setManualId(''); setServiceId('');
-    setServiceType(''); setDate(''); setAddress(''); setSelectedSummonMethods([]);
+    setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
     setStep(1);
@@ -226,6 +228,14 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                  <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
                     <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="startTime">Hora Comienzo</Label>
+                    <Input id="startTime" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="endTime">Hora Finalización</Label>
+                    <Input id="endTime" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="manualId">Número de Planilla</Label>
@@ -313,7 +323,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3 max-h-96 overflow-y-auto">
                    <p><strong>Servicio:</strong> {serviceId}</p>
                    <p><strong>Tipo:</strong> {serviceType}</p>
-                   <p><strong>Fecha:</strong> {date}</p>
+                   <p><strong>Fecha y Hora:</strong> {date} de {startTime} a {endTime}</p>
                    <p><strong>Dirección:</strong> {address}</p>
                    <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
                    <Separator className="my-2"/>

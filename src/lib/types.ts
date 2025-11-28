@@ -283,6 +283,8 @@ export type Service = {
     manualId: number;
     
     date: string;
+    startTime: string;
+    endTime: string;
     serviceType: ServiceType;
     address: string;
     locationDetails?: string; // B° / Paraje
