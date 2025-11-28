@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { Service, Firefighter, Vehicle, InterveningVehicle } from '@/lib/types';
-import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, doc, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getVehicles } from './vehicles.service';
 import { cache } from 'react';
