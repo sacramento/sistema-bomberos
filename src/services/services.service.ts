@@ -33,17 +33,17 @@ const docToService = async (
 ): Promise<Service> => {
     const data = docSnap.data();
     
-    const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
+    const getFirefighterObjects = (ids: string[]): Firefighter[] => {
         if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
-    const enrichedInterveningVehicles: InterveningVehicle[] = (data.interveningVehicles || []).map((iv: any) => ({
+    const interveningVehiclesData = data.interveningVehicles || [];
+    const enrichedInterveningVehicles: InterveningVehicle[] = interveningVehiclesData.map((iv: any) => ({
         ...iv,
         vehicle: vehicleMap.get(iv.vehicleId)
     }));
     
-    // Safely access IDs, providing an empty array as a fallback
     const onDutyIds = data.onDutyIds || [];
     const offDutyIds = data.offDutyIds || [];
 
@@ -62,7 +62,7 @@ const docToService = async (
         serviceChiefId: data.serviceChiefId,
         onDutyIds: onDutyIds,
         offDutyIds: offDutyIds,
-        interveningVehicles: data.interveningVehicles || [],
+        interveningVehicles: interveningVehiclesData,
         collaboration: data.collaboration,
         recognition: data.recognition,
         observations: data.observations,
