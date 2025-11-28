@@ -28,7 +28,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'ayudantia' | 'roperia' | 'general' | 'dashboard'> = {
+const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'ayudantia' | 'roperia' | 'servicios' | 'general' | 'dashboard'> = {
     '/sessions': 'asistencia',
     '/classes': 'asistencia',
     '/schedule': 'asistencia',
@@ -47,6 +47,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/ayudantia-reports': 'ayudantia',
     '/clothing': 'roperia',
     '/clothing-reports': 'roperia',
+    '/services': 'servicios',
     '/admin': 'general',
     '/dashboard': 'dashboard'
 };
@@ -121,6 +122,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return roles.ayudantia;
         case 'roperia':
             return roles.roperia;
+        case 'servicios':
+            // Asumiendo un rol por defecto si no está definido para el nuevo módulo
+            return 'Bombero';
         case 'general':
         case 'dashboard':
           return user.role;

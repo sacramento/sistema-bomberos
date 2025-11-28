@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -30,6 +31,7 @@ import {
   Gavel,
   Archive,
   Shirt,
+  Siren,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -45,7 +47,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia' | 'servicios';
 };
 
 export const navItems: NavItem[] = [
@@ -74,6 +76,8 @@ export const navItems: NavItem[] = [
 
   { href: '/clothing', icon: Shirt, label: 'Inventario Ropa', roles: ['Master', 'Administrador', 'Encargado', 'Oficial'], module: 'roperia' },
   { href: '/clothing-reports', icon: BarChart3, label: 'Reportes Ropa', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'roperia' },
+
+  { href: '/services', icon: Siren, label: 'Servicios', roles: ['Master', 'Administrador', 'Oficial', 'Bombero'], module: 'servicios' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -106,6 +110,7 @@ function Sidebar() {
       materiales: 'Materiales',
       roperia: 'Ropería',
       ayudantia: 'Ayudantía',
+      servicios: 'Servicios',
       general: 'Administración'
   };
   const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";

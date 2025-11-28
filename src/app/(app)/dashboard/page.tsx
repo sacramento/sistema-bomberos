@@ -1,11 +1,12 @@
 
+
 'use client';
 
 import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame, Package, ClipboardMinus, Shirt } from 'lucide-react';
+import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
@@ -40,6 +41,11 @@ const moduleDetails: Record<string, { title: string; description: string; icon: 
         description: 'Gestione licencias y sanciones del personal.',
         icon: ClipboardMinus
     },
+    servicios: {
+        title: 'Servicios',
+        description: 'Registre y administre todas las intervenciones y servicios.',
+        icon: Siren
+    },
     general: {
         title: 'Administración',
         description: 'Gestione usuarios, roles y configuraciones del sistema.',
@@ -63,7 +69,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'servicios', 'general'];
 
 
   return (
