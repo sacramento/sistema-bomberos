@@ -151,7 +151,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
 
   // Form state
   const [cuartel, setCuartel] = useState<Service['cuartel'] | ''>('');
-  const [manualId, setManualId] = useState('');
+  const [manualId, setManualId] = useState(0);
   const [serviceType, setServiceType] = useState<ServiceType | ''>('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -188,7 +188,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   }, [open, toast]);
 
   const resetForm = () => {
-    setCuartel(''); setManualId('');
+    setCuartel(''); setManualId(0);
     setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
@@ -284,7 +284,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                  </div>
                  <div className="space-y-2">
                     <Label htmlFor="manualId">Número de Planilla</Label>
-                    <Input id="manualId" placeholder="Ej: 1, 25, 134" value={manualId} onChange={e => setManualId(e.target.value)} />
+                    <Input id="manualId" type="number" placeholder="Ej: 1, 25, 134" value={manualId || ''} onChange={e => setManualId(Number(e.target.value))} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>

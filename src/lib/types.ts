@@ -278,7 +278,7 @@ export type Service = {
     id: string; // Firestore auto-generated ID
     cuartel: 'C1' | 'C2' | 'C3';
     year: number;
-    manualId: number; // e.g., 1, 25, 134
+    manualId: number;
     
     date: string;
     startTime: string;
