@@ -74,7 +74,7 @@ const docToService = async (
 
 // Function to get all services
 export const getServices = async (): Promise<Service[]> => {
-    const q = query(servicesCollection, orderBy('date', 'desc'), orderBy('startTime', 'desc'));
+    const q = query(servicesCollection, orderBy('date', 'desc'), orderBy('manualId', 'desc'));
     const querySnapshot = await getDocs(q);
 
     const [firefighterMap, vehicleMap] = await Promise.all([
