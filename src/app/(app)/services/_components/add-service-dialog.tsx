@@ -213,7 +213,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   };
   
   const handleAddVehicle = () => {
-    setInterveningVehicles(prev => [...prev, { vehicleId: '', departureTime: '', returnTime: '', inChargeId: '' }]);
+    setInterveningVehicles(prev => [...prev, { vehicleId: '', departureTime: '', returnTime: '' }]);
   }
   
   const handleVehicleChange = (index: number, field: keyof InterveningVehicle, value: string) => {
@@ -328,13 +328,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                                     <SelectContent>{allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
-                             <div className="space-y-1">
-                                <Label>A Cargo</Label>
-                                <Select value={iv.inChargeId} onValueChange={(v) => handleVehicleChange(index, 'inChargeId', v)}>
-                                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                    <SelectContent>{allFirefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.lastName}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
                             <div className="space-y-1">
                                 <Label>Hora Salida</Label>
                                 <Input type="time" value={iv.departureTime} onChange={(e) => handleVehicleChange(index, 'departureTime', e.target.value)} />
@@ -389,10 +382,9 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                         <ul className="list-disc pl-5 mt-1 space-y-1">
                             {interveningVehicles.map((iv, i) => {
                                 const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
-                                const inCharge = allFirefighters.find(f => f.id === iv.inChargeId);
                                 return (
                                     <li key={i}>
-                                        Móvil {vehicle?.numeroMovil} (a cargo de {inCharge?.lastName}) - Salida: {iv.departureTime}, Regreso: {iv.returnTime}
+                                        Móvil {vehicle?.numeroMovil} - Salida: {iv.departureTime}, Regreso: {iv.returnTime}
                                     </li>
                                 );
                             })}

@@ -270,10 +270,8 @@ export type InterveningVehicle = {
     vehicleId: string;
     departureTime: string;
     returnTime: string;
-    inChargeId: string;
     // Enriched properties
     vehicle?: Vehicle;
-    inCharge?: Firefighter;
 }
 
 export type Service = {
