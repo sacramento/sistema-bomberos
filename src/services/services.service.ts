@@ -34,7 +34,7 @@ const docToService = async (
     const data = docSnap.data();
     
     const getFirefighterObjects = (ids: string[] | undefined): Firefighter[] => {
-        if (!ids) return []; // Ensure we handle cases where the array might not exist
+        if (!ids) return [];
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
