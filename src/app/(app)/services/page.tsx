@@ -5,15 +5,23 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AddServiceDialog from "./_components/add-service-dialog";
 
 export default function ServicesPage() {
+
+    const handleServiceAdded = () => {
+        // Here we would refresh the list of services
+    }
+
     return (
         <>
             <PageHeader title="Registro de Servicios" description="Gestione todas las intervenciones y servicios del departamento.">
-                <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Registrar Servicio
-                </Button>
+                <AddServiceDialog onServiceAdded={handleServiceAdded}>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Registrar Servicio
+                    </Button>
+                </AddServiceDialog>
             </PageHeader>
             <Card>
                 <CardHeader>
