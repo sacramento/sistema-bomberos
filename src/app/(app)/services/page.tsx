@@ -3,14 +3,45 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { PlusCircle } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlusCircle, ArrowRight } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import AddServiceDialog from "./_components/add-service-dialog";
+import { useEffect, useState } from "react";
+import { Service } from "@/lib/types";
+import { getServices } from "@/services/services.service";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 
 export default function ServicesPage() {
+    const [services, setServices] = useState<Service[]>([]);
+    const [loading, setLoading] = useState(true);
+    const { toast } = useToast();
+
+    const fetchServices = async () => {
+        setLoading(true);
+        try {
+            const data = await getServices();
+            setServices(data);
+        } catch (error) {
+            toast({
+                title: "Error al cargar servicios",
+                description: "No se pudieron obtener los registros de servicios.",
+                variant: "destructive"
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchServices();
+    }, [toast]);
+
 
     const handleServiceAdded = () => {
-        // Here we would refresh the list of services
+        fetchServices();
     }
 
     return (
@@ -26,13 +57,43 @@ export default function ServicesPage() {
             <Card>
                 <CardHeader>
                     <CardTitle className="font-headline">Servicios Recientes</CardTitle>
-                    <CardDescription>Aquí se mostrará un listado de los últimos servicios registrados.</CardDescription>
+                    <CardDescription>Listado de los últimos servicios registrados, del más reciente al más antiguo.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                        <p className="text-muted-foreground">Aún no hay servicios registrados.</p>
-                        <p className="text-sm text-muted-foreground mt-2">Haga clic en "Registrar Servicio" para empezar.</p>
-                    </div>
+                    {loading ? (
+                         <div className="space-y-4">
+                            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+                        </div>
+                    ) : services.length > 0 ? (
+                        <div className="space-y-4">
+                           {services.map(service => (
+                                <Card key={service.id}>
+                                    <CardHeader>
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <Badge variant="secondary" className="mb-2">{service.serviceType}</Badge>
+                                                <CardTitle className="text-lg">{service.id}</CardTitle>
+                                                <CardDescription>{service.address}</CardDescription>
+                                            </div>
+                                             <Button asChild variant="outline" size="sm">
+                                                <Link href={`/services/${service.id}`}>
+                                                    Ver Detalle <ArrowRight className="ml-2 h-4 w-4"/>
+                                                </Link>
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                     <CardFooter className="text-xs text-muted-foreground">
+                                        {`Fecha: ${service.date} | Personal: ${[service.commandId, service.serviceChiefId, ...service.onDutyIds, ...service.offDutyIds].length}`}
+                                    </CardFooter>
+                                </Card>
+                           ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
+                            <p className="text-muted-foreground">Aún no hay servicios registrados.</p>
+                            <p className="text-sm text-muted-foreground mt-2">Haga clic en "Registrar Servicio" para empezar.</p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </>

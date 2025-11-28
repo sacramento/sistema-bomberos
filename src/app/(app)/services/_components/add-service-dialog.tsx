@@ -20,6 +20,7 @@ import { useState, useEffect } from "react";
 import { Firefighter, Vehicle, Service, ServiceType, SummonMethod, InterveningVehicle } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { addService } from "@/services/services.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, ArrowRight, ArrowLeft, Plus, Trash2 } from "lucide-react";
@@ -209,7 +210,58 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
   
   const handleSubmit = async () => {
-    toast({ title: "Función no implementada", description: "El guardado del servicio aún no está implementado." });
+     setLoading(true);
+    if (!serviceId || !command || !serviceChief) {
+        toast({
+            variant: "destructive",
+            title: "Datos incompletos",
+            description: "Asegúrese de completar el ID del servicio, el comando y el jefe de servicio.",
+        });
+        setLoading(false);
+        return;
+    }
+
+    try {
+        const serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'> = {
+            id: serviceId,
+            cuartel: cuartel as Service['cuartel'],
+            year: new Date(date).getFullYear(),
+            manualId: Number(manualId),
+            date,
+            startTime,
+            endTime,
+            serviceType: serviceType as ServiceType,
+            address,
+            summonMethods: selectedSummonMethods,
+            commandId: command.id,
+            serviceChiefId: serviceChief.id,
+            onDutyIds: onDuty.map(f => f.id),
+            offDutyIds: offDuty.map(f => f.id),
+            interveningVehicles: interveningVehicles.map(iv => ({
+                vehicleId: iv.vehicleId!,
+                departureTime: iv.departureTime!,
+                returnTime: iv.returnTime!,
+            })),
+            collaboration,
+            recognition,
+            observations
+        };
+        
+        await addService(serviceData);
+        toast({ title: "¡Éxito!", description: "El servicio ha sido registrado correctamente." });
+        onServiceAdded();
+        setOpen(false);
+        resetForm();
+
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Error al Guardar",
+            description: error.message || "No se pudo registrar el servicio.",
+        });
+    } finally {
+        setLoading(false);
+    }
   };
   
   const handleAddVehicle = () => {
