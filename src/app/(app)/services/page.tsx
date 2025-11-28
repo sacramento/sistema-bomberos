@@ -43,6 +43,12 @@ export default function ServicesPage() {
     const handleServiceAdded = () => {
         fetchServices();
     }
+    
+    const getServiceId = (service: Service) => {
+        const year = service.year.toString().slice(-2);
+        const manualId = service.manualId.toString().padStart(3, '0');
+        return `${service.cuartel}-${year}/${manualId}`;
+    }
 
     return (
         <>
@@ -72,7 +78,7 @@ export default function ServicesPage() {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <Badge variant="secondary" className="mb-2">{service.serviceType}</Badge>
-                                                <CardTitle className="text-lg">{service.id}</CardTitle>
+                                                <CardTitle className="text-lg">{getServiceId(service)}</CardTitle>
                                                 <CardDescription>{service.address}</CardDescription>
                                             </div>
                                              <Button asChild variant="outline" size="sm">

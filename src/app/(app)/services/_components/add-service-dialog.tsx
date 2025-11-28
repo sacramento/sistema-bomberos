@@ -152,7 +152,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   // Form state
   const [cuartel, setCuartel] = useState<Service['cuartel'] | ''>('');
   const [manualId, setManualId] = useState('');
-  const [serviceId, setServiceId] = useState('');
   const [serviceType, setServiceType] = useState<ServiceType | ''>('');
   const [date, setDate] = useState('');
   const [startTime, setStartTime] = useState('');
@@ -188,18 +187,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     fetchData();
   }, [open, toast]);
 
-  useEffect(() => {
-    if (cuartel && manualId && date) {
-      const year = new Date(date).getFullYear().toString().slice(-2);
-      const formattedManualId = manualId.padStart(3, '0');
-      setServiceId(`${cuartel}-${year}/${formattedManualId}`);
-    } else {
-      setServiceId('');
-    }
-  }, [cuartel, manualId, date]);
-
   const resetForm = () => {
-    setCuartel(''); setManualId(''); setServiceId('');
+    setCuartel(''); setManualId('');
     setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
@@ -211,11 +200,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   
   const handleSubmit = async () => {
      setLoading(true);
-    if (!serviceId || !command || !serviceChief) {
+    if (!cuartel || !manualId || !date || !command || !serviceChief) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
-            description: "Asegúrese de completar el ID del servicio, el comando y el jefe de servicio.",
+            description: "Asegúrese de completar el cuartel, número de planilla, fecha, comando y jefe de servicio.",
         });
         setLoading(false);
         return;
@@ -223,8 +212,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
 
     try {
         const serviceData = {
-            id: serviceId,
-            cuartel: cuartel as Service['cuartel'],
+            cuartel,
             year: new Date(date).getFullYear(),
             manualId: Number(manualId),
             date,
@@ -295,6 +283,10 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     </Select>
                  </div>
                  <div className="space-y-2">
+                    <Label htmlFor="manualId">Número de Planilla</Label>
+                    <Input id="manualId" placeholder="Ej: 1, 25, 134" value={manualId} onChange={e => setManualId(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
                     <Label htmlFor="date">Fecha</Label>
                     <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
@@ -305,14 +297,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 <div className="space-y-2">
                     <Label htmlFor="endTime">Hora Finalización</Label>
                     <Input id="endTime" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="manualId">Número de Planilla</Label>
-                    <Input id="manualId" placeholder="Ej: 1, 25, 134" value={manualId} onChange={e => setManualId(e.target.value)} />
-                </div>
-                <div className="space-y-2 flex flex-col justify-end">
-                    <Label>ID de Servicio (Generado)</Label>
-                    <Input id="serviceId" value={serviceId} readOnly disabled />
                 </div>
             </div>
              <div className="space-y-2">
@@ -416,7 +400,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             <div className="space-y-4 text-sm">
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3 max-h-96 overflow-y-auto">
-                   <p><strong>Servicio:</strong> {serviceId}</p>
                    <p><strong>Tipo:</strong> {serviceType}</p>
                    <p><strong>Fecha y Hora:</strong> {date} de {startTime} a {endTime}</p>
                    <p><strong>Dirección:</strong> {address}</p>

@@ -275,10 +275,10 @@ export type InterveningVehicle = {
 }
 
 export type Service = {
-    id: string; // C1-25/001
+    id: string; // Firestore auto-generated ID
     cuartel: 'C1' | 'C2' | 'C3';
     year: number;
-    manualId: number;
+    manualId: number; // e.g., 1, 25, 134
     
     date: string;
     startTime: string;
