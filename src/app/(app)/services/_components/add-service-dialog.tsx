@@ -84,8 +84,8 @@ const MultiSelect = ({
   options,
   selected,
   onSelectedChange,
-  displayKey = 'label',
-  valueKey = 'value',
+  displayKey = 'lastName',
+  valueKey = 'id',
   disabledIds = []
 }: {
   title: string;
@@ -222,7 +222,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     }
 
     try {
-        const serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'> = {
+        const serviceData = {
             id: serviceId,
             cuartel: cuartel as Service['cuartel'],
             year: new Date(date).getFullYear(),
@@ -340,7 +340,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
           </div>
         );
        case 2:
-        const firefighterOptions = allFirefighters.map(f => ({ label: `${f.lastName}, ${f.firstName}`, value: f.id, legajo: f.legajo }));
+        const firefighterOptions = allFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
         const disabledPersonnelIds = [command?.id, serviceChief?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
         return (
             <div className="space-y-4">
@@ -354,11 +354,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>
-                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} displayKey="label" valueKey="value" disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
+                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Pasiva</Label>
-                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={offDuty} onSelectedChange={setOffDuty} displayKey="label" valueKey="value" disabledIds={disabledPersonnelIds}/>
+                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={offDuty} onSelectedChange={setOffDuty} disabledIds={disabledPersonnelIds}/>
                 </div>
             </div>
         )

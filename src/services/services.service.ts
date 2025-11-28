@@ -72,16 +72,17 @@ export const getServices = async (): Promise<Service[]> => {
     return services;
 }
 
-export const addService = async (serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'>): Promise<string> => {
+export const addService = async (serviceData: Omit<Service, 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'>): Promise<string> => {
+    const { id, ...dataToSave } = serviceData;
     
     // The ID is now manually composed and set
-    const docRef = doc(db, 'services', serviceData.id);
+    const docRef = doc(db, 'services', id);
 
     const docSnap = await getDoc(docRef);
     if(docSnap.exists()) {
-        throw new Error(`Ya existe un servicio con el ID ${serviceData.id}. Por favor, verifique el número de planilla.`);
+        throw new Error(`Ya existe un servicio con el ID ${id}. Por favor, verifique el número de planilla.`);
     }
 
-    await setDoc(docRef, serviceData);
+    await setDoc(docRef, dataToSave);
     return docRef.id;
 }
