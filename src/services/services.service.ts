@@ -41,7 +41,7 @@ const docToService = async (
     const interveningVehiclesData = data.interveningVehicles || [];
     const enrichedInterveningVehicles: InterveningVehicle[] = interveningVehiclesData.map((iv: any) => ({
         ...iv,
-        vehicle: vehicleMap.get(iv.vehicleId) // Corrected from iv.vehicleId
+        vehicle: vehicleMap.get(iv.vehicleId)
     }));
     
     const onDutyIds = data.onDutyIds || [];
