@@ -17,12 +17,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { Firefighter, Vehicle, Service, ServiceType, SummonMethod } from "@/lib/types";
+import { Firefighter, Vehicle, Service, ServiceType, SummonMethod, InterveningVehicle } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, ArrowRight, ArrowLeft } from "lucide-react";
+import { Check, ChevronsUpDown, ArrowRight, ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -161,7 +161,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [serviceChief, setServiceChief] = useState<Firefighter | null>(null);
   const [onDuty, setOnDuty] = useState<Firefighter[]>([]);
   const [offDuty, setOffDuty] = useState<Firefighter[]>([]);
-  const [interveningVehicles, setInterveningVehicles] = useState<any[]>([]); // Simplified for now
+  const [interveningVehicles, setInterveningVehicles] = useState<Partial<InterveningVehicle & { vehicle?: Vehicle }>[]>([]);
   const [collaboration, setCollaboration] = useState('');
   const [recognition, setRecognition] = useState('');
   const [observations, setObservations] = useState('');
@@ -197,7 +197,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   }, [cuartel, manualId, date]);
 
   const resetForm = () => {
-    // Reset all state variables
     setCuartel(''); setManualId(''); setServiceId('');
     setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
@@ -211,6 +210,24 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const handleSubmit = async () => {
     toast({ title: "Función no implementada", description: "El guardado del servicio aún no está implementado." });
   };
+  
+  const handleAddVehicle = () => {
+    setInterveningVehicles(prev => [...prev, { vehicleId: '', departureTime: '', returnTime: '', inChargeId: '' }]);
+  }
+  
+  const handleVehicleChange = (index: number, field: keyof InterveningVehicle, value: string) => {
+    setInterveningVehicles(prev => {
+        const newVehicles = [...prev];
+        const vehicle = allVehicles.find(v => v.id === newVehicles[index].vehicleId);
+        newVehicles[index] = { ...newVehicles[index], [field]: value, vehicle };
+        return newVehicles;
+    });
+  };
+
+  const handleRemoveVehicle = (index: number) => {
+    setInterveningVehicles(prev => prev.filter((_, i) => i !== index));
+  }
+
 
   const renderStepContent = () => {
     switch (step) {
@@ -296,9 +313,42 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
       case 3:
         return (
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Móviles Intervinientes</Label>
-              <p className="text-sm text-muted-foreground">Funcionalidad para agregar móviles próximamente.</p>
+             <div className="space-y-2">
+                <Label>Móviles Intervinientes</Label>
+                 {interveningVehicles.map((iv, index) => (
+                    <Card key={index} className="p-4 space-y-3 relative">
+                        <Button variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => handleRemoveVehicle(index)}>
+                            <Trash2 className="h-4 w-4 text-destructive"/>
+                        </Button>
+                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                             <div className="space-y-1">
+                                <Label>Móvil</Label>
+                                <Select value={iv.vehicleId} onValueChange={(v) => handleVehicleChange(index, 'vehicleId', v)}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                    <SelectContent>{allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                             <div className="space-y-1">
+                                <Label>A Cargo</Label>
+                                <Select value={iv.inChargeId} onValueChange={(v) => handleVehicleChange(index, 'inChargeId', v)}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                    <SelectContent>{allFirefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.lastName}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-1">
+                                <Label>Hora Salida</Label>
+                                <Input type="time" value={iv.departureTime} onChange={(e) => handleVehicleChange(index, 'departureTime', e.target.value)} />
+                            </div>
+                             <div className="space-y-1">
+                                <Label>Hora Regreso</Label>
+                                <Input type="time" value={iv.returnTime} onChange={(e) => handleVehicleChange(index, 'returnTime', e.target.value)} />
+                            </div>
+                        </div>
+                    </Card>
+                ))}
+                <Button variant="outline" size="sm" onClick={handleAddVehicle} className="w-full">
+                    <Plus className="mr-2 h-4 w-4" /> Agregar Móvil
+                </Button>
             </div>
             <Separator />
             <div className="space-y-2">
@@ -329,9 +379,26 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                    <Separator className="my-2"/>
                    <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
                    <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
-                   <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.label).join(', ') || 'N/A'}</p>
-                   <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.label).join(', ') || 'N/A'}</p>
+                   <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
+                   <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
                    <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>
+                   <Separator className="my-2"/>
+                   <div>
+                     <p><strong>Móviles Intervinientes:</strong></p>
+                     {interveningVehicles.length > 0 ? (
+                        <ul className="list-disc pl-5 mt-1 space-y-1">
+                            {interveningVehicles.map((iv, i) => {
+                                const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
+                                const inCharge = allFirefighters.find(f => f.id === iv.inChargeId);
+                                return (
+                                    <li key={i}>
+                                        Móvil {vehicle?.numeroMovil} (a cargo de {inCharge?.lastName}) - Salida: {iv.departureTime}, Regreso: {iv.returnTime}
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                     ) : <p className="text-muted-foreground">Ninguno</p>}
+                   </div>
                    <Separator className="my-2"/>
                    <p><strong>Colaboración:</strong> {collaboration || 'Ninguna'}</p>
                    <p><strong>Observaciones:</strong> {observations || 'Ninguna'}</p>
