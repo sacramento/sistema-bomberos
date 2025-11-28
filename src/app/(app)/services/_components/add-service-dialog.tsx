@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -60,12 +61,12 @@ const SingleFirefighterSelect = ({
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
                             {firefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
                                     onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}
                                     disabled={disabledIds.includes(firefighter.id)}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.lastName}, ${firefighter.firstName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -122,9 +123,9 @@ const MultiSelect = ({
                         <CommandEmpty>No se encontraron opciones.</CommandEmpty>
                         <CommandGroup>
                             {options.map((option) => (
-                                <CommandItem key={option[valueKey]} value={option[displayKey]} onSelect={() => handleSelect(option)} disabled={disabledIds.includes(option[valueKey])}>
+                                <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)} disabled={disabledIds.includes(option[valueKey])}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
-                                    {option[displayKey]}
+                                    {option.legajo} - {option[displayKey]}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -250,8 +251,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 <Label>Método de Convocatoria</Label>
                  <MultiSelect
                     title="Métodos"
-                    options={summonMethods.map(m => ({ label: m, value: m }))}
-                    selected={selectedSummonMethods.map(m => ({ label: m, value: m }))}
+                    options={summonMethods.map(m => ({ label: m, value: m, legajo: '' }))}
+                    selected={selectedSummonMethods.map(m => ({ label: m, value: m, legajo: '' }))}
                     onSelectedChange={methods => setSelectedSummonMethods(methods.map(m => m.value))}
                     displayKey="label"
                     valueKey="value"
@@ -260,7 +261,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
           </div>
         );
        case 2:
-        const firefighterOptions = allFirefighters.map(f => ({ label: `${f.lastName}, ${f.firstName}`, value: f.id }));
+        const firefighterOptions = allFirefighters.map(f => ({ label: `${f.lastName}, ${f.firstName}`, value: f.id, legajo: f.legajo }));
         const disabledPersonnelIds = [command?.id, serviceChief?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
         return (
             <div className="space-y-4">
