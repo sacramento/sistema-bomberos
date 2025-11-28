@@ -27,6 +27,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
@@ -111,7 +112,7 @@ const MultiSelect = ({
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -125,7 +126,7 @@ const MultiSelect = ({
                             {options.map((option) => (
                                 <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)} disabled={disabledIds.includes(option[valueKey])}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
-                                    {option.legajo} - {option[displayKey]}
+                                    {option.legajo ? `${option.legajo} - ${option[displayKey]}` : option[displayKey]}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -228,7 +229,6 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     setInterveningVehicles(prev => prev.filter((_, i) => i !== index));
   }
 
-
   const renderStepContent = () => {
     switch (step) {
       case 1:
@@ -278,8 +278,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 <Label>Método de Convocatoria</Label>
                  <MultiSelect
                     title="Métodos"
-                    options={summonMethods.map(m => ({ label: m, value: m, legajo: '' }))}
-                    selected={selectedSummonMethods.map(m => ({ label: m, value: m, legajo: '' }))}
+                    options={summonMethods.map(m => ({ label: m, value: m }))}
+                    selected={selectedSummonMethods.map(m => ({ label: m, value: m }))}
                     onSelectedChange={methods => setSelectedSummonMethods(methods.map(m => m.value))}
                     displayKey="label"
                     valueKey="value"
