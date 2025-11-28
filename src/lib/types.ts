@@ -294,7 +294,7 @@ export type Service = {
     onDutyIds: string[];
     offDutyIds: string[];
     
-    interveningVehicles: InterveningVehicle[];
+    interveningVehicles: Omit<InterveningVehicle, 'vehicle'>[];
     
     collaboration?: string;
     recognition?: string;
@@ -305,4 +305,5 @@ export type Service = {
     serviceChief?: Firefighter;
     onDutyPersonnel?: Firefighter[];
     offDutyPersonnel?: Firefighter[];
+    enrichedInterveningVehicles?: InterveningVehicle[];
 }

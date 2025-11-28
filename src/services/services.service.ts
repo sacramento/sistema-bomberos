@@ -38,7 +38,7 @@ const docToService = async (
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
-    const interveningVehicles: InterveningVehicle[] = (data.interveningVehicles || []).map((iv: any) => ({
+    const enrichedInterveningVehicles: InterveningVehicle[] = (data.interveningVehicles || []).map((iv: any) => ({
         ...iv,
         vehicle: vehicleMap.get(iv.vehicleId)
     }));
@@ -58,7 +58,7 @@ const docToService = async (
         serviceChiefId: data.serviceChiefId,
         onDutyIds: data.onDutyIds || [],
         offDutyIds: data.offDutyIds || [],
-        interveningVehicles: interveningVehicles,
+        interveningVehicles: data.interveningVehicles || [],
         collaboration: data.collaboration,
         recognition: data.recognition,
         observations: data.observations,
@@ -66,6 +66,7 @@ const docToService = async (
         serviceChief: firefighterMap.get(data.serviceChiefId),
         onDutyPersonnel: getFirefighterObjects(data.onDutyIds),
         offDutyPersonnel: getFirefighterObjects(data.offDutyIds),
+        enrichedInterveningVehicles: enrichedInterveningVehicles,
     };
     return service;
 }
@@ -87,7 +88,7 @@ export const getServices = async (): Promise<Service[]> => {
     return services;
 }
 
-export const addService = async (serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'>): Promise<string> => {
+export const addService = async (serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel' | 'enrichedInterveningVehicles'>): Promise<string> => {
     const docRef = await addDoc(servicesCollection, serviceData);
     return docRef.id;
 }
