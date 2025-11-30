@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Service, Firefighter, Vehicle } from '@/lib/types';
 import { getServiceById } from '@/services/services.service';
@@ -12,8 +12,10 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building } from 'lucide-react';
+import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, Edit } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { useAuth } from '@/context/auth-context';
+import EditServiceDialog from '../_components/edit-service-dialog';
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
     <div className="flex items-start gap-3">
@@ -29,6 +31,9 @@ export default function ServiceDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
+    const { user, getActiveRole } = useAuth();
+    const pathname = `/services/${id}`;
+    const activeRole = getActiveRole(pathname);
 
     const [service, setService] = useState<Service | null>(null);
     const [firefighters, setFirefighters] = useState<Map<string, Firefighter>>(new Map());
@@ -36,38 +41,49 @@ export default function ServiceDetailPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    useEffect(() => {
+    const canManage = useMemo(() => {
+        return activeRole === 'Master' || activeRole === 'Administrador'
+    }, [activeRole]);
+
+
+    const fetchServiceDetails = async () => {
         if (!id) return;
         
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [serviceData, firefightersData, vehiclesData] = await Promise.all([
-                    getServiceById(id),
-                    getFirefighters(),
-                    getVehicles()
-                ]);
+        setLoading(true);
+        try {
+            const [serviceData, firefightersData, vehiclesData] = await Promise.all([
+                getServiceById(id),
+                getFirefighters(),
+                getVehicles()
+            ]);
 
-                if (!serviceData) {
-                    toast({ title: 'Error', description: 'No se pudo encontrar el servicio.', variant: 'destructive' });
-                    router.push('/services');
-                    return;
-                }
-
-                setService(serviceData);
-                setFirefighters(new Map(firefightersData.map(f => [f.id, f])));
-                setVehicles(new Map(vehiclesData.map(v => [v.id, v])));
-
-            } catch (error) {
-                console.error(error);
-                toast({ title: 'Error', description: 'No se pudieron cargar los detalles del servicio.', variant: 'destructive' });
-            } finally {
-                setLoading(false);
+            if (!serviceData) {
+                toast({ title: 'Error', description: 'No se pudo encontrar el servicio.', variant: 'destructive' });
+                router.push('/services');
+                return;
             }
-        };
 
-        fetchData();
+            setService(serviceData);
+            setFirefighters(new Map(firefightersData.map(f => [f.id, f])));
+            setVehicles(new Map(vehiclesData.map(v => [v.id, v])));
+
+        } catch (error) {
+            console.error(error);
+            toast({ title: 'Error', description: 'No se pudieron cargar los detalles del servicio.', variant: 'destructive' });
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchServiceDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id, router, toast]);
+
+    const handleServiceUpdated = () => {
+        fetchServiceDetails();
+    }
+
 
     if (loading) {
         return (
@@ -106,10 +122,20 @@ export default function ServiceDetailPage() {
     return (
         <>
             <PageHeader title={`Servicio: ${getServiceId(service)}`} description={service.address}>
-                <Button variant="outline" onClick={() => router.push('/services')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Volver a la lista
-                </Button>
+                 <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={() => router.push('/services')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver
+                    </Button>
+                    {canManage && (
+                        <EditServiceDialog service={service} onServiceUpdated={handleServiceUpdated}>
+                            <Button>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar Servicio
+                            </Button>
+                        </EditServiceDialog>
+                    )}
+                </div>
             </PageHeader>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
