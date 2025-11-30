@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, formatDistance } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Service, ServiceType, Vehicle } from "@/lib/types";
+import { Service, ServiceType, Vehicle, Firefighter } from "@/lib/types";
 import { getServices } from "@/services/services.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
@@ -274,20 +274,27 @@ export default function ServicesReportPage() {
 
         try {
             filteredServices.forEach((service, index) => {
-                let currentY = pageMargin;
+                let currentY = 0;
 
                 // --- Header ---
-                doc.addImage(logoDataUrl!, 'PNG', pageMargin, currentY, 20, 20);
-                doc.setFontSize(18);
+                doc.setFillColor(220, 53, 69);
+                doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+                doc.setFontSize(22);
+                doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
-                doc.text('Ficha de Servicio', doc.internal.pageSize.getWidth() / 2, currentY + 8, { align: 'center' });
+                doc.text("Ficha de Servicio", pageMargin, 22);
+                doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - (pageMargin + 25), 5, 25, 25);
+                
                 doc.setFontSize(12);
-                doc.text(getServiceId(service), doc.internal.pageSize.getWidth() / 2, currentY + 15, { align: 'center' });
-                currentY += 30;
+                doc.setFont('helvetica', 'normal');
+                doc.text(getServiceId(service), pageMargin, 30);
+
+                currentY = 45;
 
                 // --- Service Details Section ---
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0,0,0);
                 doc.text('Detalles del Servicio', pageMargin, currentY);
                 currentY += 6;
                 (doc as any).autoTable({
@@ -539,4 +546,3 @@ export default function ServicesReportPage() {
         </div>
     );
 }
-
