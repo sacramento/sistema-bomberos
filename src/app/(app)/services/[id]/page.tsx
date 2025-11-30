@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Service, Firefighter, Vehicle } from '@/lib/types';
-import { getServiceById } from '@/services/services.service';
+import { getServiceById, deleteService } from '@/services/services.service';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getVehicles } from '@/services/vehicles.service';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +20,7 @@ import { useAuth } from '@/context/auth-context';
 import EditServiceDialog from '../_components/edit-service-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { deleteService } from '@/services/services.service';
+
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
     <div className="flex items-start gap-3">
@@ -80,8 +80,6 @@ export default function ServiceDetailPage() {
     }, [id, router, toast]);
     
      const handleDataChange = () => {
-        // Re-fetch data after an edit
-        // This is a simplified approach. For more complex apps, you might update state directly.
         const fetchServiceDetails = async () => {
             if (!id) return;
             try {
@@ -157,8 +155,8 @@ export default function ServiceDetailPage() {
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <DetailItem icon={Siren} label="Tipo de Servicio" value={service.serviceType} />
                             <DetailItem icon={Code} label="Código de Servicio" value={service.serviceCode} />
-                            <DetailItem icon={Calendar} label="Fecha y Hora de Inicio" value={format(parseISO(service.startDateTime), 'Pp', { locale: es })} />
-                            <DetailItem icon={Calendar} label="Fecha y Hora de Fin" value={format(parseISO(service.endDateTime), 'Pp', { locale: es })} />
+                            <DetailItem icon={Calendar} label="Fecha y Hora de Inicio" value={service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'} />
+                            <DetailItem icon={Calendar} label="Fecha y Hora de Fin" value={service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'} />
                              <DetailItem icon={Clock} label="Duración Total" value={serviceDuration} />
                             <DetailItem icon={Building} label="Cuartel" value={service.cuartel} />
                             <DetailItem icon={MapPin} label="Zona" value={service.zone} />
@@ -195,7 +193,7 @@ export default function ServiceDetailPage() {
                                                 Móvil {getVehicleName(iv.vehicleId)}
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
-                                                Duración: {formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es })}
+                                                Duración: {iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A'}
                                             </div>
                                         </li>
                                     ))}
