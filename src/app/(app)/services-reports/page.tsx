@@ -26,7 +26,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate vehicular', 'Rescate urbano', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
 
@@ -42,10 +42,13 @@ const serviceCodesList = [
 
 const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Incendio': "#EF4444", 
-    'Rescate': "#3B82F6",
+    'Rescate vehicular': "#3B82F6",
+    'Rescate urbano': "#1D4ED8",
     'Accidente': "#F97316",
     'HazMat': "#A855F7",
     'Forestal': "#22C55E",
+    'G.O.R.A': '#8b5cf6', 
+    'Buceo': '#0ea5e9', 
     'Especial': "#6366F1",
     'Otros': "#64748B",
 };
@@ -168,7 +171,7 @@ export default function ServicesReportPage() {
             if (filterServiceCodes.length > 0 && !filterServiceCodes.includes(service.serviceCode)) return false;
             if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
 
-            if (filterDate?.from) {
+            if (filterDate?.from && service.startDateTime) {
                 const serviceDate = parseISO(service.startDateTime);
                 const toDate = filterDate.to ?? filterDate.from;
                 if (!isWithinInterval(serviceDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
@@ -235,7 +238,7 @@ export default function ServicesReportPage() {
                 body: filteredServices.map(item => [
                     getServiceId(item),
                     item.serviceType,
-                    format(parseISO(item.startDateTime), 'P', { locale: es }),
+                    item.startDateTime ? format(parseISO(item.startDateTime), 'P', { locale: es }) : 'N/A',
                     item.address,
                     getTotalHours(item.startDateTime, item.endDateTime),
                     getVehicleUsageHours(item),
@@ -367,7 +370,7 @@ export default function ServicesReportPage() {
                                             <TableRow key={service.id}>
                                                 <TableCell className="font-mono">{getServiceId(service)}</TableCell>
                                                 <TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white">{service.serviceType}</Badge></TableCell>
-                                                <TableCell>{format(parseISO(service.startDateTime), 'P', { locale: es })}</TableCell>
+                                                <TableCell>{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell>
                                                 <TableCell>{getTotalHours(service.startDateTime, service.endDateTime)}</TableCell>
                                             </TableRow>
                                         ))

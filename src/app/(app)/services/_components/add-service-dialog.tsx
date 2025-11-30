@@ -31,7 +31,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate vehicular', 'Rescate urbano', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
 const cuarteles: Service['cuartel'][] = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => i + 1);

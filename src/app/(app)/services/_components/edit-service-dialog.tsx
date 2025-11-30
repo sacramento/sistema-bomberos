@@ -30,7 +30,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { updateService } from "@/services/services.service";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate vehicular', 'Rescate urbano', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
 const cuarteles: Service['cuartel'][] = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -188,7 +188,7 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
   };
   
   const handleAddVehicle = () => {
-    const updatedVehicles = [...(formData.interveningVehicles || []), { vehicleId: '', departureTime: '', returnTime: '' }];
+    const updatedVehicles = [...(formData.interveningVehicles || []), { vehicleId: '', departureDateTime: '', returnDateTime: '' }];
     handleInputChange('interveningVehicles', updatedVehicles);
   };
 
@@ -199,11 +199,11 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
 
   const handleSubmit = async () => {
      setLoading(true);
-    if (!formData.cuartel || !formData.manualId || !formData.date || !formData.commandId || !formData.serviceChiefId || !formData.stationOfficerId || !formData.serviceCode) {
+    if (!formData.cuartel || !formData.manualId || !formData.startDateTime || !formData.commandId || !formData.serviceChiefId || !formData.stationOfficerId || !formData.serviceCode) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
-            description: "Asegúrese de completar el cuartel, número de planilla, fecha, código, comando, jefe de servicio y cuartelero.",
+            description: "Asegúrese de completar el cuartel, número de planilla, fecha y hora de inicio, código, comando, jefe de servicio y cuartelero.",
         });
         setLoading(false);
         return;
@@ -212,7 +212,7 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
     try {
         const serviceData = {
             ...formData,
-            year: new Date(formData.date!).getFullYear(),
+            year: new Date(formData.startDateTime!).getFullYear(),
             manualId: Number(formData.manualId),
             zone: Number(formData.zone),
         };
@@ -255,9 +255,27 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                         <Input id="manualId" type="number" value={formData.manualId || ''} onChange={e => handleInputChange('manualId', e.target.value)} />
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="date">Fecha</Label>
-                        <Input id="date" type="date" value={formData.date} onChange={e => handleInputChange('date', e.target.value)} />
+                        <Label htmlFor="startDateTime">Fecha y Hora de Inicio</Label>
+                        <Input id="startDateTime" type="datetime-local" value={formData.startDateTime} onChange={e => handleInputChange('startDateTime', e.target.value)} />
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="endDateTime">Fecha y Hora de Fin</Label>
+                        <Input id="endDateTime" type="datetime-local" value={formData.endDateTime} onChange={e => handleInputChange('endDateTime', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="zone">Zona</Label>
+                        <Select value={formData.zone?.toString()} onValueChange={v => handleInputChange('zone', Number(v))}>
+                            <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                            <SelectContent>{zones.map(z => <SelectItem key={z} value={z.toString()}>{z}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="serviceType">Tipo de Servicio</Label>
+                    <Select value={formData.serviceType} onValueChange={v => handleInputChange('serviceType', v as any)}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                        <SelectContent>{serviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="serviceCode">Código de Servicio</Label>
@@ -319,12 +337,12 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                                     </Select>
                                 </div>
                                 <div className="space-y-1">
-                                    <Label>Hora Salida</Label>
-                                    <Input type="time" value={iv.departureTime} onChange={(e) => handleVehicleChange(index, 'departureTime', e.target.value)} />
+                                    <Label>Fecha y Hora Salida</Label>
+                                    <Input type="datetime-local" value={iv.departureDateTime} onChange={(e) => handleVehicleChange(index, 'departureDateTime', e.target.value)} />
                                 </div>
                                 <div className="space-y-1">
-                                    <Label>Hora Regreso</Label>
-                                    <Input type="time" value={iv.returnTime} onChange={(e) => handleVehicleChange(index, 'returnTime', e.target.value)} />
+                                    <Label>Fecha y Hora Regreso</Label>
+                                    <Input type="datetime-local" value={iv.returnDateTime} onChange={(e) => handleVehicleChange(index, 'returnDateTime', e.target.value)} />
                                 </div>
                             </div>
                         </Card>
