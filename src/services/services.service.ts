@@ -95,6 +95,22 @@ export const getServices = async (): Promise<Service[]> => {
     return services;
 }
 
+export const getServiceById = async (id: string): Promise<Service | null> => {
+    const docRef = doc(db, 'services', id);
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+        const [firefighters, vehicles] = await Promise.all([
+            getFirefighters(),
+            getVehicles()
+        ]);
+        const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+        const vehicleMap = new Map(vehicles.map(v => [v.id, v]));
+        return await docToService(docSnap, firefighterMap, vehicleMap);
+    }
+    return null;
+}
+
 /**
  * Adds a new service record to the database.
  * @param serviceData The core data for the new service.
