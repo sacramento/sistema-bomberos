@@ -78,6 +78,7 @@ export const navItems: NavItem[] = [
   { href: '/clothing-reports', icon: BarChart3, label: 'Reportes Ropa', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'roperia' },
 
   { href: '/services', icon: Siren, label: 'Servicios', roles: ['Master', 'Administrador', 'Oficial', 'Bombero'], module: 'servicios' },
+  { href: '/services-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Bombero'], module: 'servicios' },
 
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },

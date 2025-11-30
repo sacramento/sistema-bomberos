@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -82,13 +83,13 @@ export default function ServicesPage() {
     const getTotalPersonnel = (service: Service) => {
         const onDutyCount = service.onDutyIds?.length || 0;
         const offDutyCount = service.offDutyIds?.length || 0;
-        const commandExists = service.commandId ? 1 : 0;
-        const chiefExists = service.serviceChiefId ? 1 : 0;
-        const stationOfficerExists = service.stationOfficerId ? 1 : 0;
-
+        
         const uniqueIds = new Set([service.commandId, service.serviceChiefId, service.stationOfficerId].filter(Boolean));
         
-        return uniqueIds.size + onDutyCount + offDutyCount;
+        (service.onDutyIds || []).forEach(id => uniqueIds.add(id));
+        (service.offDutyIds || []).forEach(id => uniqueIds.add(id));
+
+        return uniqueIds.size;
     }
 
     return (
@@ -180,7 +181,7 @@ export default function ServicesPage() {
                     ) : (
                         <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
                             <p className="text-muted-foreground">Aún no hay servicios registrados.</p>
-                            <p className="text-sm text-muted-foreground mt-2">Haga clic en "Registrar Servicio" para empezar.</p>
+                            {canManage && <p className="text-sm text-muted-foreground mt-2">Haga clic en "Registrar Servicio" para empezar.</p>}
                         </div>
                     )}
                 </CardContent>

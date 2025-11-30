@@ -47,6 +47,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/ayudantia-reports': 'ayudantia',
     '/clothing': 'roperia',
     '/clothing-reports': 'roperia',
+    '/services-reports': 'servicios',
     '/services': 'servicios',
     '/admin': 'general',
     '/dashboard': 'dashboard'
