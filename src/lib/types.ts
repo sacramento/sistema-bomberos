@@ -264,7 +264,7 @@ export type ClothingItem = {
 }
 
 // Types for "Servicios" Module
-export type ServiceType = 'Incendio' | 'Rescate vehicular' | 'Rescate urbano' | 'Accidente' | 'HazMat' | 'Forestal' | 'Especial' | 'G.O.R.A' | 'Buceo' | 'Otros';
+export type ServiceType = 'Incendio' | 'Rescate' | 'Accidente' | 'HazMat' | 'Forestal' | 'Especial' | 'G.O.R.A' | 'Buceo' | 'Otros';
 export type SummonMethod = 'Alarma' | 'VHF' | 'Teléfono' | 'En el Cuartel';
 
 export type InterveningVehicle = {

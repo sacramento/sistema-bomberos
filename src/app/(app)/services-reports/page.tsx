@@ -26,7 +26,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate vehicular', 'Rescate urbano', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
 
@@ -42,8 +42,7 @@ const serviceCodesList = [
 
 const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Incendio': "#EF4444", 
-    'Rescate vehicular': "#3B82F6",
-    'Rescate urbano': "#1D4ED8",
+    'Rescate': "#3B82F6",
     'Accidente': "#F97316",
     'HazMat': "#A855F7",
     'Forestal': "#22C55E",
