@@ -16,7 +16,6 @@ import { useState, useEffect, useMemo } from "react";
 import { Service, ServiceType, Vehicle, Firefighter } from "@/lib/types";
 import { getServices } from "@/services/services.service";
 import { getVehicles } from "@/services/vehicles.service";
-import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -124,7 +123,6 @@ export default function ServicesReportPage() {
     // Raw Data
     const [allServices, setAllServices] = useState<Service[]>([]);
     const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
-    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -138,14 +136,12 @@ export default function ServicesReportPage() {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [servicesData, vehiclesData, firefightersData] = await Promise.all([
+                const [servicesData, vehiclesData] = await Promise.all([
                     getServices(),
                     getVehicles(),
-                    getFirefighters()
                 ]);
                 setAllServices(servicesData);
                 setAllVehicles(vehiclesData);
-                setAllFirefighters(firefightersData);
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -167,8 +163,8 @@ export default function ServicesReportPage() {
         fetchLogo();
     }, [toast]);
     
-    const enrichedFilteredServices = useMemo(() => {
-        const filtered = allServices.filter(service => {
+    const filteredServices = useMemo(() => {
+        return allServices.filter(service => {
             if (filterServiceTypes.length > 0 && !filterServiceTypes.includes(service.serviceType)) return false;
             if (filterCuarteles.length > 0 && !filterCuarteles.includes(service.cuartel)) return false;
             if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
@@ -182,22 +178,10 @@ export default function ServicesReportPage() {
             }
             return true;
         });
-
-        // Enrich with firefighter data
-        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
-        return filtered.map(service => ({
-            ...service,
-            command: service.commandId ? firefighterMap.get(service.commandId) : undefined,
-            serviceChief: service.serviceChiefId ? firefighterMap.get(service.serviceChiefId) : undefined,
-            stationOfficer: service.stationOfficerId ? firefighterMap.get(service.stationOfficerId) : undefined,
-            onDutyPersonnel: service.onDutyIds?.map(id => firefighterMap.get(id)).filter(Boolean) as Firefighter[] || [],
-            offDutyPersonnel: service.offDutyIds?.map(id => firefighterMap.get(id)).filter(Boolean) as Firefighter[] || [],
-        }));
-
-    }, [allServices, allFirefighters, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes]);
 
     const summaryStats = useMemo(() => {
-        const servicesByType = enrichedFilteredServices.reduce((acc, service) => {
+        const servicesByType = filteredServices.reduce((acc, service) => {
             acc[service.serviceType] = (acc[service.serviceType] || 0) + 1;
             return acc;
         }, {} as Record<ServiceType, number>);
@@ -209,10 +193,10 @@ export default function ServicesReportPage() {
         })).filter(item => item.value > 0);
 
         return {
-            totalServices: enrichedFilteredServices.length,
+            totalServices: filteredServices.length,
             pieData
         }
-    }, [enrichedFilteredServices]);
+    }, [filteredServices]);
     
     const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
 
@@ -252,7 +236,7 @@ export default function ServicesReportPage() {
             (doc as any).autoTable({
                 startY: currentY,
                 head: [['ID', 'Tipo', 'Fecha', 'Dirección', 'Duración', 'Uso Móviles (hs)']],
-                body: enrichedFilteredServices.map(item => [
+                body: filteredServices.map(item => [
                     getServiceId(item),
                     item.serviceType,
                     item.startDateTime ? format(parseISO(item.startDateTime), 'P', { locale: es }) : 'N/A',
@@ -289,7 +273,7 @@ export default function ServicesReportPage() {
         };
 
         try {
-            enrichedFilteredServices.forEach((service, index) => {
+            filteredServices.forEach((service, index) => {
                 let currentY = pageMargin;
 
                 // --- Header ---
@@ -326,12 +310,15 @@ export default function ServicesReportPage() {
                 doc.setFontSize(12);
                 doc.text('Personal Interviniente', pageMargin, currentY);
                 currentY += 6;
+                const onDutyNames = service.onDutyPersonnel?.map(p => p.name).join(', ') || 'N/A';
+                const offDutyNames = service.offDutyPersonnel?.map(p => p.name).join(', ') || 'N/A';
+
                 const personnelBody = [
                     ['Comando', service.command?.name || 'N/A'],
                     ['Jefe de Servicio', service.serviceChief?.name || 'N/A'],
                     ['Cuartelero', service.stationOfficer?.name || 'N/A'],
-                    ['Dotación de Servicio', service.onDutyPersonnel?.map(p => p.name).join(', ') || 'N/A'],
-                    ['Dotación de Pasiva', service.offDutyPersonnel?.map(p => p.name).join(', ') || 'N/A'],
+                    ['Dotación de Servicio', onDutyNames],
+                    ['Dotación de Pasiva', offDutyNames],
                 ];
                 (doc as any).autoTable({
                     startY: currentY,
@@ -391,7 +378,7 @@ export default function ServicesReportPage() {
                 addNotesSection('Reconocimiento', service.recognition);
                 addNotesSection('Colaboración', service.collaboration);
 
-                if (index < enrichedFilteredServices.length - 1) {
+                if (index < filteredServices.length - 1) {
                     doc.addPage();
                 }
             });
@@ -508,14 +495,14 @@ export default function ServicesReportPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Detalle de Servicios</CardTitle>
-                            <CardDescription>Mostrando {enrichedFilteredServices.length} servicios con los filtros aplicados.</CardDescription>
+                            <CardDescription>Mostrando {filteredServices.length} servicios con los filtros aplicados.</CardDescription>
                         </CardHeader>
                         <CardContent className="max-h-[400px] overflow-y-auto">
                             <Table>
                                 <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tipo</TableHead><TableHead>Fecha</TableHead><TableHead>Duración</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {enrichedFilteredServices.length > 0 ? (
-                                        enrichedFilteredServices.map((service) => (
+                                    {filteredServices.length > 0 ? (
+                                        filteredServices.map((service) => (
                                             <TableRow key={service.id}>
                                                 <TableCell className="font-mono">{getServiceId(service)}</TableCell>
                                                 <TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white">{service.serviceType}</Badge></TableCell>
@@ -539,11 +526,11 @@ export default function ServicesReportPage() {
                     <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
                 </CardHeader>
                 <CardContent className="flex flex-col sm:flex-row gap-4">
-                     <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || enrichedFilteredServices.length === 0}>
+                     <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0}>
                         {generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         {generatingSummaryPdf ? "Generando..." : "PDF Resumido"}
                     </Button>
-                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || enrichedFilteredServices.length === 0} variant="secondary">
+                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary">
                         {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                         {generatingDetailedPdf ? "Generando Fichas..." : "PDF Detallado (Fichas)"}
                     </Button>

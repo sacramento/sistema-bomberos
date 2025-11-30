@@ -28,8 +28,8 @@ const getAllVehiclesCached = cache(async () => {
 const docToService = async (docSnap: any, firefighterMap: Map<string, Firefighter>, vehicleMap: Map<string, Vehicle>): Promise<Service> => {
     const data = docSnap.data();
 
-    const getPersonnel = (id: string | undefined) => id ? firefighterMap.get(id) : undefined;
-    const getPersonnelList = (ids: string[] | undefined) => ids?.map(id => firefighterMap.get(id)).filter(Boolean) as Firefighter[] || [];
+    const getPersonnel = (id: string | undefined): Firefighter | undefined => id ? firefighterMap.get(id) : undefined;
+    const getPersonnelList = (ids: string[] | undefined): Firefighter[] => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
 
     return {
         id: docSnap.id,
