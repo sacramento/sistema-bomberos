@@ -270,8 +270,6 @@ export type InterveningVehicle = {
     vehicleId: string;
     departureTime: string;
     returnTime: string;
-    // Enriched properties
-    vehicle?: Vehicle;
 }
 
 export type Service = {
@@ -291,10 +289,10 @@ export type Service = {
     
     commandId: string;
     serviceChiefId: string;
-    onDutyIds: string[];
-    offDutyIds: string[];
+    onDutyIds?: string[];
+    offDutyIds?: string[];
     
-    interveningVehicles: Omit<InterveningVehicle, 'vehicle'>[];
+    interveningVehicles?: InterveningVehicle[];
     
     collaboration?: string;
     recognition?: string;
@@ -305,5 +303,4 @@ export type Service = {
     serviceChief?: Firefighter;
     onDutyPersonnel?: Firefighter[];
     offDutyPersonnel?: Firefighter[];
-    enrichedInterveningVehicles?: InterveningVehicle[];
 }
