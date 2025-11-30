@@ -30,6 +30,7 @@ export default function ServicesPage() {
                 description: "No se pudieron obtener los registros de servicios.",
                 variant: "destructive"
             });
+            console.error(error);
         } finally {
             setLoading(false);
         }
@@ -37,14 +38,14 @@ export default function ServicesPage() {
 
     useEffect(() => {
         fetchServices();
-    }, [toast]);
-
+    }, []);
 
     const handleServiceAdded = () => {
         fetchServices();
     }
     
     const getServiceId = (service: Service) => {
+        if (!service.cuartel || !service.year || !service.manualId) return 'ID Inválido';
         const year = service.year.toString().slice(-2);
         const manualId = service.manualId.toString().padStart(3, '0');
         return `${service.cuartel}-${year}/${manualId}`;
@@ -53,8 +54,11 @@ export default function ServicesPage() {
     const getTotalPersonnel = (service: Service) => {
         const onDutyCount = service.onDutyIds?.length || 0;
         const offDutyCount = service.offDutyIds?.length || 0;
-        // Add command and service chief
-        return 2 + onDutyCount + offDutyCount;
+        const commandExists = service.commandId ? 1 : 0;
+        const chiefExists = service.serviceChiefId ? 1 : 0;
+        // Avoid double counting if command is also chief
+        const uniqueChiefs = commandExists && chiefExists && service.commandId === service.serviceChiefId ? 0 : chiefExists;
+        return commandExists + uniqueChiefs + onDutyCount + offDutyCount;
     }
 
     return (
@@ -84,7 +88,7 @@ export default function ServicesPage() {
                                     <CardHeader>
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <Badge variant="secondary" className="mb-2">{service.serviceType}</Badge>
+                                                <Badge variant="secondary" className="mb-2">{service.serviceType || 'Sin Tipo'}</Badge>
                                                 <CardTitle className="text-lg">{getServiceId(service)}</CardTitle>
                                                 <CardDescription>{service.address}</CardDescription>
                                             </div>
