@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { Service, Firefighter, Vehicle } from '@/lib/types';
-import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getVehicles } from './vehicles.service';
 
@@ -56,4 +56,9 @@ export const updateService = async (id: string, serviceData: Partial<Service>): 
     if (dataToUpdate.zone) dataToUpdate.zone = Number(dataToUpdate.zone);
     
     await updateDoc(docRef, dataToUpdate);
+}
+
+export const deleteService = async (id: string): Promise<void> => {
+    const docRef = doc(db, 'services', id);
+    await deleteDoc(docRef);
 }
