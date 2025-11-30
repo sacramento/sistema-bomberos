@@ -21,12 +21,6 @@ const getAllFirefightersCached = cache(async () => {
     return new Map(firefighters.map(f => [f.id, f]));
 });
 
-const getAllMaintenanceItemsCached = cache(async () => {
-    const items = await getMaintenanceItems();
-    return new Map(items.map(i => [i.id, i]));
-});
-
-
 // Helper to enrich vehicle data
 const docToVehicle = async (
     docSnap: any, 
@@ -63,10 +57,12 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
     const q = query(vehiclesCollection, orderBy('numeroMovil', 'asc'));
     const querySnapshot = await getDocs(q);
 
-    const [firefighterMap, maintenanceItemMap] = await Promise.all([
+    // Fetch dependent data inside the function
+    const [firefighterMap, maintenanceItems] = await Promise.all([
         getAllFirefightersCached(),
-        getAllMaintenanceItemsCached()
+        getMaintenanceItems()
     ]);
+    const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
     
     const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
     const vehicles = await Promise.all(vehiclesPromises);
@@ -79,10 +75,11 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const [firefighterMap, maintenanceItemMap] = await Promise.all([
+        const [firefighterMap, maintenanceItems] = await Promise.all([
             getAllFirefightersCached(),
-            getAllMaintenanceItemsCached()
+            getMaintenanceItems()
         ]);
+        const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
         return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
     }
     return null;
