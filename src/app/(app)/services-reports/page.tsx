@@ -26,7 +26,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'G.O.R.A', 'Buceo', 'Especial', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
 
@@ -264,85 +264,116 @@ export default function ServicesReportPage() {
         const doc = new jsPDF();
         const pageHeight = doc.internal.pageSize.height;
         const pageMargin = 15;
+        const addPageIfNeeded = (y: number) => {
+            if (y > pageHeight - 20) {
+                doc.addPage();
+                return pageMargin;
+            }
+            return y;
+        };
 
         try {
             filteredServices.forEach((service, index) => {
                 let currentY = pageMargin;
 
                 // --- Header ---
-                doc.setFontSize(16);
+                doc.addImage(logoDataUrl!, 'PNG', pageMargin, currentY, 20, 20);
+                doc.setFontSize(18);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Ficha de Servicio: ${getServiceId(service)}`, pageMargin, currentY);
-                currentY += 10;
-                
-                // --- Service Details ---
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Tipo: ${service.serviceType} - Código: ${service.serviceCode}`, pageMargin, currentY); currentY += 5;
-                doc.text(`Dirección: ${service.address} (Zona: ${service.zone})`, pageMargin, currentY); currentY += 5;
-                doc.text(`Inicio: ${service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'}`, pageMargin, currentY); currentY += 5;
-                doc.text(`Fin: ${service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'}`, pageMargin, currentY); currentY += 5;
+                doc.text('Ficha de Servicio', doc.internal.pageSize.getWidth() / 2, currentY + 8, { align: 'center' });
+                doc.setFontSize(12);
+                doc.text(getServiceId(service), doc.internal.pageSize.getWidth() / 2, currentY + 15, { align: 'center' });
+                currentY += 30;
 
-                currentY += 5;
-
-                // --- Personnel ---
+                // --- Service Details Section ---
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
-                doc.text('Personal Interviniente', pageMargin, currentY); currentY += 6;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                const personnelText = [
-                    `Comando: ${service.command?.name || 'N/A'}`,
-                    `Jefe de Servicio: ${service.serviceChief?.name || 'N/A'}`,
-                    `Cuartelero: ${service.stationOfficer?.name || 'N/A'}`,
-                    `Dotación de Servicio: ${service.onDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'}`,
-                    `Dotación de Pasiva: ${service.offDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'}`
-                ];
-                personnelText.forEach(line => {
-                    const splitLines = doc.splitTextToSize(line, doc.internal.pageSize.width - (pageMargin * 2));
-                    doc.text(splitLines, pageMargin, currentY);
-                    currentY += (splitLines.length * 4);
+                doc.text('Detalles del Servicio', pageMargin, currentY);
+                currentY += 6;
+                (doc as any).autoTable({
+                    startY: currentY,
+                    body: [
+                        ['Tipo', service.serviceType],
+                        ['Código', service.serviceCode],
+                        ['Dirección', `${service.address} (Zona: ${service.zone})`],
+                        ['Inicio', service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'],
+                        ['Fin', service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'],
+                    ],
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
                 });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+                currentY = addPageIfNeeded(currentY);
 
-                currentY += 5;
-                 if (currentY > pageHeight - 60) { doc.addPage(); currentY = pageMargin; }
-
-                // --- Vehicles ---
+                // --- Personnel Section ---
                 doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Móviles Intervinientes', pageMargin, currentY); currentY += 6;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'normal');
-                if (service.interveningVehicles?.length) {
-                    service.interveningVehicles.forEach(iv => {
-                        const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
-                        const duration = iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A';
-                        doc.text(`- Móvil ${vehicle?.numeroMovil || '?'}: ${duration}`, pageMargin, currentY);
-                        currentY += 5;
-                    });
-                } else {
-                    doc.text('No se registraron móviles.', pageMargin, currentY); currentY += 5;
-                }
-                
-                currentY += 5;
-                if (currentY > pageHeight - 60) { doc.addPage(); currentY = pageMargin; }
+                doc.text('Personal Interviniente', pageMargin, currentY);
+                currentY += 6;
+                const personnelBody = [
+                    ['Comando', service.command?.name || 'N/A'],
+                    ['Jefe de Servicio', service.serviceChief?.name || 'N/A'],
+                    ['Cuartelero', service.stationOfficer?.name || 'N/A'],
+                    ['Dotación de Servicio', service.onDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'],
+                    ['Dotación de Pasiva', service.offDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'],
+                ];
+                (doc as any).autoTable({
+                    startY: currentY,
+                    body: personnelBody,
+                    theme: 'grid',
+                    styles: { fontSize: 9 },
+                    columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+                currentY = addPageIfNeeded(currentY);
 
-                // --- Observations & Others ---
-                const addSection = (title: string, content?: string) => {
+                // --- Vehicles Section ---
+                doc.setFontSize(12);
+                doc.text('Móviles Intervinientes', pageMargin, currentY);
+                currentY += 6;
+                if (service.interveningVehicles?.length) {
+                    (doc as any).autoTable({
+                        startY: currentY,
+                        head: [['Móvil', 'Salida', 'Regreso', 'Duración']],
+                        body: service.interveningVehicles.map(iv => {
+                            const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
+                            const duration = iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A';
+                            return [
+                                vehicle?.numeroMovil || '?',
+                                iv.departureDateTime ? format(parseISO(iv.departureDateTime), 'p', { locale: es }) : 'N/A',
+                                iv.returnDateTime ? format(parseISO(iv.returnDateTime), 'p', { locale: es }) : 'N/A',
+                                duration
+                            ];
+                        }),
+                        theme: 'striped',
+                        headStyles: { fillColor: '#333333' },
+                        styles: { fontSize: 9 },
+                    });
+                    currentY = (doc as any).lastAutoTable.finalY + 10;
+                } else {
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('No se registraron móviles.', pageMargin, currentY);
+                    currentY += 10;
+                }
+                currentY = addPageIfNeeded(currentY);
+
+                // --- Observations Section ---
+                const addNotesSection = (title: string, content?: string) => {
                     if (!content) return;
-                    if (currentY > pageHeight - 30) { doc.addPage(); currentY = pageMargin; }
+                    currentY = addPageIfNeeded(currentY);
                     doc.setFontSize(12);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(title, pageMargin, currentY); currentY += 6;
+                    doc.text(title, pageMargin, currentY); currentY += 5;
                     doc.setFontSize(10);
                     doc.setFont('helvetica', 'normal');
                     const splitContent = doc.splitTextToSize(content, doc.internal.pageSize.width - (pageMargin * 2));
                     doc.text(splitContent, pageMargin, currentY);
                     currentY += splitContent.length * 4 + 6;
                 }
-                addSection('Observaciones', service.observations);
-                addSection('Reconocimiento', service.recognition);
-                addSection('Colaboración', service.collaboration);
+                addNotesSection('Observaciones', service.observations);
+                addNotesSection('Reconocimiento', service.recognition);
+                addNotesSection('Colaboración', service.collaboration);
 
                 if (index < filteredServices.length - 1) {
                     doc.addPage();
@@ -351,7 +382,7 @@ export default function ServicesReportPage() {
 
             doc.save(`reporte-servicios-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
-            console.error(error);
+            console.error("PDF Generation Error:", error);
             toast({ title: "Error al generar PDF detallado", description: "Hubo un problema al crear el archivo.", variant: "destructive" });
         } finally {
             setGeneratingDetailedPdf(false);
