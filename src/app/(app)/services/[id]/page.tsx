@@ -92,7 +92,7 @@ export default function ServiceDetailPage() {
 
     const getPersonnelName = (id: string) => {
         const f = firefighters.get(id);
-        return f ? `${f.lastName}, ${f.firstName}` : 'Desconocido';
+        return f ? `${f.legajo} - ${f.lastName}` : 'Desconocido';
     };
 
     const getVehicleName = (id: string) => {
