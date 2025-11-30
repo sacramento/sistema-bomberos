@@ -40,6 +40,7 @@ export const addService = async (serviceData: any): Promise<string> => {
     dataToSave.year = new Date(dataToSave.startDateTime).getFullYear();
     dataToSave.manualId = Number(dataToSave.manualId);
     dataToSave.zone = Number(dataToSave.zone);
+    if (!dataToSave.endDateTime) dataToSave.endDateTime = dataToSave.startDateTime;
 
     const docRef = await addDoc(servicesCollection, dataToSave);
     return docRef.id;

@@ -126,11 +126,11 @@ export default function ServiceDetailPage() {
     const getVehicleName = (id: string) => {
         return vehicles.get(id)?.numeroMovil || 'Desconocido';
     };
-
-    const serviceDuration = service.startDateTime && service.endDateTime 
+    
+    const serviceDuration = (service.startDateTime && service.endDateTime)
         ? formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es })
         : 'No disponible';
-    
+
     const onDutyPersonnel = service.onDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
     const offDutyPersonnel = service.offDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
 

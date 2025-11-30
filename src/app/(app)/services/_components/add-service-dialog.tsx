@@ -164,9 +164,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [cuartel, setCuartel] = useState<Service['cuartel'] | ''>('');
   const [manualId, setManualId] = useState(0);
   const [serviceType, setServiceType] = useState<ServiceType | ''>('');
-  const [date, setDate] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
+  const [startDateTime, setStartDateTime] = useState('');
+  const [endDateTime, setEndDateTime] = useState('');
   const [address, setAddress] = useState('');
   const [selectedSummonMethods, setSelectedSummonMethods] = useState<SummonMethod[]>([]);
   const [command, setCommand] = useState<Firefighter | null>(null);
@@ -204,7 +203,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
 
   const resetForm = () => {
     setCuartel(''); setManualId(0);
-    setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
+    setServiceType(''); setStartDateTime(''); setEndDateTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
     setInConjunction(false); setServiceCode(''); setZone(''); setStationOfficer(null);
@@ -216,11 +215,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   
   const handleSubmit = async () => {
      setLoading(true);
-    if (!cuartel || !manualId || !date || !command || !serviceChief || !stationOfficer || !serviceCode) {
+    if (!cuartel || !manualId || !startDateTime || !command || !serviceChief || !stationOfficer || !serviceCode) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
-            description: "Asegúrese de completar el cuartel, número de planilla, fecha, código, comando, jefe de servicio y cuartelero.",
+            description: "Asegúrese de completar el cuartel, número de planilla, fecha y hora de inicio, código, comando, jefe de servicio y cuartelero.",
         });
         setLoading(false);
         return;
@@ -229,11 +228,10 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     try {
         const serviceData = {
             cuartel,
-            year: new Date(date).getFullYear(),
+            year: new Date(startDateTime).getFullYear(),
             manualId: Number(manualId),
-            date,
-            startTime,
-            endTime,
+            startDateTime,
+            endDateTime,
             serviceType: serviceType as ServiceType,
             address,
             summonMethods: selectedSummonMethods,
@@ -244,8 +242,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             offDutyIds: offDuty.map(f => f.id),
             interveningVehicles: interveningVehicles.map(iv => ({
                 vehicleId: iv.vehicleId!,
-                departureTime: iv.departureTime!,
-                returnTime: iv.returnTime!,
+                departureDateTime: iv.departureDateTime!,
+                returnDateTime: iv.returnDateTime!,
             })),
             collaboration,
             recognition,
@@ -273,14 +271,13 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   };
   
   const handleAddVehicle = () => {
-    setInterveningVehicles(prev => [...prev, { vehicleId: '', departureTime: '', returnTime: '' }]);
+    setInterveningVehicles(prev => [...prev, { vehicleId: '', departureDateTime: '', returnDateTime: '' }]);
   }
   
-  const handleVehicleChange = (index: number, field: keyof InterveningVehicle, value: string) => {
+  const handleVehicleChange = (index: number, field: 'vehicleId' | 'departureDateTime' | 'returnDateTime', value: string) => {
     setInterveningVehicles(prev => {
         const newVehicles = [...prev];
-        const vehicle = allVehicles.find(v => v.id === newVehicles[index].vehicleId);
-        newVehicles[index] = { ...newVehicles[index], [field]: value, vehicle };
+        newVehicles[index] = { ...newVehicles[index], [field]: value };
         return newVehicles;
     });
   };
@@ -307,16 +304,12 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     <Input id="manualId" type="number" placeholder="Ej: 1, 25, 134" value={manualId || ''} onChange={e => setManualId(Number(e.target.value))} />
                 </div>
                  <div className="space-y-2">
-                    <Label htmlFor="date">Fecha</Label>
-                    <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                    <Label htmlFor="startDateTime">Fecha y Hora de Inicio</Label>
+                    <Input id="startDateTime" type="datetime-local" value={startDateTime} onChange={e => setStartDateTime(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="startTime">Hora Comienzo</Label>
-                    <Input id="startTime" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="endTime">Hora Finalización</Label>
-                    <Input id="endTime" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                    <Label htmlFor="endDateTime">Fecha y Hora de Finalización</Label>
+                    <Input id="endDateTime" type="datetime-local" value={endDateTime} onChange={e => setEndDateTime(e.target.value)} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="zone">Zona</Label>
@@ -414,12 +407,12 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                                 </Select>
                             </div>
                             <div className="space-y-1">
-                                <Label>Hora Salida</Label>
-                                <Input type="time" value={iv.departureTime} onChange={(e) => handleVehicleChange(index, 'departureTime', e.target.value)} />
+                                <Label>Fecha y Hora Salida</Label>
+                                <Input type="datetime-local" value={iv.departureDateTime} onChange={(e) => handleVehicleChange(index, 'departureDateTime', e.target.value)} />
                             </div>
                              <div className="space-y-1">
-                                <Label>Hora Regreso</Label>
-                                <Input type="time" value={iv.returnTime} onChange={(e) => handleVehicleChange(index, 'returnTime', e.target.value)} />
+                                <Label>Fecha y Hora Regreso</Label>
+                                <Input type="datetime-local" value={iv.returnDateTime} onChange={(e) => handleVehicleChange(index, 'returnDateTime', e.target.value)} />
                             </div>
                         </div>
                     </Card>
@@ -451,7 +444,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3 max-h-96 overflow-y-auto">
                    <p><strong>Tipo:</strong> {serviceType}</p>
                    <p><strong>Código:</strong> {serviceCode}</p>
-                   <p><strong>Fecha y Hora:</strong> {date} de {startTime} a {endTime}</p>
+                   <p><strong>Fecha y Hora:</strong> {startDateTime} a {endDateTime}</p>
                    <p><strong>Dirección:</strong> {address} (Zona: {zone})</p>
                    <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
                    <p><strong>En conjunto:</strong> {inConjunction ? 'Sí' : 'No'}</p>
@@ -471,7 +464,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                                 const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
                                 return (
                                     <li key={i}>
-                                        Móvil {vehicle?.numeroMovil} - Salida: {iv.departureTime}, Regreso: {iv.returnTime}
+                                        Móvil {vehicle?.numeroMovil} - Salida: {iv.departureDateTime}, Regreso: {iv.returnDateTime}
                                     </li>
                                 );
                             })}
