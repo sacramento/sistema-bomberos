@@ -2,10 +2,10 @@
 'use server';
 
 import { db } from '@/lib/firebase/firestore';
-import { Service, Firefighter } from '@/lib/types';
+import { Service, Firefighter, Vehicle, InterveningVehicle } from '@/lib/types';
 import { collection, getDocs, query, orderBy, addDoc, doc, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
-import { cache } from 'react';
+import { getVehicles } from './vehicles.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -13,20 +13,11 @@ if (!db) {
 
 const servicesCollection = collection(db, 'services');
 
-const getAllFirefightersCached = cache(async () => {
-    const firefighters = await getFirefighters();
-    return new Map(firefighters.map(f => [f.id, f]));
-});
 
-/**
- * Converts a Firestore document into a Service object with basic enrichment.
- * @param docSnap The Firestore document snapshot of the service.
- * @param firefighterMap A map of firefighter IDs to Firefighter objects.
- * @returns A promise that resolves to the enriched Service object.
- */
 const docToService = async (
     docSnap: any, 
-    firefighterMap: Map<string, Firefighter>
+    firefighterMap: Map<string, Firefighter>,
+    vehicleMap: Map<string, Vehicle>
 ): Promise<Service> => {
     const data = docSnap.data();
     
@@ -35,8 +26,16 @@ const docToService = async (
         return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
     };
     
-    const onDutyIds = data.onDutyIds || [];
-    const offDutyIds = data.offDutyIds || [];
+    const onDutyIds: string[] = data.onDutyIds || [];
+    const offDutyIds: string[] = data.offDutyIds || [];
+    
+    const interveningVehiclesData: InterveningVehicle[] = data.interveningVehicles || [];
+
+    const interveningVehicles = interveningVehiclesData.map(iv => ({
+        ...iv,
+        vehicle: vehicleMap.get(iv.vehicleId)
+    }));
+    
 
     const service: Service = {
         id: docSnap.id,
@@ -53,7 +52,7 @@ const docToService = async (
         serviceChiefId: data.serviceChiefId,
         onDutyIds: onDutyIds,
         offDutyIds: offDutyIds,
-        interveningVehicles: data.interveningVehicles || [],
+        interveningVehicles: interveningVehicles,
         collaboration: data.collaboration,
         recognition: data.recognition,
         observations: data.observations,
@@ -66,16 +65,16 @@ const docToService = async (
 }
 
 
-/**
- * Retrieves all services from Firestore and enriches them with related data.
- */
 export const getServices = async (): Promise<Service[]> => {
-    const [servicesSnapshot, firefighterMap] = await Promise.all([
+    const [servicesSnapshot, firefighterMap, vehicles] = await Promise.all([
         getDocs(query(servicesCollection, orderBy('date', 'desc'), orderBy('manualId', 'desc'))),
-        getAllFirefightersCached()
+        getFirefighters().then(ffs => new Map(ffs.map(f => [f.id, f]))),
+        getVehicles()
     ]);
     
-    const servicesPromises = servicesSnapshot.docs.map(doc => docToService(doc, firefighterMap));
+    const vehicleMap = new Map(vehicles.map(v => [v.id, v]));
+    
+    const servicesPromises = servicesSnapshot.docs.map(doc => docToService(doc, firefighterMap, vehicleMap));
     const services = await Promise.all(servicesPromises);
 
     return services;
@@ -86,18 +85,26 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const firefighterMap = await getAllFirefightersCached();
-        return await docToService(docSnap, firefighterMap);
+        const [firefighterMap, vehicles] = await Promise.all([
+             getFirefighters().then(ffs => new Map(ffs.map(f => [f.id, f]))),
+             getVehicles()
+        ]);
+        const vehicleMap = new Map(vehicles.map(v => [v.id, v]));
+        return await docToService(docSnap, firefighterMap, vehicleMap);
     }
     return null;
 }
 
-/**
- * Adds a new service record to the database.
- * @param serviceData The core data for the new service.
- * @returns The ID of the newly created service document.
- */
-export const addService = async (serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel'>): Promise<string> => {
-    const docRef = await addDoc(servicesCollection, serviceData);
+export const addService = async (serviceData: Omit<Service, 'id' | 'command' | 'serviceChief' | 'onDutyPersonnel' | 'offDutyPersonnel' | 'interveningVehicles'> & { interveningVehicles: Partial<InterveningVehicle>[] }): Promise<string> => {
+    const dataToSave = {
+        ...serviceData,
+        interveningVehicles: serviceData.interveningVehicles.map(iv => ({
+            vehicleId: iv.vehicleId,
+            departureTime: iv.departureTime,
+            returnTime: iv.returnTime
+        }))
+    };
+
+    const docRef = await addDoc(servicesCollection, dataToSave);
     return docRef.id;
 }
