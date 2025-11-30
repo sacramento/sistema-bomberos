@@ -12,10 +12,15 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building } from 'lucide-react';
+import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { format, formatDistance, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '@/context/auth-context';
+import EditServiceDialog from '../_components/edit-service-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { deleteService } from '@/services/services.service';
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
     <div className="flex items-start gap-3">
@@ -37,6 +42,10 @@ export default function ServiceDetailPage() {
     const [vehicles, setVehicles] = useState<Map<string, Vehicle>>(new Map());
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const { getActiveRole } = useAuth();
+    const activeRole = getActiveRole(`/services/${id}`);
+
+    const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     useEffect(() => {
         const fetchServiceDetails = async () => {
@@ -69,6 +78,26 @@ export default function ServiceDetailPage() {
         };
         fetchServiceDetails();
     }, [id, router, toast]);
+    
+     const handleDataChange = () => {
+        // Re-fetch data after an edit
+        // This is a simplified approach. For more complex apps, you might update state directly.
+        const fetchServiceDetails = async () => {
+            if (!id) return;
+            try {
+                const serviceData = await getServiceById(id);
+                 if (!serviceData) {
+                    toast({ title: 'Error', description: 'No se pudo encontrar el servicio.', variant: 'destructive' });
+                    router.push('/services');
+                    return;
+                }
+                setService(serviceData);
+            } catch (error) {
+                 toast({ title: 'Error', description: 'No se pudieron recargar los detalles del servicio.', variant: 'destructive' });
+            }
+        }
+        fetchServiceDetails();
+    };
 
     if (loading) {
         return (
@@ -100,7 +129,9 @@ export default function ServiceDetailPage() {
         return vehicles.get(id)?.numeroMovil || 'Desconocido';
     };
 
-    const serviceDuration = formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es });
+    const serviceDuration = service.startDateTime && service.endDateTime 
+        ? formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es })
+        : 'No disponible';
     
     const onDutyPersonnel = service.onDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
     const offDutyPersonnel = service.offDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
