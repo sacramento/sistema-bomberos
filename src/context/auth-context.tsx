@@ -1,3 +1,4 @@
+
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -80,8 +81,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const loggedInUser = await loginFlow(credentials);
       if (loggedInUser) {
-        setUser(loggedInUser);
-        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(loggedInUser));
+        // Ensure roles structure is complete
+        const userWithCompleteRoles = {
+          ...loggedInUser,
+          roles: {
+            asistencia: loggedInUser.roles?.asistencia || 'Ninguno',
+            semanas: loggedInUser.roles?.semanas || 'Ninguno',
+            movilidad: loggedInUser.roles?.movilidad || 'Ninguno',
+            materiales: loggedInUser.roles?.materiales || 'Ninguno',
+            ayudantia: loggedInUser.roles?.ayudantia || 'Ninguno',
+            roperia: loggedInUser.roles?.roperia || 'Ninguno',
+            servicios: loggedInUser.roles?.servicios || 'Ninguno',
+          }
+        };
+        setUser(userWithCompleteRoles);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userWithCompleteRoles));
         router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');

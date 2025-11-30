@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import { Service, Firefighter, Vehicle } from '@/lib/types';
 import { getServiceById, deleteService } from '@/services/services.service';
 import { getFirefighters } from '@/services/firefighters.service';
