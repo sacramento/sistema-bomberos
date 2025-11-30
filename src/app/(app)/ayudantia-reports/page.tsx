@@ -254,13 +254,15 @@ export default function AyudantiaReportsPage() {
         
         try {
             const addHeader = (title: string) => {
-                doc.setFillColor(220, 53, 69);
+                doc.setFillColor(34, 43, 54);
                 doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
                 doc.setFontSize(22);
                 doc.setTextColor(255, 255, 255);
                 doc.setFont('helvetica', 'bold');
                 doc.text(title, 14, 22);
-                doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+                if (logoDataUrl) {
+                    doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+                }
                 currentY = 45;
             };
 
