@@ -116,7 +116,8 @@ const MultiSelectFilter = ({
 export default function ServicesReportPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
-    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [generatingSummaryPdf, setGeneratingSummaryPdf] = useState(false);
+    const [generatingDetailedPdf, setGeneratingDetailedPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     // Raw Data
@@ -196,13 +197,15 @@ export default function ServicesReportPage() {
             pieData
         }
     }, [filteredServices]);
+    
+    const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
 
-    const generatePdf = async () => {
+    const generateSummaryPdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
             return;
         }
-        setGeneratingPdf(true);
+        setGeneratingSummaryPdf(true);
         const doc = new jsPDF();
         try {
             doc.setFillColor(220, 53, 69);
@@ -210,12 +213,11 @@ export default function ServicesReportPage() {
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Servicios", 14, 22);
+            doc.text("Reporte Resumido de Servicios", 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
             
             let currentY = 50;
 
-            const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
             const getTotalHours = (start?: string, end?: string) => {
                 if (!start || !end) return 'N/A';
                 const hours = Math.abs(parseISO(end).getTime() - parseISO(start).getTime()) / 36e5;
@@ -245,11 +247,114 @@ export default function ServicesReportPage() {
                 theme: 'striped',
                 headStyles: { fillColor: '#333333' },
             });
-            doc.save(`reporte-servicios-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`reporte-servicios-resumen-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
-            setGeneratingPdf(false);
+            setGeneratingSummaryPdf(false);
+        }
+    };
+    
+    const generateDetailedPdf = async () => {
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+        setGeneratingDetailedPdf(true);
+        const doc = new jsPDF();
+        const pageHeight = doc.internal.pageSize.height;
+        const pageMargin = 15;
+
+        try {
+            filteredServices.forEach((service, index) => {
+                let currentY = pageMargin;
+
+                // --- Header ---
+                doc.setFontSize(16);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Ficha de Servicio: ${getServiceId(service)}`, pageMargin, currentY);
+                currentY += 10;
+                
+                // --- Service Details ---
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Tipo: ${service.serviceType} - Código: ${service.serviceCode}`, pageMargin, currentY); currentY += 5;
+                doc.text(`Dirección: ${service.address} (Zona: ${service.zone})`, pageMargin, currentY); currentY += 5;
+                doc.text(`Inicio: ${service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'}`, pageMargin, currentY); currentY += 5;
+                doc.text(`Fin: ${service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'}`, pageMargin, currentY); currentY += 5;
+
+                currentY += 5;
+
+                // --- Personnel ---
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Personal Interviniente', pageMargin, currentY); currentY += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                const personnelText = [
+                    `Comando: ${service.command?.name || 'N/A'}`,
+                    `Jefe de Servicio: ${service.serviceChief?.name || 'N/A'}`,
+                    `Cuartelero: ${service.stationOfficer?.name || 'N/A'}`,
+                    `Dotación de Servicio: ${service.onDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'}`,
+                    `Dotación de Pasiva: ${service.offDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'}`
+                ];
+                personnelText.forEach(line => {
+                    const splitLines = doc.splitTextToSize(line, doc.internal.pageSize.width - (pageMargin * 2));
+                    doc.text(splitLines, pageMargin, currentY);
+                    currentY += (splitLines.length * 4);
+                });
+
+                currentY += 5;
+                 if (currentY > pageHeight - 60) { doc.addPage(); currentY = pageMargin; }
+
+                // --- Vehicles ---
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Móviles Intervinientes', pageMargin, currentY); currentY += 6;
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'normal');
+                if (service.interveningVehicles?.length) {
+                    service.interveningVehicles.forEach(iv => {
+                        const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
+                        const duration = iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A';
+                        doc.text(`- Móvil ${vehicle?.numeroMovil || '?'}: ${duration}`, pageMargin, currentY);
+                        currentY += 5;
+                    });
+                } else {
+                    doc.text('No se registraron móviles.', pageMargin, currentY); currentY += 5;
+                }
+                
+                currentY += 5;
+                if (currentY > pageHeight - 60) { doc.addPage(); currentY = pageMargin; }
+
+                // --- Observations & Others ---
+                const addSection = (title: string, content?: string) => {
+                    if (!content) return;
+                    if (currentY > pageHeight - 30) { doc.addPage(); currentY = pageMargin; }
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(title, pageMargin, currentY); currentY += 6;
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    const splitContent = doc.splitTextToSize(content, doc.internal.pageSize.width - (pageMargin * 2));
+                    doc.text(splitContent, pageMargin, currentY);
+                    currentY += splitContent.length * 4 + 6;
+                }
+                addSection('Observaciones', service.observations);
+                addSection('Reconocimiento', service.recognition);
+                addSection('Colaboración', service.collaboration);
+
+                if (index < filteredServices.length - 1) {
+                    doc.addPage();
+                }
+            });
+
+            doc.save(`reporte-servicios-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            console.error(error);
+            toast({ title: "Error al generar PDF detallado", description: "Hubo un problema al crear el archivo.", variant: "destructive" });
+        } finally {
+            setGeneratingDetailedPdf(false);
         }
     };
     
@@ -274,8 +379,6 @@ export default function ServicesReportPage() {
             </>
         )
     }
-
-    const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
 
     const getTotalHours = (start?: string, end?: string) => {
         if (!start || !end) return 'N/A';
@@ -388,10 +491,14 @@ export default function ServicesReportPage() {
                     <CardTitle className="font-headline">Exportar Reporte</CardTitle>
                     <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Button onClick={generatePdf} disabled={generatingPdf || filteredServices.length === 0}>
-                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {generatingPdf ? "Generando..." : "Generar PDF"}
+                <CardContent className="flex flex-col sm:flex-row gap-4">
+                     <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0}>
+                        {generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingSummaryPdf ? "Generando..." : "PDF Resumido"}
+                    </Button>
+                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary">
+                        {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingDetailedPdf ? "Generando Fichas..." : "PDF Detallado (Fichas)"}
                     </Button>
                 </CardContent>
             </Card>

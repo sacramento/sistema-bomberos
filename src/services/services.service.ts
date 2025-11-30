@@ -2,8 +2,11 @@
 'use server';
 
 import { db } from '@/lib/firebase/firestore';
-import { Service } from '@/lib/types';
+import { Service, Firefighter, Vehicle } from '@/lib/types';
 import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { getFirefighters } from './firefighters.service';
+import { getVehicles } from './vehicles.service';
+import { cache } from 'react';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -11,17 +14,41 @@ if (!db) {
 
 const servicesCollection = collection(db, 'services');
 
-const docToService = (docSnap: any): Service => {
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
+
+const getAllVehiclesCached = cache(async () => {
+    const vehicles = await getVehicles();
+    return new Map(vehicles.map(v => [v.id, v]));
+});
+
+
+const docToService = async (docSnap: any, firefighterMap: Map<string, Firefighter>, vehicleMap: Map<string, Vehicle>): Promise<Service> => {
     const data = docSnap.data();
+
+    const getPersonnel = (id: string | undefined) => id ? firefighterMap.get(id) : undefined;
+    const getPersonnelList = (ids: string[] | undefined) => ids?.map(id => firefighterMap.get(id)).filter(Boolean) as Firefighter[] || [];
+
     return {
         id: docSnap.id,
         ...data,
+        command: getPersonnel(data.commandId),
+        serviceChief: getPersonnel(data.serviceChiefId),
+        stationOfficer: getPersonnel(data.stationOfficerId),
+        onDutyPersonnel: getPersonnelList(data.onDutyIds),
+        offDutyPersonnel: getPersonnelList(data.offDutyIds),
     } as Service;
 };
 
 export const getServices = async (): Promise<Service[]> => {
     const servicesSnapshot = await getDocs(query(servicesCollection, orderBy('startDateTime', 'desc')));
-    return servicesSnapshot.docs.map(doc => docToService(doc));
+    const firefighterMap = await getAllFirefightersCached();
+    const vehicleMap = await getAllVehiclesCached();
+    
+    const servicePromises = servicesSnapshot.docs.map(doc => docToService(doc, firefighterMap, vehicleMap));
+    return Promise.all(servicePromises);
 }
 
 export const getServiceById = async (id: string): Promise<Service | null> => {
@@ -29,7 +56,9 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
     const docSnap = await getDoc(docRef);
 
     if (docSnap.exists()) {
-        const serviceData = docToService(docSnap);
+        const firefighterMap = await getAllFirefightersCached();
+        const vehicleMap = await getAllVehiclesCached();
+        const serviceData = await docToService(docSnap, firefighterMap, vehicleMap);
         return serviceData;
     }
     return null;
