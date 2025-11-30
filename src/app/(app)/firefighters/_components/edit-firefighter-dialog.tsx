@@ -128,11 +128,11 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="legajo" className="text-right">
+              <Label htmlFor="legajo-edit" className="text-right">
                 Legajo
               </Label>
               <Input 
-                id="legajo" 
+                id="legajo-edit" 
                 className="col-span-3" 
                 value={legajo} 
                 onChange={e => setLegajo(e.target.value)} 
@@ -141,23 +141,23 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
               />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firstName" className="text-right">
+              <Label htmlFor="firstName-edit" className="text-right">
                 Nombre
               </Label>
-              <Input id="firstName" className="col-span-3" value={firstName} onChange={e => setFirstName(e.target.value)} required/>
+              <Input id="firstName-edit" className="col-span-3" value={firstName} onChange={e => setFirstName(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="lastName" className="text-right">
+              <Label htmlFor="lastName-edit" className="text-right">
                 Apellido
               </Label>
-              <Input id="lastName" className="col-span-3" value={lastName} onChange={e => setLastName(e.target.value)} required/>
+              <Input id="lastName-edit" className="col-span-3" value={lastName} onChange={e => setLastName(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="rank" className="text-right">
+              <Label htmlFor="rank-edit" className="text-right">
                 Rango
               </Label>
               <Select onValueChange={(value) => setRank(value as Firefighter['rank'])} value={rank} required>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger id="rank-edit" className="col-span-3">
                   <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
                 <SelectContent>
@@ -168,11 +168,11 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="firehouse" className="text-right">
+              <Label htmlFor="firehouse-edit" className="text-right">
                 Cuartel
               </Label>
               <Select onValueChange={setFirehouse} value={firehouse} required>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger id="firehouse-edit" className="col-span-3">
                   <SelectValue placeholder="Seleccione un cuartel" />
                 </SelectTrigger>
                 <SelectContent>
@@ -186,11 +186,11 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
               </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
+              <Label htmlFor="status-edit" className="text-right">
                 Estado
               </Label>
               <Select onValueChange={(value) => setStatus(value as Firefighter['status'])} value={status} required>
-                <SelectTrigger className="col-span-3">
+                <SelectTrigger id="status-edit" className="col-span-3">
                   <SelectValue placeholder="Seleccione un estado" />
                 </SelectTrigger>
                 <SelectContent>

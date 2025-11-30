@@ -124,10 +124,10 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="id" className="text-right">
+              <Label htmlFor="legajo" className="text-right">
                 Legajo
               </Label>
-              <Input id="id" placeholder="Ej: FG-008 o A-123" className="col-span-3" value={legajo} onChange={e => setLegajo(e.target.value)} required/>
+              <Input id="legajo" placeholder="Ej: FG-008 o A-123" className="col-span-3" value={legajo} onChange={e => setLegajo(e.target.value)} required/>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firstName" className="text-right">
