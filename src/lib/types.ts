@@ -310,3 +310,4 @@ export type Service = {
     stationOfficer?: Firefighter;
     onDutyPersonnel?: Firefighter[];
     offDutyPersonnel?: Firefighter[];
+}

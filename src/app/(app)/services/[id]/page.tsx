@@ -42,7 +42,7 @@ export default function ServiceDetailPage() {
     const { toast } = useToast();
 
     const canManage = useMemo(() => {
-        return activeRole === 'Master' || activeRole === 'Administrador'
+        return activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Ayudantía';
     }, [activeRole]);
 
 
