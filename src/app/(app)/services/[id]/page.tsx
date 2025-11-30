@@ -12,11 +12,8 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { useAuth } from '@/context/auth-context';
-import EditServiceDialog from '../_components/edit-service-dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
     <div className="flex items-start gap-3">
@@ -32,20 +29,12 @@ export default function ServiceDetailPage() {
     const params = useParams();
     const router = useRouter();
     const id = params.id as string;
-    const { user, getActiveRole } = useAuth();
-    const pathname = `/services/${id}`;
-    const activeRole = getActiveRole(pathname);
 
     const [service, setService] = useState<Service | null>(null);
     const [firefighters, setFirefighters] = useState<Map<string, Firefighter>>(new Map());
     const [vehicles, setVehicles] = useState<Map<string, Vehicle>>(new Map());
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
-
-    const canManage = useMemo(() => {
-        return activeRole === 'Master' || activeRole === 'Administrador';
-    }, [activeRole]);
-
 
     const fetchServiceDetails = async () => {
         if (!id) return;
@@ -80,29 +69,6 @@ export default function ServiceDetailPage() {
         fetchServiceDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [id]);
-
-    const handleServiceUpdated = () => {
-        fetchServiceDetails();
-    }
-    
-    const handleDelete = async () => {
-        if (!service) return;
-        try {
-            await deleteService(service.id);
-            toast({
-                title: "Servicio Eliminado",
-                description: `El servicio ${getServiceId(service)} ha sido eliminado correctamente.`,
-            });
-            router.push('/services');
-        } catch (error: any) {
-            toast({
-                title: "Error al eliminar",
-                description: error.message || "No se pudo eliminar el servicio.",
-                variant: "destructive",
-            });
-        }
-    };
-
 
     if (loading) {
         return (
@@ -139,45 +105,15 @@ export default function ServiceDetailPage() {
 
 
     return (
-        <AlertDialog>
+        <>
             <PageHeader title={`Servicio: ${getServiceId(service)}`} description={service.address}>
                  <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push('/services')}>
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Volver
                     </Button>
-                    {canManage && (
-                        <>
-                            <EditServiceDialog service={service} onServiceUpdated={handleServiceUpdated}>
-                                <Button>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Editar
-                                </Button>
-                            </EditServiceDialog>
-                             <AlertDialogTrigger asChild>
-                                <Button variant="destructive" size="icon">
-                                    <Trash2 className="h-4 w-4" />
-                                    <span className="sr-only">Eliminar</span>
-                                </Button>
-                            </AlertDialogTrigger>
-                        </>
-                    )}
                 </div>
             </PageHeader>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>¿Está seguro que desea eliminar este servicio?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        Esta acción no se puede deshacer. Se eliminará permanentemente el registro del servicio <span className="font-semibold">{getServiceId(service)}</span>.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDelete} variant="destructive">
-                        Eliminar
-                    </AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
@@ -250,6 +186,6 @@ export default function ServiceDetailPage() {
                     </Card>
                 </div>
             </div>
-        </AlertDialog>
+        </>
     );
 }
