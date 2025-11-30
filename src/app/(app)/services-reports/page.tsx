@@ -314,8 +314,8 @@ export default function ServicesReportPage() {
                     ['Comando', service.command?.name || 'N/A'],
                     ['Jefe de Servicio', service.serviceChief?.name || 'N/A'],
                     ['Cuartelero', service.stationOfficer?.name || 'N/A'],
-                    ['Dotación de Servicio', service.onDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'],
-                    ['Dotación de Pasiva', service.offDutyPersonnel?.map(p=>p.name).join(', ') || 'N/A'],
+                    ['Dotación de Servicio', service.onDutyPersonnel?.map(p => p.name).join(', ') || 'N/A'],
+                    ['Dotación de Pasiva', service.offDutyPersonnel?.map(p => p.name).join(', ') || 'N/A'],
                 ];
                 (doc as any).autoTable({
                     startY: currentY,
