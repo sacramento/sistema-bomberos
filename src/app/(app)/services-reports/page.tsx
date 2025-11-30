@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, formatDistance } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Service, ServiceType, Vehicle, Firefighter } from "@/lib/types";
+import { Service, ServiceType, Vehicle } from "@/lib/types";
 import { getServices } from "@/services/services.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'G.O.R.A', 'Buceo', 'Especial', 'Otros'];
+const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
 
@@ -310,13 +310,13 @@ export default function ServicesReportPage() {
                 doc.setFontSize(12);
                 doc.text('Personal Interviniente', pageMargin, currentY);
                 currentY += 6;
-                const onDutyNames = service.onDutyPersonnel?.map(p => p.name).join(', ') || 'N/A';
-                const offDutyNames = service.offDutyPersonnel?.map(p => p.name).join(', ') || 'N/A';
+                const onDutyNames = service.onDutyPersonnel?.map(p => `${p.lastName}, ${p.firstName}`).join('; ') || 'N/A';
+                const offDutyNames = service.offDutyPersonnel?.map(p => `${p.lastName}, ${p.firstName}`).join('; ') || 'N/A';
 
                 const personnelBody = [
-                    ['Comando', service.command?.name || 'N/A'],
-                    ['Jefe de Servicio', service.serviceChief?.name || 'N/A'],
-                    ['Cuartelero', service.stationOfficer?.name || 'N/A'],
+                    ['Comando', service.command ? `${service.command.lastName}, ${service.command.firstName}`: 'N/A'],
+                    ['Jefe de Servicio', service.serviceChief ? `${service.serviceChief.lastName}, ${service.serviceChief.firstName}` : 'N/A'],
+                    ['Cuartelero', service.stationOfficer ? `${service.stationOfficer.lastName}, ${service.stationOfficer.firstName}` : 'N/A'],
                     ['Dotación de Servicio', onDutyNames],
                     ['Dotación de Pasiva', offDutyNames],
                 ];
@@ -324,7 +324,7 @@ export default function ServicesReportPage() {
                     startY: currentY,
                     body: personnelBody,
                     theme: 'grid',
-                    styles: { fontSize: 9 },
+                    styles: { fontSize: 9, cellPadding: 2 },
                     columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
