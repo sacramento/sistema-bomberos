@@ -310,15 +310,15 @@ export default function ServicesReportPage() {
                 doc.setFontSize(12);
                 doc.text('Personal Interviniente', pageMargin, currentY);
                 currentY += 6;
-                const onDutyNames = service.onDutyPersonnel?.map(p => `${p.lastName}, ${p.firstName}`).join('; ') || 'N/A';
-                const offDutyNames = service.offDutyPersonnel?.map(p => `${p.lastName}, ${p.firstName}`).join('; ') || 'N/A';
+                const onDutyLegajos = service.onDutyPersonnel?.map(p => p.legajo).join(', ') || 'N/A';
+                const offDutyLegajos = service.offDutyPersonnel?.map(p => p.legajo).join(', ') || 'N/A';
 
                 const personnelBody = [
-                    ['Comando', service.command ? `${service.command.lastName}, ${service.command.firstName}`: 'N/A'],
-                    ['Jefe de Servicio', service.serviceChief ? `${service.serviceChief.lastName}, ${service.serviceChief.firstName}` : 'N/A'],
-                    ['Cuartelero', service.stationOfficer ? `${service.stationOfficer.lastName}, ${service.stationOfficer.firstName}` : 'N/A'],
-                    ['Dotación de Servicio', onDutyNames],
-                    ['Dotación de Pasiva', offDutyNames],
+                    ['Comando', service.command?.legajo || 'N/A'],
+                    ['Jefe de Servicio', service.serviceChief?.legajo || 'N/A'],
+                    ['Cuartelero', service.stationOfficer?.legajo || 'N/A'],
+                    ['Dotación de Servicio', onDutyLegajos],
+                    ['Dotación de Pasiva', offDutyLegajos],
                 ];
                 (doc as any).autoTable({
                     startY: currentY,
@@ -539,3 +539,4 @@ export default function ServicesReportPage() {
         </div>
     );
 }
+
