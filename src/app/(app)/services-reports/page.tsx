@@ -1,22 +1,21 @@
 
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, Loader2, Siren } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
-import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO, formatDistance } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
-import { Service, ServiceType } from "@/lib/types";
+import { Service, ServiceType, Vehicle } from "@/lib/types";
 import { getServices } from "@/services/services.service";
+import { getVehicles } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,10 +23,22 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
+
+const serviceCodesList = [
+    { group: 'Accidente', codes: ['1.1 AEREO', '1.2 EMBARCACIÓN', '1.3 TRÁNSITO', '1.4 OTROS'] },
+    { group: 'Fenómeno Natural', codes: ['2.1 CICLÓN', '2.2 TORNADOS Y HURACANES', '2.3 NEVADAS', '2.4 GRANIZO', '2.5 TORMENTAS', '2.6 VOLCÁN', '2.7 AVALANCHA Y ALUD', '2.8 INUNDACIÓN', '2.9 OTROS'] },
+    { group: 'Incendio', codes: ['3.1 AERONAVES', '3.2 COMERCIO', '3.3 EMBARCACIÓN', '3.4 ESTABLECIMIENTO EDUCATIVO', '3.5 ESTABLECIMIENTO PÚBLICO', '3.6 FORESTAL', '3.7 HOSPITAL Y CLINICA', '3.8 INDUSTRIA', '3.9 VEHICULO', '3.10 VIVIENDA', '3.11 OTROS'] },
+    { group: 'Materiales Peligrosos', codes: ['4.1 ESCAPE O FUGA', '4.2 DERRAME', '4.3 EXPLOSIÓN'] },
+    { group: 'Rescate', codes: ['5.1 PERSONAS', '5.2 ANIMALES', '5.3 SERV. DE AMBULANCIA'] },
+    { group: 'Servicio Especial', codes: ['6.1 CAPACITACION', '6.2 SERV. ESPECIALES', '6.3 PREVENCIÓN', '6.4 FALSA ALARMA', '6.5 REPRESENTACIÓN', '6.6 FALSO AVISO', '6.7 OTROS', '6.8 SUMINISTRO DE AGUA', '6.9 EXTRACCION DE PANALES', '6.10 RETIRO DE OBITO', '6.11 COLABORACIÓN C/FZAS. DE SEGURIDAD', '6.12 COLOCACIÓN DE DRIZA'] },
+].flatMap(group => group.codes);
+
 
 const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Incendio': "#EF4444", 
@@ -39,6 +50,67 @@ const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Otros': "#64748B",
 };
 
+
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange,
+    searchPlaceholder,
+    renderBadge
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+    searchPlaceholder?: string;
+    renderBadge?: (value: string) => React.ReactNode;
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selected.map(value => renderBadge ? renderBadge(value) : <Badge variant="secondary" key={value}>{options.find(o => o.value === value)?.label || value}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder || `Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem key={option.value} value={option.label} onSelect={() => handleSelect(option.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(option.value) ? "opacity-100" : "opacity-0")} />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+
 export default function ServicesReportPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -47,19 +119,26 @@ export default function ServicesReportPage() {
 
     // Raw Data
     const [allServices, setAllServices] = useState<Service[]>([]);
+    const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
     
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
-    const [filterServiceType, setFilterServiceType] = useState('all');
-    const [filterCuartel, setFilterCuartel] = useState('all');
-    const [filterZone, setFilterZone] = useState('all');
+    const [filterServiceTypes, setFilterServiceTypes] = useState<string[]>([]);
+    const [filterCuarteles, setFilterCuarteles] = useState<string[]>([]);
+    const [filterZones, setFilterZones] = useState<string[]>([]);
+    const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
+    const [filterServiceCodes, setFilterServiceCodes] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const servicesData = await getServices();
+                const [servicesData, vehiclesData] = await Promise.all([
+                    getServices(),
+                    getVehicles()
+                ]);
                 setAllServices(servicesData);
+                setAllVehicles(vehiclesData);
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -83,17 +162,20 @@ export default function ServicesReportPage() {
 
     const filteredServices = useMemo(() => {
         return allServices.filter(service => {
-            if (filterServiceType !== 'all' && service.serviceType !== filterServiceType) return false;
-            if (filterCuartel !== 'all' && service.cuartel !== filterCuartel) return false;
-            if (filterZone !== 'all' && service.zone.toString() !== filterZone) return false;
+            if (filterServiceTypes.length > 0 && !filterServiceTypes.includes(service.serviceType)) return false;
+            if (filterCuarteles.length > 0 && !filterCuarteles.includes(service.cuartel)) return false;
+            if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
+            if (filterServiceCodes.length > 0 && !filterServiceCodes.includes(service.serviceCode)) return false;
+            if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
+
             if (filterDate?.from) {
-                const serviceDate = parseISO(service.date);
+                const serviceDate = parseISO(service.startDateTime);
                 const toDate = filterDate.to ?? filterDate.from;
                 if (!isWithinInterval(serviceDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
             }
             return true;
         });
-    }, [allServices, filterDate, filterServiceType, filterCuartel, filterZone]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes]);
     
     const summaryStats = useMemo(() => {
         const servicesByType = filteredServices.reduce((acc, service) => {
@@ -132,17 +214,31 @@ export default function ServicesReportPage() {
             let currentY = 50;
 
             const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
+            const getTotalHours = (start?: string, end?: string) => {
+                if (!start || !end) return 'N/A';
+                const hours = Math.abs(parseISO(end).getTime() - parseISO(start).getTime()) / 36e5;
+                return `${hours.toFixed(1)} hs`;
+            };
+            const getVehicleUsageHours = (service: Service) => {
+                 const totalMillis = service.interveningVehicles?.reduce((acc, v) => {
+                    if (v.departureDateTime && v.returnDateTime) {
+                        return acc + Math.abs(parseISO(v.returnDateTime).getTime() - parseISO(v.departureDateTime).getTime());
+                    }
+                    return acc;
+                }, 0) || 0;
+                 return (totalMillis / 36e5).toFixed(1);
+            };
 
             (doc as any).autoTable({
                 startY: currentY,
-                head: [['ID Servicio', 'Tipo', 'Fecha', 'Dirección', 'Cuartel', 'Zona']],
+                head: [['ID', 'Tipo', 'Fecha', 'Dirección', 'Duración', 'Uso Móviles (hs)']],
                 body: filteredServices.map(item => [
                     getServiceId(item),
                     item.serviceType,
-                    item.date,
+                    format(parseISO(item.startDateTime), 'P', { locale: es }),
                     item.address,
-                    item.cuartel,
-                    item.zone
+                    getTotalHours(item.startDateTime, item.endDateTime),
+                    getVehicleUsageHours(item),
                 ]),
                 theme: 'striped',
                 headStyles: { fillColor: '#333333' },
@@ -179,6 +275,22 @@ export default function ServicesReportPage() {
 
     const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
 
+    const getTotalHours = (start?: string, end?: string) => {
+        if (!start || !end) return 'N/A';
+        const hours = Math.abs(parseISO(end).getTime() - parseISO(start).getTime()) / 36e5;
+        return `${hours.toFixed(1)} hs`;
+    };
+
+    const getVehicleUsageHours = (service: Service) => {
+         const totalMillis = service.interveningVehicles?.reduce((acc, v) => {
+            if (v.departureDateTime && v.returnDateTime) {
+                return acc + Math.abs(parseISO(v.returnDateTime).getTime() - parseISO(v.departureDateTime).getTime());
+            }
+            return acc;
+        }, 0) || 0;
+         return (totalMillis / 36e5).toFixed(1);
+    };
+
     return (
         <div className="space-y-8">
             <PageHeader title="Reportes de Servicios" description="Filtre y visualice los servicios realizados." />
@@ -187,7 +299,7 @@ export default function ServicesReportPage() {
                 <CardHeader>
                     <CardTitle className="font-headline">Filtros del Reporte</CardTitle>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label>Rango de Fechas</Label>
                         <Popover>
@@ -197,15 +309,23 @@ export default function ServicesReportPage() {
                     </div>
                     <div className="space-y-2">
                         <Label>Tipo de Servicio</Label>
-                        <Select value={filterServiceType} onValueChange={setFilterServiceType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{serviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select>
+                        <MultiSelectFilter title="Tipos" options={serviceTypes.map(t => ({ value: t, label: t }))} selected={filterServiceTypes} onSelectedChange={setFilterServiceTypes} />
                     </div>
                      <div className="space-y-2">
                         <Label>Cuartel</Label>
-                        <Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
+                         <MultiSelectFilter title="Cuarteles" options={cuarteles.map(t => ({ value: t, label: t }))} selected={filterCuarteles} onSelectedChange={setFilterCuarteles} />
                     </div>
                      <div className="space-y-2">
                         <Label>Zona</Label>
-                        <Select value={filterZone} onValueChange={setFilterZone}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{zones.map(z => <SelectItem key={z} value={z}>{z}</SelectItem>)}</SelectContent></Select>
+                         <MultiSelectFilter title="Zonas" options={zones.map(z => ({ value: z, label: `Zona ${z}` }))} selected={filterZones} onSelectedChange={setFilterZones} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Móvil</Label>
+                         <MultiSelectFilter title="Móviles" options={allVehicles.map(v => ({ value: v.id, label: v.numeroMovil }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} />
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Código de Servicio</Label>
+                         <MultiSelectFilter title="Códigos" options={serviceCodesList.map(c => ({ value: c, label: c }))} selected={filterServiceCodes} onSelectedChange={setFilterServiceCodes} searchPlaceholder="Buscar código..." />
                     </div>
                 </CardContent>
             </Card>
@@ -240,15 +360,15 @@ export default function ServicesReportPage() {
                         </CardHeader>
                         <CardContent className="max-h-[400px] overflow-y-auto">
                             <Table>
-                                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tipo</TableHead><TableHead>Fecha</TableHead><TableHead>Dirección</TableHead></TableRow></TableHeader>
+                                <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tipo</TableHead><TableHead>Fecha</TableHead><TableHead>Duración</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {filteredServices.length > 0 ? (
                                         filteredServices.map((service) => (
                                             <TableRow key={service.id}>
                                                 <TableCell className="font-mono">{getServiceId(service)}</TableCell>
                                                 <TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white">{service.serviceType}</Badge></TableCell>
-                                                <TableCell>{service.date}</TableCell>
-                                                <TableCell>{service.address}</TableCell>
+                                                <TableCell>{format(parseISO(service.startDateTime), 'P', { locale: es })}</TableCell>
+                                                <TableCell>{getTotalHours(service.startDateTime, service.endDateTime)}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (
