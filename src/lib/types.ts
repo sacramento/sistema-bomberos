@@ -157,6 +157,7 @@ export type MobilityModuleRole = 'Administrador' | 'Oficial' | 'Encargado Móvil
 export type MaterialesModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type AyudantiaModuleRole = 'Administrador' | 'Oficial' | 'Ninguno';
 export type RoperiaModuleRole = 'Administrador' | 'Encargado' | 'Oficial' | 'Bombero' | 'Ninguno';
+export type ServiciosModuleRole = 'Administrador' | 'Oficial' | 'Bombero' | 'Ninguno';
 
 
 export type GlobalRole = 'Master' | 'Usuario';
@@ -173,6 +174,7 @@ export type User = {
     materiales: MaterialesModuleRole;
     ayudantia: AyudantiaModuleRole;
     roperia: RoperiaModuleRole;
+    servicios: ServiciosModuleRole;
   };
 };
 
@@ -282,9 +284,9 @@ export type Service = {
     startTime: string;
     endTime: string;
     serviceType: ServiceType;
-    serviceCode: string; // New field
-    zone: number; // New field
-    inConjunction: boolean; // New field
+    serviceCode: string; 
+    zone: number; 
+    inConjunction: boolean; 
     address: string;
     locationDetails?: string; // B° / Paraje
     
@@ -292,7 +294,7 @@ export type Service = {
     
     commandId: string;
     serviceChiefId: string;
-    stationOfficerId: string; // New field: Cuartelero
+    stationOfficerId: string; // Cuartelero
     onDutyIds?: string[];
     offDutyIds?: string[];
     
@@ -308,4 +310,3 @@ export type Service = {
     stationOfficer?: Firefighter;
     onDutyPersonnel?: Firefighter[];
     offDutyPersonnel?: Firefighter[];
-}

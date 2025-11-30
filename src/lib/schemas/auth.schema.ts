@@ -1,4 +1,3 @@
-
 import { z } from 'zod';
 
 export const LoginInputSchema = z.object({
@@ -19,6 +18,7 @@ export const LoginOutputSchema = z.nullable(
       materiales: z.enum(['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno']),
       ayudantia: z.enum(['Administrador', 'Oficial', 'Ninguno']),
       roperia: z.enum(['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno']),
+      servicios: z.enum(['Administrador', 'Oficial', 'Bombero', 'Ninguno']),
     }),
   })
 );

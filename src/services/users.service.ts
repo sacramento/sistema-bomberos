@@ -22,6 +22,7 @@ const docToUser = (docSnap: any): User => {
         materiales: rolesData.materiales || 'Ninguno',
         ayudantia: rolesData.ayudantia || 'Ninguno',
         roperia: rolesData.roperia || 'Ninguno',
+        servicios: rolesData.servicios || 'Ninguno',
     };
     return {
         id: docSnap.id, 
@@ -70,7 +71,12 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
     const docSnap = await getDoc(docRef);
 
     if (!docSnap.exists()) {
-        throw new Error(`No se encontró al usuario con el legajo ${id}.`);
+        throw new Error(`El usuario con el legajo ${id} no fue encontrado.`);
+    }
+
+    // Prevent password from being updated if it's an empty string
+    if (userData.password === '') {
+        delete userData.password;
     }
 
     await updateDoc(docRef, userData);
