@@ -2,9 +2,9 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter, usePathname } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Service, Firefighter, Vehicle } from '@/lib/types';
-import { getServiceById, deleteService } from '@/services/services.service';
+import { getServiceById } from '@/services/services.service';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getVehicles } from '@/services/vehicles.service';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +14,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { format, formatDistance, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
     <div className="flex items-start gap-3">
@@ -36,39 +38,37 @@ export default function ServiceDetailPage() {
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
 
-    const fetchServiceDetails = async () => {
-        if (!id) return;
-        
-        setLoading(true);
-        try {
-            const [serviceData, firefightersData, vehiclesData] = await Promise.all([
-                getServiceById(id),
-                getFirefighters(),
-                getVehicles()
-            ]);
-
-            if (!serviceData) {
-                toast({ title: 'Error', description: 'No se pudo encontrar el servicio.', variant: 'destructive' });
-                router.push('/services');
-                return;
-            }
-
-            setService(serviceData);
-            setFirefighters(new Map(firefightersData.map(f => [f.id, f])));
-            setVehicles(new Map(vehiclesData.map(v => [v.id, v])));
-
-        } catch (error) {
-            console.error(error);
-            toast({ title: 'Error', description: 'No se pudieron cargar los detalles del servicio.', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    };
-    
     useEffect(() => {
+        const fetchServiceDetails = async () => {
+            if (!id) return;
+            
+            setLoading(true);
+            try {
+                const [serviceData, firefightersData, vehiclesData] = await Promise.all([
+                    getServiceById(id),
+                    getFirefighters(),
+                    getVehicles()
+                ]);
+
+                if (!serviceData) {
+                    toast({ title: 'Error', description: 'No se pudo encontrar el servicio.', variant: 'destructive' });
+                    router.push('/services');
+                    return;
+                }
+
+                setService(serviceData);
+                setFirefighters(new Map(firefightersData.map(f => [f.id, f])));
+                setVehicles(new Map(vehiclesData.map(v => [v.id, v])));
+
+            } catch (error) {
+                console.error(error);
+                toast({ title: 'Error', description: 'No se pudieron cargar los detalles del servicio.', variant: 'destructive' });
+            } finally {
+                setLoading(false);
+            }
+        };
         fetchServiceDetails();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id]);
+    }, [id, router, toast]);
 
     if (loading) {
         return (
@@ -99,6 +99,8 @@ export default function ServiceDetailPage() {
     const getVehicleName = (id: string) => {
         return vehicles.get(id)?.numeroMovil || 'Desconocido';
     };
+
+    const serviceDuration = formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es });
     
     const onDutyPersonnel = service.onDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
     const offDutyPersonnel = service.offDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
@@ -124,8 +126,9 @@ export default function ServiceDetailPage() {
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <DetailItem icon={Siren} label="Tipo de Servicio" value={service.serviceType} />
                             <DetailItem icon={Code} label="Código de Servicio" value={service.serviceCode} />
-                            <DetailItem icon={Calendar} label="Fecha" value={service.date} />
-                            <DetailItem icon={Clock} label="Horario" value={`${service.startTime} - ${service.endTime}`} />
+                            <DetailItem icon={Calendar} label="Fecha y Hora de Inicio" value={format(parseISO(service.startDateTime), 'Pp', { locale: es })} />
+                            <DetailItem icon={Calendar} label="Fecha y Hora de Fin" value={format(parseISO(service.endDateTime), 'Pp', { locale: es })} />
+                             <DetailItem icon={Clock} label="Duración Total" value={serviceDuration} />
                             <DetailItem icon={Building} label="Cuartel" value={service.cuartel} />
                             <DetailItem icon={MapPin} label="Zona" value={service.zone} />
                             <DetailItem icon={Phone} label="Convocatoria" value={service.summonMethods?.join(', ') || 'N/A'} />
@@ -161,7 +164,7 @@ export default function ServiceDetailPage() {
                                                 Móvil {getVehicleName(iv.vehicleId)}
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
-                                                Salida: {iv.departureTime} - Regreso: {iv.returnTime}
+                                                Duración: {formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es })}
                                             </div>
                                         </li>
                                     ))}

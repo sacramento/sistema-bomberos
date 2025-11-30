@@ -19,6 +19,8 @@ import { usePathname } from "next/navigation";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import EditServiceDialog from "./_components/edit-service-dialog";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function ServicesPage() {
     const [services, setServices] = useState<Service[]>([]);
@@ -81,9 +83,6 @@ export default function ServicesPage() {
     };
 
     const getTotalPersonnel = (service: Service) => {
-        const onDutyCount = service.onDutyIds?.length || 0;
-        const offDutyCount = service.offDutyIds?.length || 0;
-        
         const uniqueIds = new Set([service.commandId, service.serviceChiefId, service.stationOfficerId].filter(Boolean));
         
         (service.onDutyIds || []).forEach(id => uniqueIds.add(id));
@@ -158,7 +157,7 @@ export default function ServicesPage() {
                                             </div>
                                         </CardHeader>
                                         <CardFooter className="text-xs text-muted-foreground">
-                                            {`Fecha: ${service.date} | Personal: ${getTotalPersonnel(service)}`}
+                                            {`Fecha: ${format(new Date(service.startDateTime), 'P', { locale: es })} | Personal: ${getTotalPersonnel(service)}`}
                                         </CardFooter>
                                     </Card>
                                      <AlertDialogContent>

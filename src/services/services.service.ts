@@ -2,10 +2,8 @@
 'use server';
 
 import { db } from '@/lib/firebase/firestore';
-import { Service, Firefighter, Vehicle } from '@/lib/types';
+import { Service } from '@/lib/types';
 import { collection, getDocs, query, orderBy, addDoc, doc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { getFirefighters } from './firefighters.service';
-import { getVehicles } from './vehicles.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -22,7 +20,7 @@ const docToService = (docSnap: any): Service => {
 };
 
 export const getServices = async (): Promise<Service[]> => {
-    const servicesSnapshot = await getDocs(query(servicesCollection, orderBy('date', 'desc')));
+    const servicesSnapshot = await getDocs(query(servicesCollection, orderBy('startDateTime', 'desc')));
     return servicesSnapshot.docs.map(doc => docToService(doc));
 }
 
@@ -39,7 +37,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
 export const addService = async (serviceData: any): Promise<string> => {
     const dataToSave = { ...serviceData };
-    dataToSave.year = Number(dataToSave.year);
+    dataToSave.year = new Date(dataToSave.startDateTime).getFullYear();
     dataToSave.manualId = Number(dataToSave.manualId);
     dataToSave.zone = Number(dataToSave.zone);
 
@@ -49,9 +47,8 @@ export const addService = async (serviceData: any): Promise<string> => {
 
 export const updateService = async (id: string, serviceData: Partial<Service>): Promise<void> => {
     const docRef = doc(db, 'services', id);
-    // Ensure numeric fields are correctly typed
     const dataToUpdate: any = { ...serviceData };
-    if (dataToUpdate.year) dataToUpdate.year = Number(dataToUpdate.year);
+    if (dataToUpdate.startDateTime) dataToUpdate.year = new Date(dataToUpdate.startDateTime).getFullYear();
     if (dataToUpdate.manualId) dataToUpdate.manualId = Number(dataToUpdate.manualId);
     if (dataToUpdate.zone) dataToUpdate.zone = Number(dataToUpdate.zone);
     

@@ -269,8 +269,8 @@ export type SummonMethod = 'Alarma' | 'VHF' | 'Teléfono' | 'En el Cuartel';
 
 export type InterveningVehicle = {
     vehicleId: string;
-    departureTime: string;
-    returnTime: string;
+    departureDateTime: string;
+    returnDateTime: string;
 }
 
 export type Service = {
@@ -279,9 +279,8 @@ export type Service = {
     year: number;
     manualId: number;
     
-    date: string;
-    startTime: string;
-    endTime: string;
+    startDateTime: string;
+    endDateTime: string;
     serviceType: ServiceType;
     serviceCode: string; 
     zone: number; 
