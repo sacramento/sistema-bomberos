@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -29,10 +29,21 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
 const cuarteles: Service['cuartel'][] = ['C1', 'C2', 'C3'];
+const zones = Array.from({ length: 12 }, (_, i) => i + 1);
+
+const serviceCodes = [
+    { group: 'Accidente', codes: ['1.1 AEREO', '1.2 EMBARCACIÓN', '1.3 TRÁNSITO', '1.4 OTROS'] },
+    { group: 'Fenómeno Natural', codes: ['2.1 CICLÓN', '2.2 TORNADOS Y HURACANES', '2.3 NEVADAS', '2.4 GRANIZO', '2.5 TORMENTAS', '2.6 VOLCÁN', '2.7 AVALANCHA Y ALUD', '2.8 INUNDACIÓN', '2.9 OTROS'] },
+    { group: 'Incendio', codes: ['3.1 AERONAVES', '3.2 COMERCIO', '3.3 EMBARCACIÓN', '3.4 ESTABLECIMIENTO EDUCATIVO', '3.5 ESTABLECIMIENTO PÚBLICO', '3.6 FORESTAL', '3.7 HOSPITAL Y CLINICA', '3.8 INDUSTRIA', '3.9 VEHICULO', '3.10 VIVIENDA', '3.11 OTROS'] },
+    { group: 'Materiales Peligrosos', codes: ['4.1 ESCAPE O FUGA', '4.2 DERRAME', '4.3 EXPLOSIÓN'] },
+    { group: 'Rescate', codes: ['5.1 PERSONAS', '5.2 ANIMALES', '5.3 SERV. DE AMBULANCIA'] },
+    { group: 'Servicio Especial', codes: ['6.1 CAPACITACION', '6.2 SERV. ESPECIALES', '6.3 PREVENCIÓN', '6.4 FALSA ALARMA', '6.5 REPRESENTACIÓN', '6.6 FALSO AVISO', '6.7 OTROS', '6.8 SUMINISTRO DE AGUA', '6.9 EXTRACCION DE PANALES', '6.10 RETIRO DE OBITO', '6.11 COLABORACIÓN C/FZAS. DE SEGURIDAD', '6.12 COLOCACIÓN DE DRIZA'] },
+];
 
 const SingleFirefighterSelect = ({
     title,
@@ -166,7 +177,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [collaboration, setCollaboration] = useState('');
   const [recognition, setRecognition] = useState('');
   const [observations, setObservations] = useState('');
-  
+  const [inConjunction, setInConjunction] = useState(false);
+  const [serviceCode, setServiceCode] = useState('');
+  const [zone, setZone] = useState<number | ''>('');
+  const [stationOfficer, setStationOfficer] = useState<Firefighter | null>(null);
+
   const progress = (step / totalSteps) * 100;
 
   useEffect(() => {
@@ -192,6 +207,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     setServiceType(''); setDate(''); setStartTime(''); setEndTime(''); setAddress(''); setSelectedSummonMethods([]);
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
+    setInConjunction(false); setServiceCode(''); setZone(''); setStationOfficer(null);
     setStep(1);
   };
   
@@ -200,11 +216,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   
   const handleSubmit = async () => {
      setLoading(true);
-    if (!cuartel || !manualId || !date || !command || !serviceChief) {
+    if (!cuartel || !manualId || !date || !command || !serviceChief || !stationOfficer || !serviceCode) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
-            description: "Asegúrese de completar el cuartel, número de planilla, fecha, comando y jefe de servicio.",
+            description: "Asegúrese de completar el cuartel, número de planilla, fecha, código, comando, jefe de servicio y cuartelero.",
         });
         setLoading(false);
         return;
@@ -223,6 +239,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             summonMethods: selectedSummonMethods,
             commandId: command.id,
             serviceChiefId: serviceChief.id,
+            stationOfficerId: stationOfficer.id,
             onDutyIds: onDuty.map(f => f.id),
             offDutyIds: offDuty.map(f => f.id),
             interveningVehicles: interveningVehicles.map(iv => ({
@@ -232,7 +249,10 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             })),
             collaboration,
             recognition,
-            observations
+            observations,
+            inConjunction,
+            serviceCode,
+            zone: Number(zone),
         };
         
         await addService(serviceData);
@@ -298,12 +318,33 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     <Label htmlFor="endTime">Hora Finalización</Label>
                     <Input id="endTime" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="zone">Zona</Label>
+                    <Select value={zone.toString()} onValueChange={v => setZone(Number(v))}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                        <SelectContent>{zones.map(z => <SelectItem key={z} value={z.toString()}>{z}</SelectItem>)}</SelectContent>
+                    </Select>
+                 </div>
             </div>
              <div className="space-y-2">
                 <Label htmlFor="serviceType">Tipo de Servicio</Label>
                 <Select value={serviceType} onValueChange={v => setServiceType(v as any)}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                     <SelectContent>{serviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                </Select>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="serviceCode">Código de Servicio</Label>
+                <Select value={serviceCode} onValueChange={v => setServiceCode(v)}>
+                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                    <SelectContent>
+                        {serviceCodes.map(group => (
+                            <SelectGroup key={group.group}>
+                                <Label className="px-2 py-1.5 text-sm font-semibold">{group.group}</Label>
+                                {group.codes.map(code => <SelectItem key={code} value={code}>{code}</SelectItem>)}
+                            </SelectGroup>
+                        ))}
+                    </SelectContent>
                 </Select>
             </div>
             <div className="space-y-2">
@@ -321,11 +362,15 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     valueKey="value"
                 />
             </div>
+            <div className="flex items-center space-x-2 pt-2">
+                <Switch id="inConjunction" checked={inConjunction} onCheckedChange={setInConjunction} />
+                <Label htmlFor="inConjunction">En conjunto</Label>
+            </div>
           </div>
         );
        case 2:
         const firefighterOptions = allFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
-        const disabledPersonnelIds = [command?.id, serviceChief?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
+        const disabledPersonnelIds = [command?.id, serviceChief?.id, stationOfficer?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
         return (
             <div className="space-y-4">
                 <div className="space-y-2">
@@ -337,8 +382,12 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     <SingleFirefighterSelect title="Jefe de Servicio" selected={serviceChief} onSelectedChange={setServiceChief} firefighters={allFirefighters} disabledIds={[command?.id].filter(Boolean) as string[]}/>
                 </div>
                 <div className="space-y-2">
+                    <Label>Cuartelero</Label>
+                    <SingleFirefighterSelect title="Cuartelero" selected={stationOfficer} onSelectedChange={setStationOfficer} firefighters={allFirefighters} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
+                </div>
+                <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>
-                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
+                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} disabledIds={[command?.id, serviceChief?.id, stationOfficer?.id].filter(Boolean) as string[]}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Pasiva</Label>
@@ -395,18 +444,21 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
           </div>
         );
        case 4:
-        const allPersonnel = [command, serviceChief, ...onDuty, ...offDuty].filter(Boolean) as Firefighter[];
+        const allPersonnel = [command, serviceChief, stationOfficer, ...onDuty, ...offDuty].filter(Boolean) as Firefighter[];
         return (
             <div className="space-y-4 text-sm">
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3 max-h-96 overflow-y-auto">
                    <p><strong>Tipo:</strong> {serviceType}</p>
+                   <p><strong>Código:</strong> {serviceCode}</p>
                    <p><strong>Fecha y Hora:</strong> {date} de {startTime} a {endTime}</p>
-                   <p><strong>Dirección:</strong> {address}</p>
+                   <p><strong>Dirección:</strong> {address} (Zona: {zone})</p>
                    <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
+                   <p><strong>En conjunto:</strong> {inConjunction ? 'Sí' : 'No'}</p>
                    <Separator className="my-2"/>
                    <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
                    <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
+                   <p><strong>Cuartelero:</strong> {stationOfficer ? `${stationOfficer.lastName}, ${stationOfficer.firstName}` : 'N/A'}</p>
                    <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
                    <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
                    <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>

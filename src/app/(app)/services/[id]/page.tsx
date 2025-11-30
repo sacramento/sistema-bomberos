@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion } from 'lucide-react';
+import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -120,10 +120,13 @@ export default function ServiceDetailPage() {
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <DetailItem icon={Siren} label="Tipo de Servicio" value={service.serviceType} />
+                            <DetailItem icon={Code} label="Código de Servicio" value={service.serviceCode} />
                             <DetailItem icon={Calendar} label="Fecha" value={service.date} />
                             <DetailItem icon={Clock} label="Horario" value={`${service.startTime} - ${service.endTime}`} />
-                            <DetailItem icon={MapPin} label="Cuartel" value={service.cuartel} />
+                            <DetailItem icon={Building} label="Cuartel" value={service.cuartel} />
+                            <DetailItem icon={MapPin} label="Zona" value={service.zone} />
                             <DetailItem icon={Phone} label="Convocatoria" value={service.summonMethods?.join(', ') || 'N/A'} />
+                            <DetailItem icon={Globe} label="En Conjunto" value={service.inConjunction ? 'Sí' : 'No'} />
                         </CardContent>
                     </Card>
 
@@ -134,6 +137,7 @@ export default function ServiceDetailPage() {
                         <CardContent className="space-y-4">
                             <DetailItem icon={User} label="Comando" value={getPersonnelName(service.commandId)} />
                             <DetailItem icon={User} label="Jefe de Servicio" value={getPersonnelName(service.serviceChiefId)} />
+                            <DetailItem icon={User} label="Cuartelero" value={getPersonnelName(service.stationOfficerId)} />
                             <Separator />
                             <DetailItem icon={Users} label="Dotación de Servicio" value={onDutyPersonnel} />
                             <DetailItem icon={Users} label="Dotación de Pasiva" value={offDutyPersonnel} />

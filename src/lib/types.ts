@@ -282,6 +282,9 @@ export type Service = {
     startTime: string;
     endTime: string;
     serviceType: ServiceType;
+    serviceCode: string; // New field
+    zone: number; // New field
+    inConjunction: boolean; // New field
     address: string;
     locationDetails?: string; // B° / Paraje
     
@@ -289,6 +292,7 @@ export type Service = {
     
     commandId: string;
     serviceChiefId: string;
+    stationOfficerId: string; // New field: Cuartelero
     onDutyIds?: string[];
     offDutyIds?: string[];
     
@@ -301,6 +305,7 @@ export type Service = {
     // Enriched properties
     command?: Firefighter;
     serviceChief?: Firefighter;
+    stationOfficer?: Firefighter;
     onDutyPersonnel?: Firefighter[];
     offDutyPersonnel?: Firefighter[];
 }

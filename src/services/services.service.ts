@@ -32,21 +32,7 @@ export const getServiceById = async (id: string): Promise<Service | null> => {
 
     if (docSnap.exists()) {
         const serviceData = docToService(docSnap);
-
-        const allFirefighters = await getFirefighters();
-        const allVehicles = await getVehicles();
-        const firefighterMap = new Map(allFirefighters.map(f => [f.id, f]));
-        const vehicleMap = new Map(allVehicles.map(v => [v.id, v]));
-
-        const enrichedService: Service = {
-            ...serviceData,
-            command: serviceData.commandId ? firefighterMap.get(serviceData.commandId) : undefined,
-            serviceChief: serviceData.serviceChiefId ? firefighterMap.get(serviceData.serviceChiefId) : undefined,
-            onDutyPersonnel: (serviceData.onDutyIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[],
-            offDutyPersonnel: (serviceData.offDutyIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[],
-        };
-
-        return enrichedService;
+        return serviceData;
     }
     return null;
 }
@@ -55,6 +41,7 @@ export const addService = async (serviceData: any): Promise<string> => {
     const dataToSave = { ...serviceData };
     dataToSave.year = Number(dataToSave.year);
     dataToSave.manualId = Number(dataToSave.manualId);
+    dataToSave.zone = Number(dataToSave.zone);
 
     const docRef = await addDoc(servicesCollection, dataToSave);
     return docRef.id;
