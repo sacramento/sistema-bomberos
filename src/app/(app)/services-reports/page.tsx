@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Service, ServiceType, Vehicle, Firefighter } from "@/lib/types";
 import { getServices } from "@/services/services.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -25,6 +26,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const cuarteles = ['C1', 'C2', 'C3'];
@@ -123,6 +126,7 @@ export default function ServicesReportPage() {
     // Raw Data
     const [allServices, setAllServices] = useState<Service[]>([]);
     const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
+    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
@@ -131,17 +135,22 @@ export default function ServicesReportPage() {
     const [filterZones, setFilterZones] = useState<string[]>([]);
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
     const [filterServiceCodes, setFilterServiceCodes] = useState<string[]>([]);
+    const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterServiceId, setFilterServiceId] = useState('');
+    const [openFirefighterCombobox, setOpenFirefighterCombobox] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                const [servicesData, vehiclesData] = await Promise.all([
+                const [servicesData, vehiclesData, firefightersData] = await Promise.all([
                     getServices(),
                     getVehicles(),
+                    getFirefighters(),
                 ]);
                 setAllServices(servicesData);
                 setAllVehicles(vehiclesData);
+                setAllFirefighters(firefightersData);
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
             } finally {
@@ -163,6 +172,8 @@ export default function ServicesReportPage() {
         fetchLogo();
     }, [toast]);
     
+    const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
+
     const filteredServices = useMemo(() => {
         return allServices.filter(service => {
             if (filterServiceTypes.length > 0 && !filterServiceTypes.includes(service.serviceType)) return false;
@@ -170,6 +181,21 @@ export default function ServicesReportPage() {
             if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
             if (filterServiceCodes.length > 0 && !filterServiceCodes.includes(service.serviceCode)) return false;
             if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
+            if (filterFirefighter !== 'all') {
+                const personnelIds = new Set([
+                    service.commandId,
+                    service.serviceChiefId,
+                    service.stationOfficerId,
+                    ...(service.onDutyIds || []),
+                    ...(service.offDutyIds || [])
+                ]);
+                if (!personnelIds.has(filterFirefighter)) return false;
+            }
+            if(filterServiceId) {
+                const serviceIdString = getServiceId(service).toLowerCase();
+                const serviceManualId = service.manualId.toString();
+                if (!serviceIdString.includes(filterServiceId.toLowerCase()) && !serviceManualId.includes(filterServiceId)) return false;
+            }
 
             if (filterDate?.from && service.startDateTime) {
                 const serviceDate = parseISO(service.startDateTime);
@@ -178,7 +204,7 @@ export default function ServicesReportPage() {
             }
             return true;
         });
-    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes, filterFirefighter, filterServiceId]);
 
     const summaryStats = useMemo(() => {
         const servicesByType = filteredServices.reduce((acc, service) => {
@@ -198,8 +224,6 @@ export default function ServicesReportPage() {
         }
     }, [filteredServices]);
     
-    const getServiceId = (service: Service) => `${service.cuartel}-${service.year.toString().slice(-2)}/${service.manualId.toString().padStart(3, '0')}`;
-
     const generateSummaryPdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
@@ -451,6 +475,47 @@ export default function ServicesReportPage() {
                         <Popover>
                             <PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Todos</span>)}</Button></PopoverTrigger>
                             <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} /></PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Buscar por ID de Servicio</Label>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Ej: 123 ó C1-24/123"
+                                className="pl-9"
+                                value={filterServiceId}
+                                onChange={(e) => setFilterServiceId(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Bombero</Label>
+                        <Popover open={openFirefighterCombobox} onOpenChange={setOpenFirefighterCombobox}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between">
+                                    {filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Buscar bombero..." />
+                                    <CommandList>
+                                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                                        <CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenFirefighterCombobox(false);}}>
+                                            <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                            Todos
+                                        </CommandItem>
+                                        {allFirefighters.map(f => (
+                                            <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenFirefighterCombobox(false);}}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterFirefighter === f.id ? "opacity-100" : "opacity-0")} />
+                                                {f.lastName}, {f.firstName}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
                         </Popover>
                     </div>
                     <div className="space-y-2">
