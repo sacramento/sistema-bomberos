@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -29,6 +29,7 @@ const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encarg
 const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const ayudantiaRoles: AyudantiaModuleRole[] = ['Administrador', 'Oficial', 'Ninguno'];
 const roperiaRoles: RoperiaModuleRole[] = ['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno'];
+const serviciosRoles: ServiciosModuleRole[] = ['Administrador', 'Oficial', 'Bombero', 'Ninguno'];
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -46,6 +47,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>(user.roles.materiales);
   const [ayudantiaRole, setAyudantiaRole] = useState<AyudantiaModuleRole>(user.roles.ayudantia || 'Ninguno');
   const [roperiaRole, setRoperiaRole] = useState<RoperiaModuleRole>(user.roles.roperia || 'Ninguno');
+  const [serviciosRole, setServiciosRole] = useState<ServiciosModuleRole>(user.roles.servicios || 'Ninguno');
   
   const imagePreview = `https://picsum.photos/seed/${user.id}/200`;
 
@@ -60,6 +62,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
       setMaterialesRole(user.roles.materiales || 'Ninguno');
       setAyudantiaRole(user.roles.ayudantia || 'Ninguno');
       setRoperiaRole(user.roles.roperia || 'Ninguno');
+      setServiciosRole(user.roles.servicios || 'Ninguno');
     }
   }, [open, user]);
 
@@ -89,6 +92,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 materiales: isMaster ? 'Administrador' : materialesRole,
                 ayudantia: isMaster ? 'Administrador' : ayudantiaRole,
                 roperia: isMaster ? 'Administrador' : roperiaRole,
+                servicios: isMaster ? 'Administrador' : serviciosRole,
             }
         };
 
@@ -211,6 +215,15 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 <SelectTrigger id="roperiaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {roperiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="serviciosRole-edit" className="text-right">Servicios</Label>
+              <Select onValueChange={(value) => setServiciosRole(value as ServiciosModuleRole)} value={globalRole === 'Master' ? 'Administrador' : serviciosRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger id="serviciosRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

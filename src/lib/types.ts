@@ -26,7 +26,7 @@ export type Firefighter = {
 
 export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";
 
-export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE VEHICULAR' | 'RESCATE URBANO' | 'VARIOS';
+export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'RESCATE URBANO' | 'RESCATE VEHICULAR' | 'VARIOS';
 
 export type Session = {
   id: string;
