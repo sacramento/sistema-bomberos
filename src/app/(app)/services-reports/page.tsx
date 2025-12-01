@@ -11,7 +11,7 @@ import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
-import { format, isWithinInterval, startOfDay, endOfDay, parseISO, formatDistance } from 'date-fns';
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO, differenceInMinutes } from 'date-fns';
 import { useState, useEffect, useMemo } from "react";
 import { Service, ServiceType, Vehicle, Firefighter } from "@/lib/types";
 import { getServices } from "@/services/services.service";
@@ -115,6 +115,31 @@ const MultiSelectFilter = ({
         </Popover>
     );
 };
+
+function formatExactDuration(start?: string, end?: string): string {
+    if (!start || !end) return 'N/A';
+    
+    const minutes = differenceInMinutes(parseISO(end), parseISO(start));
+    if (isNaN(minutes) || minutes < 0) {
+        return 'N/A';
+    }
+    if (minutes === 0) {
+        return '0min';
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    let result = '';
+    if (hours > 0) {
+        result += `${hours}h `;
+    }
+    if (remainingMinutes > 0) {
+        result += `${remainingMinutes}min`;
+    }
+    
+    return result.trim();
+}
 
 
 export default function ServicesReportPage() {
@@ -244,12 +269,7 @@ export default function ServicesReportPage() {
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
             
             let currentY = 50;
-
-            const getTotalHours = (start?: string, end?: string) => {
-                if (!start || !end) return 'N/A';
-                const hours = Math.abs(parseISO(end).getTime() - parseISO(start).getTime()) / 36e5;
-                return `${hours.toFixed(1)} hs`;
-            };
+            
             const getVehicleUsageHours = (service: Service) => {
                  const totalMillis = service.interveningVehicles?.reduce((acc, v) => {
                     if (v.departureDateTime && v.returnDateTime) {
@@ -268,7 +288,7 @@ export default function ServicesReportPage() {
                     item.serviceType,
                     item.startDateTime ? format(parseISO(item.startDateTime), 'P', { locale: es }) : 'N/A',
                     item.address,
-                    getTotalHours(item.startDateTime, item.endDateTime),
+                    formatExactDuration(item.startDateTime, item.endDateTime),
                     getVehicleUsageHours(item),
                 ]),
                 theme: 'striped',
@@ -370,7 +390,7 @@ export default function ServicesReportPage() {
                         head: [['Móvil', 'Salida', 'Regreso', 'Duración']],
                         body: service.interveningVehicles.map(iv => {
                             const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
-                            const duration = iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A';
+                            const duration = formatExactDuration(iv.departureDateTime, iv.returnDateTime);
                             return [
                                 vehicle?.numeroMovil || '?',
                                 iv.departureDateTime ? format(parseISO(iv.departureDateTime), 'p', { locale: es }) : 'N/A',
@@ -442,23 +462,7 @@ export default function ServicesReportPage() {
             </>
         )
     }
-
-    const getTotalHours = (start?: string, end?: string) => {
-        if (!start || !end) return 'N/A';
-        const hours = Math.abs(parseISO(end).getTime() - parseISO(start).getTime()) / 36e5;
-        return `${hours.toFixed(1)} hs`;
-    };
-
-    const getVehicleUsageHours = (service: Service) => {
-         const totalMillis = service.interveningVehicles?.reduce((acc, v) => {
-            if (v.departureDateTime && v.returnDateTime) {
-                return acc + Math.abs(parseISO(v.returnDateTime).getTime() - parseISO(v.departureDateTime).getTime());
-            }
-            return acc;
-        }, 0) || 0;
-         return (totalMillis / 36e5).toFixed(1);
-    };
-
+    
     return (
         <div className="space-y-8">
             <PageHeader title="Reportes de Servicios" description="Filtre y visualice los servicios realizados." />
@@ -606,7 +610,7 @@ export default function ServicesReportPage() {
                                                 <TableCell className="font-mono">{getServiceId(service)}</TableCell>
                                                 <TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white">{service.serviceType}</Badge></TableCell>
                                                 <TableCell>{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell>
-                                                <TableCell>{getTotalHours(service.startDateTime, service.endDateTime)}</TableCell>
+                                                <TableCell>{formatExactDuration(service.startDateTime, service.endDateTime)}</TableCell>
                                             </TableRow>
                                         ))
                                     ) : (

@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { format, formatDistance, parseISO } from 'date-fns';
+import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/auth-context';
 import EditServiceDialog from '../_components/edit-service-dialog';
@@ -31,6 +31,31 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, lab
         </div>
     </div>
 );
+
+function formatExactDuration(start?: string, end?: string): string {
+    if (!start || !end) return 'N/A';
+    
+    const minutes = differenceInMinutes(parseISO(end), parseISO(start));
+    if (isNaN(minutes) || minutes < 0) {
+        return 'N/A';
+    }
+    if (minutes === 0) {
+        return '0min';
+    }
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    let result = '';
+    if (hours > 0) {
+        result += `${hours}h `;
+    }
+    if (remainingMinutes > 0) {
+        result += `${remainingMinutes}min`;
+    }
+    
+    return result.trim();
+}
 
 export default function ServiceDetailPage() {
     const params = useParams();
@@ -127,9 +152,7 @@ export default function ServiceDetailPage() {
         return vehicles.get(id)?.numeroMovil || 'Desconocido';
     };
     
-    const serviceDuration = (service.startDateTime && service.endDateTime)
-        ? formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es })
-        : 'No disponible';
+    const serviceDuration = formatExactDuration(service.startDateTime, service.endDateTime);
 
     const onDutyPersonnel = service.onDutyPersonnel?.map(p => p.legajo).join(', ') || 'Ninguno';
     const offDutyPersonnel = service.offDutyPersonnel?.map(p => p.legajo).join(', ') || 'Ninguno';
@@ -195,7 +218,7 @@ export default function ServiceDetailPage() {
                                                 Móvil {getVehicleName(iv.vehicleId)}
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
-                                                Duración: {iv.departureDateTime && iv.returnDateTime ? formatDistance(parseISO(iv.departureDateTime), parseISO(iv.returnDateTime), { locale: es }) : 'N/A'}
+                                                Duración: {formatExactDuration(iv.departureDateTime, iv.returnDateTime)}
                                             </div>
                                         </li>
                                     ))}
