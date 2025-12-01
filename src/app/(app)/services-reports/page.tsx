@@ -492,13 +492,13 @@ export default function ServicesReportPage() {
                         <Popover open={openFirefighterCombobox} onOpenChange={setOpenFirefighterCombobox}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" role="combobox" className="w-full justify-between">
-                                    {filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}
+                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.legajo} - ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos"}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start">
                                 <Command>
-                                    <CommandInput placeholder="Buscar bombero..." />
+                                    <CommandInput placeholder="Buscar por legajo o nombre..." />
                                     <CommandList>
                                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                                         <CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenFirefighterCombobox(false);}}>
@@ -506,9 +506,9 @@ export default function ServicesReportPage() {
                                             Todos
                                         </CommandItem>
                                         {allFirefighters.map(f => (
-                                            <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenFirefighterCombobox(false);}}>
+                                            <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenFirefighterCombobox(false);}}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === f.id ? "opacity-100" : "opacity-0")} />
-                                                {f.lastName}, {f.firstName}
+                                                {f.legajo} - {f.lastName}, {f.firstName}
                                             </CommandItem>
                                         ))}
                                     </CommandList>
