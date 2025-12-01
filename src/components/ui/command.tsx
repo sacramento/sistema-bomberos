@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -60,19 +61,26 @@ const CommandList = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.List>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
 >(({ className, ...props }, ref) => {
-  const handleWheel = (e: React.WheelEvent) => {
-    e.stopPropagation();
-  };
+  const listRef = React.useRef<HTMLDivElement>(null);
+
+  React.useImperativeHandle(ref, () => listRef.current as HTMLDivElement);
+
+  // This effect ensures the list is scrolled to the top whenever it's rendered.
+  React.useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  });
 
   return (
     <CommandPrimitive.List
-      ref={ref}
+      ref={listRef}
       className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-      onWheel={handleWheel}
       {...props}
     />
   );
 });
+
 
 CommandList.displayName = CommandPrimitive.List.displayName
 

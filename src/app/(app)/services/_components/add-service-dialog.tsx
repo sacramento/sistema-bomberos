@@ -167,6 +167,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [startDateTime, setStartDateTime] = useState('');
   const [endDateTime, setEndDateTime] = useState('');
   const [address, setAddress] = useState('');
+  const [latitude, setLatitude] = useState<number | ''>('');
+  const [longitude, setLongitude] = useState<number | ''>('');
   const [selectedSummonMethods, setSelectedSummonMethods] = useState<SummonMethod[]>([]);
   const [command, setCommand] = useState<Firefighter | null>(null);
   const [serviceChief, setServiceChief] = useState<Firefighter | null>(null);
@@ -204,6 +206,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const resetForm = () => {
     setCuartel(''); setManualId(0);
     setServiceType(''); setStartDateTime(''); setEndDateTime(''); setAddress(''); setSelectedSummonMethods([]);
+    setLatitude(''); setLongitude('');
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
     setInConjunction(false); setServiceCode(''); setZone(''); setStationOfficer(null);
@@ -234,6 +237,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             endDateTime,
             serviceType: serviceType as ServiceType,
             address,
+            latitude: latitude !== '' ? Number(latitude) : undefined,
+            longitude: longitude !== '' ? Number(longitude) : undefined,
             summonMethods: selectedSummonMethods,
             commandId: command.id,
             serviceChiefId: serviceChief.id,
@@ -343,6 +348,16 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             <div className="space-y-2">
                 <Label htmlFor="address">Dirección</Label>
                 <Input id="address" placeholder="Calle y número, o referencia" value={address} onChange={e => setAddress(e.target.value)} />
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="latitude">Latitud (Opcional)</Label>
+                    <Input id="latitude" type="number" step="any" placeholder="-34.5678" value={latitude} onChange={e => setLatitude(e.target.value === '' ? '' : parseFloat(e.target.value))} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="longitude">Longitud (Opcional)</Label>
+                    <Input id="longitude" type="number" step="any" placeholder="-58.1234" value={longitude} onChange={e => setLongitude(e.target.value === '' ? '' : parseFloat(e.target.value))} />
+                </div>
             </div>
              <div className="space-y-2">
                 <Label>Método de Convocatoria</Label>

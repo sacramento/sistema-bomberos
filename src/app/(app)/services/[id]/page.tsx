@@ -131,9 +131,8 @@ export default function ServiceDetailPage() {
         ? formatDistance(parseISO(service.startDateTime), parseISO(service.endDateTime), { locale: es })
         : 'No disponible';
 
-    const onDutyPersonnel = service.onDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
-    const offDutyPersonnel = service.offDutyIds?.map(getPersonnelName).join(', ') || 'Ninguno';
-
+    const onDutyPersonnel = service.onDutyPersonnel?.map(p => p.legajo).join(', ') || 'Ninguno';
+    const offDutyPersonnel = service.offDutyPersonnel?.map(p => p.legajo).join(', ') || 'Ninguno';
 
     return (
         <>
@@ -160,6 +159,9 @@ export default function ServiceDetailPage() {
                              <DetailItem icon={Clock} label="Duración Total" value={serviceDuration} />
                             <DetailItem icon={Building} label="Cuartel" value={service.cuartel} />
                             <DetailItem icon={MapPin} label="Zona" value={service.zone} />
+                             {service.latitude && service.longitude && (
+                                <DetailItem icon={Globe} label="Coordenadas" value={`${service.latitude}, ${service.longitude}`} />
+                             )}
                             <DetailItem icon={Phone} label="Convocatoria" value={service.summonMethods?.join(', ') || 'N/A'} />
                             <DetailItem icon={Globe} label="En Conjunto" value={service.inConjunction ? 'Sí' : 'No'} />
                         </CardContent>

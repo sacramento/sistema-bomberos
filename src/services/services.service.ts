@@ -81,6 +81,8 @@ export const updateService = async (id: string, serviceData: Partial<Service>): 
     if (dataToUpdate.startDateTime) dataToUpdate.year = new Date(dataToUpdate.startDateTime).getFullYear();
     if (dataToUpdate.manualId) dataToUpdate.manualId = Number(dataToUpdate.manualId);
     if (dataToUpdate.zone) dataToUpdate.zone = Number(dataToUpdate.zone);
+    if (dataToUpdate.latitude === '') dataToUpdate.latitude = null;
+    if (dataToUpdate.longitude === '') dataToUpdate.longitude = null;
     
     await updateDoc(docRef, dataToUpdate);
 }

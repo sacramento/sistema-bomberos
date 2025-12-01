@@ -286,6 +286,8 @@ export type Service = {
     zone: number; 
     inConjunction: boolean; 
     address: string;
+    latitude?: number;
+    longitude?: number;
     locationDetails?: string; // B° / Paraje
     
     summonMethods: SummonMethod[];

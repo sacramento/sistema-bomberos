@@ -180,6 +180,10 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
   const handleInputChange = (field: keyof Service, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+  
+  const handleNumericInputChange = (field: 'latitude' | 'longitude', value: string) => {
+      setFormData(prev => ({...prev, [field]: value === '' ? '' : parseFloat(value)}));
+  }
 
   const handleVehicleChange = (index: number, field: keyof InterveningVehicle, value: string) => {
     const updatedVehicles = [...(formData.interveningVehicles || [])];
@@ -295,6 +299,16 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                     <Label htmlFor="address">Dirección</Label>
                     <Input id="address" placeholder="Calle y número, o referencia" value={formData.address} onChange={e => handleInputChange('address', e.target.value)} />
                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="latitude">Latitud (Opcional)</Label>
+                        <Input id="latitude" type="number" step="any" placeholder="-34.5678" value={formData.latitude ?? ''} onChange={e => handleNumericInputChange('latitude', e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="longitude">Longitud (Opcional)</Label>
+                        <Input id="longitude" type="number" step="any" placeholder="-58.1234" value={formData.longitude ?? ''} onChange={e => handleNumericInputChange('longitude', e.target.value)} />
+                    </div>
+                </div>
             </div>
 
             {/* Step 2 Content */}
@@ -315,6 +329,10 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                 <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>
                     <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.onDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('onDutyIds', firefighters.map(f => f.id))} disabledIds={[formData.commandId || '', formData.serviceChiefId || '', formData.stationOfficerId || '']}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label>Dotación de Pasiva</Label>
+                    <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.offDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('offDutyIds', firefighters.map(f => f.id))} disabledIds={[formData.commandId || '', formData.serviceChiefId || '', formData.stationOfficerId || '', ...(formData.onDutyIds || [])]}/>
                 </div>
             </div>
 
