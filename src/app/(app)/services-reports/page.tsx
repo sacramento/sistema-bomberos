@@ -27,6 +27,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
@@ -136,8 +137,10 @@ export default function ServicesReportPage() {
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
     const [filterServiceCodes, setFilterServiceCodes] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterStationOfficer, setFilterStationOfficer] = useState('all');
     const [filterServiceId, setFilterServiceId] = useState('');
     const [openFirefighterCombobox, setOpenFirefighterCombobox] = useState(false);
+    const [openStationOfficerCombobox, setOpenStationOfficerCombobox] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -181,11 +184,11 @@ export default function ServicesReportPage() {
             if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
             if (filterServiceCodes.length > 0 && !filterServiceCodes.includes(service.serviceCode)) return false;
             if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
+            if (filterStationOfficer !== 'all' && service.stationOfficerId !== filterStationOfficer) return false;
             if (filterFirefighter !== 'all') {
                 const personnelIds = new Set([
                     service.commandId,
                     service.serviceChiefId,
-                    service.stationOfficerId,
                     ...(service.onDutyIds || []),
                     ...(service.offDutyIds || [])
                 ]);
@@ -204,7 +207,7 @@ export default function ServicesReportPage() {
             }
             return true;
         });
-    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes, filterFirefighter, filterServiceId]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes, filterFirefighter, filterStationOfficer, filterServiceId]);
 
     const summaryStats = useMemo(() => {
         const servicesByType = filteredServices.reduce((acc, service) => {
@@ -300,7 +303,6 @@ export default function ServicesReportPage() {
             filteredServices.forEach((service, index) => {
                 let currentY = 0;
 
-                // --- Header ---
                 doc.setFillColor(220, 53, 69);
                 doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
                 doc.setFontSize(22);
@@ -315,7 +317,6 @@ export default function ServicesReportPage() {
 
                 currentY = 45;
 
-                // --- Service Details Section ---
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
                 doc.setTextColor(0,0,0);
@@ -337,7 +338,6 @@ export default function ServicesReportPage() {
                 currentY = (doc as any).lastAutoTable.finalY + 10;
                 currentY = addPageIfNeeded(currentY);
 
-                // --- Personnel Section ---
                 doc.setFontSize(12);
                 doc.text('Personal Interviniente', pageMargin, currentY);
                 currentY += 6;
@@ -361,7 +361,6 @@ export default function ServicesReportPage() {
                 currentY = (doc as any).lastAutoTable.finalY + 10;
                 currentY = addPageIfNeeded(currentY);
 
-                // --- Vehicles Section ---
                 doc.setFontSize(12);
                 doc.text('Móviles Intervinientes', pageMargin, currentY);
                 currentY += 6;
@@ -392,7 +391,6 @@ export default function ServicesReportPage() {
                 }
                 currentY = addPageIfNeeded(currentY);
 
-                // --- Observations Section ---
                 const addNotesSection = (title: string, content?: string) => {
                     if (!content) return;
                     currentY = addPageIfNeeded(currentY);
@@ -510,6 +508,35 @@ export default function ServicesReportPage() {
                                         {allFirefighters.map(f => (
                                             <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenFirefighterCombobox(false);}}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === f.id ? "opacity-100" : "opacity-0")} />
+                                                {f.lastName}, {f.firstName}
+                                            </CommandItem>
+                                        ))}
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                     <div className="space-y-2">
+                        <Label>Cuartelero</Label>
+                        <Popover open={openStationOfficerCombobox} onOpenChange={setOpenStationOfficerCombobox}>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between">
+                                    {filterStationOfficer !== 'all' ? allFirefighters.find(f => f.id === filterStationOfficer)?.lastName : "Todos"}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Buscar cuartelero..." />
+                                    <CommandList>
+                                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                                        <CommandItem onSelect={() => {setFilterStationOfficer('all'); setOpenStationOfficerCombobox(false);}}>
+                                            <Check className={cn("mr-2 h-4 w-4", filterStationOfficer === 'all' ? "opacity-100" : "opacity-0")} />
+                                            Todos
+                                        </CommandItem>
+                                        {allFirefighters.map(f => (
+                                            <CommandItem key={f.id} onSelect={() => {setFilterStationOfficer(f.id); setOpenStationOfficerCombobox(false);}}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterStationOfficer === f.id ? "opacity-100" : "opacity-0")} />
                                                 {f.lastName}, {f.firstName}
                                             </CommandItem>
                                         ))}
