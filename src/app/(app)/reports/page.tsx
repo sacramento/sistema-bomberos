@@ -461,7 +461,7 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                             name,
                             item.session.title, 
                             item.session.specialization, 
-                            item.session.date, 
+                            format(parseISO(item.session.date), 'dd/MM/yyyy'),
                             getStatusLabel(item.status)
                         ]
                     });
@@ -1258,3 +1258,4 @@ export default function ReportsPage() {
 
 
     
+
