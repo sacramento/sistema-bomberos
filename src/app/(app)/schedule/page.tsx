@@ -54,7 +54,7 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
         return { name: 'Cuartel 2', className: 'border-blue-500', bgClassName: 'bg-blue-500/5' };
     }
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5' }; // Changed to orange for better differentiation
+        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5' };
     }
 
     // Fallback: Grupo Mixto
@@ -86,15 +86,28 @@ export default function SchedulePage() {
         fetchSessions();
     }, [toast]);
     
-    const sortedSessions = useMemo(() => {
-        // Sort by most recent date first
-        return [...sessions].sort((a,b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+    const groupedSessions = useMemo(() => {
+        if (sessions.length === 0) return {};
+
+        const sorted = [...sessions].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+        
+        return sorted.reduce((acc, session) => {
+            const monthYearKey = format(parseISO(session.date), 'MMMM yyyy', { locale: es });
+            const capitalizedKey = monthYearKey.charAt(0).toUpperCase() + monthYearKey.slice(1);
+
+            if (!acc[capitalizedKey]) {
+                acc[capitalizedKey] = [];
+            }
+            acc[capitalizedKey].push(session);
+            return acc;
+        }, {} as Record<string, Session[]>);
+
     }, [sessions]);
 
     const renderSessionCards = () => {
         if (loading) {
             return (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 6 }).map((_, index) => (
                         <Card key={index} className="shadow-md">
                             <CardHeader>
@@ -114,7 +127,7 @@ export default function SchedulePage() {
             );
         }
 
-        if (sortedSessions.length === 0) {
+        if (Object.keys(groupedSessions).length === 0) {
             return (
                 <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
                     <p>No hay clases programadas.</p>
@@ -123,37 +136,44 @@ export default function SchedulePage() {
         }
 
         return (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {sortedSessions.map(session => {
-                    const groupInfo = getMajorityGroupInfo(session);
-                    const sessionDate = parseISO(session.date);
-                    return (
-                        <Card key={session.id} className={cn("flex flex-col border-l-4 shadow-md hover:shadow-lg transition-shadow", groupInfo.className, groupInfo.bgClassName)}>
-                           <CardHeader>
-                                <div className="flex items-center gap-2 mb-2">
-                                     <Badge variant="secondary">{session.specialization}</Badge>
-                                     <Badge variant="outline">{groupInfo.name}</Badge>
-                                </div>
-                                <CardTitle className="font-headline text-lg">{session.title}</CardTitle>
-                           </CardHeader>
-                           <CardContent className="flex-grow">
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                                    <Calendar className="h-4 w-4" />
-                                    <span>{format(sessionDate, "EEEE, dd 'de' MMMM", { locale: es })}</span>
-                                </div>
-                                 <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{session.startTime}hs</span>
-                                </div>
-                           </CardContent>
-                           <CardFooter>
-                                <p className="text-xs text-muted-foreground">
-                                    Instructores: {session.instructors.map(i => i.lastName).join(', ')}
-                                </p>
-                           </CardFooter>
-                        </Card>
-                    );
-                })}
+             <div className="space-y-12">
+                {Object.entries(groupedSessions).map(([monthYear, monthSessions]) => (
+                    <section key={monthYear}>
+                        <h2 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-6">{monthYear}</h2>
+                        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                            {monthSessions.map(session => {
+                                const groupInfo = getMajorityGroupInfo(session);
+                                const sessionDate = parseISO(session.date);
+                                return (
+                                    <Card key={session.id} className={cn("flex flex-col border-l-4 shadow-md hover:shadow-lg transition-shadow", groupInfo.className, groupInfo.bgClassName)}>
+                                       <CardHeader>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                 <Badge variant="secondary">{session.specialization}</Badge>
+                                                 <Badge variant="outline">{groupInfo.name}</Badge>
+                                            </div>
+                                            <CardTitle className="font-headline text-lg">{session.title}</CardTitle>
+                                       </CardHeader>
+                                       <CardContent className="flex-grow">
+                                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                                <Calendar className="h-4 w-4" />
+                                                <span>{format(sessionDate, "EEEE, dd 'de' MMMM", { locale: es })}</span>
+                                            </div>
+                                             <div className="flex items-center gap-2 text-muted-foreground text-sm mt-1">
+                                                <Clock className="h-4 w-4" />
+                                                <span>{session.startTime}hs</span>
+                                            </div>
+                                       </CardContent>
+                                       <CardFooter>
+                                            <p className="text-xs text-muted-foreground">
+                                                Instructores: {session.instructors.map(i => i.lastName).join(', ')}
+                                            </p>
+                                       </CardFooter>
+                                    </Card>
+                                );
+                            })}
+                        </div>
+                    </section>
+                ))}
             </div>
         );
     }
