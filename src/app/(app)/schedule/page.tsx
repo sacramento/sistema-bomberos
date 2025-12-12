@@ -61,6 +61,17 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
     return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/5' };
 };
 
+const getGroupBadgeClass = (groupName: string): string => {
+    switch (groupName) {
+        case 'Aspirantes': return 'bg-green-600/80 text-white border-green-700';
+        case 'Oficiales': return 'bg-red-600/80 text-white border-red-700';
+        case 'Cuartel 1': return 'bg-yellow-500/80 text-black border-yellow-600';
+        case 'Cuartel 2': return 'bg-blue-500/80 text-white border-blue-600';
+        case 'Cuartel 3': return 'bg-orange-500/80 text-white border-orange-600';
+        default: return 'bg-gray-500/80 text-white border-gray-600';
+    }
+};
+
 
 export default function SchedulePage() {
     const [sessions, setSessions] = useState<Session[]>([]);
@@ -148,8 +159,8 @@ export default function SchedulePage() {
                                     <Card key={session.id} className={cn("flex flex-col border-l-4 shadow-md hover:shadow-lg transition-shadow", groupInfo.className, groupInfo.bgClassName)}>
                                        <CardHeader>
                                             <div className="flex items-center gap-2 mb-2">
-                                                 <Badge variant="secondary">{session.specialization}</Badge>
-                                                 <Badge variant="outline">{groupInfo.name}</Badge>
+                                                 <Badge variant="default">{session.specialization}</Badge>
+                                                 <Badge className={cn(getGroupBadgeClass(groupInfo.name))}>{groupInfo.name}</Badge>
                                             </div>
                                             <CardTitle className="font-headline text-lg">{session.title}</CardTitle>
                                        </CardHeader>
