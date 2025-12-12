@@ -16,7 +16,7 @@ import { Calendar, Clock } from "lucide-react";
 
 const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string } => {
     const attendees = session.attendees;
-    if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500', bgClassName: 'bg-gray-500/10' };
+    if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500', bgClassName: 'bg-gray-500/5' };
 
     const totalAttendees = attendees.length;
     
@@ -38,27 +38,27 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
 
     // Prioridad 1: Aspirantes (si son la gran mayoría)
     if (aspirantesCount / totalAttendees > 0.8) {
-        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/10' };
+        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/5' };
     }
 
     // Prioridad 2: Oficiales y Suboficiales (si son la gran mayoría)
     if (officersCount / totalAttendees > 0.8) {
-        return { name: 'Oficiales', className: 'border-red-500', bgClassName: 'bg-red-500/10' };
+        return { name: 'Oficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5' };
     }
 
     // Prioridad 3: Mayoría de un cuartel específico
     if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 1', className: 'border-yellow-500', bgClassName: 'bg-yellow-500/10' };
+        return { name: 'Cuartel 1', className: 'border-yellow-500', bgClassName: 'bg-yellow-500/5' };
     }
     if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 2', className: 'border-blue-500', bgClassName: 'bg-blue-500/10' };
+        return { name: 'Cuartel 2', className: 'border-blue-500', bgClassName: 'bg-blue-500/5' };
     }
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/10' }; // Changed to orange for better differentiation
+        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5' }; // Changed to orange for better differentiation
     }
 
     // Fallback: Grupo Mixto
-    return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/10' };
+    return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/5' };
 };
 
 
