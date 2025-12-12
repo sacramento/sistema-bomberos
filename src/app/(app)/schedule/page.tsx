@@ -43,7 +43,7 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
 
     // Prioridad 2: Oficiales y Suboficiales (si son la gran mayoría)
     if (officersCount / totalAttendees > 0.8) {
-        return { name: 'Oficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5' };
+        return { name: 'Suboficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5' };
     }
 
     // Prioridad 3: Mayoría de un cuartel específico
@@ -64,7 +64,7 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
 const getGroupBadgeClass = (groupName: string): string => {
     switch (groupName) {
         case 'Aspirantes': return 'bg-green-600/80 text-white border-green-700';
-        case 'Oficiales': return 'bg-red-600/80 text-white border-red-700';
+        case 'Suboficiales': return 'bg-red-600/80 text-white border-red-700';
         case 'Cuartel 1': return 'bg-yellow-500/80 text-black border-yellow-600';
         case 'Cuartel 2': return 'bg-blue-500/80 text-white border-blue-600';
         case 'Cuartel 3': return 'bg-orange-500/80 text-white border-orange-600';
@@ -158,7 +158,7 @@ export default function SchedulePage() {
                                 return (
                                     <Card key={session.id} className={cn("flex flex-col border-l-4 shadow-md hover:shadow-lg transition-shadow", groupInfo.className, groupInfo.bgClassName)}>
                                        <CardHeader>
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex flex-wrap items-center gap-2 mb-2">
                                                  <Badge variant="default">{session.specialization}</Badge>
                                                  <Badge className={cn(getGroupBadgeClass(groupInfo.name))}>{groupInfo.name}</Badge>
                                             </div>
