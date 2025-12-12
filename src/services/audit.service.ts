@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { AuditLog, AuditLogAction, LoggedInUser } from '@/lib/types';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -55,7 +55,18 @@ export const getLogs = async (): Promise<AuditLog[]> => {
     const querySnapshot = await getDocs(q);
     const logs: AuditLog[] = [];
     querySnapshot.forEach((doc) => {
-        logs.push({ id: doc.id, ...doc.data() } as AuditLog);
+        const data = doc.data();
+        // The timestamp field can be a Firestore Timestamp object or null if it's pending.
+        // We convert it to a serializable format (or keep it as is if it's already one).
+        const timestamp = data.timestamp instanceof Timestamp 
+            ? data.timestamp.toDate() 
+            : (data.timestamp?.seconds ? new Date(data.timestamp.seconds * 1000) : new Date());
+
+        logs.push({ 
+            id: doc.id,
+            ...data,
+            timestamp: timestamp // Now it's a JS Date object
+        } as AuditLog);
     });
     return logs;
 }

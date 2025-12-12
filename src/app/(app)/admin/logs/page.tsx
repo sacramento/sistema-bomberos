@@ -68,7 +68,7 @@ export default function AuditLogsPage() {
                             ) : logs.length > 0 ? (
                                 logs.map(log => (
                                     <TableRow key={log.id}>
-                                        <TableCell>{log.timestamp ? format(log.timestamp.toDate(), 'Pp', { locale: es }) : 'N/A'}</TableCell>
+                                        <TableCell>{log.timestamp ? format(new Date(log.timestamp), 'Pp', { locale: es }) : 'N/A'}</TableCell>
                                         <TableCell>{log.userName} ({log.userId})</TableCell>
                                         <TableCell><Badge variant="secondary">{log.action}</Badge></TableCell>
                                         <TableCell>{log.targetEntity}: {log.targetId}</TableCell>
