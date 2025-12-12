@@ -165,7 +165,7 @@ export default function SchedulePage() {
                                        </CardContent>
                                        <CardFooter>
                                             <p className="text-xs text-muted-foreground">
-                                                Instructores: {session.instructors.map(i => i.lastName).join(', ')}
+                                                Instructores: {session.instructors.map(i => i.legajo).join(', ')}
                                             </p>
                                        </CardFooter>
                                     </Card>
