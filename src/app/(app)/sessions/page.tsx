@@ -6,7 +6,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
 } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import {
@@ -20,7 +19,6 @@ import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/ty
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useAuth } from '@/context/auth-context';
 import { useToast } from '@/hooks/use-toast';
 
 const PIE_CHART_COLORS = {
@@ -96,25 +94,8 @@ export default function DashboardPage() {
           getFirefighters(),
           getSessions(),
         ]);
-
-        const firefighterMap = new Map(firefightersData.map(f => [f.id, f]));
-        const enrichedSessions = sessionsData.map(session => {
-            const getFirefighterObjects = (ids: string[]): Firefighter[] => {
-                if (!ids) return [];
-                return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
-            };
-            
-            return {
-                ...session,
-                instructors: getFirefighterObjects(session.instructorIds || []),
-                assistants: getFirefighterObjects(session.assistantIds || []),
-                attendees: getFirefighterObjects(session.attendeeIds || []),
-            }
-        })
-
         setFirefighters(firefightersData);
-        setSessions(enrichedSessions);
-
+        setSessions(sessionsData);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
         toast({ title: "Error", description: "No se pudieron cargar los datos del dashboard.", variant: "destructive" });
@@ -150,19 +131,23 @@ export default function DashboardPage() {
     let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     
     sessions.forEach(session => {
-        const allParticipants = [
-            ...session.instructors,
-            ...session.assistants,
-            ...session.attendees
-        ];
+        const allParticipantIds = new Set([
+            ...(session.instructorIds || []),
+            ...(session.assistantIds || []),
+            ...(session.attendeeIds || [])
+        ]);
         
-        const uniqueParticipants = Array.from(new Map(allParticipants.map(p => [p.id, p])).values());
-        
-        uniqueParticipants.forEach(firefighter => {
-            let status = session.attendance?.[firefighter.id];
-            if (!status && (session.instructorIds?.includes(firefighter.id) || session.assistantIds?.includes(firefighter.id))) {
-                status = 'present';
+        allParticipantIds.forEach(firefighterId => {
+            const firefighter = firefighters.find(f => f.id === firefighterId);
+            if (!firefighter) return;
+
+            let status = session.attendance?.[firefighterId];
+            if (!status) {
+                 if (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId)) {
+                    status = 'present';
+                 }
             }
+            
             if (status) {
                 allRecords.push({ status, firefighter, session });
             }
