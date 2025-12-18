@@ -4,19 +4,20 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, AttendanceStatus, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { es } from 'date-fns/locale';
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 
 const PIE_CHART_COLORS = {
     present: "#22C55E", // green-500
     absent: "#EF4444", // red-500
     tardy: "#FBBF24",   // yellow-400
+    recupero: "#3B82F6", // blue-500
+    excused: "#8B5CF6", // violet-500
 };
 
 type AttendanceSummary = {
@@ -27,6 +28,20 @@ type AttendanceSummary = {
     excused: number;
     totalForPercentage: number;
     presentPercentage: number;
+};
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (percent < 0.05) return null; // Don't render label for tiny slices
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
 };
 
 export default function DashboardPage() {
@@ -146,6 +161,12 @@ export default function DashboardPage() {
             {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3']).map((groupTitle) => {
                 const data = attendanceDataByGroup[groupTitle];
                 const hasData = data && data.totalForPercentage > 0;
+                const pieData = hasData ? [
+                    { name: "Presente", value: data.present + data.recupero },
+                    { name: "Ausente", value: data.absent + data.excused },
+                    { name: "Tarde", value: data.tardy },
+                  ].filter(d => d.value > 0) : [];
+
                 return (
                     <Card key={groupTitle} className="flex flex-col">
                         <CardHeader className="items-center pb-2">
@@ -156,25 +177,26 @@ export default function DashboardPage() {
                                 <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
                                     <ResponsiveContainer width="100%" height="100%">
                                         <PieChart>
-                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <ChartTooltip
+                                                cursor={false}
+                                                content={<ChartTooltipContent hideLabel />}
+                                            />
                                             <Pie
-                                              data={[
-                                                { name: "Presente", value: data.present + data.recupero },
-                                                { name: "Ausente", value: data.absent + data.excused },
-                                                { name: "Tarde", value: data.tardy },
-                                              ].filter(d => d.value > 0)}
+                                              data={pieData}
                                               dataKey="value"
                                               nameKey="name"
-                                              innerRadius="60%"
-                                              outerRadius="80%"
+                                              innerRadius={60}
+                                              outerRadius={80}
                                               strokeWidth={2}
+                                              labelLine={false}
+                                              label={renderCustomizedLabel}
                                             >
-                                                <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
-                                                <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
-                                                <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
+                                                {pieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
+                                                ))}
                                             </Pie>
-                                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
-                                                {`${data.presentPercentage.toFixed(0)}%`}
+                                             <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-base font-semibold">
+                                                {groupTitle}
                                             </text>
                                         </PieChart>
                                     </ResponsiveContainer>
@@ -195,6 +217,11 @@ export default function DashboardPage() {
                     {specializationsWithData.map(spec => {
                          const data = attendanceDataByGroup[spec];
                          const hasData = data && data.totalForPercentage > 0;
+                         const pieData = hasData ? [
+                            { name: "Presente", value: data.present + data.recupero },
+                            { name: "Ausente", value: data.absent + data.excused },
+                            { name: "Tarde", value: data.tardy },
+                          ].filter(d => d.value > 0) : [];
                          return (
                             <Card key={spec} className="flex flex-col">
                                 <CardHeader className="items-center pb-2">
@@ -205,25 +232,26 @@ export default function DashboardPage() {
                                         <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <PieChart>
-                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                                    <ChartTooltip
+                                                      cursor={false}
+                                                      content={<ChartTooltipContent hideLabel />}
+                                                    />
                                                     <Pie
-                                                    data={[
-                                                        { name: "Presente", value: data.present + data.recupero },
-                                                        { name: "Ausente", value: data.absent + data.excused },
-                                                        { name: "Tarde", value: data.tardy },
-                                                    ].filter(d => d.value > 0)}
+                                                    data={pieData}
                                                     dataKey="value"
                                                     nameKey="name"
-                                                    innerRadius="60%"
-                                                    outerRadius="80%"
+                                                    innerRadius={60}
+                                                    outerRadius={80}
                                                     strokeWidth={2}
+                                                    labelLine={false}
+                                                    label={renderCustomizedLabel}
                                                     >
-                                                        <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
-                                                        <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
-                                                        <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
+                                                        {pieData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
+                                                        ))}
                                                     </Pie>
-                                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
-                                                        {`${data.presentPercentage.toFixed(0)}%`}
+                                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-base font-semibold">
+                                                        {spec}
                                                     </text>
                                                 </PieChart>
                                             </ResponsiveContainer>
