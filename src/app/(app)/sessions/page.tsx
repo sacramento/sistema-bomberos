@@ -97,62 +97,58 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const { attendanceDataByGroup } = useMemo(() => {
-      if (sessions.length === 0 || firefighters.length === 0) {
-          return { attendanceDataByGroup: {} };
-      }
+  const attendanceDataByGroup = useMemo(() => {
+    if (sessions.length === 0 || firefighters.length === 0) {
+      return {};
+    }
 
-      const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-      
-      const processAttendance = (records: { status: string }[]): AttendanceData => {
-          let present = 0, absent = 0, tardy = 0;
-          records.forEach(record => {
-              if (record.status === 'present' || record.status === 'recupero') present++;
-              else if (record.status === 'absent' || record.status === 'excused') absent++;
-              else if (record.status === 'tardy') tardy++;
-          });
-          const total = present + absent + tardy;
-          return { present, absent, tardy, total };
-      }
+    const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+    
+    // Logic from reports page to gather all attendance records correctly
+    let allRecords: { status: string, firefighter: Firefighter, session: Session }[] = [];
+    for (const session of sessions) {
+        const allParticipantIds = new Set([
+            ...(session.instructorIds || []),
+            ...(session.assistantIds || []),
+            ...(session.attendeeIds || [])
+        ]);
 
-      let allRecords: { status: string, firehouse: string, specialization: Specialization }[] = [];
-      
-      sessions.forEach(session => {
-          if (session.attendance) {
-              const allParticipantIdsInSession = new Set([
-                  ...(session.instructorIds || []),
-                  ...(session.assistantIds || []),
-                  ...(session.attendeeIds || [])
-              ]);
-              
-              allParticipantIdsInSession.forEach(firefighterId => {
-                  const status = session.attendance![firefighterId];
-                  const firefighter = firefighterMap.get(firefighterId);
-                  
-                  if (status && firefighter) {
-                      allRecords.push({ 
-                          status, 
-                          firehouse: firefighter.firehouse, 
-                          specialization: session.specialization 
-                      });
-                  }
-              });
-          }
-      });
-      
-      const attendanceData: Record<string, AttendanceData> = {
-          'General': processAttendance(allRecords),
-          'Cuartel 1': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 1')),
-          'Cuartel 2': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 2')),
-          'Cuartel 3': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 3')),
-      };
+        for (const firefighterId of allParticipantIds) {
+            const firefighter = firefighterMap.get(firefighterId);
+            if (firefighter && session.attendance?.[firefighterId]) {
+                allRecords.push({
+                    status: session.attendance[firefighterId],
+                    firefighter,
+                    session,
+                });
+            }
+        }
+    }
 
-      const specializations = new Set(allRecords.map(r => r.specialization));
-      specializations.forEach(spec => {
-          attendanceData[spec] = processAttendance(allRecords.filter(r => r.specialization === spec));
-      });
+    const processAttendance = (records: typeof allRecords): AttendanceData => {
+        let present = 0, absent = 0, tardy = 0;
+        records.forEach(record => {
+            if (record.status === 'present' || record.status === 'recupero') present++;
+            else if (record.status === 'absent' || record.status === 'excused') absent++;
+            else if (record.status === 'tardy') tardy++;
+        });
+        const total = present + absent + tardy;
+        return { present, absent, tardy, total };
+    };
 
-      return { attendanceDataByGroup: attendanceData };
+    const groupedData: Record<string, AttendanceData> = {
+        'General': processAttendance(allRecords),
+        'Cuartel 1': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 1')),
+        'Cuartel 2': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 2')),
+        'Cuartel 3': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 3')),
+    };
+
+    const specializations = new Set(allRecords.map(r => r.session.specialization));
+    specializations.forEach(spec => {
+        groupedData[spec] = processAttendance(allRecords.filter(r => r.session.specialization === spec));
+    });
+
+    return groupedData;
   }, [sessions, firefighters]);
 
 
