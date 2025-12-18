@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -40,15 +39,15 @@ type AttendanceData = {
 };
 
 const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }) => {
+    const total = data.totalForPercentage;
+    const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
+    const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
+    
     const pieData = [
         { name: "Presente", value: data.present + data.recupero, fill: PIE_CHART_COLORS.present },
         { name: "Ausente", value: data.absent + data.excused, fill: PIE_CHART_COLORS.absent },
         { name: "Tarde", value: data.tardy, fill: PIE_CHART_COLORS.tardy },
     ].filter(d => d.value > 0);
-
-    const total = data.totalForPercentage;
-    const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
-    const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
 
     return (
         <Card className="flex flex-col">
@@ -61,19 +60,19 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
                         <ResponsiveContainer width="100%" height="100%">
                              <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={5}>
+                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={pieData.length > 1 ? 5 : 0}>
                                      {pieData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
-                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold fill-foreground">
+                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
                                     {`${presentPercentage.toFixed(0)}%`}
                                 </text>
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
                  ) : (
-                    <div className="flex items-center justify-center h-full text-muted-foreground">Sin datos</div>
+                    <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
                  )}
             </CardContent>
         </Card>
