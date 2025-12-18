@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts";
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, AttendanceStatus, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -14,8 +14,8 @@ import { useToast } from '@/hooks/use-toast';
 
 const PIE_CHART_COLORS = {
     present: "#22C55E", // green-500
-    ausente: "#EF4444", // red-500
-    tarde: "#FBBF24",   // yellow-400
+    absent: "#EF4444", // red-500
+    tardy: "#FBBF24",   // yellow-400
 };
 
 type AttendanceSummary = {
@@ -28,11 +28,13 @@ type AttendanceSummary = {
     presentPercentage: number;
 };
 
-// --- Componente de Gráfico Rediseñado ---
+// --- Componente de Gráfico Rediseñado y Robusto ---
 const DonutChartCard = ({ title, data, isLoading }: { title: string, data: AttendanceSummary | undefined, isLoading: boolean }) => {
     if (isLoading) {
         return <Skeleton className="h-64 w-full" />;
     }
+
+    const hasData = data && data.totalForPercentage > 0;
 
     return (
         <Card className="flex flex-col">
@@ -40,31 +42,27 @@ const DonutChartCard = ({ title, data, isLoading }: { title: string, data: Atten
                 <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex items-center justify-center">
-                {data && data.totalForPercentage > 0 ? (
+                {hasData ? (
                     <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie 
+                                <Pie
                                   data={[
-                                    { name: "Presente", value: data.present + data.recupero, color: PIE_CHART_COLORS.present },
-                                    { name: "Ausente", value: data.absent + data.excused, color: PIE_CHART_COLORS.ausente },
-                                    { name: "Tarde", value: data.tardy, color: PIE_CHART_COLORS.tarde },
+                                    { name: "Presente", value: data.present + data.recupero },
+                                    { name: "Ausente", value: data.absent + data.excused },
+                                    { name: "Tarde", value: data.tardy },
                                   ].filter(d => d.value > 0)}
-                                  dataKey="value" 
-                                  nameKey="name" 
-                                  innerRadius={60} 
-                                  outerRadius={80} 
-                                  strokeWidth={5} 
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={60}
+                                  outerRadius={80}
+                                  strokeWidth={5}
                                   paddingAngle={5}
                                 >
-                                    {[
-                                      { name: "Presente", value: data.present + data.recupero, color: PIE_CHART_COLORS.present },
-                                      { name: "Ausente", value: data.absent + data.excused, color: PIE_CHART_COLORS.ausente },
-                                      { name: "Tarde", value: data.tardy, color: PIE_CHART_COLORS.tarde },
-                                    ].filter(d => d.value > 0).map((entry) => (
-                                        <Cell key={`cell-${entry.name}`} fill={entry.color} />
-                                    ))}
+                                    <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
+                                    <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
+                                    <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
                                 </Pie>
                                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
                                     {`${data.presentPercentage.toFixed(0)}%`}
@@ -73,7 +71,7 @@ const DonutChartCard = ({ title, data, isLoading }: { title: string, data: Atten
                         </ResponsiveContainer>
                     </ChartContainer>
                 ) : (
-                    <div className="text-center text-muted-foreground">Sin datos</div>
+                    <div className="text-center text-muted-foreground p-4">Sin datos</div>
                 )}
             </CardContent>
         </Card>
@@ -108,26 +106,29 @@ export default function DashboardPage() {
   }, [toast]);
 
  const attendanceDataByGroup = useMemo(() => {
-    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
 
+    let allRecords: { status: AttendanceStatus; firefighter: Firefighter; session: Session }[] = [];
     sessions.forEach(session => {
+        if(!session.attendance) return;
+        
         const participantIds = new Set([
+            ...Object.keys(session.attendance),
             ...(session.instructorIds || []),
-            ...(session.assistantIds || []),
-            ...(session.attendeeIds || [])
+            ...(session.assistantIds || [])
         ]);
 
         participantIds.forEach(id => {
             const firefighter = firefighterMap.get(id);
             if (!firefighter) return;
 
-            let status = session.attendance?.[id];
-            if (!status && (session.instructorIds?.includes(id) || session.assistantIds?.includes(id))) {
-                status = 'present';
+            let status = session.attendance![id];
+            if (!status) {
+                 if (session.instructorIds?.includes(id) || session.assistantIds?.includes(id)) {
+                    status = 'present';
+                 }
             }
-
-            if (status) {
+             if (status) {
                 allRecords.push({ status, firefighter, session });
             }
         });
@@ -145,7 +146,7 @@ export default function DashboardPage() {
         const recupero = counts.recupero || 0;
         const excused = counts.excused || 0;
         
-        const totalForPercentage = present + absent + tardy + excused;
+        const totalForPercentage = present + tardy + absent + excused;
         const effectiveAttendance = present + (tardy * 0.6) + recupero;
         const presentPercentage = totalForPercentage > 0 ? Math.min(100, (effectiveAttendance / totalForPercentage) * 100) : 0;
       
