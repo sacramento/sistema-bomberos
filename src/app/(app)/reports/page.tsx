@@ -621,100 +621,6 @@ const generatePdf = async () => {
         );
     };
     
-    const CommonFilters = () => (
-         <Card className="mb-8">
-            <CardHeader>
-                <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Asistencia'}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                 <div className="space-y-2">
-                    <Label>Año Lectivo</Label>
-                    <Select value={filterYear} onValueChange={setFilterYear}>
-                        <SelectTrigger><SelectValue placeholder="Seleccionar año" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos los Años</SelectItem>
-                            {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                 </div>
-                 <div className="space-y-2">
-                  <Label>Rango de Fechas</Label>
-                  <Popover>
-                      <PopoverTrigger asChild>
-                          <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
-                              <CalendarIcon className="mr-2 h-4 w-4" />
-                              {filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
-                          </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} />
-                      </PopoverContent>
-                  </Popover>
-                </div>
-                { !isBomberoRole && (
-                    <>
-                         <div className="space-y-2">
-                            <Label>Integrante Específico</Label>
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                    <CommandInput placeholder="Buscar integrante..." />
-                                    <CommandList>
-                                        <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                                        <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
-                                            Todos los integrantes
-                                        </CommandItem>
-                                        {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (
-                                        <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
-                                            <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                            {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
-                                        </CommandItem>
-                                        ))}
-                                    </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Jerarquía</Label>
-                            <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setSelectedHierarchies} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Cuartel</Label>
-                            <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
-                        </div>
-                    </>
-                )}
-                <div className="space-y-2">
-                    <Label>Especialidad</Label>
-                    <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas las especialidades</SelectItem>
-                            {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label>Clase Específica</Label>
-                    <Select value={filterClass} onValueChange={setFilterClass}>
-                        <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas las clases</SelectItem>
-                            {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardContent>
-        </Card>
-    );
 
     if (loading) {
         return (
@@ -727,7 +633,98 @@ const generatePdf = async () => {
 
     return (
         <div className="space-y-8">
-            <CommonFilters />
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Asistencia'}</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <Label>Año Lectivo</Label>
+                        <Select value={filterYear} onValueChange={setFilterYear}>
+                            <SelectTrigger><SelectValue placeholder="Seleccionar año" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los Años</SelectItem>
+                                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                    <Label>Rango de Fechas</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} />
+                        </PopoverContent>
+                    </Popover>
+                    </div>
+                    { !isBomberoRole && (
+                        <>
+                            <div className="space-y-2">
+                                <Label>Integrante Específico</Label>
+                                <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
+                                        {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                        <CommandInput placeholder="Buscar integrante..." />
+                                        <CommandList>
+                                            <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                                            <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                                Todos los integrantes
+                                            </CommandItem>
+                                            {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (
+                                            <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                            </CommandItem>
+                                            ))}
+                                        </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Jerarquía</Label>
+                                <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cuartel</Label>
+                                <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
+                            </div>
+                        </>
+                    )}
+                    <div className="space-y-2">
+                        <Label>Especialidad</Label>
+                        <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las especialidades</SelectItem>
+                                {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Clase Específica</Label>
+                        <Select value={filterClass} onValueChange={setFilterClass}>
+                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las clases</SelectItem>
+                                {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
             {attendanceReportData.details.length > 0 ? (
                 <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -1222,3 +1219,4 @@ export default function ReportsPage() {
       </>
     );
 }
+
