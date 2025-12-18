@@ -1,5 +1,4 @@
 
-
 'use client';
 import {
   Card,
@@ -8,63 +7,23 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { PageHeader } from '@/components/page-header';
-import { Badge } from '@/components/ui/badge';
-import Link from 'next/link';
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
 } from "@/components/ui/chart"
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
-import { Firefighter, Session, Leave, Specialization } from '@/lib/types';
+import { Firefighter, Session, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isWithinInterval, startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-
-const chartConfigBar = {
-  presentes: {
-    label: "Presentes",
-    color: "hsl(var(--chart-1))",
-  },
-  ausentes: {
-    label: "Ausentes",
-    color: "hsl(var(--chart-2))",
-  },
-} satisfies ChartConfig;
 
 const PIE_CHART_COLORS = {
     present: "hsl(var(--chart-1))",
     absent: "hsl(var(--chart-2))",
     tardy: "hsl(var(--chart-4))",
-};
-
-const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
-    'RESCATE VEHICULAR': "#3B82F6",
-    'RESCATE URBANO': "#1D4ED8",
-    FUEGO: "#EF4444",
-    APH: "#22C55E",
-    'HAZ-MAT': "#F97316",
-    FORESTAL: "#16A34A",
-    BUCEO: "#0EA5E9",
-    PAE: "#FBBF24",
-    GORA: "#A855F7",
-    KAIZEN: "#6366F1",
-    VARIOS: "#64748B",
-    RESCATE: "#3B82F6",
 };
 
 type AttendanceData = {
@@ -74,8 +33,6 @@ type AttendanceData = {
     total: number;
 };
 
-type ChartConfig = typeof chartConfigBar;
-
 const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }) => {
     const pieData = [
         { name: "Presente", value: data.present, fill: PIE_CHART_COLORS.present },
@@ -84,16 +41,16 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
     ].filter(d => d.value > 0);
 
     const total = data.total;
-    const presentPercentage = total > 0 ? (data.present / total) * 100 : 0;
+    const presentPercentage = total > 0 ? ((data.present + (data.tardy * 0.6)) / total) * 100 : 0;
 
     return (
         <Card className="flex flex-col">
             <CardHeader className="items-center pb-0">
-                <CardTitle className="font-headline text-lg">{title}</CardTitle>
+                <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex items-center justify-center py-2">
                  {total > 0 ? (
-                     <ChartContainer config={chartConfigBar} className="mx-auto aspect-square h-full max-h-[250px]">
+                     <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
                         <ResponsiveContainer width="100%" height="100%">
                              <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -115,50 +72,6 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
         </Card>
     )
 }
-
-const SpecializationDonutCard = ({ data }: { data: { name: Specialization, value: number }[] }) => {
-     const pieData = data.map(item => ({
-        ...item,
-        fill: SPECIALIZATION_CHART_COLORS[item.name] || '#ccc'
-    }));
-    
-     const RADIAN = Math.PI / 180;
-     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-        if (percent < 0.05) return null;
-        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-        return (
-            <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
-                {`${(percent * 100).toFixed(0)}%`}
-            </text>
-        );
-    };
-
-    return (
-        <Card className="lg:col-span-2">
-            <CardHeader>
-                <CardTitle className="font-headline">Distribución por Especialidad</CardTitle>
-                 <CardDescription>Cantidad de clases impartidas por especialidad.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <ChartContainer config={{}} className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                            <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} labelLine={false} label={renderCustomizedLabel}>
-                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
-                            </Pie>
-                            <ChartLegend content={<ChartLegendContent layout="vertical" align="right" verticalAlign="middle" />} />
-                        </PieChart>
-                    </ResponsiveContainer>
-                </ChartContainer>
-            </CardContent>
-        </Card>
-    )
-};
-
 
 export default function DashboardPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
@@ -184,14 +97,14 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const { attendanceData, specializationData } = useMemo(() => {
+  const { attendanceDataByGroup } = useMemo(() => {
       if (sessions.length === 0 || firefighters.length === 0) {
-          return { attendanceData: {}, specializationData: [] };
+          return { attendanceDataByGroup: {} };
       }
 
       const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
       
-      const processAttendance = (records: { firefighterId: string, status: string }[]) => {
+      const processAttendance = (records: { status: string }[]): AttendanceData => {
           let present = 0, absent = 0, tardy = 0;
           records.forEach(record => {
               if (record.status === 'present' || record.status === 'recupero') present++;
@@ -202,68 +115,32 @@ export default function DashboardPage() {
           return { present, absent, tardy, total };
       }
 
-      let allRecords: { firefighterId: string, status: string, firehouse: string }[] = [];
+      let allRecords: { status: string, firehouse: string, specialization: Specialization }[] = [];
       sessions.forEach(session => {
           if (session.attendance) {
               Object.entries(session.attendance).forEach(([firefighterId, status]) => {
                   const firefighter = firefighterMap.get(firefighterId);
                   if (firefighter) {
-                       allRecords.push({ firefighterId, status, firehouse: firefighter.firehouse });
+                       allRecords.push({ status, firehouse: firefighter.firehouse, specialization: session.specialization });
                   }
               });
           }
       });
       
-      const attendanceByCuartel = {
+      const attendanceData: Record<string, AttendanceData> = {
+          'General': processAttendance(allRecords),
           'Cuartel 1': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 1')),
           'Cuartel 2': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 2')),
           'Cuartel 3': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 3')),
-          'General': processAttendance(allRecords)
       };
 
-      const specializationCounts = sessions.reduce((acc, session) => {
-          acc[session.specialization] = (acc[session.specialization] || 0) + 1;
-          return acc;
-      }, {} as Record<Specialization, number>);
-
-      const specData = Object.entries(specializationCounts)
-        .map(([name, value]) => ({ name: name as Specialization, value }))
-        .sort((a, b) => b.value - a.value);
-
-
-      return { attendanceData: attendanceByCuartel, specializationData: specData };
-  }, [sessions, firefighters]);
-
-  const chartData = useMemo(() => {
-      const last6Months = Array.from({ length: 6 }).map((_, i) => {
-        const d = subMonths(new Date(), i);
-        return {
-            month: format(d, 'MMMM', { locale: es }),
-            start: startOfMonth(d),
-            end: endOfMonth(d)
-        };
-      }).reverse();
-
-      return last6Months.map(monthRange => {
-          let presentes = 0;
-          let ausentes = 0;
-          sessions.forEach(session => {
-              const sessionDate = parseISO(session.date);
-              if (isWithinInterval(sessionDate, { start: monthRange.start, end: monthRange.end })) {
-                  if (session.attendance) {
-                      Object.values(session.attendance).forEach(status => {
-                          if (status === 'present' || status === 'recupero' || status === 'tardy') {
-                              presentes++;
-                          } else if (status === 'absent' || status === 'excused') {
-                              ausentes++;
-                          }
-                      });
-                  }
-              }
-          });
-          return { month: monthRange.month.charAt(0).toUpperCase() + monthRange.month.slice(1), presentes, ausentes };
+      const specializations = new Set(allRecords.map(r => r.specialization));
+      specializations.forEach(spec => {
+          attendanceData[spec] = processAttendance(allRecords.filter(r => r.specialization === spec));
       });
-  }, [sessions]);
+
+      return { attendanceDataByGroup: attendanceData };
+  }, [sessions, firefighters]);
 
 
   if (loading) {
@@ -279,13 +156,20 @@ export default function DashboardPage() {
             <Skeleton className="h-64 w-full" />
             <Skeleton className="h-64 w-full" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
-            <Skeleton className="lg:col-span-4 h-96" />
-            <Skeleton className="lg:col-span-3 h-96" />
+        <div className="mt-8">
+            <Skeleton className="h-10 w-1/3 mb-4" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-64 w-full" />
+            </div>
         </div>
       </>
     );
   }
+  
+  const specializationsWithData = Object.keys(attendanceDataByGroup).filter(key => 
+    !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key].total > 0
+  );
 
   return (
     <>
@@ -293,45 +177,23 @@ export default function DashboardPage() {
         title="Dashboard Asistencia"
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
       />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <DonutChartCard title="General" data={attendanceData['General']} />
-            <DonutChartCard title="Cuartel 1" data={attendanceData['Cuartel 1']} />
-            <DonutChartCard title="Cuartel 2" data={attendanceData['Cuartel 2']} />
-            <DonutChartCard title="Cuartel 3" data={attendanceData['Cuartel 3']} />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <DonutChartCard title="General" data={attendanceDataByGroup['General']} />
+            <DonutChartCard title="Cuartel 1" data={attendanceDataByGroup['Cuartel 1']} />
+            <DonutChartCard title="Cuartel 2" data={attendanceDataByGroup['Cuartel 2']} />
+            <DonutChartCard title="Cuartel 3" data={attendanceDataByGroup['Cuartel 3']} />
         </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
-        <SpecializationDonutCard data={specializationData} />
-        <Card className="lg:col-span-5">
-          <CardHeader>
-            <CardTitle className="font-headline">Asistencia Mensual</CardTitle>
-            <CardDescription>
-              Un resumen de la asistencia a capacitaciones en los últimos 6 meses.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-             <ChartContainer config={chartConfigBar} className="h-[300px] w-full">
-              <RechartsBarChart accessibilityLayer data={chartData}>
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="month"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  tickFormatter={(value) => value.slice(0, 3)}
-                />
-                 <YAxis />
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent indicator="dot" />}
-                />
-                 <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="presentes" fill="var(--color-presentes)" radius={4} />
-                <Bar dataKey="ausentes" fill="var(--color-ausentes)" radius={4} />
-              </RechartsBarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
+
+        {specializationsWithData.length > 0 && (
+            <div>
+                <h2 className="text-2xl font-headline font-semibold tracking-tight mb-4">Asistencia por Especialidad</h2>
+                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {specializationsWithData.map(spec => (
+                        <DonutChartCard key={spec} title={spec} data={attendanceDataByGroup[spec]} />
+                    ))}
+                 </div>
+            </div>
+        )}
     </>
   );
 }
