@@ -116,12 +116,25 @@ export default function DashboardPage() {
       }
 
       let allRecords: { status: string, firehouse: string, specialization: Specialization }[] = [];
+      
       sessions.forEach(session => {
           if (session.attendance) {
-              Object.entries(session.attendance).forEach(([firefighterId, status]) => {
+              const allParticipantIdsInSession = new Set([
+                  ...(session.instructorIds || []),
+                  ...(session.assistantIds || []),
+                  ...(session.attendeeIds || [])
+              ]);
+              
+              allParticipantIdsInSession.forEach(firefighterId => {
+                  const status = session.attendance![firefighterId];
                   const firefighter = firefighterMap.get(firefighterId);
-                  if (firefighter) {
-                       allRecords.push({ status, firehouse: firefighter.firehouse, specialization: session.specialization });
+                  
+                  if (status && firefighter) {
+                      allRecords.push({ 
+                          status, 
+                          firehouse: firefighter.firehouse, 
+                          specialization: session.specialization 
+                      });
                   }
               });
           }
