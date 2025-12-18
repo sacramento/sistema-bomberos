@@ -104,7 +104,6 @@ export default function DashboardPage() {
 
     const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
     
-    // Correct logic inspired by the working reports page
     let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     for (const session of sessions) {
         const allParticipantIds = new Set([
@@ -197,10 +196,10 @@ export default function DashboardPage() {
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
       />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <DonutChartCard title="General" data={attendanceDataByGroup['General']} />
-            <DonutChartCard title="Cuartel 1" data={attendanceDataByGroup['Cuartel 1']} />
-            <DonutChartCard title="Cuartel 2" data={attendanceDataByGroup['Cuartel 2']} />
-            <DonutChartCard title="Cuartel 3" data={attendanceDataByGroup['Cuartel 3']} />
+            {attendanceDataByGroup['General'] && <DonutChartCard title="General" data={attendanceDataByGroup['General']} />}
+            {attendanceDataByGroup['Cuartel 1'] && <DonutChartCard title="Cuartel 1" data={attendanceDataByGroup['Cuartel 1']} />}
+            {attendanceDataByGroup['Cuartel 2'] && <DonutChartCard title="Cuartel 2" data={attendanceDataByGroup['Cuartel 2']} />}
+            {attendanceDataByGroup['Cuartel 3'] && <DonutChartCard title="Cuartel 3" data={attendanceDataByGroup['Cuartel 3']} />}
         </div>
 
         {specializationsWithData.length > 0 && (
