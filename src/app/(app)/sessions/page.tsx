@@ -29,18 +29,21 @@ type AttendanceData = {
     present: number;
     absent: number;
     tardy: number;
-    total: number;
+    recupero: number;
+    excused: number;
+    totalForPercentage: number;
 };
 
 const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }) => {
     const pieData = [
-        { name: "Presente", value: data.present, fill: PIE_CHART_COLORS.present },
-        { name: "Ausente", value: data.absent, fill: PIE_CHART_COLORS.absent },
+        { name: "Presente", value: data.present + data.recupero, fill: PIE_CHART_COLORS.present },
+        { name: "Ausente", value: data.absent + data.excused, fill: PIE_CHART_COLORS.absent },
         { name: "Tarde", value: data.tardy, fill: PIE_CHART_COLORS.tardy },
     ].filter(d => d.value > 0);
 
-    const total = data.total;
-    const presentPercentage = total > 0 ? (((data.present + data.tardy * 0.6)) / total) * 100 : 0;
+    const total = data.totalForPercentage;
+    const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
+    const presentPercentage = total > 0 ? (effectiveAttendance / total) * 100 : 0;
 
     return (
         <Card className="flex flex-col">
@@ -73,8 +76,8 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
 }
 
 export default function DashboardPage() {
-  const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -96,22 +99,12 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const attendanceDataByGroup = useMemo(() => {
+ const attendanceDataByGroup = useMemo(() => {
     if (sessions.length === 0 || firefighters.length === 0) {
       return {};
     }
 
-    const processAttendance = (records: { status: AttendanceStatus }[]): AttendanceData => {
-        let present = 0, absent = 0, tardy = 0;
-        records.forEach(record => {
-            if (record.status === 'present' || record.status === 'recupero') present++;
-            else if (record.status === 'absent' || record.status === 'excused') absent++;
-            else if (record.status === 'tardy') tardy++;
-        });
-        const total = present + absent + tardy;
-        return { present, absent, tardy, total };
-    };
-
+    // 1. Create a flat list of all attendance records from all sessions
     let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     sessions.forEach(session => {
         const allParticipantIds = new Set([
@@ -122,15 +115,40 @@ export default function DashboardPage() {
 
         allParticipantIds.forEach(firefighterId => {
             const firefighter = firefighters.find(f => f.id === firefighterId);
-            const status = session.attendance?.[firefighterId];
-            if (firefighter && status) {
-                 allRecords.push({ status, firefighter, session });
-            } else if (firefighter && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
-                 allRecords.push({ status: 'present', firefighter, session });
+            if (firefighter) {
+                let status = session.attendance?.[firefighterId];
+                // Default instructors and assistants to 'present' if no status is recorded
+                if (!status && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
+                    status = 'present';
+                }
+
+                if (status) {
+                    allRecords.push({ status, firefighter, session });
+                }
             }
         });
     });
 
+    // 2. Helper function to process a list of records into summary data
+    const processAttendance = (records: { status: AttendanceStatus }[]): AttendanceData => {
+        const counts = records.reduce((acc, record) => {
+            acc[record.status] = (acc[record.status] || 0) + 1;
+            return acc;
+        }, {} as Record<AttendanceStatus, number>);
+
+        const present = counts.present || 0;
+        const absent = counts.absent || 0;
+        const tardy = counts.tardy || 0;
+        const recupero = counts.recupero || 0;
+        const excused = counts.excused || 0;
+        
+        // Total classes for percentage calculation excludes 'recupero' as it's a make-up class
+        const totalForPercentage = present + absent + tardy + excused;
+
+        return { present, absent, tardy, recupero, excused, totalForPercentage };
+    };
+
+    // 3. Group records and calculate stats for each group
     const groupedData: Record<string, AttendanceData> = {
         'General': processAttendance(allRecords),
         'Cuartel 1': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 1')),
@@ -172,7 +190,7 @@ export default function DashboardPage() {
   }
   
   const specializationsWithData = Object.keys(attendanceDataByGroup).filter(key => 
-    !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key].total > 0
+    !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key].totalForPercentage > 0
   );
 
   return (
