@@ -10,14 +10,14 @@ import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
-const PIE_CHART_COLORS = {
-    present: "#22C55E", // green-500
-    absent: "#EF4444", // red-500
-    tardy: "#FBBF24",   // yellow-400
+const PIE_CHART_COLORS: Record<string, string> = {
+    presente: "#22C55E", // green-500
+    ausente: "#EF4444", // red-500
+    tarde: "#FBBF24",   // yellow-400
     recupero: "#3B82F6", // blue-500
-    excused: "#8B5CF6", // violet-500
+    justificado: "#8B5CF6", // violet-500
 };
 
 type AttendanceSummary = {
@@ -32,7 +32,7 @@ type AttendanceSummary = {
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (percent < 0.05) return null; // Don't render label for tiny slices
+    if (!percent || percent < 0.05) return null; // Don't render label for tiny slices
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -151,6 +151,70 @@ export default function DashboardPage() {
       )
   }
 
+  const renderChart = (title: string, data: AttendanceSummary) => {
+    const hasData = data && data.totalForPercentage > 0;
+    const pieData = hasData ? [
+        { name: "Presente", value: data.present + data.recupero },
+        { name: "Ausente", value: data.absent + data.excused },
+        { name: "Tarde", value: data.tardy },
+      ].filter(d => d.value > 0) : [];
+
+    return (
+        <Card key={title} className="flex flex-col">
+            <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
+                {hasData ? (
+                    <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Tooltip
+                                    cursor={{ fill: 'transparent' }}
+                                    content={({ active, payload }) => {
+                                        if (active && payload && payload.length) {
+                                            return (
+                                                <div className="rounded-lg border bg-background p-2 shadow-sm">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm text-muted-foreground">{payload[0].name}</span>
+                                                            <span className="font-bold">{payload[0].value}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    }}
+                                />
+                                <Pie
+                                  data={pieData}
+                                  dataKey="value"
+                                  nameKey="name"
+                                  innerRadius={50}
+                                  outerRadius={80}
+                                  strokeWidth={2}
+                                  labelLine={false}
+                                  label={renderCustomizedLabel}
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
+                                    ))}
+                                </Pie>
+                                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-sm font-semibold">
+                                    {title}
+                                </text>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-muted-foreground">
+                        <p className="font-semibold text-lg">{title}</p>
+                        <p>Sin Datos</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -160,53 +224,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3']).map((groupTitle) => {
                 const data = attendanceDataByGroup[groupTitle];
-                const hasData = data && data.totalForPercentage > 0;
-                const pieData = hasData ? [
-                    { name: "Presente", value: data.present + data.recupero },
-                    { name: "Ausente", value: data.absent + data.excused },
-                    { name: "Tarde", value: data.tardy },
-                  ].filter(d => d.value > 0) : [];
-
-                return (
-                    <Card key={groupTitle} className="flex flex-col">
-                        <CardHeader className="items-center pb-2">
-                            <CardTitle className="font-headline text-lg text-center">{groupTitle}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
-                            {hasData ? (
-                                <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <ChartTooltip
-                                                cursor={false}
-                                                content={<ChartTooltipContent hideLabel />}
-                                            />
-                                            <Pie
-                                              data={pieData}
-                                              dataKey="value"
-                                              nameKey="name"
-                                              innerRadius={60}
-                                              outerRadius={80}
-                                              strokeWidth={2}
-                                              labelLine={false}
-                                              label={renderCustomizedLabel}
-                                            >
-                                                {pieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
-                                                ))}
-                                            </Pie>
-                                             <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-base font-semibold">
-                                                {groupTitle}
-                                            </text>
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </ChartContainer>
-                            ) : (
-                                <div className="flex items-center justify-center h-full min-h-[150px] text-muted-foreground">Sin Datos</div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )
+                return renderChart(groupTitle, data);
             })}
         </div>
 
@@ -216,52 +234,7 @@ export default function DashboardPage() {
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {specializationsWithData.map(spec => {
                          const data = attendanceDataByGroup[spec];
-                         const hasData = data && data.totalForPercentage > 0;
-                         const pieData = hasData ? [
-                            { name: "Presente", value: data.present + data.recupero },
-                            { name: "Ausente", value: data.absent + data.excused },
-                            { name: "Tarde", value: data.tardy },
-                          ].filter(d => d.value > 0) : [];
-                         return (
-                            <Card key={spec} className="flex flex-col">
-                                <CardHeader className="items-center pb-2">
-                                    <CardTitle className="font-headline text-lg text-center">{spec}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
-                                    {hasData ? (
-                                        <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <PieChart>
-                                                    <ChartTooltip
-                                                      cursor={false}
-                                                      content={<ChartTooltipContent hideLabel />}
-                                                    />
-                                                    <Pie
-                                                    data={pieData}
-                                                    dataKey="value"
-                                                    nameKey="name"
-                                                    innerRadius={60}
-                                                    outerRadius={80}
-                                                    strokeWidth={2}
-                                                    labelLine={false}
-                                                    label={renderCustomizedLabel}
-                                                    >
-                                                        {pieData.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
-                                                        ))}
-                                                    </Pie>
-                                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-base font-semibold">
-                                                        {spec}
-                                                    </text>
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                        </ChartContainer>
-                                    ) : (
-                                        <div className="flex items-center justify-center h-full min-h-[150px] text-muted-foreground">Sin Datos</div>
-                                    )}
-                                </CardContent>
-                            </Card>
-                         )
+                         return renderChart(spec, data);
                     })}
                  </div>
             </div>
