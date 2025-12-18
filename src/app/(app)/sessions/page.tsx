@@ -16,16 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  BarChart,
-  Calendar,
-  ShieldCheck,
-  UserX,
-} from 'lucide-react';
 import { PageHeader } from '@/components/page-header';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import {
   ChartContainer,
   ChartTooltip,
@@ -33,45 +26,155 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis } from "recharts"
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
-import { Firefighter, Session, Leave } from '@/lib/types';
+import { Firefighter, Session, Leave, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
-import { getLeaves } from '@/services/leaves.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isWithinInterval, startOfMonth, endOfMonth, subMonths, format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
-const chartConfig = {
-  attendees: {
+const chartConfigBar = {
+  presentes: {
     label: "Presentes",
-    color: "hsl(var(--primary))",
+    color: "hsl(var(--chart-1))",
   },
-  absentees: {
+  ausentes: {
     label: "Ausentes",
-    color: "hsl(var(--muted-foreground))",
+    color: "hsl(var(--chart-2))",
   },
+} satisfies ChartConfig;
+
+const PIE_CHART_COLORS = {
+    present: "hsl(var(--chart-1))",
+    absent: "hsl(var(--chart-2))",
+    tardy: "hsl(var(--chart-4))",
+};
+
+const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
+    'RESCATE VEHICULAR': "#3B82F6",
+    'RESCATE URBANO': "#1D4ED8",
+    FUEGO: "#EF4444",
+    APH: "#22C55E",
+    'HAZ-MAT': "#F97316",
+    FORESTAL: "#16A34A",
+    BUCEO: "#0EA5E9",
+    PAE: "#FBBF24",
+    GORA: "#A855F7",
+    KAIZEN: "#6366F1",
+    VARIOS: "#64748B",
+    RESCATE: "#3B82F6",
+};
+
+type AttendanceData = {
+    present: number;
+    absent: number;
+    tardy: number;
+    total: number;
+};
+
+type ChartConfig = typeof chartConfigBar;
+
+const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }) => {
+    const pieData = [
+        { name: "Presente", value: data.present, fill: PIE_CHART_COLORS.present },
+        { name: "Ausente", value: data.absent, fill: PIE_CHART_COLORS.absent },
+        { name: "Tarde", value: data.tardy, fill: PIE_CHART_COLORS.tardy },
+    ].filter(d => d.value > 0);
+
+    const total = data.total;
+    const presentPercentage = total > 0 ? (data.present / total) * 100 : 0;
+
+    return (
+        <Card className="flex flex-col">
+            <CardHeader className="items-center pb-0">
+                <CardTitle className="font-headline text-lg">{title}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex items-center justify-center py-2">
+                 {total > 0 ? (
+                     <ChartContainer config={chartConfigBar} className="mx-auto aspect-square h-full max-h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                             <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={40} strokeWidth={5}>
+                                     {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-3xl font-bold fill-foreground">
+                                    {`${presentPercentage.toFixed(0)}%`}
+                                </text>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </ChartContainer>
+                 ) : (
+                    <div className="flex items-center justify-center h-full text-muted-foreground">Sin datos</div>
+                 )}
+            </CardContent>
+        </Card>
+    )
 }
+
+const SpecializationDonutCard = ({ data }: { data: { name: Specialization, value: number }[] }) => {
+     const pieData = data.map(item => ({
+        ...item,
+        fill: SPECIALIZATION_CHART_COLORS[item.name] || '#ccc'
+    }));
+    
+     const RADIAN = Math.PI / 180;
+     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        if (percent < 0.05) return null;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
+
+    return (
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <CardTitle className="font-headline">Distribución por Especialidad</CardTitle>
+                 <CardDescription>Cantidad de clases impartidas por especialidad.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                 <ChartContainer config={{}} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                            <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} labelLine={false} label={renderCustomizedLabel}>
+                                {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                            </Pie>
+                            <ChartLegend content={<ChartLegendContent layout="vertical" align="right" verticalAlign="middle" />} />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    )
+};
+
 
 export default function DashboardPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [leaves, setLeaves] = useState<Leave[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [firefightersData, sessionsData, leavesData] = await Promise.all([
+        const [firefightersData, sessionsData] = await Promise.all([
           getFirefighters(),
           getSessions(),
-          getLeaves(),
         ]);
         setFirefighters(firefightersData);
         setSessions(sessionsData);
-        setLeaves(leavesData);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
       } finally {
@@ -81,34 +184,55 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
-  const dashboardStats = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  const { attendanceData, specializationData } = useMemo(() => {
+      if (sessions.length === 0 || firefighters.length === 0) {
+          return { attendanceData: {}, specializationData: [] };
+      }
 
-    const activeFirefighters = firefighters.filter(f => f.status === 'Active').length;
-    const upcomingSessions = sessions.filter(s => parseISO(s.date) >= today).length;
-    const onLeave = leaves.filter(l => isWithinInterval(today, { start: parseISO(l.startDate), end: parseISO(l.endDate) })).length;
-    
-    let attendedCount = 0;
-    let totalRequired = 0;
-    
-    sessions.forEach(session => {
-        if(session.attendance) {
-            Object.values(session.attendance).forEach(status => {
-              if (status === 'present' || status === 'recupero' || status === 'tardy') {
-                attendedCount++;
-              }
-              if (status === 'present' || status === 'tardy' || status === 'absent' || status === 'excused' || status === 'recupero') {
-                  totalRequired++;
-              }
-            });
-        }
-    });
+      const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+      
+      const processAttendance = (records: { firefighterId: string, status: string }[]) => {
+          let present = 0, absent = 0, tardy = 0;
+          records.forEach(record => {
+              if (record.status === 'present' || record.status === 'recupero') present++;
+              else if (record.status === 'absent' || record.status === 'excused') absent++;
+              else if (record.status === 'tardy') tardy++;
+          });
+          const total = present + absent + tardy;
+          return { present, absent, tardy, total };
+      }
 
-    const attendanceRate = totalRequired > 0 ? ((attendedCount / totalRequired) * 100).toFixed(0) : "0";
-    
-    return { activeFirefighters, upcomingSessions, onLeave, attendanceRate };
-  }, [firefighters, sessions, leaves]);
+      let allRecords: { firefighterId: string, status: string, firehouse: string }[] = [];
+      sessions.forEach(session => {
+          if (session.attendance) {
+              Object.entries(session.attendance).forEach(([firefighterId, status]) => {
+                  const firefighter = firefighterMap.get(firefighterId);
+                  if (firefighter) {
+                       allRecords.push({ firefighterId, status, firehouse: firefighter.firehouse });
+                  }
+              });
+          }
+      });
+      
+      const attendanceByCuartel = {
+          'Cuartel 1': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 1')),
+          'Cuartel 2': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 2')),
+          'Cuartel 3': processAttendance(allRecords.filter(r => r.firehouse === 'Cuartel 3')),
+          'General': processAttendance(allRecords)
+      };
+
+      const specializationCounts = sessions.reduce((acc, session) => {
+          acc[session.specialization] = (acc[session.specialization] || 0) + 1;
+          return acc;
+      }, {} as Record<Specialization, number>);
+
+      const specData = Object.entries(specializationCounts)
+        .map(([name, value]) => ({ name: name as Specialization, value }))
+        .sort((a, b) => b.value - a.value);
+
+
+      return { attendanceData: attendanceByCuartel, specializationData: specData };
+  }, [sessions, firefighters]);
 
   const chartData = useMemo(() => {
       const last6Months = Array.from({ length: 6 }).map((_, i) => {
@@ -121,23 +245,23 @@ export default function DashboardPage() {
       }).reverse();
 
       return last6Months.map(monthRange => {
-          let attendees = 0;
-          let absentees = 0;
+          let presentes = 0;
+          let ausentes = 0;
           sessions.forEach(session => {
               const sessionDate = parseISO(session.date);
               if (isWithinInterval(sessionDate, { start: monthRange.start, end: monthRange.end })) {
                   if (session.attendance) {
                       Object.values(session.attendance).forEach(status => {
                           if (status === 'present' || status === 'recupero' || status === 'tardy') {
-                              attendees++;
+                              presentes++;
                           } else if (status === 'absent' || status === 'excused') {
-                              absentees++;
+                              ausentes++;
                           }
                       });
                   }
               }
           });
-          return { month: monthRange.month.charAt(0).toUpperCase() + monthRange.month.slice(1), attendees, absentees };
+          return { month: monthRange.month.charAt(0).toUpperCase() + monthRange.month.slice(1), presentes, ausentes };
       });
   }, [sessions]);
 
@@ -150,18 +274,10 @@ export default function DashboardPage() {
           description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
         />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {Array.from({length: 4}).map((_, index) => (
-            <Card key={index}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <Skeleton className="h-4 w-2/3" />
-                <Skeleton className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-1/3 mb-2" />
-                <Skeleton className="h-3 w-full" />
-              </CardContent>
-            </Card>
-          ))}
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-64 w-full" />
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
             <Skeleton className="lg:col-span-4 h-96" />
@@ -177,62 +293,15 @@ export default function DashboardPage() {
         title="Dashboard Asistencia"
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
       />
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Bomberos Activos
-            </CardTitle>
-            <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.activeFirefighters}</div>
-            <p className="text-xs text-muted-foreground">
-              Personal total de guardia
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Próximas Clases
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+{dashboardStats.upcomingSessions}</div>
-            <p className="text-xs text-muted-foreground">
-              Programadas en los próximos 30 días
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasa de Asistencia</CardTitle>
-            <BarChart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.attendanceRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              Promedio en todas las clases
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">De Licencia</CardTitle>
-            <UserX className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{dashboardStats.onLeave}</div>
-            <p className="text-xs text-muted-foreground">
-              Bomberos actualmente de licencia
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <DonutChartCard title="General" data={attendanceData['General']} />
+            <DonutChartCard title="Cuartel 1" data={attendanceData['Cuartel 1']} />
+            <DonutChartCard title="Cuartel 2" data={attendanceData['Cuartel 2']} />
+            <DonutChartCard title="Cuartel 3" data={attendanceData['Cuartel 3']} />
+        </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mt-8">
-        <Card className="lg:col-span-4">
+        <SpecializationDonutCard data={specializationData} />
+        <Card className="lg:col-span-5">
           <CardHeader>
             <CardTitle className="font-headline">Asistencia Mensual</CardTitle>
             <CardDescription>
@@ -240,7 +309,7 @@ export default function DashboardPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
-             <ChartContainer config={chartConfig} className="h-[300px] w-full">
+             <ChartContainer config={chartConfigBar} className="h-[300px] w-full">
               <RechartsBarChart accessibilityLayer data={chartData}>
                 <CartesianGrid vertical={false} />
                 <XAxis
@@ -256,47 +325,14 @@ export default function DashboardPage() {
                   content={<ChartTooltipContent indicator="dot" />}
                 />
                  <ChartLegend content={<ChartLegendContent />} />
-                <Bar dataKey="attendees" fill="var(--color-attendees)" radius={4} />
-                <Bar dataKey="absentees" fill="var(--color-absentees)" radius={4} />
+                <Bar dataKey="presentes" fill="var(--color-presentes)" radius={4} />
+                <Bar dataKey="ausentes" fill="var(--color-ausentes)" radius={4} />
               </RechartsBarChart>
             </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle className="font-headline">Próximas Clases</CardTitle>
-            <CardDescription>
-              Estas son las próximas clases de capacitación programadas.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Clase</TableHead>
-                  <TableHead>Especialidad</TableHead>
-                  <TableHead>Fecha</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sessions.filter(s => parseISO(s.date) >= new Date()).slice(0, 5).map((session) => (
-                  <TableRow key={session.id}>
-                    <TableCell>
-                      <Link href={`/classes/${session.id}/attendance`} className="font-medium hover:underline">
-                        {session.title}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{session.specialization}</Badge>
-                    </TableCell>
-                    <TableCell>{format(parseISO(session.date), "dd/MM/yy")}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
           </CardContent>
         </Card>
       </div>
     </>
   );
 }
+

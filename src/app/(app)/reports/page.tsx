@@ -70,6 +70,7 @@ const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
     GORA: "#A855F7",
     KAIZEN: "#6366F1",
     VARIOS: "#64748B",
+    RESCATE: "#3B82F6",
 };
 
 
@@ -335,137 +336,96 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
     });
 };
     
-    const generatePdf = async () => {
-        if (!logoDataUrl) {
-            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
-            return;
+const generatePdf = async () => {
+    if (!logoDataUrl) {
+        toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+        return;
+    }
+
+    setGeneratingPdf(true);
+    const doc = new jsPDF();
+
+    try {
+        // ... (Header code remains the same)
+        doc.setFillColor(220, 53, 69);
+        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Reporte de Asistencia", 14, 22);
+        doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+        const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+        doc.setFontSize(11);
+        doc.setTextColor(108, 117, 125);
+        doc.setFont('helvetica', 'normal');
+        doc.text(dateText, 14, 45);
+        let currentY = 55;
+
+        // ... (Chart and summary table code remains the same)
+        if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
+            const chartImage = await generateChartImage(attendanceReportData.summary);
+            if (chartImage) {
+                doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+                doc.text("Resumen Gráfico de Asistencia", 14, currentY); currentY += 5;
+                doc.addImage(chartImage, 'PNG', 14, currentY, 180, 90); currentY += 100;
+            }
         }
-    
-        setGeneratingPdf(true);
-        const doc = new jsPDF();
-    
-        try {
-            // Header
-            doc.setFillColor(220, 53, 69);
-            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
-            doc.setFontSize(22);
-            doc.setTextColor(255, 255, 255);
-            doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Asistencia", 14, 22);
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
-    
-            // Subheader
-            doc.setFontSize(11);
-            doc.setTextColor(108, 117, 125);
-            doc.setFont('helvetica', 'normal');
-            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
-            doc.text(dateText, 14, 45);
-    
-            let currentY = 55;
-    
-            if (attendanceReportData.details.length > 0) {
-                 const chartImage = await generateChartImage(attendanceReportData.summary);
-                 if (chartImage) {
-                    doc.setFontSize(12);
-                    doc.setTextColor(40, 40, 40);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text("Resumen Gráfico de Asistencia", 14, currentY);
-                    currentY += 5;
-                    doc.addImage(chartImage, 'PNG', 14, currentY, 180, 90); 
-                    currentY += 100;
-                 }
-            }
-            
-            // Summary Table
-            if (includeSummaryInPdf && summaryTableData.length > 0) {
-                if (currentY > 250) { doc.addPage(); currentY = 20; }
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Resumen de Asistencia por Bombero", 14, currentY);
-                currentY += 8;
+        
+        if (includeSummaryInPdf && summaryTableData.length > 0) {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+            doc.text("Resumen de Asistencia por Bombero", 14, currentY); currentY += 8;
+            const summaryBody = summaryTableData.map(item => [item.firefighterLegajo, item.firefighter, item.totalClasses, item.presentPercentage]);
+            (doc as any).autoTable({
+                startY: currentY, head: [['Legajo', 'Bombero', 'Clases', '% Presentismo']],
+                body: summaryBody, theme: 'striped', headStyles: { fillColor: '#333333' },
+            });
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+        }
 
-                // Sort and group for PDF
-                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+        if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+            doc.text("Detalle de Registros de Asistencia", 14, currentY); currentY += 8;
 
-                const groupedForPdf: { group: string; items: any[] }[] = [
-                    { group: 'Oficiales y Suboficiales', items: [] },
-                    { group: 'Bomberos Cuartel 1', items: [] },
-                    { group: 'Bomberos Cuartel 2', items: [] },
-                    { group: 'Bomberos Cuartel 3', items: [] },
-                    { group: 'Aspirantes', items: [] }
-                ];
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
-                summaryTableData.forEach(item => {
-                    const firefighter = allFirefighters.find(f => f.id === item.firefighterId);
-                    if (!firefighter) return;
+            const groupedDetails: { [key: string]: any[] } = {
+                'Oficiales y Suboficiales': [], 'Bomberos Cuartel 1': [], 'Bomberos Cuartel 2': [], 'Bomberos Cuartel 3': [], 'Aspirantes': []
+            };
 
-                    if (oficialRanks.includes(firefighter.rank) || suboficialRanks.includes(firefighter.rank)) {
-                        groupedForPdf[0].items.push(item);
-                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 1') {
-                        groupedForPdf[1].items.push(item);
-                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 2') {
-                        groupedForPdf[2].items.push(item);
-                    } else if (firefighter.rank === 'BOMBERO' && firefighter.firehouse === 'Cuartel 3') {
-                        groupedForPdf[3].items.push(item);
-                    } else if (firefighter.rank === 'ASPIRANTE') {
-                        groupedForPdf[4].items.push(item);
-                    }
-                });
+            attendanceReportData.details.forEach(item => {
+                const f = item.firefighter;
+                if ([...oficialRanks, ...suboficialRanks].includes(f.rank)) groupedDetails['Oficiales y Suboficiales'].push(item);
+                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 1') groupedDetails['Bomberos Cuartel 1'].push(item);
+                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 2') groupedDetails['Bomberos Cuartel 2'].push(item);
+                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 3') groupedDetails['Bomberos Cuartel 3'].push(item);
+                else if (f.rank === 'ASPIRANTE') groupedDetails['Aspirantes'].push(item);
+            });
 
-                const summaryBody: any[] = [];
-                groupedForPdf.forEach(group => {
-                    if (group.items.length > 0) {
-                        summaryBody.push([{ content: `--- ${group.group} ---`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', fillColor: '#f0f0f0' } }]);
-                        group.items.sort((a,b) => a.firefighterLegajo.localeCompare(b.firefighterLegajo, undefined, { numeric: true })).forEach(item => {
-                             summaryBody.push([
-                                item.firefighterLegajo,
-                                item.firefighter,
-                                item.totalClasses,
-                                item.presentPercentage
-                            ]);
-                        })
-                    }
-                });
-
-
-                 (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Legajo', 'Bombero', 'Clases', '% Presentismo']],
-                    body: summaryBody,
-                    theme: 'striped',
-                    headStyles: { fillColor: '#333333' },
-                });
-                currentY = (doc as any).lastAutoTable.finalY + 10;
-            }
-    
-            // Details Table
-            if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
-                if (currentY > 250) { doc.addPage(); currentY = 20; }
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Detalle de Registros de Asistencia", 14, currentY);
-                currentY += 8;
-                
-                const detailBody = attendanceReportData.details
-                    .sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true }))
-                    .map(item => {
+            const detailBody: any[] = [];
+            for (const groupName in groupedDetails) {
+                const groupItems = groupedDetails[groupName];
+                if (groupItems.length > 0) {
+                    detailBody.push([{
+                        content: groupName,
+                        colSpan: 6,
+                        styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' }
+                    }]);
+                    groupItems.sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true })).forEach(item => {
                         let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
                         if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
                         else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
-                        
-                        return [
-                            item.firefighter.legajo,
-                            name,
-                            item.session.title, 
-                            item.session.specialization, 
-                            format(parseISO(item.session.date), 'dd/MM/yyyy'),
-                            getStatusLabel(item.status)
-                        ]
+                        detailBody.push([
+                            item.firefighter.legajo, name, item.session.title,
+                            item.session.specialization, format(parseISO(item.session.date), 'dd/MM/yyyy'), getStatusLabel(item.status)
+                        ]);
                     });
-    
+                }
+            }
+
+            if (detailBody.length > 0) {
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Legajo', 'Bombero', 'Clase', 'Especialidad', 'Fecha', 'Estado']],
@@ -473,20 +433,23 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
                 });
+            } else {
+                 doc.text("No hay detalles de asistencia para los filtros aplicados.", 14, currentY);
             }
-    
-            if (attendanceReportData.details.length === 0) {
-                doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
-            }
-    
-            doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        } catch (error) {
-            console.error("PDF Generation Error: ", error);
-            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
-        } finally {
-            setGeneratingPdf(false);
         }
-    };
+
+        if (attendanceReportData.details.length === 0) {
+            doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
+        }
+
+        doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    } catch (error) {
+        console.error("PDF Generation Error: ", error);
+        toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+    } finally {
+        setGeneratingPdf(false);
+    }
+};
 
     const attendanceReportData = useMemo(() => {
         let preliminaryRecords: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
@@ -1258,4 +1221,5 @@ export default function ReportsPage() {
 
 
     
+
 
