@@ -2,7 +2,7 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, AttendanceStatus, Specialization } from '@/lib/types';
@@ -16,8 +16,6 @@ const PIE_CHART_COLORS: Record<string, string> = {
     presente: "#22C55E", // green-500
     ausente: "#EF4444", // red-500
     tarde: "#FBBF24",   // yellow-400
-    recupero: "#3B82F6", // blue-500
-    justificado: "#8B5CF6", // violet-500
 };
 
 type AttendanceSummary = {
@@ -31,7 +29,7 @@ type AttendanceSummary = {
 };
 
 const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     if (!percent || percent < 0.05) return null;
     const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -161,7 +159,10 @@ export default function DashboardPage() {
       ].filter(d => d.value > 0) : [];
 
     return (
-        <Card key={title} className="flex flex-col">
+        <Card className="flex flex-col">
+             <CardHeader className="items-center pb-2">
+                <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
+            </CardHeader>
             <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
                 {hasData ? (
                     <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
@@ -189,26 +190,22 @@ export default function DashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={60}
-                                  outerRadius={90}
+                                  innerRadius={50}
+                                  outerRadius={80}
                                   strokeWidth={2}
                                   labelLine={false}
                                   label={renderCustomizedLabel}
                                 >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
+                                    {pieData.map((entry) => (
+                                        <Cell key={`cell-${entry.name}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
                                     ))}
                                 </Pie>
-                                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-sm font-semibold">
-                                    {title}
-                                </text>
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
                 ) : (
                     <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-muted-foreground">
-                        <p className="font-semibold text-lg">{title}</p>
-                        <p>Sin Datos</p>
+                        <p>Sin datos</p>
                     </div>
                 )}
             </CardContent>
@@ -225,7 +222,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3']).map((groupTitle) => {
                 const data = attendanceDataByGroup[groupTitle];
-                return renderChart(groupTitle, data);
+                return <div key={groupTitle}>{renderChart(groupTitle, data)}</div>;
             })}
         </div>
 
@@ -235,7 +232,7 @@ export default function DashboardPage() {
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {specializationsWithData.map(spec => {
                          const data = attendanceDataByGroup[spec];
-                         return renderChart(spec, data);
+                         return <div key={spec}>{renderChart(spec, data)}</div>;
                     })}
                  </div>
             </div>
