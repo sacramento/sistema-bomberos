@@ -11,6 +11,7 @@ import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { es } from 'date-fns/locale';
 
 const PIE_CHART_COLORS = {
     present: "#22C55E", // green-500
@@ -121,54 +122,19 @@ export default function DashboardPage() {
     !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key]?.totalForPercentage > 0
   );
   
-    const renderDonutCard = (title: string, data: AttendanceSummary | undefined, isLoading: boolean) => {
-    if (isLoading) {
-        return <Skeleton className="h-64 w-full" />;
-    }
-
-    const hasData = data && data.totalForPercentage > 0;
-
-    return (
-        <Card className="flex flex-col">
-            <CardHeader className="items-center pb-2">
-                <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
-                {hasData ? (
-                    <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie
-                                  data={[
-                                    { name: "Presente", value: data.present + data.recupero },
-                                    { name: "Ausente", value: data.absent + data.excused },
-                                    { name: "Tarde", value: data.tardy },
-                                  ].filter(d => d.value > 0)}
-                                  dataKey="value"
-                                  nameKey="name"
-                                  innerRadius="60%"
-                                  outerRadius="80%"
-                                  strokeWidth={2}
-                                >
-                                    <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
-                                    <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
-                                    <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
-                                </Pie>
-                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
-                                    {`${data.presentPercentage.toFixed(0)}%`}
-                                </text>
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </ChartContainer>
-                ) : (
-                    <div className="flex items-center justify-center h-full min-h-[150px] text-muted-foreground">Sin datos</div>
-                )}
-            </CardContent>
-        </Card>
-    );
-  };
-
+  if (loading) {
+      return (
+          <>
+            <PageHeader
+                title="Dashboard Asistencia"
+                description="Cargando resumen de actividad del departamento..."
+            />
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+             </div>
+          </>
+      )
+  }
 
   return (
     <>
@@ -177,19 +143,98 @@ export default function DashboardPage() {
         description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
       />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            {renderDonutCard('General', attendanceDataByGroup['General'], loading)}
-            {renderDonutCard('Cuartel 1', attendanceDataByGroup['Cuartel 1'], loading)}
-            {renderDonutCard('Cuartel 2', attendanceDataByGroup['Cuartel 2'], loading)}
-            {renderDonutCard('Cuartel 3', attendanceDataByGroup['Cuartel 3'], loading)}
+            {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3']).map((groupTitle) => {
+                const data = attendanceDataByGroup[groupTitle];
+                const hasData = data && data.totalForPercentage > 0;
+                return (
+                    <Card key={groupTitle} className="flex flex-col">
+                        <CardHeader className="items-center pb-2">
+                            <CardTitle className="font-headline text-lg text-center">{groupTitle}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
+                            {hasData ? (
+                                <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie
+                                              data={[
+                                                { name: "Presente", value: data.present + data.recupero },
+                                                { name: "Ausente", value: data.absent + data.excused },
+                                                { name: "Tarde", value: data.tardy },
+                                              ].filter(d => d.value > 0)}
+                                              dataKey="value"
+                                              nameKey="name"
+                                              innerRadius="60%"
+                                              outerRadius="80%"
+                                              strokeWidth={2}
+                                            >
+                                                <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
+                                                <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
+                                                <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
+                                            </Pie>
+                                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
+                                                {`${data.presentPercentage.toFixed(0)}%`}
+                                            </text>
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            ) : (
+                                <div className="flex items-center justify-center h-full min-h-[150px] text-muted-foreground">Sin Datos</div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )
+            })}
         </div>
 
         {specializationsWithData.length > 0 && (
             <div>
                 <h2 className="font-headline text-2xl font-semibold tracking-tight mb-4">Asistencia por Especialidad</h2>
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {specializationsWithData.map(spec => (
-                       renderDonutCard(spec, attendanceDataByGroup[spec], loading)
-                    ))}
+                    {specializationsWithData.map(spec => {
+                         const data = attendanceDataByGroup[spec];
+                         const hasData = data && data.totalForPercentage > 0;
+                         return (
+                            <Card key={spec} className="flex flex-col">
+                                <CardHeader className="items-center pb-2">
+                                    <CardTitle className="font-headline text-lg text-center">{spec}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
+                                    {hasData ? (
+                                        <ChartContainer config={{}} className="mx-auto aspect-square h-full w-full max-h-[250px]">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                                    <Pie
+                                                    data={[
+                                                        { name: "Presente", value: data.present + data.recupero },
+                                                        { name: "Ausente", value: data.absent + data.excused },
+                                                        { name: "Tarde", value: data.tardy },
+                                                    ].filter(d => d.value > 0)}
+                                                    dataKey="value"
+                                                    nameKey="name"
+                                                    innerRadius="60%"
+                                                    outerRadius="80%"
+                                                    strokeWidth={2}
+                                                    >
+                                                        <Cell key="cell-present" fill={PIE_CHART_COLORS.present} />
+                                                        <Cell key="cell-absent" fill={PIE_CHART_COLORS.absent} />
+                                                        <Cell key="cell-tardy" fill={PIE_CHART_COLORS.tardy} />
+                                                    </Pie>
+                                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
+                                                        {`${data.presentPercentage.toFixed(0)}%`}
+                                                    </text>
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </ChartContainer>
+                                    ) : (
+                                        <div className="flex items-center justify-center h-full min-h-[150px] text-muted-foreground">Sin Datos</div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                         )
+                    })}
                  </div>
             </div>
         )}
