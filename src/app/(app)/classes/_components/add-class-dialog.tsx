@@ -259,7 +259,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 
                 filtered = filtered.filter(f => {
                     if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
-                    if (selectedHierarchies.includes('bomberos') && f.rank === 'BOMBERO') return true;
+                    if (selectedHierarchies.includes('bomberos') && (f.rank === 'BOMBERO' || f.rank === 'ADAPTACION')) return true;
                     if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
                     return false;
                 });

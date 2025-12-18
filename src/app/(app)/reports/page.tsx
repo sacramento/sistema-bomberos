@@ -401,7 +401,7 @@ const generatePdf = async () => {
                 else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 1') groupedDetails['Bomberos Cuartel 1'].push(item);
                 else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 2') groupedDetails['Bomberos Cuartel 2'].push(item);
                 else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 3') groupedDetails['Bomberos Cuartel 3'].push(item);
-                else if (f.rank === 'ASPIRANTE') groupedDetails['Aspirantes'].push(item);
+                else if (f.rank === 'ASPIRANTE' || f.rank === 'ADAPTACION') groupedDetails['Aspirantes'].push(item);
             });
 
             const detailBody: any[] = [];
@@ -498,7 +498,7 @@ const generatePdf = async () => {
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
                 const hierarchyMatch = filterHierarchy.some(h => {
-                    if (h === 'bomberos' && firefighter.rank === 'BOMBERO') return true;
+                    if (h === 'bomberos' && (firefighter.rank === 'BOMBERO' || firefighter.rank === 'ADAPTACION')) return true;
                     if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
                     if (h === 'suboficiales_oficiales' && [...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return true;
                     return false;
@@ -1221,5 +1221,6 @@ export default function ReportsPage() {
 
 
     
+
 
 

@@ -6,6 +6,7 @@ export type Firefighter = {
   lastName: string;
   rank:
     | 'ASPIRANTE'
+    | 'ADAPTACION'
     | 'BOMBERO'
     | 'CABO'
     | 'CABO PRIMERO'
