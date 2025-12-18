@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -12,7 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -44,9 +45,9 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
     const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
     
     const pieData = [
-        { name: "Presente", value: data.present + data.recupero, fill: PIE_CHART_COLORS.present },
-        { name: "Ausente", value: data.absent + data.excused, fill: PIE_CHART_COLORS.absent },
-        { name: "Tarde", value: data.tardy, fill: PIE_CHART_COLORS.tardy },
+        { name: "Presente", value: data.present + data.recupero },
+        { name: "Ausente", value: data.absent + data.excused },
+        { name: "Tarde", value: data.tardy },
     ].filter(d => d.value > 0);
 
     return (
@@ -55,14 +56,14 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
                 <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex items-center justify-center py-2">
-                 {total > 0 ? (
-                     <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
+                 <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
+                     {total > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                              <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
                                 <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={pieData.length > 1 ? 5 : 0}>
                                      {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        <Cell key={`cell-${index}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
                                     ))}
                                 </Pie>
                                 <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
@@ -70,10 +71,10 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
                                 </text>
                             </PieChart>
                         </ResponsiveContainer>
-                    </ChartContainer>
-                 ) : (
-                    <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
-                 )}
+                     ) : (
+                        <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
+                     )}
+                </ChartContainer>
             </CardContent>
         </Card>
     )
