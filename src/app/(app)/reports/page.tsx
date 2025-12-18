@@ -164,9 +164,6 @@ const MultiSelectFilter = ({
     );
 };
 
-// Register the datalabels plugin
-Chart.register(ChartDataLabels);
-
 function AttendanceReportTab() {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -264,6 +261,8 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             }
         }
     };
+    
+    Chart.register(ChartDataLabels);
 
     return new Promise((resolve) => {
         const chartData = [data.present, data.absent, data.tardy, data.excused];
@@ -1244,6 +1243,7 @@ export default function ReportsPage() {
 
 
     
+
 
 
 
