@@ -13,7 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -62,22 +62,22 @@ export default function DashboardPage() {
     fetchData();
   }, [toast]);
 
-  const attendanceDataByGroup = useMemo(() => {
+ const attendanceDataByGroup = useMemo(() => {
     const processAttendance = (records: { status: AttendanceStatus }[]): AttendanceData => {
-        const counts = records.reduce((acc, record) => {
-            acc[record.status] = (acc[record.status] || 0) + 1;
-            return acc;
-        }, {} as Record<AttendanceStatus, number>);
+      const counts = records.reduce((acc, record) => {
+        acc[record.status] = (acc[record.status] || 0) + 1;
+        return acc;
+      }, {} as Record<AttendanceStatus, number>);
 
-        const present = counts.present || 0;
-        const absent = counts.absent || 0;
-        const tardy = counts.tardy || 0;
-        const recupero = counts.recupero || 0;
-        const excused = counts.excused || 0;
-        
-        const totalForPercentage = present + absent + tardy + excused;
+      const present = counts.present || 0;
+      const absent = counts.absent || 0;
+      const tardy = counts.tardy || 0;
+      const recupero = counts.recupero || 0;
+      const excused = counts.excused || 0;
+      
+      const totalForPercentage = present + absent + tardy + excused;
 
-        return { present, absent, tardy, recupero, excused, totalForPercentage };
+      return { present, absent, tardy, recupero, excused, totalForPercentage };
     };
 
     if (sessions.length === 0 || firefighters.length === 0) {
@@ -89,9 +89,9 @@ export default function DashboardPage() {
 
     sessions.forEach(session => {
         const participantIds = new Set([
-            ...session.instructorIds || [],
-            ...session.assistantIds || [],
-            ...session.attendeeIds || []
+            ...(session.instructorIds || []),
+            ...(session.assistantIds || []),
+            ...(session.attendeeIds || [])
         ]);
 
         participantIds.forEach(id => {
@@ -155,6 +155,49 @@ export default function DashboardPage() {
     !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key].totalForPercentage > 0
   );
 
+  const renderChartCard = (groupName: string, data: AttendanceData) => {
+    if (!data) return <Skeleton key={groupName} className="h-64 w-full" />;
+
+    const total = data.totalForPercentage;
+    const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
+    const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
+    
+    const pieData = [
+        { name: "Presente", value: data.present + data.recupero, color: PIE_CHART_COLORS.present },
+        { name: "Ausente", value: data.absent + data.excused, color: PIE_CHART_COLORS.ausente },
+        { name: "Tarde", value: data.tardy, color: PIE_CHART_COLORS.tarde },
+    ].filter(d => d.value > 0);
+
+    return (
+        <Card key={groupName} className="flex flex-col">
+            <CardHeader className="items-center pb-0">
+                <CardTitle className="font-headline text-lg text-center">{groupName}</CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 flex items-center justify-center py-2">
+                 <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
+                     {total > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                             <PieChart>
+                                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={pieData.length > 1 ? 5 : 0}>
+                                     {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
+                                    {`${presentPercentage.toFixed(0)}%`}
+                                </text>
+                            </PieChart>
+                        </ResponsiveContainer>
+                     ) : (
+                        <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
+                     )}
+                </ChartContainer>
+            </CardContent>
+        </Card>
+    );
+  };
+
   return (
     <>
       <PageHeader
@@ -164,46 +207,7 @@ export default function DashboardPage() {
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'] as const).map(groupName => {
                 const data = attendanceDataByGroup[groupName];
-                if (!data) return <Skeleton key={groupName} className="h-64 w-full" />;
-
-                const total = data.totalForPercentage;
-                const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
-                const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
-                
-                const pieData = [
-                    { name: "Presente", value: data.present + data.recupero, color: PIE_CHART_COLORS.present },
-                    { name: "Ausente", value: data.absent + data.excused, color: PIE_CHART_COLORS.ausente },
-                    { name: "Tarde", value: data.tardy, color: PIE_CHART_COLORS.tarde },
-                ].filter(d => d.value > 0);
-
-                return (
-                    <Card key={groupName} className="flex flex-col">
-                        <CardHeader className="items-center pb-0">
-                            <CardTitle className="font-headline text-lg text-center">{groupName}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-1 flex items-center justify-center py-2">
-                             <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
-                                 {total > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%">
-                                         <PieChart>
-                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                            <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={pieData.length > 1 ? 5 : 0}>
-                                                 {pieData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
-                                                {`${presentPercentage.toFixed(0)}%`}
-                                            </text>
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                 ) : (
-                                    <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
-                                 )}
-                            </ChartContainer>
-                        </CardContent>
-                    </Card>
-                )
+                return renderChartCard(groupName, data);
             })}
         </div>
 
@@ -213,46 +217,7 @@ export default function DashboardPage() {
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {specializationsWithData.map(spec => {
                         const data = attendanceDataByGroup[spec];
-                        if (!data) return null;
-                        
-                        const total = data.totalForPercentage;
-                        const effectiveAttendance = data.present + (data.tardy * 0.6) + data.recupero;
-                        const presentPercentage = total > 0 ? Math.min(100, (effectiveAttendance / total) * 100) : 0;
-                        
-                        const pieData = [
-                            { name: "Presente", value: data.present + data.recupero, color: PIE_CHART_COLORS.present },
-                            { name: "Ausente", value: data.absent + data.excused, color: PIE_CHART_COLORS.ausente },
-                            { name: "Tarde", value: data.tardy, color: PIE_CHART_COLORS.tarde },
-                        ].filter(d => d.value > 0);
-
-                        return (
-                             <Card key={spec} className="flex flex-col">
-                                <CardHeader className="items-center pb-0">
-                                    <CardTitle className="font-headline text-lg text-center">{spec}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex-1 flex items-center justify-center py-2">
-                                     <ChartContainer config={{}} className="mx-auto aspect-square h-full max-h-[250px]">
-                                         {total > 0 ? (
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                 <PieChart>
-                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={pieData.length > 1 ? 5 : 0}>
-                                                         {pieData.map((entry, index) => (
-                                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                                        ))}
-                                                    </Pie>
-                                                    <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="fill-foreground text-3xl font-bold">
-                                                        {`${presentPercentage.toFixed(0)}%`}
-                                                    </text>
-                                                </PieChart>
-                                            </ResponsiveContainer>
-                                         ) : (
-                                            <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground">Sin datos</div>
-                                         )}
-                                    </ChartContainer>
-                                </CardContent>
-                            </Card>
-                        )
+                        return renderChartCard(spec, data);
                     })}
                  </div>
             </div>
