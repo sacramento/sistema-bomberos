@@ -22,7 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const PIE_CHART_COLORS = {
     present: "hsl(var(--chart-1))",
-    absent: "hsl(var(--chart-2))",
+    absent: "hsl(var(--chart-3))",
     tardy: "hsl(var(--chart-4))",
 };
 
