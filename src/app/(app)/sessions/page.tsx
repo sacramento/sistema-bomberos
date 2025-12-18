@@ -3,7 +3,6 @@
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -13,7 +12,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -24,8 +23,6 @@ const PIE_CHART_COLORS = {
     present: "hsl(var(--chart-1))",
     absent: "hsl(var(--chart-3))",
     tardy: "hsl(var(--chart-4))",
-    recupero: "hsl(var(--chart-2))",
-    excused: "hsl(var(--chart-5))",
 };
 
 type AttendanceData = {
@@ -43,7 +40,7 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
     ].filter(d => d.value > 0);
 
     const total = data.total;
-    const presentPercentage = total > 0 ? ((data.present + (data.tardy * 0.6)) / total) * 100 : 0;
+    const presentPercentage = total > 0 ? (((data.present + data.tardy * 0.6)) / total) * 100 : 0;
 
     return (
         <Card className="flex flex-col">
@@ -56,7 +53,7 @@ const DonutChartCard = ({ title, data }: { title: string, data: AttendanceData }
                         <ResponsiveContainer width="100%" height="100%">
                              <PieChart>
                                 <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={40} strokeWidth={5}>
+                                <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={60} outerRadius={80} strokeWidth={5} paddingAngle={5}>
                                      {pieData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
@@ -117,20 +114,19 @@ export default function DashboardPage() {
 
     let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     sessions.forEach(session => {
-        const attendance = session.attendance || {};
-        const participants = [
-            ...(session.instructors || []),
-            ...(session.assistants || []),
-            ...(session.attendees || [])
-        ];
+        const allParticipantIds = new Set([
+            ...(session.instructorIds || []),
+            ...(session.assistantIds || []),
+            ...(session.attendeeIds || [])
+        ]);
 
-        participants.forEach(firefighter => {
-            if (firefighter && attendance[firefighter.id]) {
-                allRecords.push({
-                    status: attendance[firefighter.id],
-                    firefighter: firefighter,
-                    session: session
-                });
+        allParticipantIds.forEach(firefighterId => {
+            const firefighter = firefighters.find(f => f.id === firefighterId);
+            const status = session.attendance?.[firefighterId];
+            if (firefighter && status) {
+                 allRecords.push({ status, firefighter, session });
+            } else if (firefighter && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
+                 allRecords.push({ status: 'present', firefighter, session });
             }
         });
     });
