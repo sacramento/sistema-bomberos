@@ -13,7 +13,7 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -24,6 +24,8 @@ const PIE_CHART_COLORS = {
     present: "hsl(var(--chart-1))",
     absent: "hsl(var(--chart-3))",
     tardy: "hsl(var(--chart-4))",
+    recupero: "hsl(var(--chart-2))",
+    excused: "hsl(var(--chart-5))",
 };
 
 type AttendanceData = {
@@ -102,39 +104,7 @@ export default function DashboardPage() {
       return {};
     }
 
-    const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-    
-    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
-    for (const session of sessions) {
-        const allParticipantIds = new Set([
-            ...(session.instructorIds || []),
-            ...(session.assistantIds || []),
-            ...(session.attendeeIds || [])
-        ]);
-
-        for (const firefighterId of allParticipantIds) {
-            const firefighter = firefighterMap.get(firefighterId);
-            if (firefighter) {
-                const isInstructor = session.instructorIds?.includes(firefighterId);
-                const isAssistant = session.assistantIds?.includes(firefighterId);
-                
-                let status = session.attendance?.[firefighterId];
-                if (!status && (isInstructor || isAssistant)) {
-                    status = 'present';
-                }
-
-                if (status) {
-                    allRecords.push({
-                        status,
-                        firefighter,
-                        session,
-                    });
-                }
-            }
-        }
-    }
-
-    const processAttendance = (records: typeof allRecords): AttendanceData => {
+    const processAttendance = (records: { status: AttendanceStatus }[]): AttendanceData => {
         let present = 0, absent = 0, tardy = 0;
         records.forEach(record => {
             if (record.status === 'present' || record.status === 'recupero') present++;
@@ -144,6 +114,26 @@ export default function DashboardPage() {
         const total = present + absent + tardy;
         return { present, absent, tardy, total };
     };
+
+    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
+    sessions.forEach(session => {
+        const attendance = session.attendance || {};
+        const participants = [
+            ...(session.instructors || []),
+            ...(session.assistants || []),
+            ...(session.attendees || [])
+        ];
+
+        participants.forEach(firefighter => {
+            if (firefighter && attendance[firefighter.id]) {
+                allRecords.push({
+                    status: attendance[firefighter.id],
+                    firefighter: firefighter,
+                    session: session
+                });
+            }
+        });
+    });
 
     const groupedData: Record<string, AttendanceData> = {
         'General': processAttendance(allRecords),
