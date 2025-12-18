@@ -1,5 +1,6 @@
 
 'use client';
+
 import {
   Card,
   CardContent,
@@ -20,12 +21,13 @@ import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const PIE_CHART_COLORS = {
-    present: "#22C55E",
-    absent: "#EF4444",
-    tardy: "#FBBF24",
-    recupero: "#3B82F6",
-    excused: "#8B5CF6",
+    present: "#22C55E", // green-500
+    absent: "#EF4444", // red-500
+    tardy: "#FBBF24", // yellow-400
+    recupero: "#3B82F6", // blue-500
+    excused: "#8B5CF6", // violet-500
 };
+
 
 type AttendanceData = {
     present: number;
@@ -101,7 +103,7 @@ export default function DashboardPage() {
     fetchData();
   }, []);
 
- const attendanceDataByGroup = useMemo(() => {
+  const attendanceDataByGroup = useMemo(() => {
     if (sessions.length === 0 || firefighters.length === 0) {
       return {};
     }
@@ -118,6 +120,7 @@ export default function DashboardPage() {
             const firefighter = firefighters.find(f => f.id === firefighterId);
             if (firefighter) {
                 let status = session.attendance?.[firefighterId];
+                // Default instructors and assistants to 'present' if no status is recorded
                 if (!status && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
                     status = 'present';
                 }
