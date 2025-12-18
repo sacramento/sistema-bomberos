@@ -1,12 +1,13 @@
 
 'use server';
 
-import { Vehicle, Firefighter, Specialization, MaintenanceItem } from '@/lib/types';
+import { Vehicle, Firefighter, Specialization, MaintenanceItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -85,7 +86,7 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     return null;
 }
 
-export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>): Promise<string> => {
+export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
     const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -97,10 +98,11 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
         maintenanceItemIds: vehicleData.maintenanceItemIds || [],
      };
     const docRef = await addDoc(vehiclesCollection, dataToSave);
+    await logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, dataToSave);
     return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>>): Promise<void> => {
+export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
 
     if (vehicleData.numeroMovil) {
@@ -113,9 +115,10 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
     
     const dataToUpdate = { ...vehicleData };
     await updateDoc(docRef, dataToUpdate);
+    await logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, dataToUpdate);
 };
 
-export const deleteVehicle = async (id: string): Promise<void> => {
+export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<void> => {
     const batch = writeBatch(db);
     
     const vehicleDocRef = doc(db, 'vehicles', id);
@@ -128,4 +131,5 @@ export const deleteVehicle = async (id: string): Promise<void> => {
     });
 
     await batch.commit();
+    await logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id });
 };

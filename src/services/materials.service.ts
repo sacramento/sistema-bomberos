@@ -1,11 +1,12 @@
 
 'use server';
 
-import { Material, Vehicle } from '@/lib/types';
+import { Material, Vehicle, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getVehicles } from './vehicles.service';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -59,7 +60,7 @@ export const getMaterials = async (): Promise<Material[]> => {
     return materials;
 }
 
-export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>): Promise<string> => {
+export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
     const q = query(materialsCollection, where("codigo", "==", materialData.codigo));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -67,10 +68,11 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     }
 
     const docRef = await addDoc(materialsCollection, materialData);
+    await logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
     return docRef.id;
 };
 
-export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string })[]): Promise<void> => {
+export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string })[], actor: LoggedInUser): Promise<void> => {
     if (!materials || materials.length === 0) {
         return;
     }
@@ -100,10 +102,11 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
     }
 
     await batch.commit();
+    await logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: materials.length });
 }
 
 
-export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>): Promise<void> => {
+export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'materials', id);
 
     if (materialData.codigo) {
@@ -116,23 +119,23 @@ export const updateMaterial = async (id: string, materialData: Partial<Omit<Mate
     
     const dataToUpdate = { ...materialData };
     await updateDoc(docRef, dataToUpdate);
+    await logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, dataToUpdate);
 };
 
-export const deleteMaterial = async (id: string): Promise<void> => {
+export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'materials', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
 };
 
-export const deleteAllMaterials = async (vehicleId?: string): Promise<number> => {
+export const deleteAllMaterials = async (actor: LoggedInUser, vehicleId?: string): Promise<number> => {
     let q;
     if (vehicleId) {
-        // Query for materials assigned to a specific vehicle
         q = query(materialsCollection, 
             where('ubicacion.type', '==', 'vehiculo'), 
             where('ubicacion.vehiculoId', '==', vehicleId)
         );
     } else {
-        // Query for all materials
         q = query(materialsCollection);
     }
 
@@ -147,5 +150,7 @@ export const deleteAllMaterials = async (vehicleId?: string): Promise<number> =>
     });
 
     await batch.commit();
+    const details = vehicleId ? { vehicleId, count: querySnapshot.size } : { count: querySnapshot.size };
+    await logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id: 'batch' }, details);
     return querySnapshot.size;
 }

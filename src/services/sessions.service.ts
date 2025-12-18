@@ -1,10 +1,11 @@
 
 
-import { Session, Firefighter, AttendanceStatus } from '@/lib/types';
+import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy, updateDoc, addDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 
 if (!db) {
@@ -69,7 +70,7 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
     return null;
 }
 
-export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>): Promise<string> => {
+export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser): Promise<string> => {
     // We only store the IDs in Firestore, not the full firefighter objects
     const sessionToStore = {
         title: sessionData.title,
@@ -84,10 +85,11 @@ export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>
     };
     
     const docRef = await addDoc(sessionsCollection, sessionToStore);
+    await logAction(actor, 'CREATE_SESSION', { entity: 'session', id: docRef.id }, sessionToStore);
     return docRef.id;
 };
 
-export const updateSession = async (id: string, sessionData: Partial<Session>): Promise<void> => {
+export const updateSession = async (id: string, sessionData: Partial<Session>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
     
     const sessionToUpdate: any = {
@@ -105,17 +107,20 @@ export const updateSession = async (id: string, sessionData: Partial<Session>): 
     Object.keys(sessionToUpdate).forEach(key => sessionToUpdate[key] === undefined && delete sessionToUpdate[key]);
 
     await updateDoc(docRef, sessionToUpdate);
+    await logAction(actor, 'UPDATE_SESSION', { entity: 'session', id }, sessionToUpdate);
 };
 
 
-export const deleteSession = async (id: string): Promise<void> => {
+export const deleteSession = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_SESSION', { entity: 'session', id });
 };
 
-export const updateSessionAttendance = async (id: string, attendance: Record<string, AttendanceStatus>): Promise<void> => {
+export const updateSessionAttendance = async (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
     await updateDoc(docRef, {
         attendance: attendance
     });
+    await logAction(actor, 'UPDATE_ATTENDANCE', { entity: 'session', id }, { count: Object.keys(attendance).length });
 };

@@ -1,10 +1,11 @@
 
 'use server';
 
-import { MaintenanceRecord } from '@/lib/types';
+import { MaintenanceRecord, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 import { parseISO } from 'date-fns';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -34,23 +35,26 @@ export const getMaintenanceRecordsByVehicle = async (vehicleId: string): Promise
 /**
  * Adds a new maintenance record.
  */
-export const addMaintenanceRecord = async (recordData: Omit<MaintenanceRecord, 'id'>): Promise<string> => {
+export const addMaintenanceRecord = async (recordData: Omit<MaintenanceRecord, 'id'>, actor: LoggedInUser): Promise<string> => {
     const docRef = await addDoc(recordsCollection, recordData);
+    await logAction(actor, 'CREATE_MAINTENANCE_RECORD', { entity: 'maintenanceRecord', id: docRef.id }, { vehicleId: recordData.vehicleId });
     return docRef.id;
 };
 
 /**
  * Updates an existing maintenance record.
  */
-export const updateMaintenanceRecord = async (id: string, recordData: Partial<Omit<MaintenanceRecord, 'id'>>): Promise<void> => {
+export const updateMaintenanceRecord = async (id: string, recordData: Partial<Omit<MaintenanceRecord, 'id'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'maintenance_records', id);
     await updateDoc(docRef, recordData);
+    await logAction(actor, 'UPDATE_MAINTENANCE_RECORD', { entity: 'maintenanceRecord', id }, recordData);
 };
 
 /**
  * Deletes a maintenance record.
  */
-export const deleteMaintenanceRecord = async (id: string): Promise<void> => {
+export const deleteMaintenanceRecord = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'maintenance_records', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_MAINTENANCE_RECORD', { entity: 'maintenanceRecord', id });
 };

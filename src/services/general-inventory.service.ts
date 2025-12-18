@@ -1,9 +1,10 @@
 
 'use server';
 
-import { GeneralInventoryItem } from '@/lib/types';
+import { GeneralInventoryItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -23,7 +24,7 @@ export const getGeneralInventory = async (): Promise<GeneralInventoryItem[]> => 
     return items;
 }
 
-export const addGeneralInventoryItem = async (itemData: Omit<GeneralInventoryItem, 'id'>): Promise<string> => {
+export const addGeneralInventoryItem = async (itemData: Omit<GeneralInventoryItem, 'id'>, actor: LoggedInUser): Promise<string> => {
     const q = query(inventoryCollection, where("codigo", "==", itemData.codigo));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -31,10 +32,11 @@ export const addGeneralInventoryItem = async (itemData: Omit<GeneralInventoryIte
     }
 
     const docRef = await addDoc(inventoryCollection, itemData);
+    await logAction(actor, 'CREATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id: docRef.id }, itemData);
     return docRef.id;
 };
 
-export const updateGeneralInventoryItem = async (id: string, itemData: Partial<Omit<GeneralInventoryItem, 'id'>>): Promise<void> => {
+export const updateGeneralInventoryItem = async (id: string, itemData: Partial<Omit<GeneralInventoryItem, 'id'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'general_inventory', id);
 
     if (itemData.codigo) {
@@ -46,9 +48,11 @@ export const updateGeneralInventoryItem = async (id: string, itemData: Partial<O
     }
     
     await updateDoc(docRef, itemData);
+    await logAction(actor, 'UPDATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id }, itemData);
 };
 
-export const deleteGeneralInventoryItem = async (id: string): Promise<void> => {
+export const deleteGeneralInventoryItem = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'general_inventory', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id });
 };

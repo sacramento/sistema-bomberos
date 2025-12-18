@@ -1,12 +1,13 @@
 
 'use server';
 
-import { Task, Firefighter } from '@/lib/types';
+import { Task, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, deleteDoc, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { parseISO } from 'date-fns';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -83,27 +84,28 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     return tasks;
 }
 
-export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>): Promise<string> => {
+export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>, actor: LoggedInUser): Promise<string> => {
     const dataToSave = {
         ...taskData,
         createdAt: serverTimestamp(),
     };
     const docRef = await addDoc(tasksCollection, dataToSave);
+    await logAction(actor, 'CREATE_TASK', { entity: 'task', id: docRef.id }, taskData);
     return docRef.id;
 }
 
-export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo' | 'createdAt'>>): Promise<void> => {
+export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' | 'assignedTo' | 'createdAt'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
     const dataToUpdate: any = { ...taskData };
     
     delete dataToUpdate.createdAt;
     
     await updateDoc(docRef, dataToUpdate);
+    await logAction(actor, 'UPDATE_TASK', { entity: 'task', id }, dataToUpdate);
 }
 
-export const deleteTask = async (id: string): Promise<void> => {
+export const deleteTask = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_TASK', { entity: 'task', id });
 }
-
-    

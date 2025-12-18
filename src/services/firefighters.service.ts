@@ -1,8 +1,9 @@
 
 
-import { Firefighter } from '@/lib/types';
+import { Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, getDoc, writeBatch, addDoc, query, where } from 'firebase/firestore';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -21,7 +22,7 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
 };
 
 
-export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id'>): Promise<string> => {
+export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id'>, actor: LoggedInUser): Promise<string> => {
     const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
     const querySnapshot = await getDocs(q);
 
@@ -29,18 +30,18 @@ export const addFirefighter = async (firefighterData: Omit<Firefighter, 'id'>): 
         throw new Error(`El bombero con el legajo ${firefighterData.legajo} ya existe.`);
     }
     
-    // Ensure status is always set if not provided, default to 'Active'
     const newFirefighter: Omit<Firefighter, 'id'> = { 
         ...firefighterData,
         status: firefighterData.status || 'Active'
     };
 
     const docRef = await addDoc(firefightersCollection, newFirefighter);
+    await logAction(actor, 'CREATE_FIREFIGHTER', { entity: 'firefighter', id: docRef.id }, newFirefighter);
     return docRef.id;
 };
 
 
-export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>[]): Promise<void> => {
+export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>[], actor: LoggedInUser): Promise<void> => {
     if (!firefighters || firefighters.length === 0) {
         return;
     }
@@ -59,9 +60,10 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
     }
 
     await batch.commit();
+    await logAction(actor, 'BATCH_IMPORT_FIREFIGHTERS', { entity: 'firefighter', id: 'batch' }, { count: firefighters.length });
 };
 
-export const updateFirefighter = async (id: string, firefighterData: Partial<Omit<Firefighter, 'id'>>): Promise<void> => {
+export const updateFirefighter = async (id: string, firefighterData: Partial<Omit<Firefighter, 'id'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);
     const docSnap = await getDoc(docRef);
 
@@ -69,7 +71,6 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
         throw new Error(`No se encontró al bombero.`);
     }
 
-    // Si el legajo cambia, verificar unicidad.
     if (firefighterData.legajo && firefighterData.legajo !== docSnap.data().legajo) {
         const q = query(firefightersCollection, where("legajo", "==", firefighterData.legajo));
         const querySnapshot = await getDocs(q);
@@ -79,10 +80,12 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
     }
 
     await updateDoc(docRef, firefighterData);
+    await logAction(actor, 'UPDATE_FIREFIGHTER', { entity: 'firefighter', id }, firefighterData);
 };
 
 
-export const deleteFirefighter = async (id: string): Promise<void> => {
+export const deleteFirefighter = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_FIREFIGHTER', { entity: 'firefighter', id });
 };

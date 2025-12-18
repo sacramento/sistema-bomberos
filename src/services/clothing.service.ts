@@ -1,11 +1,12 @@
 
 'use server';
 
-import { ClothingItem, Firefighter } from '@/lib/types';
+import { ClothingItem, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -63,14 +64,13 @@ export const getClothingItems = async (): Promise<ClothingItem[]> => {
     return items;
 }
 
-export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firefighter'>): Promise<string> => {
+export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firefighter'>, actor: LoggedInUser): Promise<string> => {
     const q = query(clothingCollection, where("code", "==", itemData.code));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
         throw new Error(`La prenda con el código ${itemData.code} ya existe.`);
     }
     
-    // Ensure optional fields that are empty strings are saved as undefined
     const dataToSave: any = { ...itemData };
     for (const key in dataToSave) {
         if (dataToSave[key as keyof typeof dataToSave] === '') {
@@ -78,13 +78,13 @@ export const addClothingItem = async (itemData: Omit<ClothingItem, 'id' | 'firef
         }
     }
     
-    // If no firefighter is assigned, ensure fighterId is not present
     if (!itemData.firefighterId) {
         delete dataToSave.firefighterId;
     }
 
 
     const docRef = await addDoc(clothingCollection, dataToSave);
+    await logAction(actor, 'CREATE_CLOTHING_ITEM', { entity: 'clothingItem', id: docRef.id }, dataToSave);
     return docRef.id;
 };
 
@@ -101,7 +101,7 @@ type ClothingImportRow = {
     legajo_bombero?: string;
 }
 
-export const batchAddClothingItems = async (items: ClothingImportRow[]): Promise<void> => {
+export const batchAddClothingItems = async (items: ClothingImportRow[], actor: LoggedInUser): Promise<void> => {
     if (!items || items.length === 0) {
         return;
     }
@@ -114,7 +114,7 @@ export const batchAddClothingItems = async (items: ClothingImportRow[]): Promise
     for (const row of items) {
         if (existingCodes.has(row.codigo)) {
             console.warn(`Skipping item with duplicate code: ${row.codigo}`);
-            continue; // Skip this item
+            continue;
         }
 
         const newDocRef = doc(collection(db, 'clothing'));
@@ -142,14 +142,15 @@ export const batchAddClothingItems = async (items: ClothingImportRow[]): Promise
         }
         
         batch.set(newDocRef, dataToSave);
-        existingCodes.add(row.codigo); // Add to set to prevent duplicates within the same batch
+        existingCodes.add(row.codigo);
     }
 
     await batch.commit();
+    await logAction(actor, 'BATCH_IMPORT_CLOTHING', { entity: 'clothingItem', id: 'batch' }, { count: items.length });
 }
 
 
-export const updateClothingItem = async (id: string, itemData: Partial<Omit<ClothingItem, 'id' | 'firefighter'>>): Promise<void> => {
+export const updateClothingItem = async (id: string, itemData: Partial<Omit<ClothingItem, 'id' | 'firefighter'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'clothing', id);
 
     if (itemData.code) {
@@ -160,7 +161,6 @@ export const updateClothingItem = async (id: string, itemData: Partial<Omit<Clot
         }
     }
     
-    // Ensure optional fields that are empty strings are saved as undefined
     const dataToUpdate: any = { ...itemData };
      for (const key in dataToUpdate) {
         if (dataToUpdate[key as keyof typeof dataToUpdate] === '') {
@@ -173,9 +173,11 @@ export const updateClothingItem = async (id: string, itemData: Partial<Omit<Clot
     }
 
     await updateDoc(docRef, dataToUpdate);
+    await logAction(actor, 'UPDATE_CLOTHING_ITEM', { entity: 'clothingItem', id }, dataToUpdate);
 };
 
-export const deleteClothingItem = async (id: string): Promise<void> => {
+export const deleteClothingItem = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'clothing', id);
     await deleteDoc(docRef);
+    await logAction(actor, 'DELETE_CLOTHING_ITEM', { entity: 'clothingItem', id });
 };

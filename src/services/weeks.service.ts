@@ -1,11 +1,12 @@
 
 'use server';
 
-import { Week, Firefighter } from '@/lib/types';
+import { Week, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { cache } from 'react';
+import { logAction } from './audit.service';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -77,7 +78,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
 }
 
 
-export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>): Promise<string> => {
+export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>, actor: LoggedInUser): Promise<string> => {
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     
     const dataToSave = {
@@ -93,10 +94,11 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
     };
 
     const docRef = await addDoc(weeksCollection, dataToSave);
+    await logAction(actor, 'CREATE_WEEK', { entity: 'week', id: docRef.id }, dataToSave);
     return docRef.id;
 };
 
-export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>): Promise<void> => {
+export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'weeks', id);
 
     const dataToUpdate: any = { ...weekData };
@@ -116,9 +118,10 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
     await updateDoc(docRef, dataToUpdate);
+    await logAction(actor, 'UPDATE_WEEK', { entity: 'week', id }, dataToUpdate);
 };
 
-export const deleteWeek = async (id: string): Promise<void> => {
+export const deleteWeek = async (id: string, actor: LoggedInUser): Promise<void> => {
     const batch = writeBatch(db);
 
     const weekDocRef = doc(db, 'weeks', id);
@@ -131,4 +134,5 @@ export const deleteWeek = async (id: string): Promise<void> => {
     });
 
     await batch.commit();
+    await logAction(actor, 'DELETE_WEEK', { entity: 'week', id });
 }
