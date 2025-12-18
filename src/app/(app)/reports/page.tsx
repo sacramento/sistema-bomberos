@@ -702,7 +702,7 @@ const generatePdf = async () => {
                         </div>
                         <div className="space-y-2">
                             <Label>Jerarquía</Label>
-                            <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
+                            <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setSelectedHierarchies} />
                         </div>
                         <div className="space-y-2">
                             <Label>Cuartel</Label>
@@ -1244,6 +1244,7 @@ export default function ReportsPage() {
 
 
     
+
 
 
 
