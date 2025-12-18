@@ -2,7 +2,7 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, AttendanceStatus, Specialization } from '@/lib/types';
@@ -31,9 +31,9 @@ type AttendanceSummary = {
 };
 
 const RADIAN = Math.PI / 180;
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (!percent || percent < 0.05) return null; // Don't render label for tiny slices
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -43,6 +43,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
         </text>
     );
 };
+
 
 export default function DashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -188,8 +189,8 @@ export default function DashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={50}
-                                  outerRadius={80}
+                                  innerRadius={60}
+                                  outerRadius={90}
                                   strokeWidth={2}
                                   labelLine={false}
                                   label={renderCustomizedLabel}
