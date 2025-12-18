@@ -26,7 +26,7 @@ import {
   ChartLegend,
   ChartLegendContent,
 } from "@/components/ui/chart"
-import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts"
+import { Bar, BarChart as RechartsBarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, Leave, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
@@ -335,4 +335,3 @@ export default function DashboardPage() {
     </>
   );
 }
-
