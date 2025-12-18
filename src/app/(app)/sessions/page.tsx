@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/chart"
 import { Pie, PieChart, Cell, ResponsiveContainer } from "recharts"
 import { useEffect, useState, useMemo } from 'react';
-import { Firefighter, Session, Specialization } from '@/lib/types';
+import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,8 +104,8 @@ export default function DashboardPage() {
 
     const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
     
-    // Logic from reports page to gather all attendance records correctly
-    let allRecords: { status: string, firefighter: Firefighter, session: Session }[] = [];
+    // Correct logic inspired by the working reports page
+    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
     for (const session of sessions) {
         const allParticipantIds = new Set([
             ...(session.instructorIds || []),
@@ -115,12 +115,22 @@ export default function DashboardPage() {
 
         for (const firefighterId of allParticipantIds) {
             const firefighter = firefighterMap.get(firefighterId);
-            if (firefighter && session.attendance?.[firefighterId]) {
-                allRecords.push({
-                    status: session.attendance[firefighterId],
-                    firefighter,
-                    session,
-                });
+            if (firefighter) {
+                const isInstructor = session.instructorIds?.includes(firefighterId);
+                const isAssistant = session.assistantIds?.includes(firefighterId);
+                
+                let status = session.attendance?.[firefighterId];
+                if (!status && (isInstructor || isAssistant)) {
+                    status = 'present';
+                }
+
+                if (status) {
+                    allRecords.push({
+                        status,
+                        firefighter,
+                        session,
+                    });
+                }
             }
         }
     }
