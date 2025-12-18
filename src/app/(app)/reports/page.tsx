@@ -185,6 +185,7 @@ function AttendanceReportTab() {
     const [filterHierarchy, setFilterHierarchy] = useState<string[]>([]);
     const [filterStation, setFilterStation] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [openCombobox, setOpenCombobox] = useState(false);
     
     // PDF Content Switches
@@ -238,6 +239,7 @@ function AttendanceReportTab() {
         }
         fetchData();
         fetchLogo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [toast, user, isBomberoRole]);
     
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
@@ -456,6 +458,12 @@ const generatePdf = async () => {
         const filteredSessions = allSessions.filter(session => {
             if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
             if (filterClass !== 'all' && session.id !== filterClass) return false;
+            
+            if (filterYear !== 'all') {
+                const sessionYear = parseISO(session.date).getFullYear().toString();
+                if (sessionYear !== filterYear) return false;
+            }
+
             if (filterDate?.from) {
                  const sessionDate = parseISO(session.date);
                  const toDate = filterDate.to ?? filterDate.from;
@@ -542,7 +550,7 @@ const generatePdf = async () => {
             details: finalData
         };
 
-    }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter]);
+    }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter, filterYear]);
     
      const summaryTableData = useMemo(() => {
         const relevantRecords = attendanceReportData.details;
@@ -585,6 +593,11 @@ const generatePdf = async () => {
         }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => (a.firefighterLegajo || '').localeCompare(b.firefighterLegajo || '', undefined, { numeric: true }));
     }, [attendanceReportData.details, allFirefighters]);
 
+
+    const availableYears = useMemo(() => {
+        const years = new Set(allSessions.map(s => parseISO(s.date).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [allSessions]);
 
     const availableClassesForFilter = useMemo(() => {
         return allSessions.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
@@ -632,6 +645,16 @@ const generatePdf = async () => {
                 <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Asistencia'}</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="space-y-2">
+                    <Label>Año Lectivo</Label>
+                    <Select value={filterYear} onValueChange={setFilterYear}>
+                        <SelectTrigger><SelectValue placeholder="Seleccionar año" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los Años</SelectItem>
+                            {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                 </div>
                  <div className="space-y-2">
                   <Label>Rango de Fechas</Label>
                   <Popover>
@@ -1221,6 +1244,7 @@ export default function ReportsPage() {
 
 
     
+
 
 
 

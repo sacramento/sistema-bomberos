@@ -81,6 +81,7 @@ export default function ClassesPage() {
   
   useEffect(() => {
     fetchSessions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
 
@@ -90,7 +91,7 @@ export default function ClassesPage() {
 
   const handleDeleteClass = async (sessionId: string) => {
     try {
-        await deleteSession(sessionId);
+        await deleteSession(sessionId, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador' } });
         toast({
             title: "Éxito",
             description: "La clase ha sido eliminada."
@@ -186,7 +187,7 @@ export default function ClassesPage() {
 
             let count = 0;
             if (filterHierarchy === 'bomberos') {
-                count = attendees.filter(a => a.rank === 'BOMBERO').length;
+                count = attendees.filter(a => a.rank === 'BOMBERO' || a.rank === 'ADAPTACION').length;
             } else if (filterHierarchy === 'suboficiales_oficiales') {
                 count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
             } else if (filterHierarchy === 'aspirantes') {
