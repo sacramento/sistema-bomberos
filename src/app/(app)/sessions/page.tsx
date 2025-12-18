@@ -19,6 +19,8 @@ import { Firefighter, Session, Specialization, AttendanceStatus } from '@/lib/ty
 import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 const PIE_CHART_COLORS = {
     present: "#22C55E", // green-500
@@ -83,6 +85,7 @@ export default function DashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,43 +99,16 @@ export default function DashboardPage() {
         setSessions(sessionsData);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
+        toast({ title: "Error", description: "No se pudieron cargar los datos del dashboard.", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [toast]);
 
   const attendanceDataByGroup = useMemo(() => {
-    if (sessions.length === 0 || firefighters.length === 0) {
-      return {};
-    }
-
-    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
-    sessions.forEach(session => {
-        const allParticipantIds = new Set([
-            ...(session.instructorIds || []),
-            ...(session.assistantIds || []),
-            ...(session.attendeeIds || [])
-        ]);
-
-        allParticipantIds.forEach(firefighterId => {
-            const firefighter = firefighters.find(f => f.id === firefighterId);
-            if (firefighter) {
-                let status = session.attendance?.[firefighterId];
-                // Default instructors and assistants to 'present' if no status is recorded
-                if (!status && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
-                    status = 'present';
-                }
-
-                if (status) {
-                    allRecords.push({ status, firefighter, session });
-                }
-            }
-        });
-    });
-    
-    const processAttendance = (records: typeof allRecords): AttendanceData => {
+    const processAttendance = (records: { status: AttendanceStatus }[]): AttendanceData => {
         const counts = records.reduce((acc, record) => {
             acc[record.status] = (acc[record.status] || 0) + 1;
             return acc;
@@ -148,6 +124,33 @@ export default function DashboardPage() {
 
         return { present, absent, tardy, recupero, excused, totalForPercentage };
     };
+
+    if (sessions.length === 0 || firefighters.length === 0) {
+      return {};
+    }
+
+    let allRecords: { status: AttendanceStatus, firefighter: Firefighter, session: Session }[] = [];
+    
+    sessions.forEach(session => {
+        const allParticipantIds = new Set([
+            ...(session.instructorIds || []),
+            ...(session.assistantIds || []),
+            ...(session.attendeeIds || [])
+        ]);
+
+        allParticipantIds.forEach(firefighterId => {
+            const firefighter = firefighters.find(f => f.id === firefighterId);
+            if (firefighter) {
+                let status = session.attendance?.[firefighterId];
+                if (!status && (session.instructorIds?.includes(firefighterId) || session.assistantIds?.includes(firefighterId))) {
+                    status = 'present';
+                }
+                if (status) {
+                    allRecords.push({ status, firefighter, session });
+                }
+            }
+        });
+    });
 
     const groupedData: Record<string, AttendanceData> = {
         'General': processAttendance(allRecords),
