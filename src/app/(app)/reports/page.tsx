@@ -164,6 +164,98 @@ const MultiSelectFilter = ({
     );
 };
 
+const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 800;
+    canvas.height = 400;
+    const ctx = canvas.getContext('2d');
+    
+    if (!ctx) return '';
+    
+    Chart.register(ChartDataLabels);
+
+    const whiteBackgroundPlugin = {
+        id: 'whiteBackground',
+        beforeDraw: (chart: Chart) => {
+            const ctx = chart.canvas.getContext('2d');
+            if (ctx) {
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0, 0, chart.width, chart.height);
+                ctx.restore();
+            }
+        }
+    };
+    
+    return new Promise((resolve) => {
+        const chartData = [data.present, data.absent, data.tardy, data.excused];
+        const total = chartData.reduce((a, b) => a + b, 0);
+
+        const chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ["Presente", "Ausente", "Tarde", "Justificado"],
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
+                    barPercentage: 0.5,
+                }],
+            },
+            plugins: [ChartDataLabels, whiteBackgroundPlugin],
+            options: {
+                responsive: false,
+                animation: {
+                    duration: 0,
+                    onComplete: (context) => {
+                        resolve(context.chart.toBase64Image('image/png', 1.0));
+                        context.chart.destroy();
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                    datalabels: {
+                        anchor: 'end',
+                        align: (context) => {
+                            const value = context.dataset.data[context.dataIndex] as number;
+                            const maxValue = Math.max(...(context.dataset.data as number[]));
+                            return value > maxValue * 0.85 ? 'start' : 'end';
+                        },
+                        formatter: (value) => {
+                            if (total === 0) return '0%';
+                            const percentage = (value / total) * 100;
+                            return `${percentage.toFixed(0)}%`;
+                        },
+                        color: (context) => {
+                            const value = context.dataset.data[context.dataIndex] as number;
+                            const maxValue = Math.max(...(context.dataset.data as number[]));
+                            return value > maxValue * 0.85 ? '#ffffff' : '#333333';
+                        },
+                        font: {
+                            weight: 'bold',
+                            size: 16,
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            precision: 0,
+                            font: { size: 14 }
+                        }
+                    },
+                    x: {
+                         ticks: { font: { size: 14 } }
+                    }
+                },
+            },
+        });
+    });
+};
+
+
 function AttendanceReportTab() {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -171,11 +263,8 @@ function AttendanceReportTab() {
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
-    // Raw Data
     const [allSessions, setAllSessions] = useState<Session[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
-
-    // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterClass, setFilterClass] = useState('all');
@@ -184,8 +273,6 @@ function AttendanceReportTab() {
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [openCombobox, setOpenCombobox] = useState(false);
-    
-    // PDF Content Switches
     const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
     const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
     
@@ -209,7 +296,6 @@ function AttendanceReportTab() {
                     if(firefighterUser) {
                         setFilterFirefighter(firefighterUser.id);
                     } else {
-                        // User is a 'Bombero' but not in the firefighters list, show no data.
                         setFilterFirefighter('__NOT_FOUND__');
                     }
                 }
@@ -239,104 +325,6 @@ function AttendanceReportTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [toast, user, isBomberoRole]);
     
-const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
-    const canvas = document.createElement('canvas');
-    // Increased resolution for better quality
-    canvas.width = 800;
-    canvas.height = 400;
-    const ctx = canvas.getContext('2d');
-    
-    if (!ctx) return '';
-    
-    const whiteBackgroundPlugin = {
-        id: 'whiteBackground',
-        beforeDraw: (chart: Chart) => {
-            const ctx = chart.canvas.getContext('2d');
-            if (ctx) {
-                ctx.save();
-                ctx.globalCompositeOperation = 'destination-over';
-                ctx.fillStyle = 'white';
-                ctx.fillRect(0, 0, chart.width, chart.height);
-                ctx.restore();
-            }
-        }
-    };
-    
-    Chart.register(ChartDataLabels);
-
-    return new Promise((resolve) => {
-        const chartData = [data.present, data.absent, data.tardy, data.excused];
-        const total = chartData.reduce((a, b) => a + b, 0);
-
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ["Presente", "Ausente", "Tarde", "Justificado"],
-                datasets: [{
-                    data: chartData,
-                    backgroundColor: [PIE_CHART_COLORS.present, PIE_CHART_COLORS.absent, PIE_CHART_COLORS.tardy, PIE_CHART_COLORS.excused],
-                    barPercentage: 0.5,
-                }],
-            },
-            plugins: [ChartDataLabels, whiteBackgroundPlugin],
-            options: {
-                responsive: false,
-                animation: {
-                    duration: 0,
-                    onComplete: (context) => {
-                        resolve(context.chart.toBase64Image('image/png', 1.0)); // Use PNG for better quality
-                        context.chart.destroy();
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false },
-                    datalabels: {
-                        anchor: 'end',
-                        align: (context) => {
-                            const value = context.dataset.data[context.dataIndex] as number;
-                            const maxValue = Math.max(...(context.dataset.data as number[]));
-                            return value > maxValue * 0.85 ? 'start' : 'end';
-                        },
-                        formatter: (value) => {
-                            if (total === 0) return '0%';
-                            const percentage = (value / total) * 100;
-                            return `${percentage.toFixed(0)}%`;
-                        },
-                        color: (context) => {
-                            const value = context.dataset.data[context.dataIndex] as number;
-                            const maxValue = Math.max(...(context.dataset.data as number[]));
-                            return value > maxValue * 0.85 ? '#ffffff' : '#333333';
-                        },
-                        font: {
-                            weight: 'bold',
-                            size: 16, // Increased font size for higher res
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { 
-                            precision: 0,
-                            font: {
-                                size: 14 // Increased font size
-                            }
-                        }
-                    },
-                    x: {
-                         ticks: {
-                            font: {
-                                size: 14 // Increased font size
-                            }
-                         }
-                    }
-                },
-            },
-        });
-    });
-};
-    
 const generatePdf = async () => {
     if (!logoDataUrl) {
         toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
@@ -347,7 +335,6 @@ const generatePdf = async () => {
     const doc = new jsPDF();
 
     try {
-        // ... (Header code remains the same)
         doc.setFillColor(220, 53, 69);
         doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
         doc.setFontSize(22);
@@ -362,9 +349,12 @@ const generatePdf = async () => {
         doc.text(dateText, 14, 45);
         let currentY = 55;
 
-        // ... (Chart and summary table code remains the same)
         if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
-            const chartImage = await generateChartImage(attendanceReportData.summary);
+            let chartImage = '';
+            if (typeof window !== 'undefined') { // Ensure this only runs on the client
+                chartImage = await generateChartImage(attendanceReportData.summary);
+            }
+
             if (chartImage) {
                 doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
                 doc.text("Resumen Gráfico de Asistencia", 14, currentY); currentY += 5;
@@ -496,7 +486,6 @@ const generatePdf = async () => {
             }
         }
         
-        // 2. Filter these records by firefighter, station and hierarchy
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
             if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
@@ -515,7 +504,6 @@ const generatePdf = async () => {
             return true;
         });
 
-        // 3. Calculate all counts based on the final, filtered data
         const statusCounts = {
             present: finalData.filter(item => item.status === 'present').length,
             absent: finalData.filter(item => item.status === 'absent').length,
@@ -524,13 +512,11 @@ const generatePdf = async () => {
             excused: finalData.filter(item => item.status === 'excused').length,
         };
 
-        // 4. Calculate summary stats
         const effectiveAttendance = (statusCounts.present * 1) + (statusCounts.tardy * 0.6) + statusCounts.recupero;
         const totalAbsences = statusCounts.absent + statusCounts.excused;
         const netAbsences = Math.max(0, totalAbsences - statusCounts.recupero);
         const totalClassesForPercentage = statusCounts.present + statusCounts.tardy + statusCounts.absent + statusCounts.excused;
 
-        // 5. Prepare Pie Chart data
         const pieData = [
             { name: 'Presente', value: statusCounts.present + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
             { name: 'Tarde', value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
@@ -570,14 +556,12 @@ const generatePdf = async () => {
             const excusedCount = records.filter(d => d.status === 'excused').length;
             const recuperoCount = records.filter(d => d.status === 'recupero').length;
             
-            // Total de clases a las que fue convocado.
             const totalRequiredClasses = presentCount + tardyCount + absentCount + excusedCount;
 
             if (totalRequiredClasses === 0) {
                  return null;
             }
             
-            // Para el cálculo del porcentaje, con `tardy` valiendo 0.6
             const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
             const percentage = Math.min(100, (weightedPresent / totalRequiredClasses) * 100);
 
@@ -625,14 +609,13 @@ const generatePdf = async () => {
     
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        if (percent === 0) return null;
         const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-        if (percent === 0) return null;
-
         return (
-            <text x={x} y={y} fill={'#333'} textAnchor="middle" dominantBaseline="central" style={{ fontSize: '14px', fontWeight: 'bold', paintOrder: 'stroke', stroke: '#fff', strokeWidth: '3px', strokeLinecap: 'butt', strokeLinejoin: 'miter' }}>
+            <text x={x} y={y} fill={'#fff'} textAnchor="middle" dominantBaseline="central" className="text-base font-bold">
                 {`${(percent * 100).toFixed(0)}%`}
             </text>
         );
@@ -1239,13 +1222,3 @@ export default function ReportsPage() {
       </>
     );
 }
-
-
-
-    
-
-
-
-
-
-
