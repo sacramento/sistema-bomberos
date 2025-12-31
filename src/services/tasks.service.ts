@@ -48,6 +48,8 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
         assignedToIds: data.assignedToIds,
         status: data.status,
         createdAt: createdAtString,
+        startDate: data.startDate,
+        endDate: data.endDate,
         assignedTo,
     };
     return task;

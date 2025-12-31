@@ -15,7 +15,7 @@ import { useEffect, useState, useMemo } from "react";
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
-import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2, CalendarDays } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
 import EditTaskDialog from "../_components/edit-task-dialog";
@@ -284,6 +284,15 @@ export default function WeekDetailPage() {
                                                         )}
                                                     </div>
                                                     {task.description && <p className="text-sm text-muted-foreground">{task.description}</p>}
+                                                    {(task.startDate || task.endDate) && (
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+                                                            <CalendarDays className="h-3 w-3" />
+                                                            <span>
+                                                                {task.startDate ? format(parseISO(task.startDate), 'dd/MM') : ''}
+                                                                {task.endDate && task.startDate !== task.endDate ? ` - ${format(parseISO(task.endDate), 'dd/MM')}` : ''}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                  <Select 
                                                     value={task.status} 

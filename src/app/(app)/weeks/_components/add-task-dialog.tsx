@@ -19,10 +19,14 @@ import { useState } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, UserCheck } from "lucide-react";
+import { Check, ChevronsUpDown, UserCheck, Calendar as CalendarIcon } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { addTask } from "@/services/tasks.service";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const MultiFirefighterSelect = ({ 
     title, 
@@ -86,11 +90,13 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assignedTo, setAssignedTo] = useState<Firefighter[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   const resetForm = () => {
     setTitle('');
     setDescription('');
     setAssignedTo([]);
+    setDateRange(undefined);
   };
 
   const assignToAll = () => {
@@ -114,7 +120,9 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
             title,
             description,
             assignedToIds: assignedTo.map(f => f.id),
-            status: 'Pendiente' as const
+            status: 'Pendiente' as const,
+            startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+            endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
         };
         
         await addTask(taskData);
@@ -148,6 +156,40 @@ export default function AddTaskDialog({ children, week, onTaskAdded }: { childre
                 <div className="space-y-2">
                     <Label htmlFor="description">Descripción (Opcional)</Label>
                     <Textarea id="description" placeholder="Detalles adicionales sobre la tarea..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Período de Ejecución (Opcional)</Label>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date"
+                                variant={"outline"}
+                                className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Toda la semana</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={1}
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">

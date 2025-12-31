@@ -19,10 +19,14 @@ import { useState, useEffect } from "react";
 import { Firefighter, Week, Task } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, UserCheck } from "lucide-react";
+import { Check, ChevronsUpDown, UserCheck, Calendar as CalendarIcon } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { updateTask } from "@/services/tasks.service";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const MultiFirefighterSelect = ({ 
     title, 
@@ -86,12 +90,18 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description);
   const [assignedTo, setAssignedTo] = useState<Firefighter[]>(task.assignedTo || []);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
     if (open) {
         setTitle(task.title);
         setDescription(task.description);
         setAssignedTo(task.assignedTo || []);
+        setDateRange(
+            (task.startDate || task.endDate) 
+            ? { from: task.startDate ? parseISO(task.startDate) : undefined, to: task.endDate ? parseISO(task.endDate) : undefined }
+            : undefined
+        );
     }
   }, [open, task]);
   
@@ -115,6 +125,8 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
             title,
             description,
             assignedToIds: assignedTo.map(f => f.id),
+            startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+            endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
         };
         
         await updateTask(task.id, taskData);
@@ -147,6 +159,40 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
                 <div className="space-y-2">
                     <Label htmlFor="description-edit">Descripción (Opcional)</Label>
                     <Textarea id="description-edit" value={description} onChange={(e) => setDescription(e.target.value)} />
+                </div>
+                 <div className="space-y-2">
+                    <Label>Período de Ejecución (Opcional)</Label>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button
+                                id="date-edit"
+                                variant={"outline"}
+                                className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                            >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {dateRange?.from ? (
+                                    dateRange.to ? (
+                                        <>{format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}</>
+                                    ) : (
+                                        format(dateRange.from, "LLL dd, y")
+                                    )
+                                ) : (
+                                    <span>Toda la semana</span>
+                                )}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                                initialFocus
+                                mode="range"
+                                defaultMonth={dateRange?.from}
+                                selected={dateRange}
+                                onSelect={setDateRange}
+                                numberOfMonths={1}
+                                locale={es}
+                            />
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="space-y-2">
                     <div className="flex justify-between items-center">

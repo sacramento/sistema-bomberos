@@ -206,9 +206,11 @@ export type Task = {
     weekId: string;
     title: string;
     description: string;
-    assignedToIds: string[]; // List of firefighter IDs assigned to the task
+    assignedToIds: string[];
     status: 'Pendiente' | 'Completada';
-    createdAt: string | null; // Changed to be consistently a string or null
+    createdAt: string | null;
+    startDate?: string;
+    endDate?: string;
     // Enriched properties for client side
     assignedTo?: Firefighter[];
 }
