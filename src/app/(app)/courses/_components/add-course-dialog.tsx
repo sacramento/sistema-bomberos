@@ -117,7 +117,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
   const [location, setLocation] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {

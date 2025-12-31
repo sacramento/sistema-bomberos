@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Vehicle, Service, ServiceType, SummonMethod, InterveningVehicle } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { getVehicles } from "@/services/vehicles.service";
@@ -184,6 +184,8 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [stationOfficer, setStationOfficer] = useState<Firefighter | null>(null);
 
   const progress = (step / totalSteps) * 100;
+  
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -377,21 +379,21 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
           </div>
         );
        case 2:
-        const firefighterOptions = allFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
+        const firefighterOptions = activeFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
         const disabledPersonnelIds = [command?.id, serviceChief?.id, stationOfficer?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
         return (
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label>Comando</Label>
-                    <SingleFirefighterSelect title="Comando" selected={command} onSelectedChange={setCommand} firefighters={allFirefighters} />
+                    <SingleFirefighterSelect title="Comando" selected={command} onSelectedChange={setCommand} firefighters={activeFirefighters} />
                 </div>
                 <div className="space-y-2">
                     <Label>Jefe de Servicio</Label>
-                    <SingleFirefighterSelect title="Jefe de Servicio" selected={serviceChief} onSelectedChange={setServiceChief} firefighters={allFirefighters} disabledIds={[command?.id].filter(Boolean) as string[]}/>
+                    <SingleFirefighterSelect title="Jefe de Servicio" selected={serviceChief} onSelectedChange={setServiceChief} firefighters={activeFirefighters} disabledIds={[command?.id].filter(Boolean) as string[]}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Cuartelero</Label>
-                    <SingleFirefighterSelect title="Cuartelero" selected={stationOfficer} onSelectedChange={setStationOfficer} firefighters={allFirefighters} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
+                    <SingleFirefighterSelect title="Cuartelero" selected={stationOfficer} onSelectedChange={setStationOfficer} firefighters={activeFirefighters} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>

@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -88,81 +87,6 @@ const getStatusLabel = (status: AttendanceStatus) => {
     const labels: Record<AttendanceStatus, string> = { present: "Presente", absent: "Ausente", tardy: "Tarde", excused: "Justificado", recupero: "Recuperó" };
     return labels[status] || "N/A";
 }
-
-
-const MultiSelectFilter = ({
-    title,
-    options,
-    selected,
-    onSelectedChange
-}: {
-    title: string;
-    options: { value: string; label: string }[];
-    selected: string[];
-    onSelectedChange: (selected: string[]) => void;
-}) => {
-    const [open, setOpen] = useState(false);
-
-    const handleSelect = (value: string) => {
-        const isSelected = selected.includes(value);
-        if (isSelected) {
-            onSelectedChange(selected.filter(s => s !== value));
-        } else {
-            onSelectedChange([...selected, value]);
-        }
-    };
-    
-    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label).filter(Boolean);
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between h-auto"
-                >
-                    <div className="flex gap-1 flex-wrap">
-                         {selected.length > 0 ? (
-                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
-                        ) : (
-                            `Seleccionar ${title.toLowerCase()}...`
-                        )}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
-                    <CommandList>
-                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
-                        <CommandGroup>
-                            {options.map((option) => (
-                                <CommandItem
-                                    key={option.value}
-                                    value={option.label}
-                                    onSelect={() => {
-                                        handleSelect(option.value);
-                                    }}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            selected.includes(option.value) ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {option.label}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 const generateChartImage = async (data: { present: number; absent: number; tardy: number; excused: number; }): Promise<string> => {
     const canvas = document.createElement('canvas');
@@ -253,6 +177,80 @@ const generateChartImage = async (data: { present: number; absent: number; tardy
             },
         });
     });
+};
+
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label).filter(Boolean);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between h-auto"
+                >
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.value}
+                                    value={option.label}
+                                    onSelect={() => {
+                                        handleSelect(option.value);
+                                    }}
+                                >
+                                    <Check
+                                        className={cn(
+                                            "mr-2 h-4 w-4",
+                                            selected.includes(option.value) ? "opacity-100" : "opacity-0"
+                                        )}
+                                    />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
 };
 
 
@@ -351,7 +349,7 @@ const generatePdf = async () => {
 
         if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
             let chartImage = '';
-            if (typeof window !== 'undefined') { // Ensure this only runs on the client
+            if (typeof window !== 'undefined') {
                 chartImage = await generateChartImage(attendanceReportData.summary);
             }
 
@@ -389,9 +387,9 @@ const generatePdf = async () => {
             attendanceReportData.details.forEach(item => {
                 const f = item.firefighter;
                 if ([...oficialRanks, ...suboficialRanks].includes(f.rank)) groupedDetails['Oficiales y Suboficiales'].push(item);
-                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 1') groupedDetails['Bomberos Cuartel 1'].push(item);
-                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 2') groupedDetails['Bomberos Cuartel 2'].push(item);
-                else if (f.rank === 'BOMBERO' && f.firehouse === 'Cuartel 3') groupedDetails['Bomberos Cuartel 3'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 1') groupedDetails['Bomberos Cuartel 1'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 2') groupedDetails['Bomberos Cuartel 2'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 3') groupedDetails['Bomberos Cuartel 3'].push(item);
                 else if (f.rank === 'ASPIRANTE' || f.rank === 'ADAPTACION') groupedDetails['Aspirantes'].push(item);
             });
 
@@ -487,6 +485,7 @@ const generatePdf = async () => {
         }
         
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
+            if (firefighter.status === 'Inactive') return false;
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
             if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
             if (filterHierarchy.length > 0) {
@@ -682,7 +681,7 @@ const generatePdf = async () => {
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
                                                 Todos los integrantes
                                             </CommandItem>
-                                            {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (
+                                            {allFirefighters.map((firefighter) => (
                                             <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
                                                 {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
@@ -1219,4 +1218,3 @@ export default function ReportsPage() {
       </>
     );
 }
-

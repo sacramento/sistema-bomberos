@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Vehicle, Specialization } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateVehicle } from "@/services/vehicles.service";
@@ -121,6 +121,8 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
   const activeRole = getActiveRole(pathname);
 
   const canEditAllFields = activeRole === 'Master' || activeRole === 'Administrador';
+  
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   const [formData, setFormData] = useState<Partial<Vehicle>>({});
   const [selectedEncargados, setSelectedEncargados] = useState<Firefighter[]>([]);
@@ -235,7 +237,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                         title="encargados"
                         selected={selectedEncargados}
                         onSelectedChange={handleEncargadosChange}
-                        firefighters={allFirefighters}
+                        firefighters={activeFirefighters}
                         disabled={!canEditAllFields}
                     />
                 </div>

@@ -45,7 +45,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
 
   const availableLeaveTypes = allLeaveTypes;
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
 
   useEffect(() => {

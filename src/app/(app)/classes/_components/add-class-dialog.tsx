@@ -223,7 +223,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
 
   useEffect(() => {

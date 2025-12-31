@@ -39,7 +39,7 @@ export default function AddSanctionDialog({ children, onSanctionAdded }: { child
 
   const [openCombobox, setOpenCombobox] = useState(false);
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {

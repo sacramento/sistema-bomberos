@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Vehicle, Specialization } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addVehicle } from "@/services/vehicles.service";
@@ -127,6 +127,8 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     encargadoIds: [],
     observaciones: ''
   });
+
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -255,9 +257,9 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     <Label htmlFor="encargadoIds">Encargado(s)</Label>
                     <MultiFirefighterSelect
                         title="encargados"
-                        selected={allFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
+                        selected={activeFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
                         onSelectedChange={handleEncargadosChange}
-                        firefighters={allFirefighters}
+                        firefighters={activeFirefighters}
                     />
                 </div>
             </div>

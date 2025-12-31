@@ -98,7 +98,7 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
 
   const assignToAll = () => {
     if (week.allMembers) {
-        setAssignedTo(week.allMembers);
+        setAssignedTo(week.allMembers.filter(m => m.status === 'Active' || m.status === 'Auxiliar'));
     }
   }
 
@@ -156,7 +156,7 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
                             Asignar a todos
                         </Button>
                     </div>
-                    <MultiFirefighterSelect title="integrantes" selected={assignedTo} onSelectedChange={setAssignedTo} firefighters={week.allMembers || []} />
+                    <MultiFirefighterSelect title="integrantes" selected={assignedTo} onSelectedChange={setAssignedTo} firefighters={week.allMembers?.filter(m => m.status === 'Active' || m.status === 'Auxiliar') || []} />
                 </div>
             </div>
             
@@ -170,5 +170,3 @@ export default function EditTaskDialog({ children, week, task, onTaskUpdated }: 
     </Dialog>
   );
 }
-
-    

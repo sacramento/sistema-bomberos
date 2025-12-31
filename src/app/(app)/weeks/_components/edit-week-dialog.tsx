@@ -154,7 +154,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   
   const progress = (step / totalSteps) * 100;
   
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   // Effect to reset form state when dialog is re-opened with a different week
   useEffect(() => {

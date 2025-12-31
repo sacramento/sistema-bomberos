@@ -48,6 +48,8 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
     const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
     const [firefighterComboboxOpen, setFirefighterComboboxOpen] = useState(false);
 
+    const activeFirefighters = useMemo(() => firefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [firefighters]);
+
     useEffect(() => {
         if(open) {
             setFormData({
@@ -153,7 +155,7 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
                                                 Dejar en Depósito
                                             </CommandItem>
                                             <CommandGroup>
-                                                {firefighters.map((firefighter) => (
+                                                {activeFirefighters.map((firefighter) => (
                                                     <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
                                                         <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
                                                         {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
