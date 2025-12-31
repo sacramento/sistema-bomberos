@@ -114,19 +114,16 @@ export default function AttendancePage() {
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
         const officials = allParticipants.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c1Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 1').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c2Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 2').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c3Bombers = allParticipants.filter(a => a.rank === 'BOMBERO' && a.firehouse === 'Cuartel 3').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
+        const c1Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 1').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
+        const c2Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 2').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
+        const c3Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 3').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
         const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const adaptacion = allParticipants.filter(a => a.rank === 'ADAPTACION').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-
 
         const groups = [];
         if (officials.length > 0) groups.push({ title: 'OFICIALES Y SUBOFICIALES', firefighters: officials });
         if (c1Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 1', firefighters: c1Bombers });
         if (c2Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 2', firefighters: c2Bombers });
         if (c3Bombers.length > 0) groups.push({ title: 'BOMBEROS CUARTEL 3', firefighters: c3Bombers });
-        if (adaptacion.length > 0) groups.push({ title: 'ADAPTACIÓN', firefighters: adaptacion });
         if (aspirantes.length > 0) groups.push({ title: 'ASPIRANTES', firefighters: aspirantes });
 
         return groups;
@@ -369,3 +366,5 @@ export default function AttendancePage() {
         </>
     );
 }
+
+    
