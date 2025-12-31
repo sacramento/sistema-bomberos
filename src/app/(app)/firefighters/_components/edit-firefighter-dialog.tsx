@@ -137,7 +137,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
                 value={legajo} 
                 onChange={e => setLegajo(e.target.value)} 
                 required
-                disabled={firefighter.rank !== 'ASPIRANTE'}
+                disabled={firefighter.rank !== 'ASPIRANTE' && firefighter.rank !== 'ADAPTACION'}
               />
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
@@ -201,12 +201,12 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
               </Select>
             </div>
           </div>
-           {firefighter.rank !== 'ASPIRANTE' && (
+           {firefighter.rank !== 'ASPIRANTE' && firefighter.rank !== 'ADAPTACION' && (
             <Alert variant="default" className="mb-4">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Legajo no editable</AlertTitle>
                 <AlertDescription>
-                    El legajo solo puede ser modificado para los aspirantes.
+                    El legajo solo puede ser modificado para los aspirantes o adaptaciones.
                 </AlertDescription>
             </Alert>
            )}
