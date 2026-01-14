@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -37,6 +38,7 @@ const pathToModule: Record<string, 'asistencia' | 'semanas' | 'movilidad' | 'mat
     '/reports': 'asistencia',
     '/weeks': 'semanas',
     '/vehicles': 'movilidad',
+    '/drivers': 'movilidad',
     '/maintenance': 'movilidad',
     '/mobility-reports': 'movilidad',
     '/materials-reports': 'materiales',
