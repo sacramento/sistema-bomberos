@@ -101,7 +101,7 @@ export default function VehicleDetailPage() {
      const handleDelete = async () => {
         if (!vehicle) return;
         try {
-            await deleteVehicle(vehicle.id);
+            await deleteVehicle(vehicle.id, user);
             toast({ title: "Éxito", description: "El móvil ha sido eliminado." });
             router.push('/vehicles');
         } catch (error: any) {
@@ -126,8 +126,9 @@ export default function VehicleDetailPage() {
 
     if (!vehicle) return null;
     
-    const encargadosDisplay = vehicle.encargados && vehicle.encargados.length > 0
-        ? vehicle.encargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+    const activeEncargados = vehicle.encargados?.filter(e => e.status === 'Active' || e.status === 'Auxiliar') || [];
+    const encargadosDisplay = activeEncargados.length > 0
+        ? activeEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
         : 'Sin Asignar';
 
     return (

@@ -128,7 +128,7 @@ export default function WeekDetailPage() {
     
     const handleStatusChange = async (taskId: string, newStatus: Task['status']) => {
         try {
-            await updateTask(taskId, { status: newStatus });
+            await updateTask(taskId, { status: newStatus }, user);
             toast({
                 title: "Estado actualizado",
                 description: `La tarea se ha marcado como "${newStatus}".`
@@ -141,7 +141,7 @@ export default function WeekDetailPage() {
 
      const handleDeleteTask = async (taskId: string) => {
         try {
-            await deleteTask(taskId);
+            await deleteTask(taskId, user);
             toast({ title: "Tarea eliminada", description: "La tarea ha sido eliminada correctamente." });
             refreshTasks();
         } catch (error) {
@@ -153,7 +153,7 @@ export default function WeekDetailPage() {
         if (!week) return;
         setSavingObservations(true);
         try {
-            await updateWeek(week.id, { observations });
+            await updateWeek(week.id, { observations }, user);
             toast({ title: "Éxito", description: "La pizarra de novedades ha sido actualizada." });
         } catch (error) {
             toast({ title: "Error", description: "No se pudo guardar la pizarra de novedades.", variant: "destructive" });
@@ -191,6 +191,9 @@ export default function WeekDetailPage() {
     
     const formattedStartDate = format(parseISO(week.periodStartDate), "dd MMM yyyy", { locale: es });
     const formattedEndDate = format(parseISO(week.periodEndDate), "dd MMM yyyy", { locale: es });
+    
+    const activeMembers = week.allMembers?.filter(m => m.status === 'Active' || m.status === 'Auxiliar') || [];
+
 
     return (
         <>
@@ -356,29 +359,29 @@ export default function WeekDetailPage() {
                     <Card>
                         <CardHeader>
                              <CardTitle className="font-headline flex items-center gap-2"><Users /> Integrantes</CardTitle>
-                             <CardDescription>{week.allMembers?.length || 0} integrantes en esta semana.</CardDescription>
+                             <CardDescription>{activeMembers.length} integrantes en esta semana.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <ul className="space-y-3">
-                                {week.lead && (
+                                {week.lead && (week.lead.status === 'Active' || week.lead.status === 'Auxiliar') && (
                                     <li className="flex items-center gap-3">
                                         <User className="h-5 w-5 text-primary"/>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold">{`${week.lead?.firstName || ''} ${week.lead?.lastName || ''}`}</span>
+                                            <span className="font-semibold">{`${week.lead.firstName} ${week.lead.lastName}`}</span>
                                             <Badge>Encargado</Badge>
                                         </div>
                                     </li>
                                 )}
-                                 {week.driver && (
+                                 {week.driver && (week.driver.status === 'Active' || week.driver.status === 'Auxiliar') && (
                                     <li className="flex items-center gap-3">
                                         <Truck className="h-5 w-5 text-primary"/>
                                         <div className="flex flex-col">
-                                            <span className="font-semibold">{`${week.driver?.firstName || ''} ${week.driver?.lastName || ''}`}</span>
+                                            <span className="font-semibold">{`${week.driver.firstName} ${week.driver.lastName}`}</span>
                                             <Badge variant="secondary">Chofer</Badge>
                                         </div>
                                     </li>
                                 )}
-                                {week.members?.map(member => (
+                                {week.members?.filter(m => m.status === 'Active' || m.status === 'Auxiliar').map(member => (
                                      <li key={member.id} className="flex items-center gap-3 pl-8">
                                         <div className="flex flex-col">
                                             <span>{`${member.firstName} ${member.lastName}`}</span>
