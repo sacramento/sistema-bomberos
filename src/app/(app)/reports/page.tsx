@@ -201,7 +201,7 @@ const MultiSelectFilter = ({
         }
     };
     
-    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label).filter(Boolean);
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label);
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -364,11 +364,51 @@ const generatePdf = async () => {
             if (currentY > 250) { doc.addPage(); currentY = 20; }
             doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
             doc.text("Resumen de Asistencia por Bombero", 14, currentY); currentY += 8;
-            const summaryBody = summaryTableData.map(item => [item.firefighterLegajo, item.firefighter, item.totalClasses, item.presentPercentage]);
+
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+            const groupedSummary: Record<string, any[]> = {
+                'Oficiales y Suboficiales': [],
+                'Bomberos Cuartel 1': [],
+                'Bomberos Cuartel 2': [],
+                'Bomberos Cuartel 3': [],
+                'Aspirantes': []
+            };
+            
+            const firefighterDetailsMap = new Map(allFirefighters.map(f => [f.id, { rank: f.rank, firehouse: f.firehouse }]));
+
+            summaryTableData.forEach(item => {
+                const details = firefighterDetailsMap.get(item.firefighterId);
+                if (details) {
+                    if ([...oficialRanks, ...suboficialRanks].includes(details.rank)) {
+                        groupedSummary['Oficiales y Suboficiales'].push(item);
+                    } else if (details.rank === 'BOMBERO' || details.rank === 'ADAPTACION') {
+                        groupedSummary[`Bomberos ${details.firehouse}`]?.push(item);
+                    } else if (details.rank === 'ASPIRANTE') {
+                        groupedSummary['Aspirantes'].push(item);
+                    }
+                }
+            });
+
+            const summaryBody: any[] = [];
+            const groupOrder = ['Oficiales y Suboficiales', 'Bomberos Cuartel 1', 'Bomberos Cuartel 2', 'Bomberos Cuartel 3', 'Aspirantes'];
+            
+            groupOrder.forEach(groupName => {
+                const groupItems = groupedSummary[groupName];
+                if (groupItems && groupItems.length > 0) {
+                    summaryBody.push([{ content: groupName, colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' } }]);
+                    groupItems.forEach((item: any) => {
+                        summaryBody.push([item.firefighterLegajo, item.firefighter, item.totalClasses, item.presentPercentage]);
+                    });
+                }
+            });
+            
             (doc as any).autoTable({
                 startY: currentY, head: [['Legajo', 'Bombero', 'Clases', '% Presentismo']],
                 body: summaryBody, theme: 'striped', headStyles: { fillColor: '#333333' },
             });
+
             currentY = (doc as any).lastAutoTable.finalY + 10;
         }
 
@@ -541,7 +581,7 @@ const generatePdf = async () => {
         if (relevantRecords.length === 0) return [];
         
         const firefighterIdsInFilter = new Set(relevantRecords.map(d => d.firefighter.id));
-        const activeFirefighterIds = new Set(allFirefighters.filter(f => f.status === 'Active').map(f => f.id));
+        const activeFirefighterIds = new Set(allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar').map(f => f.id));
         
         const finalFirefighterIds = Array.from(firefighterIdsInFilter).filter(id => activeFirefighterIds.has(id));
 
