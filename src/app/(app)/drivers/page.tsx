@@ -26,6 +26,17 @@ const habilitacionColors: Record<Habilitacion, string> = {
     'Pesada': 'bg-red-500',
 };
 
+const getCuartelBadgeClass = (cuartel: Firefighter['firehouse'] | undefined) => {
+    if (!cuartel) return 'bg-secondary text-secondary-foreground';
+    switch (cuartel) {
+        case 'Cuartel 1': return 'bg-yellow-500 text-black hover:bg-yellow-500/90';
+        case 'Cuartel 2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
+        case 'Cuartel 3': return 'bg-green-600 text-white hover:bg-green-600/90';
+        default: return 'bg-secondary text-secondary-foreground';
+    }
+}
+
+
 export default function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +138,9 @@ export default function DriversPage() {
                     <TableCell className="font-medium">{driver.firefighter?.legajo}</TableCell>
                     <TableCell>{driver.firefighter ? `${driver.firefighter.firstName} ${driver.firefighter.lastName}` : 'N/A'}</TableCell>
                     <TableCell>{driver.firefighter?.rank}</TableCell>
-                    <TableCell>{driver.firefighter?.firehouse}</TableCell>
+                    <TableCell>
+                        <Badge className={cn(getCuartelBadgeClass(driver.firefighter?.firehouse))}>{driver.firefighter?.firehouse}</Badge>
+                    </TableCell>
                     <TableCell>
                         <div className="flex gap-2">
                             {driver.habilitaciones.map(h => (
