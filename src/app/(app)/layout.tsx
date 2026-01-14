@@ -32,7 +32,7 @@ import {
   Archive,
   Shirt,
   Siren,
-  SteeringWheel,
+  UserCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -63,7 +63,7 @@ export const navItems: NavItem[] = [
   { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
-  { href: '/drivers', icon: SteeringWheel, label: 'Choferes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
+  { href: '/drivers', icon: UserCircle, label: 'Choferes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
   { href: '/maintenance', icon: Wrench, label: 'Items', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},
   { href: '/mobility-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad' },
 
