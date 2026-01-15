@@ -120,12 +120,10 @@ export default function SchedulePage() {
             const spec = session.specialization;
 
             if (firehouse === 'Varios') {
-                // If it's a general class, count it for all 3 main cuarteles
                 summary['Cuartel 1'][spec] = (summary['Cuartel 1'][spec] || 0) + 1;
                 summary['Cuartel 2'][spec] = (summary['Cuartel 2'][spec] || 0) + 1;
                 summary['Cuartel 3'][spec] = (summary['Cuartel 3'][spec] || 0) + 1;
             } else if (summary.hasOwnProperty(firehouse)) {
-                // If it belongs to a specific group (C1, C2, C3, or Suboficiales), count it there
                 summary[firehouse as keyof SummaryStructure][spec] = (summary[firehouse as keyof SummaryStructure][spec] || 0) + 1;
             }
         });
@@ -256,25 +254,25 @@ export default function SchedulePage() {
                     return (
                     <Card key={groupName}>
                         <CardHeader>
-                            <CardTitle className="font-headline text-base flex items-center justify-between">
-                                <span>{groupName}</span>
-                                <span className="text-2xl font-bold text-primary">{totalClasses}</span>
-                            </CardTitle>
+                             <div className="flex justify-between items-center">
+                                <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
+                                <span className="font-bold text-xl text-primary">{totalClasses}</span>
+                            </div>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
-                            <div className="space-y-2">
+                            <div className="space-y-1">
                                 {Object.keys(groupData).length > 0 ? (
                                     Object.entries(groupData)
                                         .sort(([specA], [specB]) => specA.localeCompare(specB))
                                         .map(([spec, count]) => (
-                                        <div key={spec} className="flex justify-between items-center text-sm p-2 rounded-md even:bg-muted/50">
+                                        <div key={spec} className="flex justify-between items-center text-xs p-2 rounded-md even:bg-muted/50">
                                             <p className="text-muted-foreground">{spec}</p>
                                             <p className="font-bold">{count}</p>
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground text-sm text-center py-4">Sin clases registradas.</p>
+                                    <p className="text-muted-foreground text-xs text-center py-4">Sin clases registradas.</p>
                                 )}
                             </div>
                             }
