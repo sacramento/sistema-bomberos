@@ -247,38 +247,38 @@ export default function SchedulePage() {
             
             <div className="space-y-8 mb-8">
                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Grupo ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
-                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => {
-                    const groupData = summaryData[groupName];
-                    const totalClasses = Object.values(groupData).reduce((sum, count) => sum + count, 0);
-                    
-                    return (
-                    <Card key={groupName}>
-                        <CardHeader>
-                             <div className="flex justify-between items-center">
-                                <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
-                                <span className="font-bold text-xl text-primary">{totalClasses}</span>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            {loading ? <Skeleton className="h-20 w-full" /> : 
-                            <div className="space-y-1">
-                                {Object.keys(groupData).length > 0 ? (
-                                    Object.entries(groupData)
-                                        .sort(([specA], [specB]) => specA.localeCompare(specB))
-                                        .map(([spec, count]) => (
-                                        <div key={spec} className="flex justify-between items-center text-xs p-2 rounded-md even:bg-muted/50">
-                                            <p className="text-muted-foreground">{spec}</p>
-                                            <p className="font-bold">{count}</p>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-muted-foreground text-xs text-center py-4">Sin clases registradas.</p>
-                                )}
-                            </div>
-                            }
-                        </CardContent>
-                    </Card>
-                )})}
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => {
+                        const groupData = summaryData[groupName];
+                        const totalClasses = Object.values(groupData).reduce((sum, count) => sum + count, 0);
+                        
+                        return (
+                        <Card key={groupName}>
+                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{groupName}</CardTitle>
+                                <span className="font-bold text-lg text-primary">{totalClasses}</span>
+                            </CardHeader>
+                            <CardContent>
+                                {loading ? <Skeleton className="h-20 w-full" /> : 
+                                <div className="space-y-1">
+                                    {Object.keys(groupData).length > 0 ? (
+                                        Object.entries(groupData)
+                                            .sort(([specA], [specB]) => specA.localeCompare(specB))
+                                            .map(([spec, count]) => (
+                                            <div key={spec} className="flex justify-between items-center text-xs p-1 rounded-md even:bg-muted/50">
+                                                <p className="text-muted-foreground">{spec}</p>
+                                                <p className="font-bold">{count}</p>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <p className="text-muted-foreground text-xs text-center py-4">Sin clases registradas.</p>
+                                    )}
+                                </div>
+                                }
+                            </CardContent>
+                        </Card>
+                    )})}
+                </div>
             </div>
 
             {renderSessionCards()}
