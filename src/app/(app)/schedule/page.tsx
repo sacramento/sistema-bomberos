@@ -13,6 +13,8 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
 import { Calendar, Clock, Flame } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string, firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Varios' } => {
     const attendees = session.attendees;
@@ -77,6 +79,7 @@ export default function SchedulePage() {
     const [sessions, setSessions] = useState<Session[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+    const [selectedYear, setSelectedYear] = useState<string>(new Date().getFullYear().toString());
 
     useEffect(() => {
         const fetchSessions = async () => {
@@ -97,17 +100,25 @@ export default function SchedulePage() {
         fetchSessions();
     }, [toast]);
     
-    const summaryData = useMemo(() => {
-        const currentYear = new Date().getFullYear();
-        const yearlySessions = sessions.filter(session => parseISO(session.date).getFullYear() === currentYear);
+    const availableYears = useMemo(() => {
+        if (sessions.length === 0) return [new Date().getFullYear().toString()];
+        const years = new Set(sessions.map(s => parseISO(s.date).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [sessions]);
 
+    const filteredSessions = useMemo(() => {
+        if (selectedYear === 'all') return sessions;
+        return sessions.filter(session => parseISO(session.date).getFullYear().toString() === selectedYear);
+    }, [sessions, selectedYear]);
+
+    const summaryData = useMemo(() => {
         const summary: Record<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3', Record<Specialization, number>> = {
             'Cuartel 1': {} as Record<Specialization, number>,
             'Cuartel 2': {} as Record<Specialization, number>,
             'Cuartel 3': {} as Record<Specialization, number>,
         };
 
-        yearlySessions.forEach(session => {
+        filteredSessions.forEach(session => {
             const { firehouse } = getMajorityGroupInfo(session);
             if (firehouse !== 'Varios') {
                 const spec = session.specialization;
@@ -116,12 +127,12 @@ export default function SchedulePage() {
         });
         
         return summary;
-    }, [sessions]);
+    }, [filteredSessions]);
     
     const groupedSessions = useMemo(() => {
-        if (sessions.length === 0) return {};
+        if (filteredSessions.length === 0) return {};
 
-        const sorted = [...sessions].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
+        const sorted = [...filteredSessions].sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
         
         return sorted.reduce((acc, session) => {
             const monthYearKey = format(parseISO(session.date), 'MMMM yyyy', { locale: es });
@@ -134,7 +145,7 @@ export default function SchedulePage() {
             return acc;
         }, {} as Record<string, Session[]>);
 
-    }, [sessions]);
+    }, [filteredSessions]);
 
     const renderSessionCards = () => {
         if (loading) {
@@ -162,7 +173,7 @@ export default function SchedulePage() {
         if (Object.keys(groupedSessions).length === 0) {
             return (
                 <div className="text-center py-16 text-muted-foreground border-2 border-dashed rounded-lg">
-                    <p>No hay clases programadas.</p>
+                    <p>No hay clases programadas para el año seleccionado.</p>
                 </div>
             );
         }
@@ -214,31 +225,48 @@ export default function SchedulePage() {
         <>
             <PageHeader
                 title="Cronograma de Capacitaciones"
-                description="Vista de todas las clases de capacitación planificadas, ordenadas de más reciente a más antigua."
-            />
+                description="Vista de todas las clases de capacitación planificadas."
+            >
+                <div className="space-y-2">
+                    <Label htmlFor="year-select">Ciclo Lectivo</Label>
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                        <SelectTrigger id="year-select" className="w-[180px]">
+                            <SelectValue placeholder="Seleccionar año..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos</SelectItem>
+                            {availableYears.map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </PageHeader>
             
             <div className="space-y-8 mb-8">
-                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Cuartel (Año Actual)</h2>
+                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Cuartel ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
                 {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] as const).map(cuartel => (
                     <Card key={cuartel}>
                         <CardHeader>
                             <CardTitle className="font-headline text-lg">{cuartel}</CardTitle>
                         </CardHeader>
                         <CardContent>
+                            {loading ? <Skeleton className="h-20 w-full" /> : 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                 {Object.keys(summaryData[cuartel]).length > 0 ? (
                                     Object.entries(summaryData[cuartel])
                                         .sort(([specA], [specB]) => specA.localeCompare(specB))
                                         .map(([spec, count]) => (
                                         <div key={spec} className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
-                                            <p className="text-2xl font-bold text-primary">{count}</p>
+                                            <p className="text-3xl font-bold text-primary">{count}</p>
                                             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{spec}</p>
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este cuartel en el año actual.</p>
+                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este cuartel en el período seleccionado.</p>
                                 )}
                             </div>
+                            }
                         </CardContent>
                     </Card>
                 ))}
