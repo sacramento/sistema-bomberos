@@ -5,18 +5,18 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Session, Firefighter } from "@/lib/types";
+import { Session, Firefighter, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { useEffect, useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from "@/lib/utils";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, Flame } from "lucide-react";
 
-const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string } => {
+const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string, firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Varios' } => {
     const attendees = session.attendees;
-    if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500', bgClassName: 'bg-gray-500/5' };
+    if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500', bgClassName: 'bg-gray-500/5', firehouse: 'Varios' };
 
     const totalAttendees = attendees.length;
     
@@ -38,27 +38,27 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
 
     // Prioridad 1: Aspirantes (si son la gran mayoría)
     if (aspirantesCount / totalAttendees > 0.8) {
-        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/5' };
+        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/5', firehouse: 'Varios' };
     }
 
     // Prioridad 2: Oficiales y Suboficiales (si son la gran mayoría)
     if (officersCount / totalAttendees > 0.8) {
-        return { name: 'Suboficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5' };
+        return { name: 'Suboficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5', firehouse: 'Varios' };
     }
 
     // Prioridad 3: Mayoría de un cuartel específico
     if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 1', className: 'border-yellow-500', bgClassName: 'bg-yellow-500/5' };
+        return { name: 'Cuartel 1', className: 'border-yellow-500', bgClassName: 'bg-yellow-500/5', firehouse: 'Cuartel 1' };
     }
     if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 2', className: 'border-blue-500', bgClassName: 'bg-blue-500/5' };
+        return { name: 'Cuartel 2', className: 'border-blue-500', bgClassName: 'bg-blue-500/5', firehouse: 'Cuartel 2' };
     }
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) {
-        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5' };
+        return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5', firehouse: 'Cuartel 3' };
     }
 
     // Fallback: Grupo Mixto
-    return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/5' };
+    return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/5', firehouse: 'Varios' };
 };
 
 const getGroupBadgeClass = (groupName: string): string => {
@@ -96,6 +96,24 @@ export default function SchedulePage() {
         };
         fetchSessions();
     }, [toast]);
+    
+    const summaryData = useMemo(() => {
+        const summary: Record<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3', Record<Specialization, number>> = {
+            'Cuartel 1': {} as Record<Specialization, number>,
+            'Cuartel 2': {} as Record<Specialization, number>,
+            'Cuartel 3': {} as Record<Specialization, number>,
+        };
+
+        sessions.forEach(session => {
+            const { firehouse } = getMajorityGroupInfo(session);
+            if (firehouse !== 'Varios') {
+                const spec = session.specialization;
+                summary[firehouse][spec] = (summary[firehouse][spec] || 0) + 1;
+            }
+        });
+        
+        return summary;
+    }, [sessions]);
     
     const groupedSessions = useMemo(() => {
         if (sessions.length === 0) return {};
@@ -195,6 +213,28 @@ export default function SchedulePage() {
                 title="Cronograma de Capacitaciones"
                 description="Vista de todas las clases de capacitación planificadas, ordenadas de más reciente a más antigua."
             />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] as const).map(cuartel => (
+                    <Card key={cuartel}>
+                        <CardHeader>
+                            <CardTitle className="font-headline text-base">{cuartel}</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="text-sm space-y-1">
+                                {Object.entries(summaryData[cuartel]).map(([spec, count]) => (
+                                    <li key={spec} className="flex justify-between">
+                                        <span className="text-muted-foreground">{spec}:</span>
+                                        <span className="font-semibold">{count} clase(s)</span>
+                                    </li>
+                                ))}
+                                {Object.keys(summaryData[cuartel]).length === 0 && <p className="text-muted-foreground text-xs">Sin clases registradas.</p>}
+                            </ul>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
             {renderSessionCards()}
         </>
     );
