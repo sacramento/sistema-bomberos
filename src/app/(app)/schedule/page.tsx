@@ -98,13 +98,16 @@ export default function SchedulePage() {
     }, [toast]);
     
     const summaryData = useMemo(() => {
+        const currentYear = new Date().getFullYear();
+        const yearlySessions = sessions.filter(session => parseISO(session.date).getFullYear() === currentYear);
+
         const summary: Record<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3', Record<Specialization, number>> = {
             'Cuartel 1': {} as Record<Specialization, number>,
             'Cuartel 2': {} as Record<Specialization, number>,
             'Cuartel 3': {} as Record<Specialization, number>,
         };
 
-        sessions.forEach(session => {
+        yearlySessions.forEach(session => {
             const { firehouse } = getMajorityGroupInfo(session);
             if (firehouse !== 'Varios') {
                 const spec = session.specialization;
@@ -214,22 +217,28 @@ export default function SchedulePage() {
                 description="Vista de todas las clases de capacitación planificadas, ordenadas de más reciente a más antigua."
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="space-y-8 mb-8">
+                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Cuartel (Año Actual)</h2>
                 {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] as const).map(cuartel => (
                     <Card key={cuartel}>
                         <CardHeader>
-                            <CardTitle className="font-headline text-base">{cuartel}</CardTitle>
+                            <CardTitle className="font-headline text-lg">{cuartel}</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <ul className="text-sm space-y-1">
-                                {Object.entries(summaryData[cuartel]).map(([spec, count]) => (
-                                    <li key={spec} className="flex justify-between">
-                                        <span className="text-muted-foreground">{spec}:</span>
-                                        <span className="font-semibold">{count} clase(s)</span>
-                                    </li>
-                                ))}
-                                {Object.keys(summaryData[cuartel]).length === 0 && <p className="text-muted-foreground text-xs">Sin clases registradas.</p>}
-                            </ul>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {Object.keys(summaryData[cuartel]).length > 0 ? (
+                                    Object.entries(summaryData[cuartel])
+                                        .sort(([specA], [specB]) => specA.localeCompare(specB))
+                                        .map(([spec, count]) => (
+                                        <div key={spec} className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
+                                            <p className="text-2xl font-bold text-primary">{count}</p>
+                                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{spec}</p>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este cuartel en el año actual.</p>
+                                )}
+                            </div>
                         </CardContent>
                     </Card>
                 ))}
