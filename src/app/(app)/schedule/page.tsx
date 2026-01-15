@@ -255,26 +255,24 @@ export default function SchedulePage() {
                     
                     return (
                     <Card key={groupName}>
-                        <CardHeader className="flex flex-row items-center gap-4">
-                            <div className="p-3 bg-primary/10 rounded-lg">
-                                <span className="font-headline text-3xl font-bold text-primary">{totalClasses}</span>
-                            </div>
+                        <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
+                            <span className="font-headline text-2xl font-bold text-primary">{totalClasses}</span>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                            <div className="space-y-2">
                                 {Object.keys(groupData).length > 0 ? (
                                     Object.entries(groupData)
                                         .sort(([specA], [specB]) => specA.localeCompare(specB))
                                         .map(([spec, count]) => (
-                                        <div key={spec} className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
-                                            <p className="text-3xl font-bold">{count}</p>
-                                            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{spec}</p>
+                                        <div key={spec} className="flex justify-between items-center text-sm p-2 rounded-md even:bg-muted/50">
+                                            <p className="text-muted-foreground">{spec}</p>
+                                            <p className="font-bold text-base">{count}</p>
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este grupo en el período seleccionado.</p>
+                                    <p className="text-muted-foreground text-sm text-center py-4">Sin clases registradas.</p>
                                 )}
                             </div>
                             }
