@@ -254,24 +254,26 @@ export default function SchedulePage() {
                         
                         return (
                         <Card key={groupName}>
-                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-base font-medium">{groupName}</CardTitle>
-                                <span className="font-bold text-xl text-primary">{totalClasses}</span>
+                            <CardHeader className="pb-2">
+                                <div className="flex justify-between items-center">
+                                    <CardTitle className="text-base font-medium">{groupName}</CardTitle>
+                                    <span className="font-bold text-xl text-primary">{totalClasses}</span>
+                                </div>
                             </CardHeader>
                             <CardContent>
-                                {loading ? <Skeleton className="h-20 w-full" /> : 
-                                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                {loading ? <Skeleton className="h-10 w-full" /> : 
+                                <div className="flex flex-wrap gap-x-3 gap-y-1">
                                     {Object.keys(groupData).length > 0 ? (
                                         Object.entries(groupData)
                                             .sort(([specA], [specB]) => specA.localeCompare(specB))
                                             .map(([spec, count]) => (
-                                            <div key={spec} className="flex items-baseline gap-1.5 text-xs">
+                                            <div key={spec} className="flex items-baseline gap-1 text-xs">
                                                 <p className="text-muted-foreground">{spec}:</p>
-                                                <p className="font-bold text-sm">{count}</p>
+                                                <p className="font-bold">{count}</p>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-muted-foreground text-xs text-center py-4 w-full">Sin clases registradas.</p>
+                                        <p className="text-muted-foreground text-xs w-full">Sin clases.</p>
                                     )}
                                 </div>
                                 }
