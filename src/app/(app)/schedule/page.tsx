@@ -255,9 +255,11 @@ export default function SchedulePage() {
                     
                     return (
                     <Card key={groupName}>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="font-headline text-base">{groupName}</CardTitle>
-                            <span className="font-headline text-xl font-bold text-primary">{totalClasses}</span>
+                        <CardHeader>
+                            <CardTitle className="font-headline text-base flex items-center justify-between">
+                                <span>{groupName}</span>
+                                <span className="text-2xl font-bold text-primary">{totalClasses}</span>
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
