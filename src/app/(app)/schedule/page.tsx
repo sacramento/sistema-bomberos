@@ -256,8 +256,8 @@ export default function SchedulePage() {
                     return (
                     <Card key={groupName}>
                         <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
-                            <span className="font-headline text-2xl font-bold text-primary">{totalClasses}</span>
+                            <CardTitle className="font-headline text-base">{groupName}</CardTitle>
+                            <span className="font-headline text-xl font-bold text-primary">{totalClasses}</span>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
@@ -268,7 +268,7 @@ export default function SchedulePage() {
                                         .map(([spec, count]) => (
                                         <div key={spec} className="flex justify-between items-center text-sm p-2 rounded-md even:bg-muted/50">
                                             <p className="text-muted-foreground">{spec}</p>
-                                            <p className="font-bold text-base">{count}</p>
+                                            <p className="font-bold">{count}</p>
                                         </div>
                                     ))
                                 ) : (
