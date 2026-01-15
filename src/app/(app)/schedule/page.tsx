@@ -246,7 +246,7 @@ export default function SchedulePage() {
             </PageHeader>
             
             <div className="space-y-8 mb-8">
-                <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Grupo ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
+                <h2 className="font-headline text-xl font-semibold tracking-tight">Clases por Grupo ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => {
                         const groupData = summaryData[groupName];
@@ -255,23 +255,23 @@ export default function SchedulePage() {
                         return (
                         <Card key={groupName}>
                              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">{groupName}</CardTitle>
-                                <span className="font-bold text-lg text-primary">{totalClasses}</span>
+                                <CardTitle className="text-base font-medium">{groupName}</CardTitle>
+                                <span className="font-bold text-xl text-primary">{totalClasses}</span>
                             </CardHeader>
                             <CardContent>
                                 {loading ? <Skeleton className="h-20 w-full" /> : 
-                                <div className="space-y-1">
+                                <div className="flex flex-wrap gap-x-4 gap-y-1">
                                     {Object.keys(groupData).length > 0 ? (
                                         Object.entries(groupData)
                                             .sort(([specA], [specB]) => specA.localeCompare(specB))
                                             .map(([spec, count]) => (
-                                            <div key={spec} className="flex justify-between items-center text-xs p-1 rounded-md even:bg-muted/50">
-                                                <p className="text-muted-foreground">{spec}</p>
-                                                <p className="font-bold">{count}</p>
+                                            <div key={spec} className="flex items-baseline gap-1.5 text-xs">
+                                                <p className="text-muted-foreground">{spec}:</p>
+                                                <p className="font-bold text-sm">{count}</p>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-muted-foreground text-xs text-center py-4">Sin clases registradas.</p>
+                                        <p className="text-muted-foreground text-xs text-center py-4 w-full">Sin clases registradas.</p>
                                     )}
                                 </div>
                                 }
