@@ -249,20 +249,27 @@ export default function SchedulePage() {
             
             <div className="space-y-8 mb-8">
                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Grupo ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
-                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => (
+                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => {
+                    const groupData = summaryData[groupName];
+                    const totalClasses = Object.values(groupData).reduce((sum, count) => sum + count, 0);
+                    
+                    return (
                     <Card key={groupName}>
-                        <CardHeader>
+                        <CardHeader className="flex flex-row items-center gap-4">
+                            <div className="p-3 bg-primary/10 rounded-lg">
+                                <span className="font-headline text-3xl font-bold text-primary">{totalClasses}</span>
+                            </div>
                             <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {Object.keys(summaryData[groupName]).length > 0 ? (
-                                    Object.entries(summaryData[groupName])
+                                {Object.keys(groupData).length > 0 ? (
+                                    Object.entries(groupData)
                                         .sort(([specA], [specB]) => specA.localeCompare(specB))
                                         .map(([spec, count]) => (
                                         <div key={spec} className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
-                                            <p className="text-3xl font-bold text-primary">{count}</p>
+                                            <p className="text-3xl font-bold">{count}</p>
                                             <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{spec}</p>
                                         </div>
                                     ))
@@ -273,7 +280,7 @@ export default function SchedulePage() {
                             }
                         </CardContent>
                     </Card>
-                ))}
+                )})}
             </div>
 
             {renderSessionCards()}
