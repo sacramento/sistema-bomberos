@@ -16,13 +16,12 @@ import { Calendar, Clock, Flame } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
-const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string, firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Varios' } => {
+const getMajorityGroupInfo = (session: Session): { name: string, className: string, bgClassName: string, firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Varios' | 'Suboficiales' } => {
     const attendees = session.attendees;
     if (!attendees || attendees.length === 0) return { name: 'N/A', className: 'border-gray-500', bgClassName: 'bg-gray-500/5', firehouse: 'Varios' };
 
     const totalAttendees = attendees.length;
     
-    // Jerarquías
     const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
     const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
     const officerAndSubOfficerRanks = new Set([...suboficialRanks, ...oficialRanks]);
@@ -30,7 +29,6 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
     const aspirantesCount = attendees.filter(a => a.rank === 'ASPIRANTE').length;
     const officersCount = attendees.filter(a => officerAndSubOfficerRanks.has(a.rank)).length;
 
-    // Cuarteles
     const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
     attendees.forEach(a => {
         if (firehouseCounts.hasOwnProperty(a.firehouse)) {
@@ -38,17 +36,14 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
         }
     });
 
-    // Prioridad 1: Aspirantes (si son la gran mayoría)
     if (aspirantesCount / totalAttendees > 0.8) {
-        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/5', firehouse: 'Varios' };
+        return { name: 'Aspirantes', className: 'border-green-500', bgClassName: 'bg-green-500/5', firehouse: 'Varios' }; // Aspirantes are general
     }
 
-    // Prioridad 2: Oficiales y Suboficiales (si son la gran mayoría)
     if (officersCount / totalAttendees > 0.8) {
-        return { name: 'Suboficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5', firehouse: 'Varios' };
+        return { name: 'Suboficiales', className: 'border-red-500', bgClassName: 'bg-red-500/5', firehouse: 'Suboficiales' };
     }
 
-    // Prioridad 3: Mayoría de un cuartel específico
     if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) {
         return { name: 'Cuartel 1', className: 'border-yellow-500', bgClassName: 'bg-yellow-500/5', firehouse: 'Cuartel 1' };
     }
@@ -59,7 +54,6 @@ const getMajorityGroupInfo = (session: Session): { name: string, className: stri
         return { name: 'Cuartel 3', className: 'border-orange-500', bgClassName: 'bg-orange-500/5', firehouse: 'Cuartel 3' };
     }
 
-    // Fallback: Grupo Mixto
     return { name: 'Varios Cuarteles', className: 'border-gray-500', bgClassName: 'bg-gray-500/5', firehouse: 'Varios' };
 };
 
@@ -112,17 +106,27 @@ export default function SchedulePage() {
     }, [sessions, selectedYear]);
 
     const summaryData = useMemo(() => {
-        const summary: Record<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3', Record<Specialization, number>> = {
+        type SummaryStructure = Record<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Suboficiales', Record<Specialization, number>>;
+
+        const summary: SummaryStructure = {
             'Cuartel 1': {} as Record<Specialization, number>,
             'Cuartel 2': {} as Record<Specialization, number>,
             'Cuartel 3': {} as Record<Specialization, number>,
+            'Suboficiales': {} as Record<Specialization, number>,
         };
 
         filteredSessions.forEach(session => {
             const { firehouse } = getMajorityGroupInfo(session);
-            if (firehouse !== 'Varios') {
-                const spec = session.specialization;
-                summary[firehouse][spec] = (summary[firehouse][spec] || 0) + 1;
+            const spec = session.specialization;
+
+            if (firehouse === 'Varios') {
+                // If it's a general class, count it for all 3 main cuarteles
+                summary['Cuartel 1'][spec] = (summary['Cuartel 1'][spec] || 0) + 1;
+                summary['Cuartel 2'][spec] = (summary['Cuartel 2'][spec] || 0) + 1;
+                summary['Cuartel 3'][spec] = (summary['Cuartel 3'][spec] || 0) + 1;
+            } else if (summary.hasOwnProperty(firehouse)) {
+                // If it belongs to a specific group (C1, C2, C3, or Suboficiales), count it there
+                summary[firehouse as keyof SummaryStructure][spec] = (summary[firehouse as keyof SummaryStructure][spec] || 0) + 1;
             }
         });
         
@@ -244,17 +248,17 @@ export default function SchedulePage() {
             </PageHeader>
             
             <div className="space-y-8 mb-8">
-                 <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Cuartel ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
-                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] as const).map(cuartel => (
-                    <Card key={cuartel}>
+                <h2 className="font-headline text-2xl font-semibold tracking-tight">Clases por Grupo ({selectedYear === 'all' ? 'Todos los años' : `Año ${selectedYear}`})</h2>
+                {(['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Suboficiales'] as const).map(groupName => (
+                    <Card key={groupName}>
                         <CardHeader>
-                            <CardTitle className="font-headline text-lg">{cuartel}</CardTitle>
+                            <CardTitle className="font-headline text-lg">{groupName}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             {loading ? <Skeleton className="h-20 w-full" /> : 
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                                {Object.keys(summaryData[cuartel]).length > 0 ? (
-                                    Object.entries(summaryData[cuartel])
+                                {Object.keys(summaryData[groupName]).length > 0 ? (
+                                    Object.entries(summaryData[groupName])
                                         .sort(([specA], [specB]) => specA.localeCompare(specB))
                                         .map(([spec, count]) => (
                                         <div key={spec} className="flex flex-col items-center justify-center p-3 rounded-lg bg-muted/50 text-center">
@@ -263,7 +267,7 @@ export default function SchedulePage() {
                                         </div>
                                     ))
                                 ) : (
-                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este cuartel en el período seleccionado.</p>
+                                    <p className="text-muted-foreground text-sm col-span-full">Sin clases registradas para este grupo en el período seleccionado.</p>
                                 )}
                             </div>
                             }
