@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -219,7 +218,15 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
                 </div>
 
                 <Separator />
-                
+                 <div className="space-y-2">
+                    <Label>Ayudantes (Opcional)</Label>
+                     <MultiFirefighterSelect
+                        title="ayudantes"
+                        selected={assistants}
+                        onSelectedChange={setAssistants}
+                        firefighters={activeFirefighters}
+                    />
+                </div>
                 <div className="space-y-2">
                     <Label>Checklist de Tareas Realizadas</Label>
                     <ScrollArea className="h-64 w-full rounded-md border p-4">
@@ -245,15 +252,6 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
                             <p className="text-sm text-muted-foreground text-center">Este móvil no tiene ítems de checklist configurados. Vaya a la pestaña "Checklist" para agregarlos.</p>
                         )}
                     </ScrollArea>
-                </div>
-                <div className="space-y-2">
-                    <Label>Ayudantes (Opcional)</Label>
-                     <MultiFirefighterSelect
-                        title="ayudantes"
-                        selected={assistants}
-                        onSelectedChange={setAssistants}
-                        firefighters={activeFirefighters}
-                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="observaciones">Observaciones Adicionales</Label>
