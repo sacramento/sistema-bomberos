@@ -226,7 +226,7 @@ export type Task = {
     assignedTo?: Firefighter[];
 }
 
-export type Habilitacion = 'Practica' | 'Liviana' | 'Pesada';
+export type Habilitacion = 'Practica' | 'Liviana' | 'Pesada' | 'Timonel';
 
 export type Driver = {
     id: string;

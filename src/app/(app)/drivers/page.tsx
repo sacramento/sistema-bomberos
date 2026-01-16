@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Firefighter, Driver, Habilitacion } from "@/lib/types";
-import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo } from 'react';
 import { getDrivers, deleteDriver } from "@/services/drivers.service";
@@ -24,6 +24,7 @@ const habilitacionColors: Record<Habilitacion, string> = {
     'Practica': 'bg-blue-500',
     'Liviana': 'bg-green-500',
     'Pesada': 'bg-red-500',
+    'Timonel': 'bg-cyan-500',
 };
 
 const getCuartelBadgeClass = (cuartel: Firefighter['firehouse'] | undefined) => {
@@ -88,6 +89,24 @@ export default function DriversPage() {
     }
   };
 
+    const summary = useMemo(() => {
+    const counts = {
+      'Cuartel 1': 0,
+      'Cuartel 2': 0,
+      'Cuartel 3': 0,
+      'Otros': 0,
+    };
+    drivers.forEach(driver => {
+      const firehouse = driver.firefighter?.firehouse;
+      if (firehouse === 'Cuartel 1' || firehouse === 'Cuartel 2' || firehouse === 'Cuartel 3') {
+        counts[firehouse]++;
+      } else if (firehouse) {
+        counts['Otros']++;
+      }
+    });
+    return counts;
+  }, [drivers]);
+
   return (
     <>
       <PageHeader title="Gestión de Choferes" description="Listado de todo el personal habilitado para conducir.">
@@ -100,6 +119,38 @@ export default function DriversPage() {
             </AddDriverDialog>
         )}
       </PageHeader>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Choferes Cuartel 1</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{summary['Cuartel 1']}</div></CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Choferes Cuartel 2</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{summary['Cuartel 2']}</div></CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Choferes Cuartel 3</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{summary['Cuartel 3']}</div></CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium">Total Choferes</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent><div className="text-2xl font-bold">{drivers.length}</div></CardContent>
+            </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Choferes Habilitados</CardTitle>

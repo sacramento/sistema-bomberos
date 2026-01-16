@@ -22,7 +22,7 @@ import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const habilitaciones: Habilitacion[] = ['Practica', 'Liviana', 'Pesada'];
+const habilitaciones: Habilitacion[] = ['Practica', 'Liviana', 'Pesada', 'Timonel'];
 
 const MultiSelect = ({
     title,
