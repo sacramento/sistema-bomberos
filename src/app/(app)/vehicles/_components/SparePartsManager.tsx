@@ -78,7 +78,7 @@ export default function SparePartsManager({ vehicleId, canManage, actor }: Spare
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>Nombre</TableHead>
+                            <TableHead>Tipo</TableHead>
                             <TableHead>Marca</TableHead>
                             <TableHead>Código</TableHead>
                             <TableHead>Observaciones</TableHead>

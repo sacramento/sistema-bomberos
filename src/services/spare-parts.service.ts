@@ -13,12 +13,14 @@ if (!db) {
 const sparePartsCollection = collection(db, 'spare_parts');
 
 export const getSparePartsByVehicle = async (vehicleId: string): Promise<SparePart[]> => {
-    const q = query(sparePartsCollection, where('vehicleId', '==', vehicleId), orderBy('name', 'asc'));
+    const q = query(sparePartsCollection, where('vehicleId', '==', vehicleId));
     const querySnapshot = await getDocs(q);
     const parts: SparePart[] = [];
     querySnapshot.forEach((doc) => {
         parts.push({ id: doc.id, ...doc.data() } as SparePart);
     });
+    // Sort client-side to avoid complex composite indexes
+    parts.sort((a, b) => a.name.localeCompare(b.name));
     return parts;
 };
 

@@ -40,7 +40,7 @@ export default function AddSparePartDialog({ children, vehicleId, onPartAdded, a
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name) {
-            toast({ variant: "destructive", title: "Campo requerido", description: "El nombre del repuesto es obligatorio." });
+            toast({ variant: "destructive", title: "Campo requerido", description: "El tipo de repuesto es obligatorio." });
             return;
         }
 
@@ -68,8 +68,8 @@ export default function AddSparePartDialog({ children, vehicleId, onPartAdded, a
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name">Nombre del Repuesto</Label>
-                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
+                        <Label htmlFor="name">Tipo</Label>
+                        <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required placeholder="Ej: Filtro de aceite"/>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">

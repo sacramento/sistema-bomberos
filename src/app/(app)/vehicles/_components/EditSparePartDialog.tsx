@@ -43,7 +43,7 @@ export default function EditSparePartDialog({ children, part, onPartUpdated, act
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name) {
-            toast({ variant: "destructive", title: "Campo requerido", description: "El nombre del repuesto es obligatorio." });
+            toast({ variant: "destructive", title: "Campo requerido", description: "El tipo de repuesto es obligatorio." });
             return;
         }
 
@@ -70,7 +70,7 @@ export default function EditSparePartDialog({ children, part, onPartUpdated, act
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="name-edit">Nombre del Repuesto</Label>
+                        <Label htmlFor="name-edit">Tipo</Label>
                         <Input id="name-edit" value={name} onChange={(e) => setName(e.target.value)} required />
                     </div>
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
