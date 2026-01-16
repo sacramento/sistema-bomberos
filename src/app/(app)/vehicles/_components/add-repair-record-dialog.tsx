@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 
-const repairTypes: RepairType[] = ['Mecanica', 'Electrica', 'Neumatica', 'Hidraulica'];
+const repairTypes: RepairType[] = ['Mecanica', 'Electrica', 'Neumatica', 'Hidraulica', 'Carrocería'];
 
 const MultiFirefighterSelect = ({ 
     title, 

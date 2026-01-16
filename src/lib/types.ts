@@ -124,7 +124,7 @@ export type MaintenanceRecord = {
   observations: string;
 };
 
-export type RepairType = 'Mecanica' | 'Electrica' | 'Neumatica' | 'Hidraulica';
+export type RepairType = 'Mecanica' | 'Electrica' | 'Neumatica' | 'Hidraulica' | 'Carrocería';
 
 export type RepairRecord = {
   id: string;
