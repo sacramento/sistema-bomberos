@@ -14,10 +14,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { MaintenanceItem, MaintenanceChecklistItem, Vehicle } from "@/lib/types";
+import { useState, useEffect, useMemo } from "react";
+import { MaintenanceItem, MaintenanceChecklistItem, Vehicle, Firefighter } from "@/lib/types";
 import { addMaintenanceRecord } from "@/services/maintenance.service";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { es } from "date-fns/locale";
@@ -27,6 +27,62 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { getFirefighters } from "@/services/firefighters.service";
+import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+
+const MultiFirefighterSelect = ({ 
+    title, 
+    selected, 
+    onSelectedChange,
+    firefighters,
+}: { 
+    title: string;
+    selected: Firefighter[]; 
+    onSelectedChange: (selected: Firefighter[]) => void;
+    firefighters: Firefighter[];
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (firefighter: Firefighter) => {
+        const isSelected = selected.some(s => s.id === firefighter.id);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
+        } else {
+            onSelectedChange([...selected, firefighter]);
+        }
+    };
+    
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                    <div className="flex gap-1 flex-wrap">
+                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
+                        <CommandGroup>
+                            {firefighters.map((firefighter) => (
+                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    onSelect={() => handleSelect(firefighter)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0")} />
+                                    {`${firefighter.lastName}, ${firefighter.firstName}`}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 
 export default function AddMaintenanceRecordDialog({ children, vehicle, onRecordAdded }: { children: React.ReactNode; vehicle: Vehicle; onRecordAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -40,6 +96,10 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
   const [nextServiceMileage, setNextServiceMileage] = useState<number>(0);
   const [checklist, setChecklist] = useState<MaintenanceChecklistItem[]>([]);
   const [observations, setObservations] = useState('');
+  const [assistants, setAssistants] = useState<Firefighter[]>([]);
+  const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
+
+  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     if (open) {
@@ -52,8 +112,14 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
         
         // Pre-fill mileage from vehicle data
         setMileage(vehicle.kilometraje);
+
+        // Fetch firefighters
+        getFirefighters()
+            .then(setAllFirefighters)
+            .catch(() => toast({ title: "Error", description: "No se pudieron cargar los bomberos.", variant: "destructive" }));
+
     }
-  }, [open, vehicle]);
+  }, [open, vehicle, toast]);
   
   const resetForm = () => {
     setDate(new Date());
@@ -62,6 +128,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
     setNextServiceMileage(0);
     setChecklist([]);
     setObservations('');
+    setAssistants([]);
   }
 
   const handleChecklistChange = (itemName: string, checked: boolean) => {
@@ -85,6 +152,7 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
             nextServiceMileage: nextServiceMileage > 0 ? nextServiceMileage : undefined,
             checklist,
             observations,
+            assistantIds: assistants.map(a => a.id),
         };
         
         await addMaintenanceRecord(newRecord);
@@ -177,6 +245,15 @@ export default function AddMaintenanceRecordDialog({ children, vehicle, onRecord
                             <p className="text-sm text-muted-foreground text-center">Este móvil no tiene ítems de checklist configurados. Vaya a la pestaña "Checklist" para agregarlos.</p>
                         )}
                     </ScrollArea>
+                </div>
+                <div className="space-y-2">
+                    <Label>Ayudantes (Opcional)</Label>
+                     <MultiFirefighterSelect
+                        title="ayudantes"
+                        selected={assistants}
+                        onSelectedChange={setAssistants}
+                        firefighters={activeFirefighters}
+                    />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="observaciones">Observaciones Adicionales</Label>

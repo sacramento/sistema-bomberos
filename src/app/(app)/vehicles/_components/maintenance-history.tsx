@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { MaintenanceRecord, MaintenanceChecklistItem } from '@/lib/types';
+import { MaintenanceRecord, MaintenanceChecklistItem, Firefighter } from '@/lib/types';
 import { getMaintenanceRecordsByVehicle, deleteMaintenanceRecord } from '@/services/maintenance.service';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +10,11 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Check, X, Gauge, Calendar, Trash2, MoreVertical } from 'lucide-react';
+import { Check, X, Gauge, Calendar, Trash2, MoreVertical, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 
 interface MaintenanceHistoryProps {
     vehicleId: string;
@@ -149,6 +150,18 @@ export default function MaintenanceHistory({ vehicleId, canEdit, refreshSignal, 
                                         
                                         <h4 className="font-semibold mb-2">Checklist Realizado:</h4>
                                         {renderChecklist(record.checklist)}
+                                        
+                                        {record.assistants && record.assistants.length > 0 && (
+                                            <>
+                                                <h4 className="font-semibold mt-4 mb-2 flex items-center gap-2"><Users className="h-4 w-4" /> Ayudantes:</h4>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {record.assistants.map(assistant => (
+                                                        <Badge key={assistant.id} variant="secondary">{assistant.lastName}</Badge>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+
                                         {record.observations && (
                                             <>
                                                 <h4 className="font-semibold mt-4 mb-2">Observaciones:</h4>

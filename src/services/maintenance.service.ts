@@ -1,11 +1,13 @@
 
 'use server';
 
-import { MaintenanceRecord, LoggedInUser } from '@/lib/types';
+import { MaintenanceRecord, LoggedInUser, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
 import { parseISO } from 'date-fns';
 import { logAction } from './audit.service';
+import { getFirefighters } from './firefighters.service';
+import { cache } from 'react';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
@@ -13,20 +15,35 @@ if (!db) {
 
 const recordsCollection = collection(db, 'maintenance_records');
 
+const getAllFirefightersCached = cache(async () => {
+    const firefighters = await getFirefighters();
+    return new Map(firefighters.map(f => [f.id, f]));
+});
+
+const docToMaintenanceRecord = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<MaintenanceRecord> => {
+    const data = docSnap.data();
+    const assistants = (data.assistantIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+
+    return {
+        id: docSnap.id,
+        ...data,
+        assistants,
+    } as MaintenanceRecord;
+};
+
+
 /**
  * Retrieves all maintenance records for a specific vehicle, ordered by date descending.
  * @param vehicleId The ID of the vehicle.
  */
 export const getMaintenanceRecordsByVehicle = async (vehicleId: string): Promise<MaintenanceRecord[]> => {
-    // Simple query by vehicleId, no complex ordering on the server side.
     const q = query(recordsCollection, where('vehicleId', '==', vehicleId));
     const querySnapshot = await getDocs(q);
-    const records: MaintenanceRecord[] = [];
-    querySnapshot.forEach((doc) => {
-        records.push({ id: doc.id, ...doc.data() } as MaintenanceRecord);
-    });
+    const firefighterMap = await getAllFirefightersCached();
+    
+    const recordsPromises = querySnapshot.docs.map(doc => docToMaintenanceRecord(doc, firefighterMap));
+    let records = await Promise.all(recordsPromises);
 
-    // Sort the records on the client/server side after fetching.
     records.sort((a, b) => parseISO(b.date).getTime() - parseISO(a.date).getTime());
 
     return records;

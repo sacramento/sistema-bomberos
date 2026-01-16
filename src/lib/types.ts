@@ -122,6 +122,8 @@ export type MaintenanceRecord = {
   nextServiceMileage?: number;
   checklist: MaintenanceChecklistItem[];
   observations: string;
+  assistantIds?: string[];
+  assistants?: Firefighter[];
 };
 
 export type RepairType = 'Mecanica' | 'Electrica' | 'Neumatica' | 'Hidraulica' | 'Carrocería';
