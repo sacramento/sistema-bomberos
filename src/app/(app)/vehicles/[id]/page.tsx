@@ -22,6 +22,7 @@ import MaintenanceHistory from "../_components/maintenance-history";
 import AddMaintenanceRecordDialog from "../_components/add-maintenance-record-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChecklistManager from "../_components/checklist-manager";
+import SparePartsManager from "../_components/SparePartsManager";
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -158,9 +159,10 @@ export default function VehicleDetailPage() {
             </PageHeader>
 
             <Tabs defaultValue="ficha" className="w-full">
-                <TabsList className={cn("grid w-full max-w-2xl mx-auto mb-6", canManage ? "grid-cols-3" : "grid-cols-2")}>
+                <TabsList className={cn("grid w-full max-w-3xl mx-auto mb-6", canManage ? "grid-cols-4" : "grid-cols-2")}>
                     <TabsTrigger value="ficha"><FileText className="mr-2 h-4 w-4"/>Ficha Técnica</TabsTrigger>
                      {canManage && <TabsTrigger value="checklist"><List className="mr-2 h-4 w-4"/>Checklist</TabsTrigger>}
+                     {canManage && <TabsTrigger value="repuestos"><Wrench className="mr-2 h-4 w-4"/>Repuestos</TabsTrigger>}
                     <TabsTrigger value="historial"><History className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ficha">
@@ -220,6 +222,11 @@ export default function VehicleDetailPage() {
                 {canManage && (
                     <TabsContent value="checklist">
                         <ChecklistManager vehicle={vehicle} canEdit={canManage} onVehicleUpdated={handleDataChange} />
+                    </TabsContent>
+                )}
+                 {canManage && (
+                    <TabsContent value="repuestos">
+                        <SparePartsManager vehicleId={vehicle.id} canManage={canManage} />
                     </TabsContent>
                 )}
                 <TabsContent value="historial">

@@ -99,6 +99,15 @@ export type Vehicle = {
   maintenanceItems?: MaintenanceItem[];
 }
 
+export type SparePart = {
+  id: string;
+  vehicleId: string;
+  name: string;
+  brand?: string;
+  code?: string;
+  observations?: string;
+};
+
 export type MaintenanceChecklistItem = {
   name: string;
   checked: boolean;
@@ -241,6 +250,7 @@ export type AuditLogAction =
   | 'CREATE_VEHICLE' | 'UPDATE_VEHICLE' | 'DELETE_VEHICLE'
   | 'CREATE_MAINTENANCE_ITEM' | 'UPDATE_MAINTENANCE_ITEM' | 'DELETE_MAINTENANCE_ITEM'
   | 'CREATE_MAINTENANCE_RECORD' | 'UPDATE_MAINTENANCE_RECORD' | 'DELETE_MAINTENANCE_RECORD'
+  | 'CREATE_SPARE_PART' | 'UPDATE_SPARE_PART' | 'DELETE_SPARE_PART'
   | 'CREATE_MATERIAL' | 'UPDATE_MATERIAL' | 'DELETE_MATERIAL' | 'BATCH_IMPORT_MATERIALS'
   | 'CREATE_CLOTHING_ITEM' | 'UPDATE_CLOTHING_ITEM' | 'DELETE_CLOTHING_ITEM' | 'BATCH_IMPORT_CLOTHING'
   | 'CREATE_GENERAL_INVENTORY_ITEM' | 'UPDATE_GENERAL_INVENTORY_ITEM' | 'DELETE_GENERAL_INVENTORY_ITEM'
