@@ -10,14 +10,16 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { addSparePart } from "@/services/spare-parts.service";
 import { Loader2 } from "lucide-react";
+import { LoggedInUser } from "@/lib/types";
 
 interface AddSparePartDialogProps {
     children: React.ReactNode;
     vehicleId: string;
     onPartAdded: () => void;
+    actor: LoggedInUser;
 }
 
-export default function AddSparePartDialog({ children, vehicleId, onPartAdded }: AddSparePartDialogProps) {
+export default function AddSparePartDialog({ children, vehicleId, onPartAdded, actor }: AddSparePartDialogProps) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -44,7 +46,7 @@ export default function AddSparePartDialog({ children, vehicleId, onPartAdded }:
 
         setLoading(true);
         try {
-            await addSparePart({ vehicleId, name, brand, code, observations });
+            await addSparePart({ vehicleId, name, brand, code, observations }, actor);
             toast({ title: "¡Éxito!", description: "El repuesto ha sido agregado." });
             onPartAdded();
             resetForm();

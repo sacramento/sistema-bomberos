@@ -22,20 +22,20 @@ export const getSparePartsByVehicle = async (vehicleId: string): Promise<SparePa
     return parts;
 };
 
-export const addSparePart = async (partData: Omit<SparePart, 'id'>): Promise<string> => {
+export const addSparePart = async (partData: Omit<SparePart, 'id'>, actor: LoggedInUser): Promise<string> => {
     const docRef = await addDoc(sparePartsCollection, partData);
-    await logAction({} as LoggedInUser, 'CREATE_SPARE_PART', { entity: 'sparePart', id: docRef.id }, partData);
+    await logAction(actor, 'CREATE_SPARE_PART', { entity: 'sparePart', id: docRef.id }, partData);
     return docRef.id;
 };
 
-export const updateSparePart = async (id: string, partData: Partial<Omit<SparePart, 'id' | 'vehicleId'>>): Promise<void> => {
+export const updateSparePart = async (id: string, partData: Partial<Omit<SparePart, 'id' | 'vehicleId'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'spare_parts', id);
     await updateDoc(docRef, partData);
-    await logAction({} as LoggedInUser, 'UPDATE_SPARE_PART', { entity: 'sparePart', id }, partData);
+    await logAction(actor, 'UPDATE_SPARE_PART', { entity: 'sparePart', id }, partData);
 };
 
-export const deleteSparePart = async (id: string): Promise<void> => {
+export const deleteSparePart = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'spare_parts', id);
     await deleteDoc(docRef);
-    await logAction({} as LoggedInUser, 'DELETE_SPARE_PART', { entity: 'sparePart', id });
+    await logAction(actor, 'DELETE_SPARE_PART', { entity: 'sparePart', id });
 };

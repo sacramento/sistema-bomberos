@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { SparePart } from "@/lib/types";
+import { SparePart, LoggedInUser } from "@/lib/types";
 import { updateSparePart } from "@/services/spare-parts.service";
 import { Loader2 } from "lucide-react";
 
@@ -16,9 +16,10 @@ interface EditSparePartDialogProps {
     children: React.ReactNode;
     part: SparePart;
     onPartUpdated: () => void;
+    actor: LoggedInUser;
 }
 
-export default function EditSparePartDialog({ children, part, onPartUpdated }: EditSparePartDialogProps) {
+export default function EditSparePartDialog({ children, part, onPartUpdated, actor }: EditSparePartDialogProps) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -48,7 +49,7 @@ export default function EditSparePartDialog({ children, part, onPartUpdated }: E
 
         setLoading(true);
         try {
-            await updateSparePart(part.id, { name, brand, code, observations });
+            await updateSparePart(part.id, { name, brand, code, observations }, actor);
             toast({ title: "¡Éxito!", description: "El repuesto ha sido actualizado." });
             onPartUpdated();
             setOpen(false);

@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SparePart } from '@/lib/types';
+import { SparePart, LoggedInUser } from '@/lib/types';
 import { getSparePartsByVehicle, deleteSparePart } from '@/services/spare-parts.service';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +18,10 @@ import EditSparePartDialog from './EditSparePartDialog';
 interface SparePartsManagerProps {
     vehicleId: string;
     canManage: boolean;
+    actor: LoggedInUser;
 }
 
-export default function SparePartsManager({ vehicleId, canManage }: SparePartsManagerProps) {
+export default function SparePartsManager({ vehicleId, canManage, actor }: SparePartsManagerProps) {
     const [spareParts, setSpareParts] = useState<SparePart[]>([]);
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
@@ -49,7 +50,7 @@ export default function SparePartsManager({ vehicleId, canManage }: SparePartsMa
 
     const handleDelete = async (partId: string) => {
         try {
-            await deleteSparePart(partId);
+            await deleteSparePart(partId, actor);
             toast({ title: "Repuesto eliminado" });
             fetchSpareParts();
         } catch (error: any) {
@@ -65,7 +66,7 @@ export default function SparePartsManager({ vehicleId, canManage }: SparePartsMa
                     <CardDescription>Listado de repuestos específicos para este móvil.</CardDescription>
                 </div>
                 {canManage && (
-                    <AddSparePartDialog vehicleId={vehicleId} onPartAdded={handleDataChange}>
+                    <AddSparePartDialog vehicleId={vehicleId} onPartAdded={handleDataChange} actor={actor}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Agregar Repuesto
@@ -107,7 +108,7 @@ export default function SparePartsManager({ vehicleId, canManage }: SparePartsMa
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <EditSparePartDialog part={part} onPartUpdated={handleDataChange}>
+                                                        <EditSparePartDialog part={part} onPartUpdated={handleDataChange} actor={actor}>
                                                             <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
                                                         </EditSparePartDialog>
                                                         <AlertDialogTrigger asChild>

@@ -226,7 +226,7 @@ export default function VehicleDetailPage() {
                 )}
                  {canManage && (
                     <TabsContent value="repuestos">
-                        <SparePartsManager vehicleId={vehicle.id} canManage={canManage} />
+                        <SparePartsManager vehicleId={vehicle.id} canManage={canManage} actor={user} />
                     </TabsContent>
                 )}
                 <TabsContent value="historial">
