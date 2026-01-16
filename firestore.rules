@@ -103,6 +103,11 @@ service cloud.firestore {
         allow write: if hasRole('movilidad', ['Administrador', 'Encargado Móvil']);
       }
       
+      match /repair_records/{recordId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('movilidad', ['Administrador', 'Oficial', 'Encargado Móvil']);
+      }
+      
       match /spare_parts/{partId} {
         allow read: if request.auth != null;
         allow write: if hasRole('movilidad', ['Administrador']);

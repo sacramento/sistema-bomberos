@@ -10,7 +10,7 @@ import { getVehicleById } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle, List, History, FileText } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle, List, History, FileText, Construction } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import EditVehicleDialog from "../_components/edit-vehicle-dialog";
@@ -23,6 +23,8 @@ import AddMaintenanceRecordDialog from "../_components/add-maintenance-record-di
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ChecklistManager from "../_components/checklist-manager";
 import SparePartsManager from "../_components/SparePartsManager";
+import AddRepairRecordDialog from "../_components/add-repair-record-dialog";
+import RepairHistory from "../_components/repair-history";
 
 interface DetailItemProps {
     icon: React.ElementType;
@@ -68,6 +70,8 @@ export default function VehicleDetailPage() {
       if (activeRole === 'Encargado Móvil' && user?.id && vehicle?.encargadoIds.includes(user.id)) return true;
       return false;
     }, [canManage, activeRole, user, vehicle]);
+    
+    const canLogRepairs = useMemo(() => ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'].includes(activeRole), [activeRole]);
 
     const fetchVehicle = async () => {
         if (vehicleId) {
@@ -100,7 +104,7 @@ export default function VehicleDetailPage() {
     }, [vehicleId]);
 
      const handleDelete = async () => {
-        if (!vehicle) return;
+        if (!vehicle || !user) return;
         try {
             await deleteVehicle(vehicle.id, user);
             toast({ title: "Éxito", description: "El móvil ha sido eliminado." });
@@ -125,7 +129,7 @@ export default function VehicleDetailPage() {
         )
     }
 
-    if (!vehicle) return null;
+    if (!vehicle || !user) return null;
     
     const activeEncargados = vehicle.encargados?.filter(e => e.status === 'Active' || e.status === 'Auxiliar') || [];
     const encargadosDisplay = activeEncargados.length > 0
@@ -135,19 +139,25 @@ export default function VehicleDetailPage() {
     return (
         <>
             <PageHeader title={`Móvil ${vehicle.numeroMovil}`} description={`${vehicle.marca} ${vehicle.modelo}`}>
-                <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
-                         <Button variant="outline" onClick={() => router.push('/vehicles')}>
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver
-                        </Button>
-                        {canEdit && (
-                            <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
-                                <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar Ficha</Button>
-                            </EditVehicleDialog>
-                        )}
-                    </div>
-                     {canEdit && (
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    <Button variant="outline" onClick={() => router.push('/vehicles')}>
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver
+                    </Button>
+                    {canEdit && (
+                        <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
+                            <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar Ficha</Button>
+                        </EditVehicleDialog>
+                    )}
+                     {canLogRepairs && (
+                        <AddRepairRecordDialog vehicle={vehicle} onRecordAdded={handleDataChange} actor={user}>
+                            <Button variant="outline">
+                                <Construction className="mr-2 h-4 w-4" />
+                                Registrar Reparación
+                            </Button>
+                        </AddRepairRecordDialog>
+                    )}
+                    {canEdit && (
                         <AddMaintenanceRecordDialog vehicle={vehicle} onRecordAdded={handleDataChange}>
                             <Button>
                                 <PlusCircle className="mr-2" />
@@ -159,11 +169,12 @@ export default function VehicleDetailPage() {
             </PageHeader>
 
             <Tabs defaultValue="ficha" className="w-full">
-                <TabsList className={cn("grid w-full max-w-3xl mx-auto mb-6", canManage ? "grid-cols-4" : "grid-cols-2")}>
+                <TabsList className={cn("grid w-full max-w-4xl mx-auto mb-6", canManage ? "grid-cols-5" : "grid-cols-3")}>
                     <TabsTrigger value="ficha"><FileText className="mr-2 h-4 w-4"/>Ficha Técnica</TabsTrigger>
                      {canManage && <TabsTrigger value="checklist"><List className="mr-2 h-4 w-4"/>Checklist</TabsTrigger>}
                      {canManage && <TabsTrigger value="repuestos"><Wrench className="mr-2 h-4 w-4"/>Repuestos</TabsTrigger>}
                     <TabsTrigger value="historial"><History className="mr-2 h-4 w-4"/>Historial</TabsTrigger>
+                    <TabsTrigger value="reparaciones"><Construction className="mr-2 h-4 w-4"/>Reparaciones</TabsTrigger>
                 </TabsList>
                 <TabsContent value="ficha">
                      <Card>
@@ -231,6 +242,9 @@ export default function VehicleDetailPage() {
                 )}
                 <TabsContent value="historial">
                     <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
+                </TabsContent>
+                <TabsContent value="reparaciones">
+                    <RepairHistory vehicleId={vehicleId} canManage={canManage} refreshSignal={refreshSignal} actor={user} />
                 </TabsContent>
             </Tabs>
 
