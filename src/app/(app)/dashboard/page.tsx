@@ -4,7 +4,7 @@
 
 import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren } from 'lucide-react';
 import type { NavItem } from '../layout';
@@ -83,35 +83,33 @@ export default function ModuleSelectionPage() {
                 Por favor, seleccione un módulo para continuar.
             </p>
         </div>
-        <div className="z-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl w-full">
-            {moduleOrder.map(moduleKey => {
-                const module = accessibleModules[moduleKey];
-                if (!module) return null;
+        
+        <div className="z-10 w-full max-w-xl">
+            <ul className="space-y-4">
+                {moduleOrder.map(moduleKey => {
+                    const module = accessibleModules[moduleKey];
+                    if (!module) return null;
 
-                const ModuleIcon = module.icon;
+                    const ModuleIcon = module.icon;
 
-                return (
-                     <Link href={module.entryPoint} key={moduleKey} className="group">
-                        <Card className="bg-white shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col hover:-translate-y-1 backdrop-blur-sm">
-                            <CardHeader className="flex-row items-center gap-4">
-                                <div className="p-3 bg-primary/10 rounded-lg">
-                                     <ModuleIcon className="h-8 w-8 text-primary" />
-                                </div>
-                                <div>
-                                    <CardTitle className="font-headline text-2xl">{module.title}</CardTitle>
-                                </div>
-                            </CardHeader>
-                            <CardDescription className="px-6 pb-6 flex-grow">{module.description}</CardDescription>
-                            <div className="px-6 pb-4 mt-auto">
-                                <div className="flex items-center text-primary font-semibold group-hover:gap-3 transition-all duration-200">
-                                    <span>Ingresar al Módulo</span>
-                                    <ArrowRight className="h-5 w-5" />
-                                </div>
-                            </div>
-                        </Card>
-                    </Link>
-                )
-            })}
+                    return (
+                        <li key={moduleKey}>
+                            <Link href={module.entryPoint} className="group">
+                                <Card className="bg-white shadow-md hover:shadow-xl hover:border-primary/50 transition-all duration-200 h-full flex items-center p-4">
+                                    <div className="p-3 bg-primary/10 rounded-lg mr-4">
+                                        <ModuleIcon className="h-6 w-6 text-primary" />
+                                    </div>
+                                    <div className="flex-grow">
+                                        <p className="font-headline text-lg font-semibold">{module.title}</p>
+                                        <p className="text-sm text-muted-foreground">{module.description}</p>
+                                    </div>
+                                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors ml-4" />
+                                </Card>
+                            </Link>
+                        </li>
+                    )
+                })}
+            </ul>
         </div>
     </div>
   );
