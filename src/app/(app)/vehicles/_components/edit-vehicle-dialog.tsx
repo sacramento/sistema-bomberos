@@ -163,8 +163,8 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.numeroMovil || !formData.marca || !formData.modelo || selectedEncargados.length === 0) {
-        toast({ title: "Error", description: "Móvil, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
+    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo || selectedEncargados.length === 0) {
+        toast({ title: "Error", description: "Móvil, dominio, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
         return;
     }
     setLoading(true);
@@ -198,6 +198,10 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                 <div className="space-y-2">
                     <Label htmlFor="numeroMovil">Número de Móvil</Label>
                     <Input id="numeroMovil" value={formData.numeroMovil || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="dominio">Dominio (Patente)</Label>
+                    <Input id="dominio" value={formData.dominio || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="marca">Marca</Label>

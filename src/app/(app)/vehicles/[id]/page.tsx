@@ -172,6 +172,7 @@ export default function VehicleDetailPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
                                 <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
+                                <DetailItem icon={FileText} label="Dominio" value={vehicle.dominio} />
                                 <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
                                 <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
                                 <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />

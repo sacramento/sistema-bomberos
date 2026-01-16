@@ -81,6 +81,7 @@ export type Course = {
 export type Vehicle = {
   id: string;
   numeroMovil: string;
+  dominio: string;
   marca: string;
   modelo: string;
   ano: number;

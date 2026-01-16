@@ -115,6 +115,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   // Form State
   const [formData, setFormData] = useState<Omit<Vehicle, 'id' | 'encargados'>>({
     numeroMovil: '',
+    dominio: '',
     marca: '',
     modelo: '',
     ano: new Date().getFullYear(),
@@ -164,6 +165,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   const resetForm = () => {
     setFormData({
         numeroMovil: '',
+        dominio: '',
         marca: '',
         modelo: '',
         ano: new Date().getFullYear(),
@@ -180,8 +182,8 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.numeroMovil || !formData.marca || !formData.modelo || formData.encargadoIds.length === 0) {
-        toast({ title: "Error", description: "Móvil, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
+    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo || formData.encargadoIds.length === 0) {
+        toast({ title: "Error", description: "Móvil, dominio, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
         return;
     }
     
@@ -219,6 +221,10 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                 <div className="space-y-2">
                     <Label htmlFor="numeroMovil">Número de Móvil</Label>
                     <Input id="numeroMovil" value={formData.numeroMovil} onChange={handleInputChange} required />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="dominio">Dominio (Patente)</Label>
+                    <Input id="dominio" value={formData.dominio} onChange={handleInputChange} required />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="marca">Marca</Label>

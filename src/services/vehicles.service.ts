@@ -36,6 +36,7 @@ const docToVehicle = async (
     const vehicle: Vehicle = {
         id: docSnap.id,
         numeroMovil: data.numeroMovil,
+        dominio: data.dominio || '',
         marca: data.marca,
         modelo: data.modelo,
         ano: data.ano,
