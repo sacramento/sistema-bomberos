@@ -326,6 +326,7 @@ export type Service = {
     cuartel: 'C1' | 'C2' | 'C3';
     year: number;
     manualId: number;
+    status?: 'Activo' | 'Anulado';
     
     startDateTime: string;
     endDateTime: string;

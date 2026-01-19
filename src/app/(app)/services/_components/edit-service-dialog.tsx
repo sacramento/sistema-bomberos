@@ -49,19 +49,19 @@ const SingleFirefighterSelect = ({
     selected,
     onSelectedChange,
     firefighters,
-    disabledIds = []
+    disabled = false
 }: {
     title: string;
     selected: Firefighter | null;
     onSelectedChange: (firefighter: Firefighter | null) => void;
     firefighters: Firefighter[];
-    disabledIds?: string[];
+    disabled?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between" disabled={disabled}>
                     {selected ? `${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -75,7 +75,6 @@ const SingleFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
                                     onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}
-                                    disabled={disabledIds.includes(firefighter.id)}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
                                     {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
@@ -96,7 +95,7 @@ const MultiSelect = ({
   onSelectedChange,
   displayKey = 'lastName',
   valueKey = 'id',
-  disabledIds = []
+  disabled = false
 }: {
   title: string;
   options: any[];
@@ -104,12 +103,11 @@ const MultiSelect = ({
   onSelectedChange: (selected: any[]) => void;
   displayKey?: string;
   valueKey?: string;
-  disabledIds?: string[];
+  disabled?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
     
     const handleSelect = (option: any) => {
-        if(disabledIds.includes(option[valueKey])) return;
         const isSelected = selected.some(s => s[valueKey] === option[valueKey]);
         if (isSelected) {
             onSelectedChange(selected.filter(s => s[valueKey] !== option[valueKey]));
@@ -121,7 +119,7 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10" disabled={disabled}>
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
@@ -135,7 +133,7 @@ const MultiSelect = ({
                         <CommandEmpty>No se encontraron opciones.</CommandEmpty>
                         <CommandGroup>
                             {options.map((option) => (
-                                <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)} disabled={disabledIds.includes(option[valueKey])}>
+                                <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
                                     {option.legajo ? `${option.legajo} - ${option[displayKey]}` : option[displayKey]}
                                 </CommandItem>
@@ -320,19 +318,19 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                 </div>
                 <div className="space-y-2">
                     <Label>Jefe de Servicio</Label>
-                    <SingleFirefighterSelect title="Jefe de Servicio" selected={findFirefighter(formData.serviceChiefId || '')} onSelectedChange={(f) => handleInputChange('serviceChiefId', f?.id)} firefighters={allFirefighters} disabledIds={[formData.commandId || '']}/>
+                    <SingleFirefighterSelect title="Jefe de Servicio" selected={findFirefighter(formData.serviceChiefId || '')} onSelectedChange={(f) => handleInputChange('serviceChiefId', f?.id)} firefighters={allFirefighters}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Cuartelero</Label>
-                    <SingleFirefighterSelect title="Cuartelero" selected={findFirefighter(formData.stationOfficerId || '')} onSelectedChange={(f) => handleInputChange('stationOfficerId', f?.id)} firefighters={allFirefighters} disabledIds={[formData.commandId || '', formData.serviceChiefId || '']}/>
+                    <SingleFirefighterSelect title="Cuartelero" selected={findFirefighter(formData.stationOfficerId || '')} onSelectedChange={(f) => handleInputChange('stationOfficerId', f?.id)} firefighters={allFirefighters}/>
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>
-                    <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.onDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('onDutyIds', firefighters.map(f => f.id))} disabledIds={[formData.commandId || '', formData.serviceChiefId || '', formData.stationOfficerId || '']}/>
+                    <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.onDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('onDutyIds', firefighters.map(f => f.id))}/>
                 </div>
                  <div className="space-y-2">
                     <Label>Dotación de Pasiva</Label>
-                    <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.offDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('offDutyIds', firefighters.map(f => f.id))} disabledIds={[formData.commandId || '', formData.serviceChiefId || '', formData.stationOfficerId || '', ...(formData.onDutyIds || [])]}/>
+                    <MultiSelect title="Integrantes" options={allFirefighters} selected={findFirefighters(formData.offDutyIds || [])} onSelectedChange={(firefighters) => handleInputChange('offDutyIds', firefighters.map(f => f.id))}/>
                 </div>
             </div>
 
@@ -351,7 +349,10 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
                                     <Label>Móvil</Label>
                                     <Select value={iv.vehicleId} onValueChange={(v) => handleVehicleChange(index, 'vehicleId', v)}>
                                         <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                        <SelectContent>{allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent>
+                                        <SelectContent>
+                                            <SelectItem value="particular">Vehículo Particular</SelectItem>
+                                            {allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}
+                                        </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-1">

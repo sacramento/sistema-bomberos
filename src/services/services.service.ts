@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { db } from '@/lib/firebase/firestore';
@@ -35,6 +36,7 @@ const docToService = async (docSnap: any, firefighterMap: Map<string, Firefighte
     return {
         id: docSnap.id,
         ...data,
+        status: data.status || 'Activo',
         command: getPersonnel(data.commandId),
         serviceChief: getPersonnel(data.serviceChiefId),
         stationOfficer: getPersonnel(data.stationOfficerId),
@@ -71,6 +73,7 @@ export const addService = async (serviceData: any, actor: LoggedInUser): Promise
     dataToSave.manualId = Number(dataToSave.manualId);
     dataToSave.zone = Number(dataToSave.zone);
     if (!dataToSave.endDateTime) dataToSave.endDateTime = dataToSave.startDateTime;
+    if (!dataToSave.status) dataToSave.status = 'Activo';
 
     const docRef = await addDoc(servicesCollection, dataToSave);
     await logAction(actor, 'CREATE_SERVICE', { entity: 'service', id: docRef.id }, dataToSave);

@@ -50,19 +50,19 @@ const SingleFirefighterSelect = ({
     selected,
     onSelectedChange,
     firefighters,
-    disabledIds = []
+    disabled = false
 }: {
     title: string;
     selected: Firefighter | null;
     onSelectedChange: (firefighter: Firefighter | null) => void;
     firefighters: Firefighter[];
-    disabledIds?: string[];
+    disabled?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between" disabled={disabled}>
                     {selected ? `${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -76,7 +76,6 @@ const SingleFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
                                     onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}
-                                    disabled={disabledIds.includes(firefighter.id)}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
                                     {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
@@ -97,7 +96,7 @@ const MultiSelect = ({
   onSelectedChange,
   displayKey = 'lastName',
   valueKey = 'id',
-  disabledIds = []
+  disabled = false
 }: {
   title: string;
   options: any[];
@@ -105,12 +104,11 @@ const MultiSelect = ({
   onSelectedChange: (selected: any[]) => void;
   displayKey?: string;
   valueKey?: string;
-  disabledIds?: string[];
+  disabled?: boolean;
 }) => {
     const [open, setOpen] = useState(false);
     
     const handleSelect = (option: any) => {
-        if(disabledIds.includes(option[valueKey])) return;
         const isSelected = selected.some(s => s[valueKey] === option[valueKey]);
         if (isSelected) {
             onSelectedChange(selected.filter(s => s[valueKey] !== option[valueKey]));
@@ -122,7 +120,7 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10" disabled={disabled}>
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
@@ -136,7 +134,7 @@ const MultiSelect = ({
                         <CommandEmpty>No se encontraron opciones.</CommandEmpty>
                         <CommandGroup>
                             {options.map((option) => (
-                                <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)} disabled={disabledIds.includes(option[valueKey])}>
+                                <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
                                     {option.legajo ? `${option.legajo} - ${option[displayKey]}` : option[displayKey]}
                                 </CommandItem>
@@ -182,6 +180,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const [serviceCode, setServiceCode] = useState('');
   const [zone, setZone] = useState<number | ''>('');
   const [stationOfficer, setStationOfficer] = useState<Firefighter | null>(null);
+  const [isAnulado, setIsAnulado] = useState(false);
 
   const progress = (step / totalSteps) * 100;
   
@@ -212,6 +211,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
     setCommand(null); setServiceChief(null); setOnDuty([]); setOffDuty([]);
     setInterveningVehicles([]); setCollaboration(''); setRecognition(''); setObservations('');
     setInConjunction(false); setServiceCode(''); setZone(''); setStationOfficer(null);
+    setIsAnulado(false);
     setStep(1);
   };
   
@@ -220,11 +220,20 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   
   const handleSubmit = async () => {
      setLoading(true);
-    if (!cuartel || !manualId || !startDateTime || !command || !serviceChief || !stationOfficer || !serviceCode) {
+    if (!cuartel || !manualId || !startDateTime) {
         toast({
             variant: "destructive",
             title: "Datos incompletos",
-            description: "Asegúrese de completar el cuartel, número de planilla, fecha y hora de inicio, código, comando, jefe de servicio y cuartelero.",
+            description: "Asegúrese de completar el cuartel, número de planilla y fecha y hora de inicio.",
+        });
+        setLoading(false);
+        return;
+    }
+     if (!isAnulado && (!command || !serviceChief || !stationOfficer || !serviceCode)) {
+        toast({
+            variant: "destructive",
+            title: "Datos incompletos",
+            description: "Para un servicio activo, el código, comando, jefe de servicio y cuartelero son obligatorios.",
         });
         setLoading(false);
         return;
@@ -236,15 +245,16 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             year: new Date(startDateTime).getFullYear(),
             manualId: Number(manualId),
             startDateTime,
-            endDateTime,
+            status: isAnulado ? 'Anulado' : 'Activo',
+            endDateTime: isAnulado ? startDateTime : endDateTime,
             serviceType: serviceType as ServiceType,
             address,
             latitude: latitude !== '' ? Number(latitude) : undefined,
             longitude: longitude !== '' ? Number(longitude) : undefined,
             summonMethods: selectedSummonMethods,
-            commandId: command.id,
-            serviceChiefId: serviceChief.id,
-            stationOfficerId: stationOfficer.id,
+            commandId: command?.id,
+            serviceChiefId: serviceChief?.id,
+            stationOfficerId: stationOfficer?.id,
             onDutyIds: onDuty.map(f => f.id),
             offDutyIds: offDuty.map(f => f.id),
             interveningVehicles: interveningVehicles.map(iv => ({
@@ -298,6 +308,10 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
       case 1:
         return (
           <div className="space-y-4">
+            <div className="flex items-center space-x-2 pt-2">
+                <Switch id="isAnulado" checked={isAnulado} onCheckedChange={setIsAnulado} />
+                <Label htmlFor="isAnulado" className="text-red-600 font-bold">Anular Planilla</Label>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                  <div className="space-y-2">
                     <Label htmlFor="cuartel">Cuartel</Label>
@@ -316,11 +330,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="endDateTime">Fecha y Hora de Finalización</Label>
-                    <Input id="endDateTime" type="datetime-local" value={endDateTime} onChange={e => setEndDateTime(e.target.value)} />
+                    <Input id="endDateTime" type="datetime-local" value={endDateTime} onChange={e => setEndDateTime(e.target.value)} disabled={isAnulado}/>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="zone">Zona</Label>
-                    <Select value={zone.toString()} onValueChange={v => setZone(Number(v))}>
+                    <Select value={zone.toString()} onValueChange={v => setZone(Number(v))} disabled={isAnulado}>
                         <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                         <SelectContent>{zones.map(z => <SelectItem key={z} value={z.toString()}>{z}</SelectItem>)}</SelectContent>
                     </Select>
@@ -328,14 +342,14 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             </div>
              <div className="space-y-2">
                 <Label htmlFor="serviceType">Tipo de Servicio</Label>
-                <Select value={serviceType} onValueChange={v => setServiceType(v as any)}>
+                <Select value={serviceType} onValueChange={v => setServiceType(v as any)} disabled={isAnulado}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                     <SelectContent>{serviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
                 </Select>
             </div>
              <div className="space-y-2">
                 <Label htmlFor="serviceCode">Código de Servicio</Label>
-                <Select value={serviceCode} onValueChange={v => setServiceCode(v)}>
+                <Select value={serviceCode} onValueChange={v => setServiceCode(v)} disabled={isAnulado}>
                     <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                     <SelectContent>
                         {serviceCodes.map(group => (
@@ -349,16 +363,16 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             </div>
             <div className="space-y-2">
                 <Label htmlFor="address">Dirección</Label>
-                <Input id="address" placeholder="Calle y número, o referencia" value={address} onChange={e => setAddress(e.target.value)} />
+                <Input id="address" placeholder="Calle y número, o referencia" value={address} onChange={e => setAddress(e.target.value)} disabled={isAnulado}/>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="latitude">Latitud (Opcional)</Label>
-                    <Input id="latitude" type="number" step="any" placeholder="-34.5678" value={latitude} onChange={e => setLatitude(e.target.value === '' ? '' : parseFloat(e.target.value))} />
+                    <Input id="latitude" type="number" step="any" placeholder="-34.5678" value={latitude} onChange={e => setLatitude(e.target.value === '' ? '' : parseFloat(e.target.value))} disabled={isAnulado}/>
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="longitude">Longitud (Opcional)</Label>
-                    <Input id="longitude" type="number" step="any" placeholder="-58.1234" value={longitude} onChange={e => setLongitude(e.target.value === '' ? '' : parseFloat(e.target.value))} />
+                    <Input id="longitude" type="number" step="any" placeholder="-58.1234" value={longitude} onChange={e => setLongitude(e.target.value === '' ? '' : parseFloat(e.target.value))} disabled={isAnulado}/>
                 </div>
             </div>
              <div className="space-y-2">
@@ -370,17 +384,17 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                     onSelectedChange={methods => setSelectedSummonMethods(methods.map(m => m.value))}
                     displayKey="label"
                     valueKey="value"
+                    disabled={isAnulado}
                 />
             </div>
             <div className="flex items-center space-x-2 pt-2">
-                <Switch id="inConjunction" checked={inConjunction} onCheckedChange={setInConjunction} />
+                <Switch id="inConjunction" checked={inConjunction} onCheckedChange={setInConjunction} disabled={isAnulado}/>
                 <Label htmlFor="inConjunction">En conjunto</Label>
             </div>
           </div>
         );
        case 2:
         const firefighterOptions = activeFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
-        const disabledPersonnelIds = [command?.id, serviceChief?.id, stationOfficer?.id, ...onDuty.map(f => f.id)].filter(Boolean) as string[];
         return (
             <div className="space-y-4">
                 <div className="space-y-2">
@@ -389,19 +403,19 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                 </div>
                 <div className="space-y-2">
                     <Label>Jefe de Servicio</Label>
-                    <SingleFirefighterSelect title="Jefe de Servicio" selected={serviceChief} onSelectedChange={setServiceChief} firefighters={activeFirefighters} disabledIds={[command?.id].filter(Boolean) as string[]}/>
+                    <SingleFirefighterSelect title="Jefe de Servicio" selected={serviceChief} onSelectedChange={setServiceChief} firefighters={activeFirefighters} />
                 </div>
                 <div className="space-y-2">
                     <Label>Cuartelero</Label>
-                    <SingleFirefighterSelect title="Cuartelero" selected={stationOfficer} onSelectedChange={setStationOfficer} firefighters={activeFirefighters} disabledIds={[command?.id, serviceChief?.id].filter(Boolean) as string[]}/>
+                    <SingleFirefighterSelect title="Cuartelero" selected={stationOfficer} onSelectedChange={setStationOfficer} firefighters={activeFirefighters} />
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Servicio</Label>
-                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} disabledIds={[command?.id, serviceChief?.id, stationOfficer?.id].filter(Boolean) as string[]}/>
+                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={onDuty} onSelectedChange={setOnDuty} />
                 </div>
                 <div className="space-y-2">
                     <Label>Dotación de Pasiva</Label>
-                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={offDuty} onSelectedChange={setOffDuty} disabledIds={disabledPersonnelIds}/>
+                    <MultiSelect title="Integrantes" options={firefighterOptions} selected={offDuty} onSelectedChange={setOffDuty} />
                 </div>
             </div>
         )
@@ -420,7 +434,10 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                                 <Label>Móvil</Label>
                                 <Select value={iv.vehicleId} onValueChange={(v) => handleVehicleChange(index, 'vehicleId', v)}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                    <SelectContent>{allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent>
+                                    <SelectContent>
+                                        <SelectItem value="particular">Vehículo Particular</SelectItem>
+                                        {allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
+                                    </SelectContent>
                                 </Select>
                             </div>
                             <div className="space-y-1">
@@ -459,38 +476,50 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             <div className="space-y-4 text-sm">
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3 max-h-96 overflow-y-auto">
-                   <p><strong>Tipo:</strong> {serviceType}</p>
-                   <p><strong>Código:</strong> {serviceCode}</p>
-                   <p><strong>Fecha y Hora:</strong> {startDateTime} a {endDateTime}</p>
-                   <p><strong>Dirección:</strong> {address} (Zona: {zone})</p>
-                   <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
-                   <p><strong>En conjunto:</strong> {inConjunction ? 'Sí' : 'No'}</p>
-                   <Separator className="my-2"/>
-                   <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
-                   <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
-                   <p><strong>Cuartelero:</strong> {stationOfficer ? `${stationOfficer.lastName}, ${stationOfficer.firstName}` : 'N/A'}</p>
-                   <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
-                   <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
-                   <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>
-                   <Separator className="my-2"/>
-                   <div>
-                     <p><strong>Móviles Intervinientes:</strong></p>
-                     {interveningVehicles.length > 0 ? (
-                        <ul className="list-disc pl-5 mt-1 space-y-1">
-                            {interveningVehicles.map((iv, i) => {
-                                const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
-                                return (
-                                    <li key={i}>
-                                        Móvil {vehicle?.numeroMovil} - Salida: {iv.departureDateTime}, Regreso: {iv.returnDateTime}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                     ) : <p className="text-muted-foreground">Ninguno</p>}
-                   </div>
-                   <Separator className="my-2"/>
-                   <p><strong>Colaboración:</strong> {collaboration || 'Ninguna'}</p>
-                   <p><strong>Observaciones:</strong> {observations || 'Ninguna'}</p>
+                   {isAnulado ? (
+                     <>
+                        <p className="font-bold text-red-600">Este servicio se registrará como ANULADO.</p>
+                        <p><strong>Cuartel:</strong> {cuartel}</p>
+                        <p><strong>Número de Planilla:</strong> {manualId}</p>
+                        <p><strong>Fecha:</strong> {startDateTime ? format(new Date(startDateTime), 'P', {locale: es}) : 'N/A'}</p>
+                        <p><strong>Observaciones:</strong> {observations || 'Sin observaciones.'}</p>
+                     </>
+                   ) : (
+                    <>
+                       <p><strong>Tipo:</strong> {serviceType}</p>
+                       <p><strong>Código:</strong> {serviceCode}</p>
+                       <p><strong>Fecha y Hora:</strong> {startDateTime} a {endDateTime}</p>
+                       <p><strong>Dirección:</strong> {address} (Zona: {zone})</p>
+                       <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
+                       <p><strong>En conjunto:</strong> {inConjunction ? 'Sí' : 'No'}</p>
+                       <Separator className="my-2"/>
+                       <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
+                       <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
+                       <p><strong>Cuartelero:</strong> {stationOfficer ? `${stationOfficer.lastName}, ${stationOfficer.firstName}` : 'N/A'}</p>
+                       <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
+                       <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
+                       <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>
+                       <Separator className="my-2"/>
+                       <div>
+                         <p><strong>Móviles Intervinientes:</strong></p>
+                         {interveningVehicles.length > 0 ? (
+                            <ul className="list-disc pl-5 mt-1 space-y-1">
+                                {interveningVehicles.map((iv, i) => {
+                                    const vehicle = iv.vehicleId === 'particular' ? { numeroMovil: 'Particular' } : allVehicles.find(v => v.id === iv.vehicleId);
+                                    return (
+                                        <li key={i}>
+                                            Móvil {vehicle?.numeroMovil} - Salida: {iv.departureDateTime}, Regreso: {iv.returnDateTime}
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                         ) : <p className="text-muted-foreground">Ninguno</p>}
+                       </div>
+                       <Separator className="my-2"/>
+                       <p><strong>Colaboración:</strong> {collaboration || 'Ninguna'}</p>
+                       <p><strong>Observaciones:</strong> {observations || 'Ninguna'}</p>
+                    </>
+                   )}
                 </div>
             </div>
         )

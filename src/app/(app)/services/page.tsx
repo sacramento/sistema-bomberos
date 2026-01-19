@@ -21,6 +21,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import EditServiceDialog from "./_components/edit-service-dialog";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { cn } from "@/lib/utils";
 
 export default function ServicesPage() {
     const [services, setServices] = useState<Service[]>([]);
@@ -117,13 +118,17 @@ export default function ServicesPage() {
                         <div className="space-y-4">
                            {services.map(service => (
                                 <AlertDialog key={service.id}>
-                                    <Card>
+                                    <Card className={cn(service.status === 'Anulado' && 'bg-muted/50 border-dashed')}>
                                         <CardHeader>
                                             <div className="flex justify-between items-start">
                                                 <div>
-                                                    <Badge variant="secondary" className="mb-2">{service.serviceType || 'Sin Tipo'}</Badge>
+                                                     {service.status === 'Anulado' ? (
+                                                        <Badge variant="destructive" className="mb-2">ANULADO</Badge>
+                                                     ) : (
+                                                        <Badge variant="secondary" className="mb-2">{service.serviceType || 'Sin Tipo'}</Badge>
+                                                     )}
                                                     <CardTitle className="text-lg">{getServiceId(service)}</CardTitle>
-                                                    <CardDescription>{service.address}</CardDescription>
+                                                    <CardDescription>{service.address || 'Sin dirección'}</CardDescription>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                      <Button asChild variant="outline" size="sm">
@@ -157,7 +162,8 @@ export default function ServicesPage() {
                                             </div>
                                         </CardHeader>
                                         <CardFooter className="text-xs text-muted-foreground">
-                                            {`Fecha: ${format(new Date(service.startDateTime), 'P', { locale: es })} | Personal: ${getTotalPersonnel(service)}`}
+                                            {service.status !== 'Anulado' && `Fecha: ${format(new Date(service.startDateTime), 'P', { locale: es })} | Personal: ${getTotalPersonnel(service)}`}
+                                            {service.status === 'Anulado' && `Fecha: ${format(new Date(service.startDateTime), 'P', { locale: es })}`}
                                         </CardFooter>
                                     </Card>
                                      <AlertDialogContent>

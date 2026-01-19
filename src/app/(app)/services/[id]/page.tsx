@@ -12,7 +12,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, User, Users, Truck, Siren, MapPin, Calendar, Clock, Phone, Sparkles, MessageCircle, ShieldQuestion, Code, Globe, Building, MoreVertical, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { format, parseISO, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -20,6 +20,7 @@ import { useAuth } from '@/context/auth-context';
 import EditServiceDialog from '../_components/edit-service-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 
 const DetailItem = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: React.ReactNode }) => (
@@ -149,6 +150,7 @@ export default function ServiceDetailPage() {
     };
 
     const getVehicleName = (id: string) => {
+        if (id === 'particular') return 'Vehículo Particular';
         return vehicles.get(id)?.numeroMovil || 'Desconocido';
     };
     
@@ -168,6 +170,16 @@ export default function ServiceDetailPage() {
                 </div>
             </PageHeader>
 
+            {service.status === 'Anulado' && (
+                <Alert variant="destructive" className="mb-8">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertTitle>Servicio Anulado</AlertTitle>
+                    <AlertDescription>
+                        Esta planilla de servicio fue marcada como anulada. La información que se muestra es limitada.
+                    </AlertDescription>
+                </Alert>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-2 space-y-8">
                     <Card>
@@ -175,8 +187,8 @@ export default function ServiceDetailPage() {
                             <CardTitle className="font-headline">Detalles del Servicio</CardTitle>
                         </CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <DetailItem icon={Siren} label="Tipo de Servicio" value={service.serviceType} />
-                            <DetailItem icon={Code} label="Código de Servicio" value={service.serviceCode} />
+                            <DetailItem icon={Siren} label="Tipo de Servicio" value={service.serviceType || 'N/A'} />
+                            <DetailItem icon={Code} label="Código de Servicio" value={service.serviceCode || 'N/A'} />
                             <DetailItem icon={Calendar} label="Fecha y Hora de Inicio" value={service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'} />
                             <DetailItem icon={Calendar} label="Fecha y Hora de Fin" value={service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'} />
                              <DetailItem icon={Clock} label="Duración Total" value={serviceDuration} />
@@ -215,7 +227,7 @@ export default function ServiceDetailPage() {
                                         <li key={index} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 border rounded-md">
                                             <div className="flex items-center gap-3 font-medium">
                                                 <Truck className="h-5 w-5 text-primary" />
-                                                Móvil {getVehicleName(iv.vehicleId)}
+                                                {getVehicleName(iv.vehicleId)}
                                             </div>
                                             <div className="text-sm text-muted-foreground mt-2 sm:mt-0">
                                                 Duración: {formatExactDuration(iv.departureDateTime, iv.returnDateTime)}
