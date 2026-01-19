@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +29,8 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
