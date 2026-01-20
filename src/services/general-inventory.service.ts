@@ -53,6 +53,8 @@ export const updateGeneralInventoryItem = async (id: string, itemData: Partial<O
 
 export const deleteGeneralInventoryItem = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'general_inventory', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { nombre: docSnap.data().nombre } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id });
+    await logAction(actor, 'DELETE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id }, details);
 };

@@ -86,6 +86,8 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
 
 export const deleteUser = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'users', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { legajo: id, name: docSnap.data().name } : { legajo: id };
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_USER', { entity: 'user', id });
+    await logAction(actor, 'DELETE_USER', { entity: 'user', id }, details);
 };

@@ -3,7 +3,7 @@
 
 import { Sanction, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, query, orderBy, getDoc } from 'firebase/firestore';
 import { parseISO } from 'date-fns';
 import { logAction } from './audit.service';
 
@@ -36,6 +36,8 @@ export const updateSanction = async (id: string, sanctionData: Partial<Omit<Sanc
 
 export const deleteSanction = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'sanctions', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { firefighterName: docSnap.data().firefighterName } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_SANCTION', { entity: 'sanction', id });
+    await logAction(actor, 'DELETE_SANCTION', { entity: 'sanction', id }, details);
 };

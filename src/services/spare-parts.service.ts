@@ -3,7 +3,7 @@
 
 import { SparePart, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 
 if (!db) {
@@ -38,6 +38,8 @@ export const updateSparePart = async (id: string, partData: Partial<Omit<SparePa
 
 export const deleteSparePart = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'spare_parts', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { name: docSnap.data().name } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_SPARE_PART', { entity: 'sparePart', id });
+    await logAction(actor, 'DELETE_SPARE_PART', { entity: 'sparePart', id }, details);
 };

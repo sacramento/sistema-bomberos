@@ -178,6 +178,8 @@ export const updateClothingItem = async (id: string, itemData: Partial<Omit<Clot
 
 export const deleteClothingItem = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'clothing', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { code: docSnap.data().code } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_CLOTHING_ITEM', { entity: 'clothingItem', id });
+    await logAction(actor, 'DELETE_CLOTHING_ITEM', { entity: 'clothingItem', id }, details);
 };

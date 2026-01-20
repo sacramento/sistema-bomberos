@@ -3,7 +3,7 @@
 
 import { Driver, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, doc, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, doc, updateDoc, deleteDoc, where, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { cache } from 'react';
 import { logAction } from './audit.service';

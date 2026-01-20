@@ -124,8 +124,10 @@ export const updateMaterial = async (id: string, materialData: Partial<Omit<Mate
 
 export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'materials', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { nombre: docSnap.data().nombre } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
+    await logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id }, details);
 };
 
 export const deleteAllMaterials = async (actor: LoggedInUser, vehicleId?: string): Promise<number> => {

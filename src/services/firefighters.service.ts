@@ -86,6 +86,8 @@ export const updateFirefighter = async (id: string, firefighterData: Partial<Omi
 
 export const deleteFirefighter = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'firefighters', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { firstName: docSnap.data().firstName, lastName: docSnap.data().lastName } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_FIREFIGHTER', { entity: 'firefighter', id });
+    await logAction(actor, 'DELETE_FIREFIGHTER', { entity: 'firefighter', id }, details);
 };

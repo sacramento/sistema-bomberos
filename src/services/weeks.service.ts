@@ -125,6 +125,9 @@ export const deleteWeek = async (id: string, actor: LoggedInUser): Promise<void>
     const batch = writeBatch(db);
 
     const weekDocRef = doc(db, 'weeks', id);
+    const weekSnap = await getDoc(weekDocRef);
+    const details = weekSnap.exists() ? { name: weekSnap.data().name } : {};
+
     batch.delete(weekDocRef);
 
     const tasksQuery = query(tasksCollection, where('weekId', '==', id));
@@ -134,5 +137,5 @@ export const deleteWeek = async (id: string, actor: LoggedInUser): Promise<void>
     });
 
     await batch.commit();
-    await logAction(actor, 'DELETE_WEEK', { entity: 'week', id });
+    await logAction(actor, 'DELETE_WEEK', { entity: 'week', id }, details);
 }

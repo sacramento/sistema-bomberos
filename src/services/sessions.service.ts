@@ -113,8 +113,10 @@ export const updateSession = async (id: string, sessionData: Partial<Session>, a
 
 export const deleteSession = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'sessions', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { title: docSnap.data().title } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_SESSION', { entity: 'session', id });
+    await logAction(actor, 'DELETE_SESSION', { entity: 'session', id }, details);
 };
 
 export const updateSessionAttendance = async (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser): Promise<void> => {

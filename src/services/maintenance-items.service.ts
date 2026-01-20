@@ -3,7 +3,7 @@
 
 import { MaintenanceItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, orderBy, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 
 if (!db) {
@@ -48,6 +48,8 @@ export const updateMaintenanceItem = async (id: string, itemData: Partial<Omit<M
  */
 export const deleteMaintenanceItem = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'maintenance_items', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { name: docSnap.data().name } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_MAINTENANCE_ITEM', { entity: 'maintenanceItem', id });
+    await logAction(actor, 'DELETE_MAINTENANCE_ITEM', { entity: 'maintenanceItem', id }, details);
 };

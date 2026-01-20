@@ -3,7 +3,7 @@
 
 import { MaintenanceRecord, LoggedInUser, Firefighter } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
 import { parseISO } from 'date-fns';
 import { logAction } from './audit.service';
 import { getFirefighters } from './firefighters.service';

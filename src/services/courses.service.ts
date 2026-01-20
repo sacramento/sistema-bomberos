@@ -3,7 +3,7 @@
 
 import { Course, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, deleteDoc, addDoc, updateDoc, query, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, addDoc, updateDoc, query, orderBy, writeBatch, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 
 if (!db) {
@@ -50,6 +50,8 @@ export const updateCourse = async (id: string, courseData: Partial<Omit<Course, 
 
 export const deleteCourse = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'courses', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { firefighterName: docSnap.data().firefighterName } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_COURSE', { entity: 'course', id });
+    await logAction(actor, 'DELETE_COURSE', { entity: 'course', id }, details);
 };

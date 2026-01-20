@@ -108,6 +108,8 @@ export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' |
 
 export const deleteTask = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'tasks', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { title: docSnap.data().title } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_TASK', { entity: 'task', id });
+    await logAction(actor, 'DELETE_TASK', { entity: 'task', id }, details);
 }

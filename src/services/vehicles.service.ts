@@ -123,6 +123,9 @@ export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<vo
     const batch = writeBatch(db);
     
     const vehicleDocRef = doc(db, 'vehicles', id);
+    const vehicleSnap = await getDoc(vehicleDocRef);
+    const details = vehicleSnap.exists() ? { numeroMovil: vehicleSnap.data().numeroMovil } : {};
+
     batch.delete(vehicleDocRef);
 
     const maintQuery = query(maintenanceRecordsCollection, where('vehicleId', '==', id));
@@ -132,5 +135,5 @@ export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<vo
     });
 
     await batch.commit();
-    await logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id });
+    await logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id }, details);
 };

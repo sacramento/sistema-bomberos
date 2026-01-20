@@ -67,6 +67,8 @@ export const updateLeave = async (id: string, leaveData: Partial<Omit<Leave, 'id
 
 export const deleteLeave = async (id: string, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'leaves', id);
+    const docSnap = await getDoc(docRef);
+    const details = docSnap.exists() ? { firefighterName: docSnap.data().firefighterName } : {};
     await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_LEAVE', { entity: 'leave', id });
+    await logAction(actor, 'DELETE_LEAVE', { entity: 'leave', id }, details);
 };
