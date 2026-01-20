@@ -862,7 +862,7 @@ const generatePdf = async () => {
                                                 </TableCell>
                                                 <TableCell>{item.session.title}</TableCell>
                                                 <TableCell className="hidden sm:table-cell">{item.session.specialization}</TableCell>
-                                                <TableCell className="hidden md:table-cell">{item.session.date}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{format(parseISO(item.session.date), 'dd/MM/yyyy')}</TableCell>
                                                 <TableCell>
                                                         <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
                                                         {getStatusLabel(item.status)}
