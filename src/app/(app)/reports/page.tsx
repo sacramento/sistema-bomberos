@@ -273,6 +273,7 @@ function AttendanceReportTab() {
     const [openCombobox, setOpenCombobox] = useState(false);
     const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
     const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
+    const [excludeInstructorRole, setExcludeInstructorRole] = useState(false);
     
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
@@ -511,6 +512,10 @@ const generatePdf = async () => {
                 if (firefighter) {
                     const isInstructor = session.instructorIds?.includes(firefighterId);
                     const isAssistant = session.assistantIds?.includes(firefighterId);
+
+                    if (excludeInstructorRole && (isInstructor || isAssistant)) {
+                        continue;
+                    }
                     
                     let status = session.attendance?.[firefighterId];
                     if (!status && (isInstructor || isAssistant)) {
@@ -574,7 +579,7 @@ const generatePdf = async () => {
             details: finalData
         };
 
-    }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter, filterYear]);
+    }, [allSessions, allFirefighters, filterDate, filterSpecialization, filterClass, filterHierarchy, filterStation, filterFirefighter, filterYear, excludeInstructorRole]);
     
      const summaryTableData = useMemo(() => {
         const relevantRecords = attendanceReportData.details;
@@ -761,6 +766,12 @@ const generatePdf = async () => {
                                 {availableClassesForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                             </SelectContent>
                         </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-1 lg:col-span-3">
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch id="exclude-instructor-role" checked={excludeInstructorRole} onCheckedChange={setExcludeInstructorRole} />
+                            <Label htmlFor="exclude-instructor-role">Excluir asistencias como Instructor/Ayudante</Label>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
