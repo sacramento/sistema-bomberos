@@ -34,7 +34,13 @@ const translateLog = (log: AuditLog): string => {
         CREATE_SESSION: l => `Creó la clase "${l.details?.title}".`,
         UPDATE_SESSION: l => `Actualizó la clase "${l.details?.title}".`,
         DELETE_SESSION: l => `Eliminó la clase "${l.details?.title}".`,
-        UPDATE_ATTENDANCE: l => `Actualizó la asistencia para una clase.`,
+        
+        // Workshop
+        CREATE_WORKSHOP: l => `Creó el taller "${l.details?.title}".`,
+        UPDATE_WORKSHOP: l => `Actualizó el taller "${l.details?.title}".`,
+        DELETE_WORKSHOP: l => `Eliminó el taller "${l.details?.title}".`,
+
+        UPDATE_ATTENDANCE: l => `Actualizó la asistencia para una clase o taller.`,
 
         // Leave, Sanction, Course
         CREATE_LEAVE: l => `Creó una licencia para ${l.details?.firefighterName}.`,
