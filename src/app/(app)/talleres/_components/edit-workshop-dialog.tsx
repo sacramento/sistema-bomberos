@@ -460,7 +460,7 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
         if (!isOpen) resetForm();
     }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-xl flex flex-col">
+        <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
              <DialogHeader>
                 <DialogTitle className="font-headline">Editar Taller</DialogTitle>
                 <DialogDescription>

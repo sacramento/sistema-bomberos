@@ -462,7 +462,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
         if (!isOpen) resetForm();
     }}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-xl flex flex-col">
+        <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
              <DialogHeader>
                 <DialogTitle className="font-headline">Crear Nuevo Taller</DialogTitle>
                 <DialogDescription>
