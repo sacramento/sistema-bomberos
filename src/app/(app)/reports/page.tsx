@@ -16,6 +16,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-f
 import { useState, useEffect, useMemo } from "react";
 import { Session, Firefighter, AttendanceStatus, Course, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
+import { getWorkshops } from "@/services/workshops.service";
 import { getCourses } from "@/services/courses.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
@@ -254,7 +255,7 @@ const MultiSelectFilter = ({
 };
 
 
-function AttendanceReportTab() {
+function ClassesReportTab() {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -339,7 +340,7 @@ const generatePdf = async () => {
         doc.setFontSize(22);
         doc.setTextColor(255, 255, 255);
         doc.setFont('helvetica', 'bold');
-        doc.text("Reporte de Asistencia", 14, 22);
+        doc.text("Reporte de Asistencia de Clases", 14, 22);
         doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
         const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
         doc.setFontSize(11);
@@ -472,7 +473,7 @@ const generatePdf = async () => {
             doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
         }
 
-        doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        doc.save(`reporte-asistencia-clases-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     } catch (error) {
         console.error("PDF Generation Error: ", error);
         toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
@@ -669,7 +670,6 @@ const generatePdf = async () => {
     if (loading) {
         return (
             <>
-                <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description="Generando reportes..." />
                 <Skeleton className="w-full h-96" />
             </>
         )
@@ -679,7 +679,7 @@ const generatePdf = async () => {
         <div className="space-y-8">
             <Card className="mb-8">
                 <CardHeader>
-                    <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Asistencia'}</CardTitle>
+                    <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Clases'}</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -769,8 +769,8 @@ const generatePdf = async () => {
                     </div>
                     <div className="space-y-2 md:col-span-1 lg:col-span-3">
                         <div className="flex items-center space-x-2 pt-2">
-                            <Switch id="exclude-instructor-role" checked={excludeInstructorRole} onCheckedChange={setExcludeInstructorRole} />
-                            <Label htmlFor="exclude-instructor-role">Excluir asistencias como Instructor/Ayudante</Label>
+                            <Switch id="exclude-instructor-role-classes" checked={excludeInstructorRole} onCheckedChange={setExcludeInstructorRole} />
+                            <Label htmlFor="exclude-instructor-role-classes">Excluir asistencias como Instructor/Ayudante</Label>
                         </div>
                     </div>
                 </CardContent>
@@ -914,7 +914,676 @@ const generatePdf = async () => {
                             </div>
                             <Button onClick={generatePdf} disabled={generatingPdf}>
                                 {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                {generatingPdf ? "Generando..." : "Generar PDF de Asistencia"}
+                                {generatingPdf ? "Generando..." : "Generar PDF de Clases"}
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            ) : ( <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg"><p className="text-muted-foreground">No hay datos de asistencia para los filtros seleccionados.</p></div>)}
+        </div>
+    );
+}
+
+function WorkshopsReportTab() {
+    const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+
+    const [allWorkshops, setAllWorkshops] = useState<Session[]>([]);
+    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
+    const [filterDate, setFilterDate] = useState<DateRange | undefined>();
+    const [filterSpecialization, setFilterSpecialization] = useState('all');
+    const [filterWorkshop, setFilterWorkshop] = useState('all');
+    const [filterHierarchy, setFilterHierarchy] = useState<string[]>([]);
+    const [filterStation, setFilterStation] = useState<string[]>([]);
+    const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+    const [openCombobox, setOpenCombobox] = useState(false);
+    const [includeSummaryInPdf, setIncludeSummaryInPdf] = useState(true);
+    const [includeDetailsInPdf, setIncludeDetailsInPdf] = useState(true);
+    const [excludeInstructorRole, setExcludeInstructorRole] = useState(false);
+    
+    const pathname = usePathname();
+    const activeRole = getActiveRole(pathname);
+    const isBomberoRole = activeRole === 'Bombero';
+
+     useEffect(() => {
+        const fetchData = async () => {
+            setLoading(true);
+            try {
+                const [workshopsData, firefightersData] = await Promise.all([
+                    getWorkshops(),
+                    getFirefighters(),
+                ]);
+                setAllWorkshops(workshopsData);
+                setAllFirefighters(firefightersData);
+
+                if (isBomberoRole && user) {
+                    const firefighterUser = firefightersData.find(f => f.legajo === user.id);
+                    if(firefighterUser) {
+                        setFilterFirefighter(firefighterUser.id);
+                    } else {
+                        setFilterFirefighter('__NOT_FOUND__');
+                    }
+                }
+
+            } catch (error) {
+                toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes de talleres.", variant: "destructive" });
+            } finally {
+                setLoading(false);
+            }
+        };
+        const fetchLogo = async () => {
+             try {
+                const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLogoDataUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+             } catch (error) {
+                 console.error("Failed to load logo for PDF", error);
+                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
+             }
+        }
+        fetchData();
+        fetchLogo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [toast, user, isBomberoRole]);
+    
+const generatePdf = async () => {
+    if (!logoDataUrl) {
+        toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+        return;
+    }
+
+    setGeneratingPdf(true);
+    const doc = new jsPDF();
+
+    try {
+        doc.setFillColor(220, 53, 69);
+        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+        doc.setFontSize(22);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.text("Reporte de Asistencia de Talleres", 14, 22);
+        doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+        const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+        doc.setFontSize(11);
+        doc.setTextColor(108, 117, 125);
+        doc.setFont('helvetica', 'normal');
+        doc.text(dateText, 14, 45);
+        let currentY = 55;
+
+        if (includeSummaryInPdf && attendanceReportData.details.length > 0) {
+            let chartImage = '';
+            if (typeof window !== 'undefined') {
+                chartImage = await generateChartImage(attendanceReportData.summary);
+            }
+
+            if (chartImage) {
+                doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+                doc.text("Resumen Gráfico de Asistencia", 14, currentY); currentY += 5;
+                doc.addImage(chartImage, 'PNG', 14, currentY, 180, 90); currentY += 100;
+            }
+        }
+        
+        if (includeSummaryInPdf && summaryTableData.length > 0) {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+            doc.text("Resumen de Asistencia por Bombero", 14, currentY); currentY += 8;
+            
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+            const groupedSummary: Record<string, any[]> = {
+                'Oficiales y Suboficiales': [],
+                'Bomberos Cuartel 1': [],
+                'Bomberos Cuartel 2': [],
+                'Bomberos Cuartel 3': [],
+                'Aspirantes': []
+            };
+            
+            const firefighterDetailsMap = new Map(allFirefighters.map(f => [f.id, { rank: f.rank, firehouse: f.firehouse }]));
+
+            summaryTableData.forEach(item => {
+                const details = firefighterDetailsMap.get(item.firefighterId);
+                if (details) {
+                    if ([...oficialRanks, ...suboficialRanks].includes(details.rank)) {
+                        groupedSummary['Oficiales y Suboficiales'].push(item);
+                    } else if (details.rank === 'BOMBERO' || details.rank === 'ADAPTACION') {
+                        groupedSummary[`Bomberos ${details.firehouse}`]?.push(item);
+                    } else if (details.rank === 'ASPIRANTE') {
+                        groupedSummary['Aspirantes'].push(item);
+                    }
+                }
+            });
+
+            const summaryBody: any[] = [];
+            const groupOrder = ['Oficiales y Suboficiales', 'Bomberos Cuartel 1', 'Bomberos Cuartel 2', 'Bomberos Cuartel 3', 'Aspirantes'];
+            
+            groupOrder.forEach(groupName => {
+                const groupItems = groupedSummary[groupName];
+                if (groupItems && groupItems.length > 0) {
+                    summaryBody.push([{ content: groupName, colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' } }]);
+                    groupItems.forEach((item: any) => {
+                        summaryBody.push([item.firefighterLegajo, item.firefighter, item.totalClasses, item.presentPercentage]);
+                    });
+                }
+            });
+            
+            (doc as any).autoTable({
+                startY: currentY, head: [['Legajo', 'Bombero', 'Talleres', '% Presentismo']],
+                body: summaryBody, theme: 'striped', headStyles: { fillColor: '#333333' },
+            });
+
+            currentY = (doc as any).lastAutoTable.finalY + 10;
+        }
+
+        if (includeDetailsInPdf && attendanceReportData.details.length > 0) {
+            if (currentY > 250) { doc.addPage(); currentY = 20; }
+            doc.setFontSize(12); doc.setTextColor(40, 40, 40); doc.setFont('helvetica', 'bold');
+            doc.text("Detalle de Registros de Asistencia", 14, currentY); currentY += 8;
+
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+            const groupedDetails: { [key: string]: any[] } = {
+                'Oficiales y Suboficiales': [], 'Bomberos Cuartel 1': [], 'Bomberos Cuartel 2': [], 'Bomberos Cuartel 3': [], 'Aspirantes': []
+            };
+
+            attendanceReportData.details.forEach(item => {
+                const f = item.firefighter;
+                if ([...oficialRanks, ...suboficialRanks].includes(f.rank)) groupedDetails['Oficiales y Suboficiales'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 1') groupedDetails['Bomberos Cuartel 1'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 2') groupedDetails['Bomberos Cuartel 2'].push(item);
+                else if ((f.rank === 'BOMBERO' || f.rank === 'ADAPTACION') && f.firehouse === 'Cuartel 3') groupedDetails['Bomberos Cuartel 3'].push(item);
+                else if (f.rank === 'ASPIRANTE' || f.rank === 'ADAPTACION') groupedDetails['Aspirantes'].push(item);
+            });
+
+            const detailBody: any[] = [];
+            for (const groupName in groupedDetails) {
+                const groupItems = groupedDetails[groupName];
+                if (groupItems.length > 0) {
+                    detailBody.push([{
+                        content: groupName,
+                        colSpan: 6,
+                        styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' }
+                    }]);
+                    groupItems.sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true })).forEach(item => {
+                        let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                        if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
+                        else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
+                        detailBody.push([
+                            item.firefighter.legajo, name, item.session.title,
+                            item.session.specialization, format(parseISO(item.session.date), 'dd/MM/yyyy'), getStatusLabel(item.status)
+                        ]);
+                    });
+                }
+            }
+
+            if (detailBody.length > 0) {
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Legajo', 'Bombero', 'Taller', 'Especialidad', 'Fecha', 'Estado']],
+                    body: detailBody,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333333' },
+                });
+            } else {
+                 doc.text("No hay detalles de asistencia para los filtros aplicados.", 14, currentY);
+            }
+        }
+
+        if (attendanceReportData.details.length === 0) {
+            doc.text("No se encontraron registros de asistencia con los filtros aplicados.", 14, currentY);
+        }
+
+        doc.save(`reporte-asistencia-talleres-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    } catch (error) {
+        console.error("PDF Generation Error: ", error);
+        toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+    } finally {
+        setGeneratingPdf(false);
+    }
+};
+
+    const attendanceReportData = useMemo(() => {
+        let preliminaryRecords: { firefighter: Firefighter, status: AttendanceStatus, session: Session }[] = [];
+        const filteredWorkshops = allWorkshops.filter(session => {
+            if (filterSpecialization !== 'all' && session.specialization !== filterSpecialization) return false;
+            if (filterWorkshop !== 'all' && session.id !== filterWorkshop) return false;
+            
+            if (filterYear !== 'all') {
+                const sessionYear = parseISO(session.date).getFullYear().toString();
+                if (sessionYear !== filterYear) return false;
+            }
+
+            if (filterDate?.from) {
+                 const sessionDate = parseISO(session.date);
+                 const toDate = filterDate.to ?? filterDate.from;
+                 if (!isWithinInterval(sessionDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
+            }
+            return true;
+        });
+
+        for (const session of filteredWorkshops) {
+             const allParticipantIds = new Set([
+                ...(session.instructorIds || []),
+                ...(session.assistantIds || []),
+                ...(session.attendeeIds || [])
+            ]);
+            
+            for (const firefighterId of allParticipantIds) {
+                const firefighter = allFirefighters.find(f => f.id === firefighterId);
+                if (firefighter) {
+                    const isInstructor = session.instructorIds?.includes(firefighterId);
+                    const isAssistant = session.assistantIds?.includes(firefighterId);
+
+                    if (excludeInstructorRole && (isInstructor || isAssistant)) {
+                        continue;
+                    }
+                    
+                    let status = session.attendance?.[firefighterId];
+                    if (!status && (isInstructor || isAssistant)) {
+                        status = 'present';
+                    }
+
+                    if (status) {
+                         preliminaryRecords.push({ firefighter, status, session });
+                    }
+                }
+            }
+        }
+        
+        const finalData = preliminaryRecords.filter(({ firefighter }) => {
+            if (firefighter.status === 'Inactive') return false;
+            if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
+            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
+            if (filterHierarchy.length > 0) {
+                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
+
+                const hierarchyMatch = filterHierarchy.some(h => {
+                    if (h === 'bomberos' && (firefighter.rank === 'BOMBERO' || firefighter.rank === 'ADAPTACION')) return true;
+                    if (h === 'aspirantes' && firefighter.rank === 'ASPIRANTE') return true;
+                    if (h === 'suboficiales_oficiales' && [...suboficialRanks, ...oficialRanks].includes(firefighter.rank)) return true;
+                    return false;
+                });
+                if (!hierarchyMatch) return false;
+            }
+            return true;
+        });
+
+        const statusCounts = {
+            present: finalData.filter(item => item.status === 'present').length,
+            absent: finalData.filter(item => item.status === 'absent').length,
+            tardy: finalData.filter(item => item.status === 'tardy').length,
+            recupero: finalData.filter(item => item.status === 'recupero').length,
+            excused: finalData.filter(item => item.status === 'excused').length,
+        };
+
+        const effectiveAttendance = (statusCounts.present * 1) + (statusCounts.tardy * 0.6) + statusCounts.recupero;
+        const totalAbsences = statusCounts.absent + statusCounts.excused;
+        const netAbsences = Math.max(0, totalAbsences - statusCounts.recupero);
+        const totalClassesForPercentage = statusCounts.present + statusCounts.tardy + statusCounts.absent + statusCounts.excused;
+
+        const pieData = [
+            { name: 'Presente', value: statusCounts.present + statusCounts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Tarde', value: statusCounts.tardy, fill: PIE_CHART_COLORS.tardy },
+            { name: 'Ausente', value: statusCounts.absent + statusCounts.excused, fill: PIE_CHART_COLORS.absent },
+        ].filter(item => item.value > 0);
+            
+        return { 
+            summary: {
+                present: effectiveAttendance,
+                absent: netAbsences,
+                tardy: statusCounts.tardy,
+                excused: statusCounts.excused,
+                totalForPercentage: totalClassesForPercentage
+            },
+            pieData, 
+            details: finalData
+        };
+
+    }, [allWorkshops, allFirefighters, filterDate, filterSpecialization, filterWorkshop, filterHierarchy, filterStation, filterFirefighter, filterYear, excludeInstructorRole]);
+    
+     const summaryTableData = useMemo(() => {
+        const relevantRecords = attendanceReportData.details;
+        if (relevantRecords.length === 0) return [];
+        
+        const firefighterIdsInFilter = new Set(relevantRecords.map(d => d.firefighter.id));
+        const activeFirefighterIds = new Set(allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar').map(f => f.id));
+        
+        const finalFirefighterIds = Array.from(firefighterIdsInFilter).filter(id => activeFirefighterIds.has(id));
+
+        return finalFirefighterIds.map(firefighterId => {
+            const firefighter = allFirefighters.find(f => f.id === firefighterId)!;
+            const records = relevantRecords.filter(d => d.firefighter.id === firefighterId);
+            
+            const presentCount = records.filter(d => d.status === 'present').length;
+            const tardyCount = records.filter(d => d.status === 'tardy').length;
+            const absentCount = records.filter(d => d.status === 'absent').length;
+            const excusedCount = records.filter(d => d.status === 'excused').length;
+            const recuperoCount = records.filter(d => d.status === 'recupero').length;
+            
+            const totalRequiredClasses = presentCount + tardyCount + absentCount + excusedCount;
+
+            if (totalRequiredClasses === 0) {
+                 return null;
+            }
+            
+            const weightedPresent = presentCount + (tardyCount * 0.6) + recuperoCount;
+            const percentage = Math.min(100, (weightedPresent / totalRequiredClasses) * 100);
+
+            return {
+                firefighterId: firefighter.id,
+                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                firefighterLegajo: firefighter.legajo,
+                firefighterFirehouse: firefighter.firehouse,
+                totalClasses: totalRequiredClasses,
+                presentPercentage: `${percentage.toFixed(0)}%`,
+            };
+        }).filter((item): item is NonNullable<typeof item> => item !== null).sort((a, b) => (a.firefighterLegajo || '').localeCompare(b.firefighterLegajo || '', undefined, { numeric: true }));
+    }, [attendanceReportData.details, allFirefighters]);
+
+
+    const availableYears = useMemo(() => {
+        const years = new Set(allWorkshops.map(s => parseISO(s.date).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [allWorkshops]);
+
+    const availableWorkshopsForFilter = useMemo(() => {
+        return allWorkshops.map(s => ({ value: s.id, label: `${s.date} - ${s.title}` }));
+    }, [allWorkshops]);
+    
+    const overallAttendancePercentage = useMemo(() => {
+        const totalClassesSum = summaryTableData.reduce((acc, item) => acc + item.totalClasses, 0);
+        const totalPercentageSum = summaryTableData.reduce((acc, item) => {
+            const percentage = parseFloat(item.presentPercentage.replace('%', ''));
+            if (!isNaN(percentage)) {
+                return acc + (percentage / 100) * item.totalClasses;
+            }
+            return acc;
+        }, 0);
+
+        if (totalClassesSum === 0) return "0";
+        return ((totalPercentageSum / totalClassesSum) * 100).toFixed(0);
+    }, [summaryTableData]);
+
+    const summaryCards = [
+        { title: "Asistencias Efectivas", value: attendanceReportData.summary.present.toFixed(1), icon: UserCheck, color: "text-green-500" },
+        { title: "Ausencias Netas", value: attendanceReportData.summary.absent, icon: UserX, color: "text-red-500" },
+        { title: "Justificadas (Licencia)", value: attendanceReportData.summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+        { title: "% Presentismo General", value: `${overallAttendancePercentage}%`, icon: Percent, color: "text-blue-500" },
+    ];
+    
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        if (percent === 0) return null;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill={'#fff'} textAnchor="middle" dominantBaseline="central" className="text-base font-bold">
+                {`${(percent * 100).toFixed(0)}%`}
+            </text>
+        );
+    };
+    
+
+    if (loading) {
+        return (
+            <>
+                <Skeleton className="w-full h-96" />
+            </>
+        )
+    }
+
+    return (
+        <div className="space-y-8">
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">{isBomberoRole ? 'Filtros de Reporte' : 'Filtros de Reporte de Talleres'}</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                        <Label>Año Lectivo</Label>
+                        <Select value={filterYear} onValueChange={setFilterYear}>
+                            <SelectTrigger><SelectValue placeholder="Seleccionar año" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los Años</SelectItem>
+                                {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                    <Label>Rango de Fechas</Label>
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} />
+                        </PopoverContent>
+                    </Popover>
+                    </div>
+                    { !isBomberoRole && (
+                        <>
+                            <div className="space-y-2">
+                                <Label>Integrante Específico</Label>
+                                <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
+                                        {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                        <CommandInput placeholder="Buscar integrante..." />
+                                        <CommandList>
+                                            <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                                            <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />
+                                                Todos los integrantes
+                                            </CommandItem>
+                                            {allFirefighters.map((firefighter) => (
+                                            <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                                <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
+                                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                            </CommandItem>
+                                            ))}
+                                        </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Jerarquía</Label>
+                                <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={filterHierarchy} onSelectedChange={setFilterHierarchy} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Cuartel</Label>
+                                <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={filterStation} onSelectedChange={setFilterStation} />
+                            </div>
+                        </>
+                    )}
+                    <div className="space-y-2">
+                        <Label>Especialidad</Label>
+                        <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
+                            <SelectTrigger><SelectValue placeholder="Todas" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todas las especialidades</SelectItem>
+                                {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Taller Específico</Label>
+                        <Select value={filterWorkshop} onValueChange={setFilterWorkshop}>
+                            <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todos los talleres</SelectItem>
+                                {availableWorkshopsForFilter.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2 md:col-span-1 lg:col-span-3">
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch id="exclude-instructor-role-workshops" checked={excludeInstructorRole} onCheckedChange={setExcludeInstructorRole} />
+                            <Label htmlFor="exclude-instructor-role-workshops">Excluir asistencias como Instructor/Ayudante</Label>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+            {attendanceReportData.details.length > 0 ? (
+                <div className="space-y-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        {summaryCards.map((card, index) => (
+                        <Card key={index}>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                                <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{card.value}</div>
+                            </CardContent>
+                        </Card>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                        <Card className="lg:col-span-2">
+                            <CardHeader>
+                                <CardTitle className="font-headline">Distribución de Estados</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ChartContainer config={{}} className="h-[250px] w-full">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                            <Pie data={attendanceReportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={100} innerRadius={60}>
+                                                {attendanceReportData.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={entry.fill} />))}
+                                            </Pie>
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </ChartContainer>
+                            </CardContent>
+                        </Card>
+                            <Card className="lg:col-span-3">
+                                <CardHeader>
+                                <CardTitle className="font-headline">Resumen por Bombero</CardTitle>
+                                </CardHeader>
+                                <CardContent className="max-h-[300px] overflow-y-auto">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Legajo</TableHead>
+                                            <TableHead>Bombero</TableHead>
+                                            <TableHead>Talleres</TableHead>
+                                            <TableHead>% Presentismo</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {summaryTableData.map((item) => (
+                                            <TableRow key={item.firefighterId}>
+                                                <TableCell className="font-medium">{item.firefighterLegajo}</TableCell>
+                                                <TableCell>{item.firefighter}</TableCell>
+                                                <TableCell>{item.totalClasses}</TableCell>
+                                                <TableCell className="font-semibold">{item.presentPercentage}</TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                                </CardContent>
+                            </Card>
+                    </div>
+                    
+                        <Card className="mt-8">
+                        <CardHeader>
+                            <CardTitle className="font-headline">Detalle de Asistencias</CardTitle>
+                            <CardDescription>
+                                Todos los registros individuales que coinciden con los filtros aplicados.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="max-h-[400px] overflow-y-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Legajo</TableHead>
+                                        <TableHead>Bombero</TableHead>
+                                        <TableHead>Taller</TableHead>
+                                        <TableHead className="hidden sm:table-cell">Especialidad</TableHead>
+                                        <TableHead className="hidden md:table-cell">Fecha</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {attendanceReportData.details.map((item, index) => {
+                                        const isInstructor = item.session.instructorIds?.includes(item.firefighter.id);
+                                        const isAssistant = item.session.assistantIds?.includes(item.firefighter.id);
+                                        return (
+                                            <TableRow key={`${item.session.id}-${item.firefighter.id}-${index}`}>
+                                                <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
+                                                        {isInstructor && <Badge variant="destructive">I</Badge>}
+                                                        {isAssistant && <Badge variant="secondary">A</Badge>}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{item.session.title}</TableCell>
+                                                <TableCell className="hidden sm:table-cell">{item.session.specialization}</TableCell>
+                                                <TableCell className="hidden md:table-cell">{format(parseISO(item.session.date), 'dd/MM/yyyy')}</TableCell>
+                                                <TableCell>
+                                                        <Badge className={cn("whitespace-nowrap", getStatusClass(item.status))}>
+                                                        {getStatusLabel(item.status)}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+
+
+                    <Card className="mt-8">
+                        <CardHeader>
+                            <CardTitle className="font-headline">Generar Reporte en PDF</CardTitle>
+                            <CardDescription>Seleccione qué contenido incluir en la exportación del PDF.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-col space-y-4 mb-4">
+                                <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="include-summary-pdf-workshops"
+                                        checked={includeSummaryInPdf}
+                                        onCheckedChange={setIncludeSummaryInPdf}
+                                    />
+                                    <Label htmlFor="include-summary-pdf-workshops">Incluir resumen por porcentaje</Label>
+                                </div>
+                                    <div className="flex items-center space-x-2">
+                                    <Switch
+                                        id="include-details-pdf-workshops"
+                                        checked={includeDetailsInPdf}
+                                        onCheckedChange={setIncludeDetailsInPdf}
+                                    />
+                                    <Label htmlFor="include-details-pdf-workshops">Incluir detalle de asistencia por taller</Label>
+                                </div>
+                            </div>
+                            <Button onClick={generatePdf} disabled={generatingPdf}>
+                                {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                {generatingPdf ? "Generando..." : "Generar PDF de Talleres"}
                             </Button>
                         </CardContent>
                     </Card>
@@ -1254,13 +1923,17 @@ export default function ReportsPage() {
     return (
       <>
         <PageHeader title={isBomberoRole ? 'Mi Reporte' : 'Reportes'} description="Genere y exporte reportes de asistencia y actividad." />
-        <Tabs defaultValue="asistencia" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
-                <TabsTrigger value="asistencia">Asistencia</TabsTrigger>
+        <Tabs defaultValue="clases" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 max-w-lg mx-auto mb-6">
+                <TabsTrigger value="clases">Clases</TabsTrigger>
+                <TabsTrigger value="talleres">Talleres</TabsTrigger>
                 <TabsTrigger value="cursos">Cursos</TabsTrigger>
             </TabsList>
-            <TabsContent value="asistencia">
-                <AttendanceReportTab />
+            <TabsContent value="clases">
+                <ClassesReportTab />
+            </TabsContent>
+            <TabsContent value="talleres">
+                <WorkshopsReportTab />
             </TabsContent>
             <TabsContent value="cursos">
                 <CoursesReportTab />
