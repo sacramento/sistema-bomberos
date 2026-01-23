@@ -116,6 +116,7 @@ export default function CascadeReportsPage() {
     const [filterCuartel, setFilterCuartel] = useState('all');
     const [filterUser, setFilterUser] = useState('all');
     const [filterTubes, setFilterTubes] = useState<string[]>([]);
+    const [userComboboxOpen, setUserComboboxOpen] = useState(false);
     
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [generatingSystemPdf, setGeneratingSystemPdf] = useState(false);
@@ -355,7 +356,10 @@ export default function CascadeReportsPage() {
         );
     };
     
-    const userOptions = useMemo(() => allUsers.map(u => ({ value: u.id, label: `${u.id} - ${u.name}` })), [allUsers]);
+    const userOptions = useMemo(() => {
+        const sortedUsers = [...allUsers].sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }));
+        return sortedUsers.map(u => ({ value: u.id, label: `${u.id} - ${u.name}` }));
+    }, [allUsers]);
     const tubeOptions = useMemo(() => cascadeTubes.map(t => ({ value: t, label: t })), []);
 
     return (
@@ -393,13 +397,34 @@ export default function CascadeReportsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Usuario</Label>
-                                <Select value={filterUser} onValueChange={setFilterUser}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los Usuarios</SelectItem>
-                                        {userOptions.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={userComboboxOpen} onOpenChange={setUserComboboxOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={userComboboxOpen} className="w-full justify-between">
+                                            {filterUser !== 'all' ? userOptions.find(u => u.value === filterUser)?.label : "Todos los Usuarios"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Buscar usuario por legajo o nombre..." />
+                                            <CommandList>
+                                                <CommandEmpty>No se encontró el usuario.</CommandEmpty>
+                                                <CommandItem value="all" onSelect={() => { setFilterUser('all'); setUserComboboxOpen(false); }}>
+                                                    <Check className={cn("mr-2 h-4 w-4", filterUser === 'all' ? "opacity-100" : "opacity-0")} />
+                                                    Todos los Usuarios
+                                                </CommandItem>
+                                                <CommandGroup>
+                                                    {userOptions.map(u => (
+                                                        <CommandItem key={u.value} value={u.label} onSelect={() => { setFilterUser(u.value); setUserComboboxOpen(false); }}>
+                                                            <Check className={cn("mr-2 h-4 w-4", filterUser === u.value ? "opacity-100" : "opacity-0")} />
+                                                            {u.label}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </CardContent>
                     </Card>
@@ -458,13 +483,34 @@ export default function CascadeReportsPage() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Usuario</Label>
-                                <Select value={filterUser} onValueChange={setFilterUser}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los Usuarios</SelectItem>
-                                        {userOptions.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={userComboboxOpen} onOpenChange={setUserComboboxOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button variant="outline" role="combobox" aria-expanded={userComboboxOpen} className="w-full justify-between">
+                                            {filterUser !== 'all' ? userOptions.find(u => u.value === filterUser)?.label : "Todos los Usuarios"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[300px] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Buscar usuario por legajo o nombre..." />
+                                            <CommandList>
+                                                <CommandEmpty>No se encontró el usuario.</CommandEmpty>
+                                                <CommandItem value="all" onSelect={() => { setFilterUser('all'); setUserComboboxOpen(false); }}>
+                                                    <Check className={cn("mr-2 h-4 w-4", filterUser === 'all' ? "opacity-100" : "opacity-0")} />
+                                                    Todos los Usuarios
+                                                </CommandItem>
+                                                <CommandGroup>
+                                                    {userOptions.map(u => (
+                                                        <CommandItem key={u.value} value={u.label} onSelect={() => { setFilterUser(u.value); setUserComboboxOpen(false); }}>
+                                                            <Check className={cn("mr-2 h-4 w-4", filterUser === u.value ? "opacity-100" : "opacity-0")} />
+                                                            {u.label}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                         </CardContent>
                     </Card>
