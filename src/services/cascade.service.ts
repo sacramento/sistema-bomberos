@@ -3,7 +3,7 @@
 
 import { CascadeCharge, Material, LoggedInUser, CascadeSystemCharge } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, orderBy, Timestamp, doc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 
 if (!db) {
@@ -56,9 +56,15 @@ export const getCascadeCharges = async (): Promise<CascadeCharge[]> => {
     const charges: CascadeCharge[] = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const timestamp = data.chargeTimestamp instanceof Timestamp 
-            ? data.chargeTimestamp.toDate().toISOString()
-            : (data.chargeTimestamp?.seconds ? new Date(data.chargeTimestamp.seconds * 1000).toISOString() : new Date().toISOString());
+        let timestamp = '';
+        if (data.chargeTimestamp) {
+            if (data.chargeTimestamp instanceof Timestamp) {
+                timestamp = data.chargeTimestamp.toDate().toISOString();
+            } else if (data.chargeTimestamp.seconds) {
+                timestamp = new Date(data.chargeTimestamp.seconds * 1000).toISOString();
+            }
+        }
+
 
         charges.push({ 
             id: doc.id,
@@ -94,16 +100,26 @@ export const getCascadeSystemCharges = async (): Promise<CascadeSystemCharge[]> 
     const charges: CascadeSystemCharge[] = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
-        const startTime = data.startTime instanceof Timestamp 
-            ? data.startTime.toDate().toISOString()
-            : new Date(data.startTime).toISOString();
-        const endTime = data.endTime instanceof Timestamp
-            ? data.endTime.toDate().toISOString()
-            : new Date(data.endTime).toISOString();
+
+        let startTime = '';
+        if (data.startTime) {
+            const d = new Date(data.startTime instanceof Timestamp ? data.startTime.toDate() : data.startTime);
+            if (!isNaN(d.getTime())) {
+                startTime = d.toISOString();
+            }
+        }
+        
+        let endTime = '';
+        if (data.endTime) {
+            const d = new Date(data.endTime instanceof Timestamp ? data.endTime.toDate() : data.endTime);
+            if (!isNaN(d.getTime())) {
+                endTime = d.toISOString();
+            }
+        }
 
         charges.push({ 
             id: doc.id,
-            tubes: data.tubes,
+            tubes: data.tubes || [],
             startTime,
             endTime,
             actorId: data.actorId,
