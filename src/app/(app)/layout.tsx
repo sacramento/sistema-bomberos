@@ -93,7 +93,7 @@ export const navItems: NavItem[] = [
 
   // Cascada
   { href: '/cascade', icon: Droplets, label: 'Carga Cascada', roles: ['Master', 'Administrador', 'Encargado', 'Bombero'], module: 'cascada' },
-  { href: '/cascade-reports', icon: BarChart3, label: 'Reportes Cascada', roles: ['Master', 'Administrador', 'Encargado'], module: 'cascada' },
+  { href: '/cascade-reports', icon: BarChart3, label: 'Reportes Cascada', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Encargado', 'Bombero', 'Ayudantía', 'Encargado Móvil'], module: 'cascada' },
 
   // General
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },

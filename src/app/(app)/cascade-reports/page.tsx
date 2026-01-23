@@ -15,13 +15,15 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Loader2 } from 'lucide-react';
 import { DateRange } from "react-day-picker";
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const PIE_CHART_COLORS: Record<string, string> = {
@@ -39,6 +41,10 @@ export default function CascadeReportsPage() {
     // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterCuartel, setFilterCuartel] = useState('all');
+    
+    // PDF State
+    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -56,7 +62,23 @@ export default function CascadeReportsPage() {
                 setLoading(false);
             }
         };
+
+        const fetchLogo = async () => {
+             try {
+                const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setLogoDataUrl(reader.result as string);
+                };
+                reader.readAsDataURL(blob);
+             } catch (error) {
+                 console.error("Failed to load logo for PDF", error);
+             }
+        }
+
         fetchData();
+        fetchLogo();
     }, [toast]);
     
     const filteredCharges = useMemo(() => {
@@ -98,6 +120,92 @@ export default function CascadeReportsPage() {
         
         return { tableData, pieData, totalCharges: filteredCharges.length };
     }, [filteredCharges, allMaterials]);
+
+    const generatePdf = async () => {
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+
+        setGeneratingPdf(true);
+        const doc = new jsPDF();
+        let currentY = 0;
+
+        try {
+            // Header
+            doc.setFillColor(34, 43, 54);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Reporte de Carga de Cascada", 14, 22);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            currentY = 45;
+
+            // Filter Info
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100);
+            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
+            const cuartelText = `Cuartel: ${filterCuartel === 'all' ? 'Todos' : filterCuartel}`;
+            doc.text(dateText, 14, currentY);
+            currentY += 5;
+            doc.text(cuartelText, 14, currentY);
+            currentY += 10;
+            
+            // Summary Table
+            if (reportData.pieData.length > 0) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0);
+                doc.text("Resumen de Cargas por Cuartel", 14, currentY);
+                currentY += 7;
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Cuartel', 'Nº de Cargas', 'Porcentaje']],
+                    body: reportData.pieData.map(item => [
+                        item.name, 
+                        item.value, 
+                        `${(item.value / reportData.totalCharges * 100).toFixed(0)}%`
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: '#343a40' },
+                });
+                currentY = (doc as any).lastAutoTable.finalY + 15;
+            }
+
+            // Detail Table
+            if (reportData.tableData.length > 0) {
+                doc.setFontSize(12);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0);
+                doc.text("Detalle de Cargas por Tubo", 14, currentY);
+                currentY += 7;
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Tubo (Código)', 'Cuartel', 'Nº de Cargas']],
+                    body: reportData.tableData.map(item => [
+                        item.code,
+                        item.cuartel,
+                        item.chargeCount
+                    ]),
+                    theme: 'striped',
+                    headStyles: { fillColor: '#343a40' },
+                });
+            }
+            
+            doc.save(`reporte-cascada-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+            console.error("PDF generation error: ", error);
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
+
 
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -192,6 +300,18 @@ export default function CascadeReportsPage() {
                     </Card>
                 </div>
             </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Exportar Reporte</CardTitle>
+                    <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={generatePdf} disabled={generatingPdf}>
+                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingPdf ? "Generando..." : "Generar PDF"}
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
 }
