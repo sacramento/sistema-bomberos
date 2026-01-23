@@ -193,7 +193,6 @@ export type CascadeSystemCharge = {
   tubes: ('Tubo 1' | 'Tubo 2' | 'Tubo 3' | 'Tubo 4')[];
   startTime: string; // ISO String
   endTime: string; // ISO String
-  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
   actorId: string;
   actorName: string;
 };

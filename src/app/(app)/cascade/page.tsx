@@ -106,7 +106,6 @@ export default function CascadePage() {
                 tubes: selectedTubes as any,
                 startTime,
                 endTime,
-                cuartel: 'Cuartel 1',
             }, user);
             toast({ title: "¡Éxito!", description: `Se registró la carga de la cascada.` });
             // reset form

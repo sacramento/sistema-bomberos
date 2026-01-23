@@ -82,7 +82,7 @@ export const addCascadeSystemCharge = async (chargeData: Omit<CascadeSystemCharg
     };
 
     const docRef = await addDoc(cascadeSystemCollection, dataToSave);
-    await logAction(actor, 'CREATE_CASCADE_SYSTEM_CHARGE', { entity: 'cascadeSystemCharge', id: docRef.id }, dataToSave);
+    await logAction(actor, 'CREATE_CASCADE_SYSTEM_CHARGE', { entity: 'cascadeSystemCharge', id: docRef.id }, { tubes: chargeData.tubes });
     
     return docRef.id;
 };
@@ -103,9 +103,11 @@ export const getCascadeSystemCharges = async (): Promise<CascadeSystemCharge[]> 
 
         charges.push({ 
             id: doc.id,
-            ...data,
+            tubes: data.tubes,
             startTime,
             endTime,
+            actorId: data.actorId,
+            actorName: data.actorName,
          } as CascadeSystemCharge);
     });
 

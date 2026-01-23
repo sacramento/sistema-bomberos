@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from "@/hooks/use-toast";
 import { getCascadeCharges, getCascadeSystemCharges } from '@/services/cascade.service';
 import { getMaterials } from '@/services/materials.service';
+import { getFirefighters as getUsers, User } from '@/services/users.service';
 import { CascadeCharge, CascadeSystemCharge, Material } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Download, Loader2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Download, Loader2, Check, ChevronsUpDown } from 'lucide-react';
 import { DateRange } from "react-day-picker";
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, differenceInMinutes } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -26,6 +27,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
@@ -34,6 +36,7 @@ const PIE_CHART_COLORS: Record<string, string> = {
     'Cuartel 2': "#3b82f6", // blue-500
     'Cuartel 3': "#22c55e", // green-500
 };
+const cascadeTubes = ['Tubo 1', 'Tubo 2', 'Tubo 3', 'Tubo 4'] as const;
 
 const formatDuration = (start: string, end: string) => {
     const minutes = differenceInMinutes(parseISO(end), parseISO(start));
@@ -43,22 +46,79 @@ const formatDuration = (start: string, end: string) => {
     return `${h}h ${m}min`;
 }
 
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    const selectedLabels = selected.map(s => options.find(o => o.value === s)?.label).filter(Boolean);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto">
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem key={option.value} value={option.label} onSelect={() => handleSelect(option.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(option.value) ? "opacity-100" : "opacity-0")} />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 
 export default function CascadeReportsPage() {
     const { toast } = useToast();
     
-    // State for ERA Tube Charges
+    // State
     const [loading, setLoading] = useState(true);
     const [allCharges, setAllCharges] = useState<CascadeCharge[]>([]);
     const [allMaterials, setAllMaterials] = useState<Material[]>([]);
-    
-    // State for Cascade System Charges
     const [systemCharges, setSystemCharges] = useState<CascadeSystemCharge[]>([]);
-    const [systemLoading, setSystemLoading] = useState(true);
+    const [allUsers, setAllUsers] = useState<User[]>([]);
 
-    // Common State
+    // Filters
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterCuartel, setFilterCuartel] = useState('all');
+    const [filterUser, setFilterUser] = useState('all');
+    const [filterTubes, setFilterTubes] = useState<string[]>([]);
+    
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [generatingSystemPdf, setGeneratingSystemPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
@@ -66,21 +126,21 @@ export default function CascadeReportsPage() {
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-            setSystemLoading(true);
             try {
-                const [chargesData, materialsData, systemChargesData] = await Promise.all([
+                const [chargesData, materialsData, systemChargesData, usersData] = await Promise.all([
                     getCascadeCharges(),
                     getMaterials(),
-                    getCascadeSystemCharges()
+                    getCascadeSystemCharges(),
+                    getUsers(),
                 ]);
                 setAllCharges(chargesData);
                 setAllMaterials(materialsData.filter(m => m.tipo === 'RESPIRACIÓN'));
                 setSystemCharges(systemChargesData);
+                setAllUsers(usersData);
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
             } finally {
                 setLoading(false);
-                setSystemLoading(false);
             }
         };
 
@@ -106,6 +166,7 @@ export default function CascadeReportsPage() {
     const filteredCharges = useMemo(() => {
         return allCharges.filter(charge => {
             if (filterCuartel !== 'all' && charge.cuartel !== filterCuartel) return false;
+            if (filterUser !== 'all' && charge.actorId !== filterUser) return false;
             if (filterDate?.from) {
                 const chargeDate = parseISO(charge.chargeTimestamp);
                 const toDate = filterDate.to ?? filterDate.from;
@@ -113,7 +174,7 @@ export default function CascadeReportsPage() {
             }
             return true;
         });
-    }, [allCharges, filterDate, filterCuartel]);
+    }, [allCharges, filterDate, filterCuartel, filterUser]);
     
     const reportData = useMemo(() => {
         const chargesByTube = filteredCharges.reduce((acc, charge) => {
@@ -134,15 +195,19 @@ export default function CascadeReportsPage() {
             code: material.codigo,
             cuartel: material.cuartel,
             chargeCount: chargesByTube[material.codigo] || 0,
-        })).filter(item => item.chargeCount > 0).sort((a,b) => b.chargeCount - a.chargeCount);
+        })).filter(item => {
+            if (filterCuartel !== 'all' && item.cuartel !== filterCuartel) return false;
+            return item.chargeCount > 0;
+        }).sort((a,b) => b.chargeCount - a.chargeCount);
         
         return { tableData, pieData, totalCharges: filteredCharges.length };
-    }, [filteredCharges, allMaterials]);
+    }, [filteredCharges, allMaterials, filterCuartel]);
 
     // Memos for Cascade System Report
     const filteredSystemCharges = useMemo(() => {
         return systemCharges.filter(charge => {
-            if (filterCuartel !== 'all' && charge.cuartel !== filterCuartel) return false;
+            if (filterUser !== 'all' && charge.actorId !== filterUser) return false;
+            if (filterTubes.length > 0 && !filterTubes.some(tube => charge.tubes.includes(tube as any))) return false;
             if (filterDate?.from) {
                 const chargeStartDate = parseISO(charge.startTime);
                 const toDate = filterDate.to ?? filterDate.from;
@@ -150,10 +215,84 @@ export default function CascadeReportsPage() {
             }
             return true;
         });
-    }, [systemCharges, filterDate, filterCuartel]);
+    }, [systemCharges, filterDate, filterUser, filterTubes]);
+
+    const addFilterInfoToPdf = (doc: jsPDF, currentY: number) => {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100);
+        
+        let filterText = [];
+        if (filterDate?.from) {
+            filterText.push(`Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}`);
+        }
+        const selectedUser = allUsers.find(u => u.id === filterUser);
+        if (selectedUser) {
+            filterText.push(`Usuario: ${selectedUser.name}`);
+        }
+        if (filterCuartel !== 'all') {
+            filterText.push(`Cuartel: ${filterCuartel}`);
+        }
+        if (filterTubes.length > 0) {
+            filterText.push(`Tubos: ${filterTubes.join(', ')}`);
+        }
+
+        if(filterText.length > 0) {
+            doc.setFont('helvetica', 'bold');
+            doc.text("Filtros Aplicados:", 14, currentY);
+            currentY += 5;
+            doc.setFont('helvetica', 'normal');
+            filterText.forEach(line => {
+                doc.text(line, 14, currentY);
+                currentY += 5;
+            });
+        }
+        
+        return currentY;
+    };
 
     // PDF Generations
-    const generatePdf = async () => { /* ... existing implementation ... */ };
+    const generatePdf = async () => { 
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+            return;
+        }
+
+        setGeneratingPdf(true);
+        const doc = new jsPDF();
+
+        try {
+            doc.setFillColor(34, 43, 54);
+            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+            doc.setFontSize(22);
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.text("Reporte de Carga de Tubos ERA", 14, 22);
+            if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            
+            let currentY = addFilterInfoToPdf(doc, 45);
+
+            if (reportData.tableData.length > 0) {
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Tubo (Código)', 'Cuartel', 'Nº de Cargas']],
+                    body: reportData.tableData.map(item => [item.code, item.cuartel, item.chargeCount]),
+                    theme: 'striped',
+                    headStyles: { fillColor: '#343a40' },
+                });
+            } else {
+                 doc.setFontSize(12);
+                 doc.setTextColor(0);
+                 doc.text("No se encontraron registros con los filtros aplicados.", 14, currentY);
+            }
+            
+            doc.save(`reporte-tubos-era-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+        } catch (error) {
+            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+        } finally {
+            setGeneratingPdf(false);
+        }
+    };
     
     const generateSystemPdf = async () => {
         if (!logoDataUrl) {
@@ -171,26 +310,15 @@ export default function CascadeReportsPage() {
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Carga de Sistema de Cascada", 14, 22);
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
             
-            let currentY = 45;
-
-            doc.setFontSize(10);
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(100);
-            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to ?? filterDate.from, "P", { locale: es })}` : "Período: Todos los registros";
-            const cuartelText = `Cuartel: ${filterCuartel === 'all' ? 'Todos' : filterCuartel}`;
-            doc.text(dateText, 14, currentY);
-            currentY += 5;
-            doc.text(cuartelText, 14, currentY);
-            currentY += 10;
+            let currentY = addFilterInfoToPdf(doc, 45);
             
             if (filteredSystemCharges.length > 0) {
                  (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Cuartel', 'Tubos', 'Inicio', 'Fin', 'Duración', 'Registrado por']],
+                    head: [['Tubos', 'Inicio', 'Fin', 'Duración', 'Registrado por']],
                     body: filteredSystemCharges.map(item => [
-                        item.cuartel,
                         item.tubes.join(', '),
                         format(parseISO(item.startTime), 'Pp', { locale: es }),
                         format(parseISO(item.endTime), 'Pp', { locale: es }),
@@ -228,6 +356,9 @@ export default function CascadeReportsPage() {
             </text>
         );
     };
+    
+    const userOptions = useMemo(() => allUsers.map(u => ({ value: u.id, label: u.name })), [allUsers]);
+    const tubeOptions = useMemo(() => cascadeTubes.map(t => ({ value: t, label: t })), []);
 
     return (
         <div className="space-y-8">
@@ -259,6 +390,16 @@ export default function CascadeReportsPage() {
                                     <SelectContent>
                                         <SelectItem value="all">Todos los Cuarteles</SelectItem>
                                         {cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Usuario</Label>
+                                <Select value={filterUser} onValueChange={setFilterUser}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos los Usuarios</SelectItem>
+                                        {userOptions.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -303,6 +444,34 @@ export default function CascadeReportsPage() {
                 <TabsContent value="cascada" className="mt-6 space-y-8">
                      <Card>
                         <CardHeader>
+                            <CardTitle className="font-headline">Filtros del Reporte de Carga de Cascada</CardTitle>
+                        </CardHeader>
+                         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                             <div className="space-y-2">
+                                <Label>Rango de Fechas</Label>
+                                <Popover>
+                                    <PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "LLL dd, y", { locale: es })} - {format(filterDate.to, "LLL dd, y", { locale: es })}</>) : (format(filterDate.from, "LLL dd, y", { locale: es }))) : (<span>Todos</span>)}</Button></PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} /></PopoverContent>
+                                </Popover>
+                            </div>
+                             <div className="space-y-2">
+                                <Label>Tubos</Label>
+                                 <MultiSelectFilter title="Tubos" options={tubeOptions} selected={filterTubes} onSelectedChange={setFilterTubes} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Usuario</Label>
+                                <Select value={filterUser} onValueChange={setFilterUser}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todos los Usuarios</SelectItem>
+                                        {userOptions.map(u => <SelectItem key={u.value} value={u.value}>{u.label}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
                             <CardTitle className="font-headline">Historial de Cargas de Cascada</CardTitle>
                              <CardDescription>Mostrando {filteredSystemCharges.length} registros para los filtros aplicados.</CardDescription>
                         </CardHeader>
@@ -310,7 +479,6 @@ export default function CascadeReportsPage() {
                             <Table>
                                 <TableHeader>
                                     <TableRow>
-                                        <TableHead>Cuartel</TableHead>
                                         <TableHead>Tubos Cargados</TableHead>
                                         <TableHead>Inicio</TableHead>
                                         <TableHead>Fin</TableHead>
@@ -319,14 +487,13 @@ export default function CascadeReportsPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {systemLoading ? (
+                                    {loading ? (
                                         Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                            <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                         ))
                                     ) : filteredSystemCharges.length > 0 ? (
                                         filteredSystemCharges.map(charge => (
                                             <TableRow key={charge.id}>
-                                                <TableCell>{charge.cuartel}</TableCell>
                                                 <TableCell><div className="flex flex-wrap gap-1">{charge.tubes.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}</div></TableCell>
                                                 <TableCell>{format(parseISO(charge.startTime), 'Pp', { locale: es })}</TableCell>
                                                 <TableCell>{format(parseISO(charge.endTime), 'Pp', { locale: es })}</TableCell>
@@ -335,7 +502,7 @@ export default function CascadeReportsPage() {
                                             </TableRow>
                                         ))
                                     ) : (
-                                        <TableRow><TableCell colSpan={6} className="h-24 text-center">No se encontraron registros de carga del sistema.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron registros de carga del sistema.</TableCell></TableRow>
                                     )}
                                 </TableBody>
                             </Table>
