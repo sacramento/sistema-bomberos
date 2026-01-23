@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -7,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from "@/hooks/use-toast";
 import { getCascadeCharges, getCascadeSystemCharges } from '@/services/cascade.service';
 import { getMaterials } from '@/services/materials.service';
-import { getFirefighters as getUsers, User } from '@/services/users.service';
+import { getUsers, User } from '@/services/users.service';
 import { CascadeCharge, CascadeSystemCharge, Material } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,7 +29,6 @@ import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 
-const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const PIE_CHART_COLORS: Record<string, string> = {
     'Cuartel 1': "#facc15", // yellow-400
     'Cuartel 2': "#3b82f6", // blue-500
@@ -389,7 +387,7 @@ export default function CascadeReportsPage() {
                                     <SelectTrigger><SelectValue/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Todos los Cuarteles</SelectItem>
-                                        {cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                        {['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
