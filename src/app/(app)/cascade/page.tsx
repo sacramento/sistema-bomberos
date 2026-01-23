@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,10 +20,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const cascadeTubes = ['Tubo 1', 'Tubo 2', 'Tubo 3', 'Tubo 4'] as const;
-const cuarteles: ('Cuartel 1' | 'Cuartel 2' | 'Cuartel 3')[] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
 export default function CascadePage() {
     const { user } = useAuth();
@@ -38,7 +37,6 @@ export default function CascadePage() {
     const [selectedTubes, setSelectedTubes] = useState<string[]>([]);
     const [startTime, setStartTime] = useState('');
     const [endTime, setEndTime] = useState('');
-    const [chargeCuartel, setChargeCuartel] = useState<'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | ''>('');
     const [isSubmittingSystem, setIsSubmittingSystem] = useState(false);
 
 
@@ -97,7 +95,7 @@ export default function CascadePage() {
             toast({ variant: 'destructive', title: "Error de autenticación", description: "Debe iniciar sesión." });
             return; 
         }
-        if (selectedTubes.length === 0 || !startTime || !endTime || !chargeCuartel) {
+        if (selectedTubes.length === 0 || !startTime || !endTime) {
             toast({ variant: 'destructive', title: "Error", description: "Todos los campos son obligatorios para la carga de cascada." });
             return;
         }
@@ -108,14 +106,13 @@ export default function CascadePage() {
                 tubes: selectedTubes as any,
                 startTime,
                 endTime,
-                cuartel: chargeCuartel,
+                cuartel: 'Cuartel 1',
             }, user);
             toast({ title: "¡Éxito!", description: `Se registró la carga de la cascada.` });
             // reset form
             setSelectedTubes([]);
             setStartTime('');
             setEndTime('');
-            setChargeCuartel('');
         } catch (error: any) {
             toast({ variant: 'destructive', title: "Error al registrar", description: error.message });
         } finally {
@@ -225,13 +222,6 @@ export default function CascadePage() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Cuartel donde se realiza la carga</Label>
-                                    <Select value={chargeCuartel} onValueChange={(v) => setChargeCuartel(v as any)}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                        <SelectContent>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                                    </Select>
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
