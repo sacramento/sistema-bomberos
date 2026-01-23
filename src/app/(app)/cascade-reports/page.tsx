@@ -327,6 +327,29 @@ export default function CascadeReportsPage() {
                     theme: 'striped',
                     headStyles: { fillColor: '#343a40' },
                 });
+
+                // Calculate total duration
+                const totalDurationInMinutes = filteredSystemCharges.reduce((acc, charge) => {
+                    const minutes = differenceInMinutes(parseISO(charge.endTime), parseISO(charge.startTime));
+                    return acc + (isNaN(minutes) || minutes < 0 ? 0 : minutes);
+                }, 0);
+
+                const totalHours = Math.floor(totalDurationInMinutes / 60);
+                const totalMinutes = totalDurationInMinutes % 60;
+                const totalDurationFormatted = `${totalHours.toString().padStart(2, '0')}:${totalMinutes.toString().padStart(2, '0')} hs`;
+                
+                let finalY = (doc as any).lastAutoTable.finalY + 15;
+                if (finalY > 270) {
+                    doc.addPage();
+                    finalY = 20;
+                }
+
+                doc.setFontSize(14);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Duración Total (HH:MM):', 14, finalY);
+                doc.setFont('helvetica', 'normal');
+                doc.text(totalDurationFormatted, 75, finalY);
+
             } else {
                  doc.setFontSize(12);
                  doc.setTextColor(0);
