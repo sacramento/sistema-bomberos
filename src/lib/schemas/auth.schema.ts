@@ -20,6 +20,7 @@ export const LoginOutputSchema = z.nullable(
       ayudantia: z.enum(['Administrador', 'Oficial', 'Ninguno']),
       roperia: z.enum(['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno']),
       servicios: z.enum(['Administrador', 'Oficial', 'Bombero', 'Ninguno']),
+      cascada: z.enum(['Administrador', 'Encargado', 'Bombero', 'Ninguno']),
     }),
   })
 );

@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole } from "@/lib/types";
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
@@ -34,6 +34,7 @@ const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'En
 const ayudantiaRoles: AyudantiaModuleRole[] = ['Administrador', 'Oficial', 'Ninguno'];
 const roperiaRoles: RoperiaModuleRole[] = ['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno'];
 const serviciosRoles: ServiciosModuleRole[] = ['Administrador', 'Oficial', 'Bombero', 'Ninguno'];
+const cascadaRoles: CascadaModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
 
 
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
@@ -52,6 +53,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [ayudantiaRole, setAyudantiaRole] = useState<AyudantiaModuleRole>('Ninguno');
   const [roperiaRole, setRoperiaRole] = useState<RoperiaModuleRole>('Ninguno');
   const [serviciosRole, setServiciosRole] = useState<ServiciosModuleRole>('Ninguno');
+  const [cascadaRole, setCascadaRole] = useState<CascadaModuleRole>('Ninguno');
 
   // Data for selection
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
@@ -95,6 +97,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setAyudantiaRole('Ninguno');
     setRoperiaRole('Ninguno');
     setServiciosRole('Ninguno');
+    setCascadaRole('Ninguno');
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -129,6 +132,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 ayudantia: isMaster ? 'Administrador' : ayudantiaRole,
                 roperia: isMaster ? 'Administrador' : roperiaRole,
                 servicios: isMaster ? 'Administrador' : serviciosRole,
+                cascada: isMaster ? 'Administrador' : cascadaRole,
             }
         };
         
@@ -201,11 +205,11 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                     </Popover>
                  </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password" className="text-right">Contraseña</Label>
+                  <Label htmlFor="password">Contraseña</Label>
                   <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="globalRole" className="text-right">Rol Global</Label>
+                  <Label htmlFor="globalRole">Rol Global</Label>
                   <Select onValueChange={(value) => setGlobalRole(value as GlobalRole)} value={globalRole} required>
                     <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione un rol global" /></SelectTrigger>
                     <SelectContent>
@@ -283,6 +287,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cascadaRole" className="text-right">Cascada</Label>
+              <Select onValueChange={(value) => setCascadaRole(value as CascadaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : cascadaRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

@@ -6,7 +6,7 @@ import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren } from 'lucide-react';
+import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren, Droplets } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
@@ -46,6 +46,11 @@ const moduleDetails: Record<string, { title: string; description: string; icon: 
         description: 'Registre y administre todas las intervenciones y servicios.',
         icon: Siren
     },
+    cascada: {
+        title: 'Cascada',
+        description: 'Registre y consulte las cargas de equipos de respiración.',
+        icon: Droplets
+    },
     general: {
         title: 'Administración',
         description: 'Gestione usuarios, roles y configuraciones del sistema.',
@@ -69,7 +74,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'servicios', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'servicios', 'cascada', 'general'];
 
 
   return (

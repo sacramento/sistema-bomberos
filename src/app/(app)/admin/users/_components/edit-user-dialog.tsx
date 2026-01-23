@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -30,6 +30,8 @@ const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'En
 const ayudantiaRoles: AyudantiaModuleRole[] = ['Administrador', 'Oficial', 'Ninguno'];
 const roperiaRoles: RoperiaModuleRole[] = ['Administrador', 'Encargado', 'Oficial', 'Bombero', 'Ninguno'];
 const serviciosRoles: ServiciosModuleRole[] = ['Administrador', 'Oficial', 'Bombero', 'Ninguno'];
+const cascadaRoles: CascadaModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
+
 
 export default function EditUserDialog({ children, user, onUserUpdated }: { children: React.ReactNode; user: User; onUserUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -48,6 +50,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const [ayudantiaRole, setAyudantiaRole] = useState<AyudantiaModuleRole>(user.roles.ayudantia || 'Ninguno');
   const [roperiaRole, setRoperiaRole] = useState<RoperiaModuleRole>(user.roles.roperia || 'Ninguno');
   const [serviciosRole, setServiciosRole] = useState<ServiciosModuleRole>(user.roles.servicios || 'Ninguno');
+  const [cascadaRole, setCascadaRole] = useState<CascadaModuleRole>(user.roles.cascada || 'Ninguno');
   
   const imagePreview = `https://picsum.photos/seed/${user.id}/200`;
 
@@ -63,6 +66,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
       setAyudantiaRole(user.roles.ayudantia || 'Ninguno');
       setRoperiaRole(user.roles.roperia || 'Ninguno');
       setServiciosRole(user.roles.servicios || 'Ninguno');
+      setCascadaRole(user.roles.cascada || 'Ninguno');
     }
   }, [open, user]);
 
@@ -93,6 +97,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 ayudantia: isMaster ? 'Administrador' : ayudantiaRole,
                 roperia: isMaster ? 'Administrador' : roperiaRole,
                 servicios: isMaster ? 'Administrador' : serviciosRole,
+                cascada: isMaster ? 'Administrador' : cascadaRole,
             }
         };
 
@@ -224,6 +229,15 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 <SelectTrigger id="serviciosRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cascadaRole-edit" className="text-right">Cascada</Label>
+              <Select onValueChange={(value) => setCascadaRole(value as CascadaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : cascadaRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger id="cascadaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

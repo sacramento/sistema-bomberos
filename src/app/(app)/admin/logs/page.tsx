@@ -107,6 +107,9 @@ const translateLog = (log: AuditLog): string => {
         CREATE_SERVICE: l => `Registró un nuevo servicio.`,
         UPDATE_SERVICE: l => `Actualizó un servicio.`,
         DELETE_SERVICE: l => `Eliminó un servicio.`,
+        
+        // Cascade
+        CREATE_CASCADE_CHARGE: l => `Registró una carga de cascada para el tubo ${l.details?.materialCode}.`,
     };
 
     const translator = translations[action];

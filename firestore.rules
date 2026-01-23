@@ -25,6 +25,9 @@ service cloud.firestore {
       if (module == 'servicios') {
         return userRoles.servicios in requiredRoles;
       }
+      if (module == 'cascada') {
+        return userRoles.cascada in requiredRoles;
+      }
       // For global entities like 'users'
       if (module == 'general') {
          return userGlobalRole in requiredRoles;
@@ -130,6 +133,12 @@ service cloud.firestore {
         allow read: if hasRole('general', ['Master']);
         // Writes are handled by server-side logic (logAction function)
         allow write: if false; 
+      }
+
+      // CASCADE CHARGES
+      match /cascade_charges/{chargeId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('cascada', ['Administrador', 'Encargado', 'Bombero']);
       }
     }
   }

@@ -33,6 +33,7 @@ import {
   Shirt,
   Siren,
   UserCircle,
+  Droplets,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -48,7 +49,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia' | 'servicios';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia' | 'servicios' | 'cascada';
 };
 
 export const navItems: NavItem[] = [
@@ -90,6 +91,10 @@ export const navItems: NavItem[] = [
   { href: '/services', icon: Siren, label: 'Servicios', roles: ['Master', 'Administrador', 'Oficial', 'Bombero'], module: 'servicios' },
   { href: '/services-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Bombero'], module: 'servicios' },
 
+  // Cascada
+  { href: '/cascade', icon: Droplets, label: 'Carga Cascada', roles: ['Master', 'Administrador', 'Encargado', 'Bombero'], module: 'cascada' },
+  { href: '/cascade-reports', icon: BarChart3, label: 'Reportes Cascada', roles: ['Master', 'Administrador', 'Encargado'], module: 'cascada' },
+
   // General
   { href: '/firefighters', icon: Users, label: 'Bomberos', roles: ['Master'], module: 'general' },
   { href: '/admin/users', icon: Settings, label: 'Admin Usuarios', roles: ['Master'], module: 'general' },
@@ -123,6 +128,7 @@ function Sidebar() {
       roperia: 'Ropería',
       ayudantia: 'Ayudantía',
       servicios: 'Servicios',
+      cascada: 'Cascada',
       general: 'Administración'
   };
   const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
