@@ -68,10 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
       if (storedSession) {
         const parsedUser = JSON.parse(storedSession);
-        if (!parsedUser.roles) {
-            parsedUser.roles = { asistencia: 'Ninguno', semanas: 'Ninguno', movilidad: 'Ninguno', materiales: 'Ninguno', ayudantia: 'Ninguno', roperia: 'Ninguno', servicios: 'Ninguno', cascada: 'Ninguno' };
-        }
-        setUser(parsedUser);
+        // Ensure roles structure is complete to avoid crashes on old sessions
+        const userWithCompleteRoles = {
+          ...parsedUser,
+          roles: {
+            asistencia: parsedUser.roles?.asistencia || 'Ninguno',
+            semanas: parsedUser.roles?.semanas || 'Ninguno',
+            movilidad: parsedUser.roles?.movilidad || 'Ninguno',
+            materiales: parsedUser.roles?.materiales || 'Ninguno',
+            ayudantia: parsedUser.roles?.ayudantia || 'Ninguno',
+            roperia: parsedUser.roles?.roperia || 'Ninguno',
+            servicios: parsedUser.roles?.servicios || 'Ninguno',
+            cascada: parsedUser.roles?.cascada || 'Ninguno',
+          }
+        };
+        setUser(userWithCompleteRoles);
       }
     } catch (e) {
       console.error('Error parsing stored session', e);
