@@ -25,6 +25,7 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
