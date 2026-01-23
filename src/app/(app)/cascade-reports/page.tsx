@@ -355,7 +355,7 @@ export default function CascadeReportsPage() {
         );
     };
     
-    const userOptions = useMemo(() => allUsers.map(u => ({ value: u.id, label: u.name })), [allUsers]);
+    const userOptions = useMemo(() => allUsers.map(u => ({ value: u.id, label: `${u.id} - ${u.name}` })), [allUsers]);
     const tubeOptions = useMemo(() => cascadeTubes.map(t => ({ value: t, label: t })), []);
 
     return (
