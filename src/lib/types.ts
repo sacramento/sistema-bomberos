@@ -178,6 +178,26 @@ export type GeneralInventoryItem = {
   caracteristicas?: string;
 }
 
+export type CascadeCharge = {
+    id: string;
+    materialId: string;
+    materialCode: string;
+    chargeTimestamp: string; // ISO String
+    cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+    actorId: string;
+    actorName: string;
+};
+
+export type CascadeSystemCharge = {
+  id: string;
+  tubes: ('Tubo 1' | 'Tubo 2' | 'Tubo 3' | 'Tubo 4')[];
+  startTime: string; // ISO String
+  endTime: string; // ISO String
+  cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  actorId: string;
+  actorName: string;
+};
+
 
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
@@ -186,6 +206,7 @@ export type MaterialesModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | '
 export type AyudantiaModuleRole = 'Administrador' | 'Oficial' | 'Ninguno';
 export type RoperiaModuleRole = 'Administrador' | 'Encargado' | 'Oficial' | 'Bombero' | 'Ninguno';
 export type ServiciosModuleRole = 'Administrador' | 'Oficial' | 'Bombero' | 'Ninguno';
+export type CascadaModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
 
 
 export type GlobalRole = 'Master' | 'Usuario';
@@ -203,6 +224,7 @@ export type User = {
     ayudantia: AyudantiaModuleRole;
     roperia: RoperiaModuleRole;
     servicios: ServiciosModuleRole;
+    cascada: CascadaModuleRole;
   };
 };
 
@@ -274,7 +296,9 @@ export type AuditLogAction =
   | 'CREATE_CLOTHING_ITEM' | 'UPDATE_CLOTHING_ITEM' | 'DELETE_CLOTHING_ITEM' | 'BATCH_IMPORT_CLOTHING'
   | 'CREATE_GENERAL_INVENTORY_ITEM' | 'UPDATE_GENERAL_INVENTORY_ITEM' | 'DELETE_GENERAL_INVENTORY_ITEM'
   | 'CREATE_DRIVER' | 'UPDATE_DRIVER' | 'DELETE_DRIVER'
-  | 'CREATE_SERVICE' | 'UPDATE_SERVICE' | 'DELETE_SERVICE';
+  | 'CREATE_SERVICE' | 'UPDATE_SERVICE' | 'DELETE_SERVICE'
+  | 'CREATE_CASCADE_CHARGE'
+  | 'CREATE_CASCADE_SYSTEM_CHARGE';
 
 export type AuditLog = {
     id: string;

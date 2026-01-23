@@ -110,6 +110,7 @@ const translateLog = (log: AuditLog): string => {
         
         // Cascade
         CREATE_CASCADE_CHARGE: l => `Registró una carga de cascada para el tubo ${l.details?.materialCode}.`,
+        CREATE_CASCADE_SYSTEM_CHARGE: l => `Registró una carga del sistema de cascada para los tubos: ${l.details?.tubes?.join(', ')}.`,
     };
 
     const translator = translations[action];

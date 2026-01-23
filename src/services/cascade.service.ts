@@ -1,7 +1,7 @@
 
 'use server';
 
-import { CascadeCharge, Material, LoggedInUser } from '@/lib/types';
+import { CascadeCharge, Material, LoggedInUser, CascadeSystemCharge } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { logAction } from './audit.service';
@@ -11,6 +11,7 @@ if (!db) {
 }
 
 const cascadeCollection = collection(db, 'cascade_charges');
+const cascadeSystemCollection = collection(db, 'cascade_system_charges');
 const materialsCollection = collection(db, 'materials');
 
 export const addCascadeCharge = async (materialCode: string, actor: LoggedInUser): Promise<string> => {
@@ -64,6 +65,48 @@ export const getCascadeCharges = async (): Promise<CascadeCharge[]> => {
             ...data,
             chargeTimestamp: timestamp,
          } as CascadeCharge);
+    });
+
+    return charges;
+};
+
+export const addCascadeSystemCharge = async (chargeData: Omit<CascadeSystemCharge, 'id' | 'actorId' | 'actorName'>, actor: LoggedInUser): Promise<string> => {
+    if (!actor) {
+        throw new Error("Usuario no autenticado.");
+    }
+
+    const dataToSave = {
+        ...chargeData,
+        actorId: actor.id,
+        actorName: actor.name,
+    };
+
+    const docRef = await addDoc(cascadeSystemCollection, dataToSave);
+    await logAction(actor, 'CREATE_CASCADE_SYSTEM_CHARGE', { entity: 'cascadeSystemCharge', id: docRef.id }, dataToSave);
+    
+    return docRef.id;
+};
+
+export const getCascadeSystemCharges = async (): Promise<CascadeSystemCharge[]> => {
+    const q = query(cascadeSystemCollection, orderBy('startTime', 'desc'));
+    const querySnapshot = await getDocs(q);
+    
+    const charges: CascadeSystemCharge[] = [];
+    querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        const startTime = data.startTime instanceof Timestamp 
+            ? data.startTime.toDate().toISOString()
+            : new Date(data.startTime).toISOString();
+        const endTime = data.endTime instanceof Timestamp
+            ? data.endTime.toDate().toISOString()
+            : new Date(data.endTime).toISOString();
+
+        charges.push({ 
+            id: doc.id,
+            ...data,
+            startTime,
+            endTime,
+         } as CascadeSystemCharge);
     });
 
     return charges;
