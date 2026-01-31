@@ -100,7 +100,7 @@ export default function LoginPage() {
       </Card>
       <footer className="absolute bottom-4 text-center w-full">
         <p className="text-xs text-muted-foreground">
-          desarrollado por @OZNOVA.S
+          desarrollado por OZNOVA Systems
         </p>
       </footer>
     </div>

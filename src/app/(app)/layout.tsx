@@ -327,7 +327,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                     {!isDashboard && (
                         <footer className="mt-8 text-center text-xs text-muted-foreground">
-                            <p>desarrollado por @OZNOVA.S</p>
+                            <p>desarrollado por OZNOVA Systems</p>
                         </footer>
                     )}
                 </main>
