@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import * as React from 'react';
@@ -304,7 +302,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex min-h-screen items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-muted-foreground">Cargando...</p>
+                    <p className="text-muted-foreground">Cargando sesión...</p>
                 </div>
             </div>
         );
@@ -323,8 +321,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {showSidebar && <Sidebar />}
             <div className="flex flex-1 flex-col">
                 <MobileNav navItems={availableNavItems} />
-                <main className={cn("flex-1 p-4 sm:p-6 md:p-8", "md:pt-8 pt-20", isDashboard && "p-0 pt-16 md:pt-0")}>
-                    {children}
+                <main className={cn("flex flex-1 flex-col p-4 sm:p-6 md:p-8", "md:pt-8 pt-20", isDashboard && "p-0 pt-16 md:pt-0")}>
+                    <div className="flex-grow">
+                        {children}
+                    </div>
+                    {!isDashboard && (
+                        <footer className="mt-8 text-center text-xs text-muted-foreground">
+                            <p>desarrollado por @OZNOVA.S</p>
+                        </footer>
+                    )}
                 </main>
             </div>
         </div>

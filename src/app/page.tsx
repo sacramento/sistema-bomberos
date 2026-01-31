@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -99,6 +98,11 @@ export default function LoginPage() {
           </CardFooter>
         </form>
       </Card>
+      <footer className="absolute bottom-4 text-center w-full">
+        <p className="text-xs text-muted-foreground">
+          desarrollado por @OZNOVA.S
+        </p>
+      </footer>
     </div>
   );
 }
