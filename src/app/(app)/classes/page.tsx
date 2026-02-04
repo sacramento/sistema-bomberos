@@ -152,6 +152,15 @@ export default function ClassesPage() {
 
   const { upcomingOrCurrentSessions, pastSessions } = useMemo(() => {
     const filtered = sessions.filter(session => {
+        if (!session.attendees || session.attendees.length === 0) {
+            // Include sessions without attendees if no hierarchy is filtered
+            if (filterHierarchy !== 'all') return false;
+        } else {
+            // Exclude sessions where all attendees are aspirantes
+            const isAspiranteSession = session.attendees.every(a => a.rank === 'ASPIRANTE');
+            if (isAspiranteSession) return false;
+        }
+        
         if (searchTerm && !session.title.toLowerCase().includes(searchTerm.toLowerCase())) {
             return false;
         }
@@ -190,8 +199,6 @@ export default function ClassesPage() {
                 count = attendees.filter(a => a.rank === 'BOMBERO' || a.rank === 'ADAPTACION').length;
             } else if (filterHierarchy === 'suboficiales_oficiales') {
                 count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-            } else if (filterHierarchy === 'aspirantes') {
-                count = attendees.filter(a => a.rank === 'ASPIRANTE').length;
             }
             if (count / totalAttendees <= 0.5) return false;
         }

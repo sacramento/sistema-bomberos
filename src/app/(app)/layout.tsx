@@ -61,6 +61,7 @@ export const navItems: NavItem[] = [
   
   // Aspirantes
   { href: '/aspirantes', icon: GraduationCap, label: 'Dashboard Aspirantes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor'], module: 'aspirantes' },
+  { href: '/aspirantes/clases', icon: CalendarClock, label: 'Clases', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'aspirantes' },
   { href: '/aspirantes/talleres', icon: CalendarClock, label: 'Talleres', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'aspirantes' },
   { href: '/aspirantes/cursos', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial'], module: 'aspirantes' },
   { href: '/aspirantes-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Bombero'], module: 'aspirantes' },
