@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from "@/lib/types";
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +27,7 @@ import { useAuth } from "@/context/auth-context";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
+const aspirantesRoles: AspirantesModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno'];
 const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
@@ -47,6 +47,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [password, setPassword] = useState('');
   const [globalRole, setGlobalRole] = useState<GlobalRole | ''>('');
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
+  const [aspirantesRole, setAspirantesRole] = useState<AspirantesModuleRole>('Ninguno');
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>('Ninguno');
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>('Ninguno');
   const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>('Ninguno');
@@ -91,6 +92,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setPassword('');
     setGlobalRole('');
     setAsistenciaRole('Ninguno');
+    setAspirantesRole('Ninguno');
     setSemanasRole('Ninguno');
     setMovilidadRole('Ninguno');
     setMaterialesRole('Ninguno');
@@ -126,6 +128,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             role: globalRole,
             roles: {
                 asistencia: isMaster ? 'Administrador' : asistenciaRole,
+                aspirantes: isMaster ? 'Administrador' : aspirantesRole,
                 semanas: isMaster ? 'Administrador' : semanasRole,
                 movilidad: isMaster ? 'Administrador' : movilidadRole,
                 materiales: isMaster ? 'Administrador' : materialesRole,
@@ -233,6 +236,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="aspirantesRole" className="text-right">Aspirantes</Label>
+              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : aspirantesRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

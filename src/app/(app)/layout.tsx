@@ -47,7 +47,7 @@ export type NavItem = {
   icon: React.ElementType;
   label: string;
   roles: ActiveRole[];
-  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia' | 'servicios' | 'cascada';
+  module: 'asistencia' | 'semanas' | 'movilidad' | 'materiales' | 'general' | 'ayudantia' | 'roperia' | 'servicios' | 'cascada' | 'aspirantes';
 };
 
 export const navItems: NavItem[] = [
@@ -58,6 +58,12 @@ export const navItems: NavItem[] = [
   { href: '/talleres', icon: CalendarClock, label: 'Talleres', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'asistencia' },
   { href: '/courses', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial'], module: 'asistencia' },
   { href: '/reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Bombero'], module: 'asistencia' },
+  
+  // Aspirantes
+  { href: '/aspirantes', icon: GraduationCap, label: 'Dashboard Aspirantes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor'], module: 'aspirantes' },
+  { href: '/aspirantes/talleres', icon: CalendarClock, label: 'Talleres', roles: ['Master', 'Administrador', 'Instructor', 'Oficial'], module: 'aspirantes' },
+  { href: '/aspirantes/cursos', icon: GraduationCap, label: 'Cursos', roles: ['Master', 'Administrador', 'Oficial'], module: 'aspirantes' },
+  { href: '/aspirantes-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Bombero'], module: 'aspirantes' },
   
   // Semanas
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
@@ -120,6 +126,7 @@ function Sidebar() {
   
   const moduleTitles = {
       asistencia: 'Asistencia',
+      aspirantes: 'Aspirantes',
       semanas: 'Semanas',
       movilidad: 'Movilidad',
       materiales: 'Materiales',
@@ -325,11 +332,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <div className="flex-grow">
                         {children}
                     </div>
-                    {!isDashboard && (
-                        <footer className="mt-8 text-center text-xs text-muted-foreground">
-                            <p>desarrollado por OZNOVA Systems</p>
-                        </footer>
-                    )}
+                    <footer className="mt-8 text-center text-xs text-muted-foreground">
+                        <p>desarrollado por OZNOVA Systems</p>
+                    </footer>
                 </main>
             </div>
         </div>

@@ -16,6 +16,9 @@ service cloud.firestore {
       if (module == 'asistencia') {
         return userRoles.asistencia in requiredRoles;
       }
+      if (module == 'aspirantes') {
+        return userRoles.aspirantes in requiredRoles;
+      }
       if (module == 'semanas') {
         return userRoles.semanas in requiredRoles;
       }

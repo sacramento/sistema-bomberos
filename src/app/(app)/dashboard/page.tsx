@@ -1,12 +1,10 @@
-
-
 'use client';
 
 import { useAuth } from '@/context/auth-context';
 import { navItems } from '../layout';
 import { Card } from '@/components/ui/card';
 import Link from 'next/link';
-import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren, Droplets } from 'lucide-react';
+import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren, Droplets, GraduationCap } from 'lucide-react';
 import type { NavItem } from '../layout';
 import Image from 'next/image';
 
@@ -15,6 +13,11 @@ const moduleDetails: Record<string, { title: string; description: string; icon: 
         title: 'Asistencia',
         description: 'Gestione clases, asistencias y reportes de capacitación.',
         icon: Flame
+    },
+    aspirantes: {
+        title: 'Aspirantes',
+        description: 'Gestione la formación y asistencia de los aspirantes.',
+        icon: GraduationCap
     },
     semanas: {
         title: 'Semanas',
@@ -74,7 +77,7 @@ export default function ModuleSelectionPage() {
     return acc;
   }, {} as Record<string, { title: string; description: string; icon: React.ElementType, entryPoint: string }>);
 
-  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'servicios', 'cascada', 'general'];
+  const moduleOrder: (keyof typeof moduleDetails)[] = ['asistencia', 'aspirantes', 'semanas', 'movilidad', 'materiales', 'roperia', 'ayudantia', 'servicios', 'cascada', 'general'];
 
 
   return (

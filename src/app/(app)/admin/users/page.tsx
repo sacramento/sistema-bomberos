@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -132,6 +131,7 @@ export default function UsersPage() {
                                     {user.role === 'Usuario' && user.roles && (
                                         <>
                                             <Badge variant="outline">Asis: {user.roles.asistencia}</Badge>
+                                            <Badge variant="outline">Asp: {user.roles.aspirantes}</Badge>
                                             <Badge variant="outline">Sem: {user.roles.semanas}</Badge>
                                             <Badge variant="outline">Mov: {user.roles.movilidad}</Badge>
                                             <Badge variant="outline">Mat: {user.roles.materiales}</Badge>

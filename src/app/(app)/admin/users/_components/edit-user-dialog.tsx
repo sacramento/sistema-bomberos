@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole } from "@/lib/types";
+import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from "@/lib/types";
 import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +23,7 @@ import { useAuth } from "@/context/auth-context";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
+const aspirantesRoles: AspirantesModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
 const weekRoles: WeekModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
 const mobilityRoles: MobilityModuleRole[] = ['Administrador', 'Oficial', 'Encargado Móvil', 'Ninguno'];
 const materialesRoles: MaterialesModuleRole[] = ['Administrador', 'Oficial', 'Encargado', 'Bombero', 'Ninguno'];
@@ -44,6 +44,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
   const [password, setPassword] = useState('');
   const [globalRole, setGlobalRole] = useState<GlobalRole>(user.role);
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>(user.roles.asistencia);
+  const [aspirantesRole, setAspirantesRole] = useState<AspirantesModuleRole>(user.roles.aspirantes || 'Ninguno');
   const [semanasRole, setSemanasRole] = useState<WeekModuleRole>(user.roles.semanas);
   const [movilidadRole, setMovilidadRole] = useState<MobilityModuleRole>(user.roles.movilidad);
   const [materialesRole, setMaterialesRole] = useState<MaterialesModuleRole>(user.roles.materiales);
@@ -60,6 +61,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
       setPassword('');
       setGlobalRole(user.role);
       setAsistenciaRole(user.roles.asistencia);
+      setAspirantesRole(user.roles.aspirantes || 'Ninguno');
       setSemanasRole(user.roles.semanas);
       setMovilidadRole(user.roles.movilidad);
       setMaterialesRole(user.roles.materiales || 'Ninguno');
@@ -91,6 +93,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             role: globalRole,
             roles: {
                 asistencia: isMaster ? 'Administrador' : asistenciaRole,
+                aspirantes: isMaster ? 'Administrador' : aspirantesRole,
                 semanas: isMaster ? 'Administrador' : semanasRole,
                 movilidad: isMaster ? 'Administrador' : movilidadRole,
                 materiales: isMaster ? 'Administrador' : materialesRole,
@@ -175,6 +178,15 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
                 <SelectTrigger id="asistenciaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="aspirantesRole-edit" className="text-right">Aspirantes</Label>
+              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : aspirantesRole} disabled={globalRole === 'Master'}>
+                <SelectTrigger id="aspirantesRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
