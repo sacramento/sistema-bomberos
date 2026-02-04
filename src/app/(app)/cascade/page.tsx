@@ -183,7 +183,7 @@ export default function CascadePage() {
                                         recentCharges.map(charge => (
                                             <TableRow key={charge.id}>
                                                 <TableCell className="font-mono">{charge.materialCode}</TableCell>
-                                                <TableCell>{format(parseISO(charge.chargeTimestamp), 'Pp', { locale: es })}</TableCell>
+                                                <TableCell>{charge.chargeTimestamp ? format(parseISO(charge.chargeTimestamp), 'Pp', { locale: es }) : 'N/A'}</TableCell>
                                                 <TableCell>{charge.cuartel}</TableCell>
                                                 <TableCell>{charge.actorName}</TableCell>
                                             </TableRow>

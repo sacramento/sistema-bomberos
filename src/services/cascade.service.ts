@@ -56,12 +56,15 @@ export const getCascadeCharges = async (): Promise<CascadeCharge[]> => {
     const charges: CascadeCharge[] = [];
     querySnapshot.forEach((doc) => {
         const data = doc.data();
-        let timestamp = '';
+        let timestamp: string | null = null;
         if (data.chargeTimestamp) {
             if (data.chargeTimestamp instanceof Timestamp) {
                 timestamp = data.chargeTimestamp.toDate().toISOString();
             } else if (data.chargeTimestamp.seconds) {
-                timestamp = new Date(data.chargeTimestamp.seconds * 1000).toISOString();
+                const d = new Date(data.chargeTimestamp.seconds * 1000);
+                if (!isNaN(d.getTime())) {
+                    timestamp = d.toISOString();
+                }
             }
         }
 
@@ -101,7 +104,7 @@ export const getCascadeSystemCharges = async (): Promise<CascadeSystemCharge[]> 
     querySnapshot.forEach((doc) => {
         const data = doc.data();
 
-        let startTime = '';
+        let startTime: string | null = null;
         if (data.startTime) {
             const d = new Date(data.startTime instanceof Timestamp ? data.startTime.toDate() : data.startTime);
             if (!isNaN(d.getTime())) {
@@ -109,7 +112,7 @@ export const getCascadeSystemCharges = async (): Promise<CascadeSystemCharge[]> 
             }
         }
         
-        let endTime = '';
+        let endTime: string | null = null;
         if (data.endTime) {
             const d = new Date(data.endTime instanceof Timestamp ? data.endTime.toDate() : data.endTime);
             if (!isNaN(d.getTime())) {

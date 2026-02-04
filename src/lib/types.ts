@@ -182,7 +182,7 @@ export type CascadeCharge = {
     id: string;
     materialId: string;
     materialCode: string;
-    chargeTimestamp: string; // ISO String
+    chargeTimestamp: string | null; // ISO String
     cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
     actorId: string;
     actorName: string;
@@ -191,8 +191,8 @@ export type CascadeCharge = {
 export type CascadeSystemCharge = {
   id: string;
   tubes: ('Tubo 1' | 'Tubo 2' | 'Tubo 3' | 'Tubo 4')[];
-  startTime: string; // ISO String
-  endTime: string; // ISO String
+  startTime: string | null; // ISO String
+  endTime: string | null; // ISO String
   actorId: string;
   actorName: string;
 };

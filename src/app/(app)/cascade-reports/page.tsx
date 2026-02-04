@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
@@ -36,7 +37,8 @@ const PIE_CHART_COLORS: Record<string, string> = {
 };
 const cascadeTubes = ['Tubo 1', 'Tubo 2', 'Tubo 3', 'Tubo 4'] as const;
 
-const formatDuration = (start: string, end: string) => {
+const formatDuration = (start: string | null, end: string | null) => {
+    if (!start || !end) return 'N/A';
     const minutes = differenceInMinutes(parseISO(end), parseISO(start));
     if (isNaN(minutes) || minutes < 0) return 'N/A';
     const h = Math.floor(minutes / 60);
@@ -161,12 +163,21 @@ export default function CascadeReportsPage() {
         fetchLogo();
     }, [toast]);
     
+    const formatCascadeDate = (dateString: string | null) => {
+        if (!dateString) return 'N/A';
+        try {
+            return format(parseISO(dateString), 'Pp', { locale: es });
+        } catch (e) {
+            return 'Fecha inválida';
+        }
+    };
+    
     // Memos for ERA Tube Report
     const filteredCharges = useMemo(() => {
         return allCharges.filter(charge => {
             if (filterCuartel !== 'all' && charge.cuartel !== filterCuartel) return false;
             if (filterUser !== 'all' && charge.actorId !== filterUser) return false;
-            if (filterDate?.from) {
+            if (filterDate?.from && charge.chargeTimestamp) {
                 const chargeDate = parseISO(charge.chargeTimestamp);
                 const toDate = filterDate.to ?? filterDate.from;
                 if (!isWithinInterval(chargeDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
@@ -207,7 +218,7 @@ export default function CascadeReportsPage() {
         return systemCharges.filter(charge => {
             if (filterUser !== 'all' && charge.actorId !== filterUser) return false;
             if (filterTubes.length > 0 && !filterTubes.some(tube => charge.tubes.includes(tube as any))) return false;
-            if (filterDate?.from) {
+            if (filterDate?.from && charge.startTime) {
                 const chargeStartDate = parseISO(charge.startTime);
                 const toDate = filterDate.to ?? filterDate.from;
                 if (!isWithinInterval(chargeStartDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return false;
@@ -319,8 +330,8 @@ export default function CascadeReportsPage() {
                     head: [['Tubos', 'Inicio', 'Fin', 'Duración', 'Registrado por']],
                     body: filteredSystemCharges.map(item => [
                         item.tubes.join(', '),
-                        format(parseISO(item.startTime), 'Pp', { locale: es }),
-                        format(parseISO(item.endTime), 'Pp', { locale: es }),
+                        formatCascadeDate(item.startTime),
+                        formatCascadeDate(item.endTime),
                         formatDuration(item.startTime, item.endTime),
                         item.actorName
                     ]),
@@ -330,6 +341,7 @@ export default function CascadeReportsPage() {
 
                 // Calculate total duration
                 const totalDurationInMinutes = filteredSystemCharges.reduce((acc, charge) => {
+                    if (!charge.startTime || !charge.endTime) return acc;
                     const minutes = differenceInMinutes(parseISO(charge.endTime), parseISO(charge.startTime));
                     return acc + (isNaN(minutes) || minutes < 0 ? 0 : minutes);
                 }, 0);
@@ -562,8 +574,8 @@ export default function CascadeReportsPage() {
                                         filteredSystemCharges.map(charge => (
                                             <TableRow key={charge.id}>
                                                 <TableCell><div className="flex flex-wrap gap-1">{charge.tubes.map(t => <Badge key={t} variant="secondary">{t}</Badge>)}</div></TableCell>
-                                                <TableCell>{format(parseISO(charge.startTime), 'Pp', { locale: es })}</TableCell>
-                                                <TableCell>{format(parseISO(charge.endTime), 'Pp', { locale: es })}</TableCell>
+                                                <TableCell>{formatCascadeDate(charge.startTime)}</TableCell>
+                                                <TableCell>{formatCascadeDate(charge.endTime)}</TableCell>
                                                 <TableCell>{formatDuration(charge.startTime, charge.endTime)}</TableCell>
                                                 <TableCell>{charge.actorName}</TableCell>
                                             </TableRow>
