@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -43,7 +42,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 };
 
 
-export default function DashboardPage() {
+export default function AspirantesDashboardPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,12 +71,12 @@ export default function DashboardPage() {
  const attendanceDataByGroup = useMemo(() => {
     const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
 
-    const nonAspiranteSessions = sessions.filter(session => 
-      !session.attendees.every(a => a.rank === 'ASPIRANTE')
+    const aspiranteSessions = sessions.filter(session => 
+      session.attendees.every(a => a.rank === 'ASPIRANTE')
     );
 
     let allRecords: { status: AttendanceStatus; firefighter: Firefighter; session: Session }[] = [];
-    nonAspiranteSessions.forEach(session => {
+    aspiranteSessions.forEach(session => {
         if(!session.attendance) return;
         
         const participantIds = new Set([
@@ -90,9 +89,9 @@ export default function DashboardPage() {
             const firefighter = firefighterMap.get(id);
             if (!firefighter) return;
 
-            // Only count non-aspirantes for statistics
-            if(firefighter.rank === 'ASPIRANTE') return;
-            
+            // Only count aspirantes for the statistics
+            if (firefighter.rank !== 'ASPIRANTE') return;
+
             let status = session.attendance![id];
             if (!status) {
                  if (session.instructorIds?.includes(id) || session.assistantIds?.includes(id)) {
@@ -125,10 +124,7 @@ export default function DashboardPage() {
     };
 
     const groupedData: Record<string, AttendanceSummary> = {
-        'General': processAttendance(allRecords),
-        'Cuartel 1': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 1')),
-        'Cuartel 2': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 2')),
-        'Cuartel 3': processAttendance(allRecords.filter(r => r.firefighter.firehouse === 'Cuartel 3')),
+        'General': processAttendance(allRecords)
     };
 
     const specializations = new Set(allRecords.map(r => r.session.specialization));
@@ -140,15 +136,15 @@ export default function DashboardPage() {
   }, [sessions, firefighters]);
 
   const specializationsWithData = Object.keys(attendanceDataByGroup).filter(key => 
-    !['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(key) && attendanceDataByGroup[key]?.totalForPercentage > 0
+    !['General'].includes(key) && attendanceDataByGroup[key]?.totalForPercentage > 0
   );
   
   if (loading) {
       return (
           <>
             <PageHeader
-                title="Dashboard Asistencia"
-                description="Cargando resumen de actividad del departamento..."
+                title="Dashboard Aspirantes"
+                description="Cargando resumen de actividad de los aspirantes..."
             />
              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
@@ -223,14 +219,11 @@ export default function DashboardPage() {
   return (
     <>
       <PageHeader
-        title="Dashboard Asistencia"
-        description="Bienvenido de nuevo, aquí hay un resumen de la actividad de tu departamento."
+        title="Dashboard Aspirantes"
+        description="Bienvenido, aquí hay un resumen de la actividad de los aspirantes."
       />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            {(['General', 'Cuartel 1', 'Cuartel 2', 'Cuartel 3']).map((groupTitle) => {
-                const data = attendanceDataByGroup[groupTitle];
-                return <div key={groupTitle}>{renderChart(groupTitle, data)}</div>;
-            })}
+        <div className="mb-8">
+             {renderChart('Asistencia General', attendanceDataByGroup['General'])}
         </div>
 
         {specializationsWithData.length > 0 && (
