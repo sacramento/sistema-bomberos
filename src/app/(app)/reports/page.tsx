@@ -16,7 +16,9 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-f
 import { useState, useEffect, useMemo } from "react";
 import { Session, Firefighter, AttendanceStatus, Course, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
+import { getAspiranteSessions } from "@/services/aspirantes-sessions.service";
 import { getWorkshops } from "@/services/workshops.service";
+import { getAspiranteWorkshops } from "@/services/aspirantes-workshops.service";
 import { getCourses } from "@/services/courses.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
@@ -254,8 +256,11 @@ const MultiSelectFilter = ({
     );
 };
 
+interface ReportTabProps {
+  context?: 'asistencia' | 'aspirantes';
+}
 
-function ClassesReportTab() {
+export function ClassesReportTab({ context = 'asistencia' }: ReportTabProps) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -285,10 +290,16 @@ function ClassesReportTab() {
             setLoading(true);
             try {
                 const [sessionsData, firefightersData] = await Promise.all([
-                    getSessions(),
+                    context === 'asistencia' ? getSessions() : getAspiranteSessions(),
                     getFirefighters(),
                 ]);
-                setAllSessions(sessionsData);
+                
+                let sessionsToSet = sessionsData;
+                if (context === 'asistencia') {
+                    sessionsToSet = sessionsData.filter(s => !s.attendees.every(a => a.rank === 'ASPIRANTE'));
+                }
+                setAllSessions(sessionsToSet);
+
                 setAllFirefighters(firefightersData);
 
                 if (isBomberoRole && user) {
@@ -323,7 +334,7 @@ function ClassesReportTab() {
         fetchData();
         fetchLogo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [toast, user, isBomberoRole]);
+    }, [toast, user, isBomberoRole, context]);
     
 const generatePdf = async () => {
     if (!logoDataUrl) {
@@ -924,7 +935,7 @@ const generatePdf = async () => {
     );
 }
 
-function WorkshopsReportTab() {
+export function WorkshopsReportTab({ context = 'asistencia' }: ReportTabProps) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const [loading, setLoading] = useState(true);
@@ -954,10 +965,16 @@ function WorkshopsReportTab() {
             setLoading(true);
             try {
                 const [workshopsData, firefightersData] = await Promise.all([
-                    getWorkshops(),
+                    context === 'asistencia' ? getWorkshops() : getAspiranteWorkshops(),
                     getFirefighters(),
                 ]);
-                setAllWorkshops(workshopsData);
+                
+                let workshopsToSet = workshopsData;
+                if (context === 'asistencia') {
+                    workshopsToSet = workshopsData.filter(s => !s.attendees.every(a => a.rank === 'ASPIRANTE'));
+                }
+                setAllWorkshops(workshopsToSet);
+
                 setAllFirefighters(firefightersData);
 
                 if (isBomberoRole && user) {
@@ -992,7 +1009,7 @@ function WorkshopsReportTab() {
         fetchData();
         fetchLogo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [toast, user, isBomberoRole]);
+    }, [toast, user, isBomberoRole, context]);
     
 const generatePdf = async () => {
     if (!logoDataUrl) {
@@ -1593,7 +1610,7 @@ const generatePdf = async () => {
     );
 }
 
-function CoursesReportTab() {
+export function CoursesReportTab({ context = 'asistencia' }: ReportTabProps) {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -1632,8 +1649,15 @@ function CoursesReportTab() {
                     getCourses(),
                     getFirefighters()
                 ]);
-                setAllCourses(coursesData);
                 setAllFirefighters(firefightersData);
+
+                if (context === 'aspirantes') {
+                    const aspiranteIds = new Set(firefightersData.filter(f => f.rank === 'ASPIRANTE').map(f => f.id));
+                    setAllCourses(coursesData.filter(c => aspiranteIds.has(c.firefighterId)));
+                } else { // context is 'asistencia'
+                    const nonAspiranteIds = new Set(firefightersData.filter(f => f.rank !== 'ASPIRANTE').map(f => f.id));
+                    setAllCourses(coursesData.filter(c => nonAspiranteIds.has(c.firefighterId)));
+                }
 
             } catch (error) {
                 toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes de cursos.", variant: "destructive" });
@@ -1657,7 +1681,7 @@ function CoursesReportTab() {
         }
         fetchData();
         fetchLogo();
-    }, [toast]);
+    }, [toast, context]);
     
     const generatePdf = async () => {
         if (!logoDataUrl) {
