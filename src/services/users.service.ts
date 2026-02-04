@@ -24,6 +24,7 @@ const docToUser = (docSnap: any): User => {
         roperia: rolesData.roperia || 'Ninguno',
         servicios: rolesData.servicios || 'Ninguno',
         cascada: rolesData.cascada || 'Ninguno',
+        aspirantes: rolesData.aspirantes || 'Ninguno',
     };
     return {
         id: docSnap.id, 

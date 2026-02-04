@@ -206,6 +206,7 @@ export type AyudantiaModuleRole = 'Administrador' | 'Oficial' | 'Ninguno';
 export type RoperiaModuleRole = 'Administrador' | 'Encargado' | 'Oficial' | 'Bombero' | 'Ninguno';
 export type ServiciosModuleRole = 'Administrador' | 'Oficial' | 'Bombero' | 'Ninguno';
 export type CascadaModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
+export type AspirantesModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Bombero' | 'Ninguno';
 
 
 export type GlobalRole = 'Master' | 'Usuario';
@@ -224,6 +225,7 @@ export type User = {
     roperia: RoperiaModuleRole;
     servicios: ServiciosModuleRole;
     cascada: CascadaModuleRole;
+    aspirantes: AspirantesModuleRole;
   };
 };
 
