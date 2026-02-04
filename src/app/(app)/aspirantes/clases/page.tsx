@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { PlusCircle, ArrowRight, MoreVertical, Edit, Trash2, Search, CalendarClock, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import AddClassDialog from './_components/add-class-dialog';
+import AddAspiranteClassDialog from './_components/add-class-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Session } from '@/lib/types';
 import { Input } from '@/components/ui/input';
@@ -27,10 +27,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { getSessions, deleteSession } from '@/services/sessions.service';
+import { getAspiranteSessions, deleteAspiranteSession } from '@/services/aspirantes-sessions.service';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import EditClassDialog from './_components/edit-class-dialog';
+import EditAspiranteClassDialog from './_components/edit-class-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { parseISO, format } from 'date-fns';
 import { usePathname } from 'next/navigation';
@@ -39,34 +39,24 @@ import { es } from 'date-fns/locale';
 
 const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 
-const hierarchyOptions = [
-    { value: 'bomberos', label: 'Bomberos' },
-    { value: 'suboficiales_oficiales', label: 'Suboficiales y Oficiales' },
-    { value: 'aspirantes', label: 'Aspirantes' }
-];
-
-export default function ClassesPage() {
+export default function AspiranteClassesPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const { getActiveRole, user } = useAuth();
   const pathname = usePathname();
   const { toast } = useToast();
   
-  // State for filters
   const [searchTerm, setSearchTerm] = useState('');
   const [filterSpecialization, setFilterSpecialization] = useState('all');
-  const [filterStation, setFilterStation] = useState('all');
-  const [filterHierarchy, setFilterHierarchy] = useState('all');
   const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
 
   const activeRole = getActiveRole(pathname);
   const canManageClasses = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Instructor', [activeRole]);
 
-
   const fetchSessions = async () => {
     setLoading(true);
     try {
-        const data = await getSessions();
+        const data = await getAspiranteSessions();
         setSessions(data);
     } catch(error) {
          toast({
@@ -84,15 +74,14 @@ export default function ClassesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-
   const handleDataChange = () => {
     fetchSessions();
   };
 
   const handleDeleteClass = async (sessionId: string) => {
-    if (!user) return;
     try {
-        await deleteSession(sessionId, user);
+        if (!user) throw new Error("Usuario no autenticado.");
+        await deleteAspiranteSession(sessionId, user);
         toast({
             title: "Éxito",
             description: "La clase ha sido eliminada."
@@ -107,48 +96,13 @@ export default function ClassesPage() {
     }
   };
   
- const getCardBorderColor = (session: Session): string => {
-    const attendees = session.attendees;
-    if (!attendees || attendees.length === 0) return 'border-gray-500';
-
-    const totalAttendees = attendees.length;
-    const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-    const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-
-    const suboficialesOficialesCount = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-    if (suboficialesOficialesCount / totalAttendees > 0.8) return 'border-red-500';
-    
-    const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
-    attendees.forEach(a => {
-        if (firehouseCounts.hasOwnProperty(a.firehouse)) {
-            firehouseCounts[a.firehouse]++;
-        }
-    });
-    const hasC1 = firehouseCounts['Cuartel 1'] > 0;
-    const hasC2 = firehouseCounts['Cuartel 2'] > 0;
-    const hasC3 = firehouseCounts['Cuartel 3'] > 0;
-
-    if (hasC1 && hasC2 && hasC3) return 'border-gray-500';
-
-    if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) return 'border-yellow-500';
-    if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'border-blue-500';
-    if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'border-orange-500';
-    
-    return 'border-gray-500';
-  };
-
   const availableYears = useMemo(() => {
     const years = new Set(sessions.map(s => parseISO(s.date).getFullYear().toString()));
     return Array.from(years).sort((a, b) => b.localeCompare(a));
   }, [sessions]);
 
-
   const { upcomingOrCurrentSessions, pastSessions } = useMemo(() => {
     const filtered = sessions.filter(session => {
-        // Exclude sessions where all attendees are aspirantes
-        const isAspiranteSession = session.attendees.every(a => a.rank === 'ASPIRANTE');
-        if (isAspiranteSession) return false;
-        
         if (searchTerm && !session.title.toLowerCase().includes(searchTerm.toLowerCase())) {
             return false;
         }
@@ -160,37 +114,6 @@ export default function ClassesPage() {
             const sessionYear = sessionDate.getFullYear().toString();
             if(sessionYear !== filterYear) return false;
         }
-
-        const attendees = session.attendees;
-        if (!attendees || attendees.length === 0) {
-            return filterStation === 'all' && filterHierarchy === 'all';
-        }
-        
-        if (filterStation !== 'all') {
-            const stationCounts: Record<string, number> = {};
-            attendees.forEach(a => {
-                stationCounts[a.firehouse] = (stationCounts[a.firehouse] || 0) + 1;
-            });
-            const majorityStation = Object.keys(stationCounts).reduce((a, b) => stationCounts[a] > stationCounts[b] ? a : b, '');
-            if (majorityStation !== filterStation || (stationCounts[majorityStation] / attendees.length) <= 0.5) {
-                return false;
-            }
-        }
-        
-        if (filterHierarchy !== 'all') {
-            const totalAttendees = attendees.length;
-            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-
-            let count = 0;
-            if (filterHierarchy === 'bomberos') {
-                count = attendees.filter(a => a.rank === 'BOMBERO' || a.rank === 'ADAPTACION').length;
-            } else if (filterHierarchy === 'suboficiales_oficiales') {
-                count = attendees.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).length;
-            }
-            if (count / totalAttendees <= 0.5) return false;
-        }
-
         return true;
     });
 
@@ -210,7 +133,7 @@ export default function ClassesPage() {
     });
 
     return { upcomingOrCurrentSessions: upcomingOrCurrent, pastSessions: past };
-  }, [sessions, searchTerm, filterSpecialization, filterStation, filterHierarchy, filterYear]);
+  }, [sessions, searchTerm, filterSpecialization, filterYear]);
 
 
   const renderSessionCards = (sessionList: Session[]) => {
@@ -256,7 +179,7 @@ export default function ClassesPage() {
             const formattedDate = format(sessionDate, "dd 'de' MMMM", { locale: es });
 
             return (
-            <Card key={session.id} className={cn("flex flex-col border-l-4", getCardBorderColor(session))}>
+            <Card key={session.id} className="flex flex-col border-l-4 border-green-500 bg-green-500/5">
                <CardHeader className="p-4 flex-grow">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2 flex-grow">
@@ -273,12 +196,12 @@ export default function ClassesPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <EditClassDialog session={session} onClassUpdated={handleDataChange}>
+                          <EditAspiranteClassDialog session={session} onClassUpdated={handleDataChange}>
                             <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                               <Edit className="mr-2 h-4 w-4" />
                               Editar
                             </DropdownMenuItem>
-                          </EditClassDialog>
+                          </EditAspiranteClassDialog>
                           <AlertDialogTrigger asChild>
                             <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
                               <Trash2 className="mr-2 h-4 w-4" />
@@ -291,8 +214,7 @@ export default function ClassesPage() {
                           <AlertDialogHeader>
                           <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                           <AlertDialogDescription>
-                              Esta acción no se puede deshacer. Esto eliminará permanentemente la clase
-                              y sus datos asociados.
+                              Esta acción no se puede deshacer. Esto eliminará permanentemente la clase y sus datos asociados.
                           </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -318,7 +240,7 @@ export default function ClassesPage() {
               </CardContent>
               <CardFooter className="p-4 pt-0 mt-auto">
                    <Button asChild className="w-full">
-                      <Link href={`/classes/${session.id}/attendance`}>
+                      <Link href={`/aspirantes/clases/${session.id}/attendance`}>
                           Gestionar Asistencia
                           <ArrowRight className="ml-2 h-4 w-4" />
                       </Link>
@@ -332,14 +254,14 @@ export default function ClassesPage() {
 
   return (
     <>
-      <PageHeader title="Clases de Capacitación" description="Cree, gestione y filtre clases de capacitación.">
+      <PageHeader title="Clases de Aspirantes" description="Cree y gestione las clases de capacitación para aspirantes.">
         {canManageClasses && (
-          <AddClassDialog onClassAdded={handleDataChange}>
+          <AddAspiranteClassDialog onClassAdded={handleDataChange}>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
               Crear Clase
             </Button>
-          </AddClassDialog>
+          </AddAspiranteClassDialog>
         )}
       </PageHeader>
       
@@ -348,7 +270,7 @@ export default function ClassesPage() {
               <CardTitle className="font-headline">Filtros</CardTitle>
           </CardHeader>
           <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div className="space-y-2">
                       <Label htmlFor='search'>Buscar por Título</Label>
                       <div className="relative">
@@ -386,33 +308,6 @@ export default function ClassesPage() {
                           </SelectContent>
                       </Select>
                   </div>
-                   <div className="space-y-2">
-                       <Label>Cuartel</Label>
-                        <Select value={filterStation} onValueChange={setFilterStation}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Todos los cuarteles" />
-                            </SelectTrigger>
-                            <SelectContent>
-                               <SelectItem value="all">Todos los Cuarteles</SelectItem>
-                               <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
-                               <SelectItem value="Cuartel 2">Cuartel 2</SelectItem>
-                               <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                     <div className="space-y-2">
-                        <Label>Jerarquía</Label>
-                         <Select value={filterHierarchy} onValueChange={setFilterHierarchy}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Todas las jerarquías" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Todos</SelectItem>
-                                <SelectItem value="bomberos">Solo Bomberos</SelectItem>
-                                <SelectItem value="suboficiales_oficiales">Suboficiales y Oficiales</SelectItem>
-                            </SelectContent>
-                         </Select>
-                    </div>
               </div>
           </CardContent>
       </Card>

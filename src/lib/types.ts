@@ -214,7 +214,7 @@ export type GlobalRole = 'Master' | 'Usuario';
 export type User = {
   id: string; // This is the user's legajo
   name: string;
-  password: string;
+  password?: string;
   role: GlobalRole; // Global role
   roles: {
     asistencia: AttendanceModuleRole;
