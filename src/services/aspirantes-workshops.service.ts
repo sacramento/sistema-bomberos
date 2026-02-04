@@ -1,4 +1,5 @@
 
+
 'use server';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
@@ -70,7 +71,7 @@ export const getAspiranteWorkshopById = async(id: string): Promise<Session | nul
     return null;
 }
 
-export const addAspiranteWorkshop = async (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser): Promise<string> => {
+export const addAspiranteWorkshop = async (sessionData: Omit<Session, 'id'>, actor: LoggedInUser): Promise<string> => {
     const sessionToStore = {
         title: sessionData.title,
         description: sessionData.description,

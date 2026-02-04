@@ -210,8 +210,8 @@ function Sidebar() {
                     isActive = pathname === item.href;
                 } else if (item.href === '/weeks') {
                     isActive = pathname === '/weeks' || (pathname.startsWith('/weeks/') && !pathname.startsWith('/weeks/my-week') && !pathname.startsWith('/weeks/tasks'));
-                } else if (item.href === '/sessions' || item.href === '/talleres') {
-                    isActive = pathname.startsWith(item.href) || pathname.startsWith('/classes');
+                } else if (item.href === '/sessions' || item.href === '/talleres' || item.href === '/aspirantes/talleres') {
+                    isActive = pathname.startsWith(item.href);
                 } else if (item.href === '/materials/vehicles') {
                     isActive = pathname === item.href;
                 } else if (item.href === '/materials') {
