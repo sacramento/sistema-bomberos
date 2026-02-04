@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { useParams, usePathname } from "next/navigation";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Firefighter, Session, AttendanceStatus } from "@/lib/types";
-import { getSessionById, updateSessionAttendance } from "@/services/sessions.service";
+import { getAspiranteSessionById, updateAspiranteSessionAttendance } from "@/services/aspirantes-sessions.service";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
@@ -50,7 +50,7 @@ export default function AspiranteClassAttendancePage() {
     const pathname = usePathname();
     const sessionId = params.id as string;
     const { toast } = useToast();
-    const { getActiveRole } = useAuth();
+    const { user, getActiveRole } = useAuth();
     
     const [session, setSession] = useState<Session | null>(null);
     const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
@@ -69,8 +69,7 @@ export default function AspiranteClassAttendancePage() {
             if (sessionId) {
                 setLoading(true);
                 try {
-                    // Reusing the same service as it fetches by ID
-                    const data = await getSessionById(sessionId);
+                    const data = await getAspiranteSessionById(sessionId);
                     setSession(data);
                     if (data) {
                         const uniqueParticipants = new Map<string, Firefighter>();
@@ -181,7 +180,8 @@ export default function AspiranteClassAttendancePage() {
     const handleSaveChanges = async () => {
         setSaving(true);
         try {
-            await updateSessionAttendance(sessionId, attendance);
+            if (!user) throw new Error("Usuario no autenticado");
+            await updateAspiranteSessionAttendance(sessionId, attendance, user);
             toast({
                 title: "¡Éxito!",
                 description: "La asistencia ha sido guardada correctamente."
@@ -352,4 +352,3 @@ export default function AspiranteClassAttendancePage() {
         </>
     );
 }
-
