@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Course, Session } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { batchAddCourses } from "@/services/courses.service";
@@ -137,13 +137,21 @@ export default function AddAspiranteCourseDialog({ children, onCourseAdded }: { 
     fetchAllFirefighters();
   }, [open, toast]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setSelectedFirefighters([]);
     setSpecialization('');
     setTitle('');
     setLocation('');
     setDateRange(undefined);
-  };
+  }, []);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
+
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -170,7 +178,7 @@ export default function AddAspiranteCourseDialog({ children, onCourseAdded }: { 
             endDate: format(dateRange.to!, 'yyyy-MM-dd'),
         }));
         
-        await batchAddCourses(coursesToCreate);
+        await batchAddCourses(coursesToCreate, {});
 
         toast({
             title: "¡Éxito!",
@@ -194,10 +202,7 @@ export default function AddAspiranteCourseDialog({ children, onCourseAdded }: { 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>

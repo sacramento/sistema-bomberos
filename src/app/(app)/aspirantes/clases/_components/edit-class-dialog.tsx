@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Session } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -155,7 +155,7 @@ export default function EditAspiranteClassDialog({ children, session, onClassUpd
     }
   }, [step, attendees, instructors, assistants]);
   
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setStep(1);
     setTitle(session.title);
     setSpecialization(session.specialization);
@@ -165,7 +165,15 @@ export default function EditAspiranteClassDialog({ children, session, onClassUpd
     setInstructors(session.instructors);
     setAssistants(session.assistants);
     setAttendees(session.attendees);
-  };
+  }, [session]);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
+
   
   const handleNext = () => {
     if (step === 1 && (!title || !specialization || !date || !time)) {
@@ -210,7 +218,7 @@ export default function EditAspiranteClassDialog({ children, session, onClassUpd
             attendees: attendees,
         };
         
-        await updateAspiranteSession(session.id, updatedData);
+        await updateAspiranteSession(session.id, updatedData, {});
 
         toast({
             title: "¡Éxito!",
@@ -314,10 +322,7 @@ export default function EditAspiranteClassDialog({ children, session, onClassUpd
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
              <DialogHeader>
