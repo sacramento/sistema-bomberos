@@ -151,9 +151,10 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
     if (step === 4) {
         const instructorIds = new Set(instructors.map(i => i.id));
         const assistantIds = new Set(assistants.map(a => a.id));
-        setAttendees(attendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
+        setAttendees(prev => prev.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
     }
-  }, [step, attendees, instructors, assistants]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, instructors, assistants]);
   
   const resetForm = useCallback(() => {
     setStep(1);
