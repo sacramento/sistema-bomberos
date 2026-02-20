@@ -91,7 +91,7 @@ export type Vehicle = {
   tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
   traccion: 'Trasera' | 'Delantera' | '4x4';
   encargadoIds: string[]; // Firefighter IDs of the people in charge
-  observations: string;
+  observaciones: string;
   maintenanceItemIds?: string[]; // IDs of MaintenanceItem that apply to this vehicle
   // Enriched properties for client side
   encargados?: Firefighter[];
@@ -149,7 +149,7 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'COMUNICACION' | 'DOCUMENTACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INSTRUMENTO' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION';
+  tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'INSTRUMENTO' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
   especialidad: Specialization;
   caracteristicas?: string;
   ubicacion: {

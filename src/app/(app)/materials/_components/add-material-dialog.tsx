@@ -16,9 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2 } from "lucide-react";
 
 const materialTypes: Material['tipo'][] = [
-    'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
-    'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
-    'LOGISTICA', 'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION'
+    'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
+    'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
+    'ILUMINACION', 'INMOVILIZACION', 'INSTRUMENTO', 'LANZA', 'LOGISTICA', 
+    'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
 ];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
