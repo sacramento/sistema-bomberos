@@ -32,7 +32,7 @@ import { Switch } from "@/components/ui/switch";
 
 const materialTypes: Material['tipo'][] = [
     'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
-    'H. HIDRAULICA', 'H. NEUMATICA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
+    'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
     'LOGISTICA', 'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION'
 ];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
@@ -128,7 +128,7 @@ export default function MaterialsReportPage() {
             toast({ title: "¡Éxito!", description: "El material ha sido eliminado." });
             fetchAllData();
         } catch (error: any) {
-            toast({ title: "Error", description: error.message || "No se pudo eliminar el material.", variant: "destructive" });
+            toast({ title: "Error", description: error.message || "No se pudo eliminar the material.", variant: "destructive" });
         }
     };
 

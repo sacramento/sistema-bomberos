@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 const materialTypes: Material['tipo'][] = [
     'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
-    'H. HIDRAULICA', 'H. NEUMATICA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
+    'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
     'LOGISTICA', 'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION'
 ];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
