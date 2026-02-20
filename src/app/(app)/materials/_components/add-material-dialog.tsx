@@ -22,7 +22,7 @@ const materialTypes: Material['tipo'][] = [
     'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
 ].sort() as Material['tipo'][];
 
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
@@ -130,7 +130,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
         setLoading(true);
         try {
-            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion });
+            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
             setOpen(false);

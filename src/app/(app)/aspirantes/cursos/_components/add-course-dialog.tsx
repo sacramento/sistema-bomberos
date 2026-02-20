@@ -29,7 +29,7 @@ import { es } from 'date-fns/locale';
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const MultiSelectFirefighter = ({ 
     title, 
@@ -178,7 +178,7 @@ export default function AddAspiranteCourseDialog({ children, onCourseAdded }: { 
             endDate: format(dateRange.to!, 'yyyy-MM-dd'),
         }));
         
-        await batchAddCourses(coursesToCreate, {});
+        await batchAddCourses(coursesToCreate, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
 
         toast({
             title: "¡Éxito!",

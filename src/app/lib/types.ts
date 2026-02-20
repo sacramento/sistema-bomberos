@@ -27,7 +27,7 @@ export type Firefighter = {
 
 export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";
 
-export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'RESCATE URBANO' | 'RESCATE VEHICULAR' | 'VARIOS';
+export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE' | 'RESCATE URBANO' | 'RESCATE VEHICULAR' | 'GENERAL';
 
 export type Session = {
   id: string;
@@ -149,7 +149,7 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'COMUNICACION' | 'DOCUMENTACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INSTRUMENTO' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION';
+  tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICION' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
   especialidad: Specialization;
   caracteristicas?: string;
   ubicacion: {

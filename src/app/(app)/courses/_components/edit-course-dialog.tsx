@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Course, Session } from "@/lib/types";
 import { updateCourse } from "@/services/courses.service";
 import { cn } from "@/lib/utils";
@@ -26,7 +26,7 @@ import { es } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 export default function EditCourseDialog({ children, course, onCourseUpdated }: { children: React.ReactNode; course: Course; onCourseUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -53,6 +53,23 @@ export default function EditCourseDialog({ children, course, onCourseUpdated }: 
     }
   }, [open, course]);
 
+  const resetForm = useCallback(() => {
+    setSpecialization(course.specialization);
+    setTitle(course.title);
+    setLocation(course.location);
+    setDateRange({
+      from: parseISO(course.startDate),
+      to: parseISO(course.endDate),
+    });
+  }, [course]);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!specialization || !title || !location || !dateRange?.from || !dateRange?.to) {
@@ -75,7 +92,7 @@ export default function EditCourseDialog({ children, course, onCourseUpdated }: 
             endDate: format(dateRange.to, 'yyyy-MM-dd'),
         };
         
-        await updateCourse(course.id, updatedCourseData);
+        await updateCourse(course.id, updatedCourseData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
 
         toast({
             title: "¡Éxito!",
@@ -98,7 +115,7 @@ export default function EditCourseDialog({ children, course, onCourseUpdated }: 
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>

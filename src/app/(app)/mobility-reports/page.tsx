@@ -24,7 +24,7 @@ import 'jspdf-autotable';
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
@@ -400,5 +400,3 @@ export default function MobilityReportsPage() {
         </>
     );
 }
-
-    

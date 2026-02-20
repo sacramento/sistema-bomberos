@@ -37,7 +37,7 @@ import { usePathname } from 'next/navigation';
 import { es } from 'date-fns/locale';
 
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 export default function AspiranteTalleresPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -90,7 +90,7 @@ export default function AspiranteTalleresPage() {
     } catch (error: any) {
         toast({
             title: "Error",
-            description: error.message || "No se pudo eliminar el taller.",
+            description: error.message || "No se pudo eliminar the taller.",
             variant: "destructive"
         });
     }

@@ -27,7 +27,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addAspiranteWorkshop } from "@/services/aspirantes-workshops.service";
 import { Progress } from "@/components/ui/progress";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const MultiSelectFirefighter = ({ 
     title, 
@@ -147,14 +147,17 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
     fetchAllFirefighters();
   }, [open, toast]);
 
+  const handleAttendeesUpdate = useCallback(() => {
+    const instructorIds = new Set(instructors.map(i => i.id));
+    const assistantIds = new Set(assistants.map(a => a.id));
+    setAttendees(prev => prev.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
+  }, [instructors, assistants]);
+
   useEffect(() => {
     if (step === 4) {
-        const instructorIds = new Set(instructors.map(i => i.id));
-        const assistantIds = new Set(assistants.map(a => a.id));
-        setAttendees(prev => prev.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
+        handleAttendeesUpdate();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, instructors, assistants]);
+  }, [step, handleAttendeesUpdate]);
   
   const resetForm = useCallback(() => {
     setTitle('');
@@ -219,7 +222,7 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
             attendees,
         };
         
-        await addAspiranteWorkshop(newWorkshopData, {});
+        await addAspiranteWorkshop(newWorkshopData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
 
         toast({
             title: "¡Éxito!",

@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Vehicle, Specialization } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addVehicle } from "@/services/vehicles.service";
@@ -26,7 +26,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
@@ -162,7 +162,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     setFormData(prev => ({ ...prev, encargadoIds: encargados.map(f => f.id) }));
   }
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFormData({
         numeroMovil: '',
         dominio: '',
@@ -178,7 +178,14 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         encargadoIds: [],
         observaciones: ''
     });
-  };
+  }, []);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -190,7 +197,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     setLoading(true);
 
     try {
-      await addVehicle(formData);
+      await addVehicle(formData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
       toast({ title: "¡Éxito!", description: "El nuevo móvil ha sido agregado." });
       onVehicleAdded();
       resetForm();
@@ -204,10 +211,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>

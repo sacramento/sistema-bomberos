@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-fns';
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Session, Firefighter, AttendanceStatus, Course, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getAspiranteSessions } from "@/services/aspirantes-sessions.service";
@@ -38,7 +38,7 @@ import { Switch } from "@/components/ui/switch";
 import { usePathname } from 'next/navigation';
 
 
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -71,7 +71,7 @@ const SPECIALIZATION_CHART_COLORS: Record<Specialization, string> = {
     PAE: "#FBBF24",
     GORA: "#A855F7",
     KAIZEN: "#6366F1",
-    VARIOS: "#64748B",
+    GENERAL: "#64748B",
     RESCATE: "#3B82F6",
 };
 
@@ -544,7 +544,7 @@ const generatePdf = async () => {
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
             if (firefighter.status === 'Inactive') return false;
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
-            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
+            if (filterStation.length > 0 && !filterStation.includes(firehouse => filterStation.includes(firehouse))) return false;
             if (filterHierarchy.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
@@ -1219,7 +1219,7 @@ const generatePdf = async () => {
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
             if (firefighter.status === 'Inactive') return false;
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
-            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
+            if (filterStation.length > 0 && !filterStation.includes(firehouse => filterStation.includes(firehouse))) return false;
             if (filterHierarchy.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];

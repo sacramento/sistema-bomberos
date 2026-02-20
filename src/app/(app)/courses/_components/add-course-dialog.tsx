@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Course, Session } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { batchAddCourses } from "@/services/courses.service";
@@ -29,7 +29,7 @@ import { es } from 'date-fns/locale';
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const MultiSelectFirefighter = ({ 
     title, 
@@ -137,13 +137,20 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
     fetchAllFirefighters();
   }, [open, toast]);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setSelectedFirefighters([]);
     setSpecialization('');
     setTitle('');
     setLocation('');
     setDateRange(undefined);
-  };
+  }, []);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -170,7 +177,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
             endDate: format(dateRange.to!, 'yyyy-MM-dd'),
         }));
         
-        await batchAddCourses(coursesToCreate);
+        await batchAddCourses(coursesToCreate, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
 
         toast({
             title: "¡Éxito!",
@@ -194,10 +201,7 @@ export default function AddCourseDialog({ children, onCourseAdded }: { children:
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
