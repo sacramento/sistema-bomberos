@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Session } from "@/lib/types";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addWorkshop } from "@/services/workshops.service";
 import { Progress } from "@/components/ui/progress";
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const hierarchyOptions = [
     { value: 'aspirantes', label: 'Aspirantes' },
@@ -244,47 +244,49 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
     fetchAllFirefighters();
   }, [open, toast]);
 
-  // This effect will run when moving to the final "review" step (step 4)
-  // It calculates the final list of attendees and "freezes" it in state.
-  useEffect(() => {
-    if (step === 4) {
-        let filteredByGroup: Firefighter[] = [];
+  const handleAttendeesUpdate = useCallback(() => {
+    let filteredByGroup: Firefighter[] = [];
 
-        if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-            let filtered = activeFirefighters;
+    if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
+        let filtered = activeFirefighters;
+        
+        if (selectedHierarchies.length > 0) {
+            const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
+            const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
             
-            if (selectedHierarchies.length > 0) {
-                const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
-                const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
-                
-                filtered = filtered.filter(f => {
-                    if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
-                    if (selectedHierarchies.includes('bomberos') && (f.rank === 'BOMBERO' || f.rank === 'ADAPTACION')) return true;
-                    if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
-                    return false;
-                });
-            }
-            
-            if (selectedStations.length > 0) {
-                filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
-            }
-            filteredByGroup = filtered;
+            filtered = filtered.filter(f => {
+                if (selectedHierarchies.includes('aspirantes') && f.rank === 'ASPIRANTE') return true;
+                if (selectedHierarchies.includes('bomberos') && (f.rank === 'BOMBERO' || f.rank === 'ADAPTACION')) return true;
+                if (selectedHierarchies.includes('suboficiales_oficiales') && [...suboficialRanks, ...oficialRanks].includes(f.rank)) return true;
+                return false;
+            });
         }
         
-        const combined = [...filteredByGroup, ...manualAttendees];
-        const uniqueAttendeesMap = new Map<string, Firefighter>();
-        combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
-
-        const finalAttendees = Array.from(uniqueAttendeesMap.values());
-        
-        const instructorIds = new Set(instructors.map(i => i.id));
-        const assistantIds = new Set(assistants.map(a => a.id));
-
-        setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
+        if (selectedStations.length > 0) {
+            filtered = filtered.filter(f => selectedStations.includes(f.firehouse));
+        }
+        filteredByGroup = filtered;
     }
-  }, [step, activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+    
+    const combined = [...filteredByGroup, ...manualAttendees];
+    const uniqueAttendeesMap = new Map<string, Firefighter>();
+    combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
+
+    const finalAttendees = Array.from(uniqueAttendeesMap.values());
+    
+    const instructorIds = new Set(instructors.map(i => i.id));
+    const assistantIds = new Set(assistants.map(a => a.id));
+
+    setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
+  }, [activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+
+  useEffect(() => {
+    if (step === 4) {
+        handleAttendeesUpdate();
+    }
+  }, [step, handleAttendeesUpdate]);
   
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setTitle('');
     setSpecialization('');
     setDescription('');
@@ -297,7 +299,14 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
     setSelectedHierarchies([]);
     setSelectedStations([]);
     setStep(1);
-  };
+  }, []);
+
+  const handleOpenChange = useCallback((isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) {
+      resetForm();
+    }
+  }, [resetForm]);
 
   const handleNext = () => {
     // Validations before going to the next step
@@ -457,10 +466,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
              <DialogHeader>
@@ -478,13 +484,11 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
             <DialogFooter className="flex-shrink-0 pt-4 border-t">
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Anterior
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                     </Button>
                      {step < totalSteps ? (
                         <Button onClick={handleNext} disabled={loading}>
-                            Siguiente
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                            Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     ) : (
                         <Button onClick={handleSubmit} disabled={loading}>

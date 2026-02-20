@@ -190,7 +190,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
       setOpen(false);
     } catch (error: any) {
       console.error(error);
-      toast({ title: "Error", description: error.message || "No se pudo actualizar el móvil.", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "No se pudo actualizar the móvil.", variant: "destructive" });
     } finally {
       setLoading(false);
     }

@@ -37,7 +37,7 @@ import { usePathname } from 'next/navigation';
 import { es } from 'date-fns/locale';
 
 
-const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
+const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const hierarchyOptions = [
     { value: 'bomberos', label: 'Bomberos' },
@@ -48,7 +48,7 @@ const hierarchyOptions = [
 export default function TalleresPage() {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const { getActiveRole } = useAuth();
+  const { getActiveRole, user } = useAuth();
   const pathname = usePathname();
   const { toast } = useToast();
   
