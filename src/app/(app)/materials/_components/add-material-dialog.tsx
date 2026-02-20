@@ -18,9 +18,10 @@ import { Sparkles, Loader2 } from "lucide-react";
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
     'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
-    'ILUMINACION', 'INMOVILIZACION', 'INSTRUMENTO', 'LANZA', 'LOGISTICA', 
-    'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
-];
+    'ILUMINACION', 'INMOVILIZACION', 'LANZA', 'LOGISTICA', 'MANGA', 'MEDICION', 
+    'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
+].sort() as Material['tipo'][];
+
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];

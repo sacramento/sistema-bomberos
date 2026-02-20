@@ -149,7 +149,7 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'INSTRUMENTO' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
+  tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICION' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
   especialidad: Specialization;
   caracteristicas?: string;
   ubicacion: {
