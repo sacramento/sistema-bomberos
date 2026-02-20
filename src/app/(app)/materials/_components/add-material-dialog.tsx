@@ -99,13 +99,12 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
         setGeneratingCode(true);
         try {
-            // Formula: 2 chars of Type + 2 chars of Spec + Sequence
             const cleanType = tipo.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
             const cleanSpec = especialidad.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
             const prefix = `${cleanType}${cleanSpec}`;
             
             const sequence = await getNextMaterialSequence(prefix);
-            const formattedCode = `${prefix}${sequence.toString().padStart(2, '0')}`;
+            const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
             
             setCodigo(formattedCode);
             toast({ title: "Código generado", description: `Se ha asignado el código único: ${formattedCode}` });
@@ -166,14 +165,14 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                         <div className="space-y-2">
                             <Label htmlFor="codigo">Código (Único)</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ej: REHA01" className="flex-grow" />
+                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ej: REHA001" className="flex-grow font-mono" />
                                 <Button 
                                     type="button" 
                                     variant="outline" 
                                     size="icon" 
                                     onClick={handleAutoGenerateCode}
                                     disabled={generatingCode || !tipo || !especialidad}
-                                    title="Auto-generar código"
+                                    title="Auto-generar código (3 dígitos)"
                                 >
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>

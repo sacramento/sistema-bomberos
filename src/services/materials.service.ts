@@ -20,6 +20,13 @@ const getAllVehiclesCached = cache(async () => {
     return new Map(vehicles.map(v => [v.id, v]));
 });
 
+// Helper to calculate the prefix from type and specialization
+const calculatePrefix = (tipo: string, especialidad: string) => {
+    const cleanType = tipo.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
+    const cleanSpec = especialidad.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
+    return `${cleanType}${cleanSpec}`;
+};
+
 // Helper to enrich material data with vehicle details
 const docToMaterial = async (
     docSnap: any, 
@@ -41,7 +48,7 @@ const docToMaterial = async (
         caracteristicas: data.caracteristicas,
         ubicacion: data.ubicacion,
         estado: data.estado,
-        condicion: data.condicion || 'Bueno', // Default to 'Bueno' if not present
+        condicion: data.condicion || 'Bueno',
         cuartel: data.cuartel,
         vehiculo: vehiculo,
     };
@@ -62,7 +69,7 @@ export const getMaterials = async (): Promise<Material[]> => {
 
 /**
  * Generates the next sequential number for a given code prefix.
- * Example: for prefix 'REHA', if 'REHA01' exists, returns 2.
+ * Returns the number (integer).
  */
 export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
     const q = query(materialsCollection, where("codigo", ">=", prefix), where("codigo", "<=", prefix + '\uf8ff'));
@@ -101,22 +108,46 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
     const batch = writeBatch(db);
     const allVehicles = await getVehicles();
     const vehicleMapByNumber = new Map(allVehicles.map(v => [v.numeroMovil, v]));
+    
+    // To handle auto-generation in batch, we need to track local counters for prefixes
+    const prefixCounters = new Map<string, number>();
+    const existingMaterials = await getMaterials();
+    const existingCodes = existingMaterials.map(m => m.codigo);
 
     for (const material of materials) {
         const materialToSave: any = { ...material };
         
+        // Handle auto-generation if code is missing
+        if (!materialToSave.codigo) {
+            const prefix = calculatePrefix(materialToSave.tipo, materialToSave.especialidad);
+            if (!prefixCounters.has(prefix)) {
+                // Find initial max sequence from DB for this prefix
+                let maxNum = 0;
+                existingCodes.filter(c => c.startsWith(prefix)).forEach(code => {
+                    const numPart = code.substring(prefix.length);
+                    const num = parseInt(numPart);
+                    if (!isNaN(num) && num > maxNum) maxNum = num;
+                });
+                prefixCounters.set(prefix, maxNum + 1);
+            }
+            
+            const nextSeq = prefixCounters.get(prefix)!;
+            materialToSave.codigo = `${prefix}${nextSeq.toString().padStart(3, '0')}`;
+            prefixCounters.set(prefix, nextSeq + 1);
+        }
+
         if (material.ubicacion.type === 'vehiculo' && material.numero_movil) {
             const vehicle = vehicleMapByNumber.get(material.numero_movil);
             if (vehicle) {
                 materialToSave.ubicacion.vehiculoId = vehicle.id;
-                materialToSave.cuartel = vehicle.cuartel; // Automatically set the firehouse based on the vehicle
+                materialToSave.cuartel = vehicle.cuartel;
             } else {
                 console.warn(`Vehículo con número "${material.numero_movil}" no encontrado. El material "${material.nombre}" no será asignado a un vehículo.`);
                 materialToSave.ubicacion.type = 'deposito';
                 materialToSave.ubicacion.deposito = materialToSave.cuartel;
             }
         }
-        delete materialToSave.numero_movil; // Remove the temporary field before saving
+        delete materialToSave.numero_movil;
 
         const newDocRef = doc(collection(db, 'materials')); 
         batch.set(newDocRef, materialToSave);

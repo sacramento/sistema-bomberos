@@ -85,7 +85,7 @@ export default function ImportMaterialsDialog({
                 : { type: 'deposito' as const, deposito: row.cuartel };
 
             return {
-                codigo: row.codigo.trim(),
+                codigo: row.codigo?.trim() || '', // Can be empty for auto-generation
                 nombre: row.nombre.trim(),
                 tipo: row.tipo.trim(),
                 especialidad: row.especialidad.trim(),
@@ -94,7 +94,7 @@ export default function ImportMaterialsDialog({
                 condicion: row.condicion.trim(),
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
-                numero_movil: row.numero_movil?.trim() || '' // Temporary field for processing
+                numero_movil: row.numero_movil?.trim() || ''
             } as Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string };
         });
         
@@ -113,7 +113,7 @@ export default function ImportMaterialsDialog({
           await batchAddMaterials(materialsToUpload);
           toast({
             title: '¡Éxito!',
-            description: `${materialsToUpload.length} materiales han sido importados correctamente.`,
+            description: `${materialsToUpload.length} materiales han sido procesados e importados.`,
           });
           onImportSuccess();
           resetDialog();
@@ -122,7 +122,7 @@ export default function ImportMaterialsDialog({
           console.error(error);
           toast({
             title: 'Error de importación',
-            description: error.message || 'No se pudieron guardar los datos. Revise la consola para más detalles.',
+            description: error.message || 'No se pudieron guardar los datos.',
             variant: 'destructive',
           });
         } finally {
@@ -157,11 +157,10 @@ export default function ImportMaterialsDialog({
         <div className="space-y-4 py-4">
              <Alert>
                 <FileText className="h-4 w-4" />
-                <AlertTitle>Formato del Archivo</AlertTitle>
+                <AlertTitle>Formato Inteligente</AlertTitle>
                 <AlertDescription>
-                    <p>El orden de las columnas no importa, pero los títulos deben ser exactos y en minúscula (sin tildes).</p>
+                    <p><strong>Códigos Automáticos:</strong> Si dejas la columna `codigo` vacía, el sistema generará automáticamente códigos de 3 dígitos (ej: REHA001) basados en el Tipo y Especialidad.</p>
                     <p className='mt-2'><strong>Columnas obligatorias:</strong> {REQUIRED_HEADERS.join(', ')}.</p>
-                    <p className="mt-2 text-xs">Si `ubicacion_tipo` es `vehiculo`, complete `numero_movil` y `ubicacion_baulera`. Si es `deposito`, los campos `numero_movil` y `ubicacion_baulera` pueden quedar vacíos.</p>
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
@@ -177,7 +176,7 @@ export default function ImportMaterialsDialog({
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Importando...
+                Procesando...
               </>
             ) : (
                <>
