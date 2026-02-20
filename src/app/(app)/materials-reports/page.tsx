@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy, Upload } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Download, Loader2 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial, deleteAllMaterials } from "@/services/materials.service";
@@ -12,7 +12,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,11 @@ import { format } from 'date-fns';
 import { Switch } from "@/components/ui/switch";
 
 
-const materialTypes: Material['tipo'][] = ['PROTECCIÓN', 'RESPIRACIÓN', 'MÉDICO', 'HERRAMIENTAS', 'RESCATE (EQUIPOS)', 'EXTINCIÓN', 'ILUMINACIÓN', 'COMUNICACIÓN', 'ACCESO', 'LOGÍSTICA', 'DOCUMENTACIÓN', 'SEÑALIZACIÓN'];
+const materialTypes: Material['tipo'][] = [
+    'PROTECCION', 'RESPIRACION', 'MANGA', 'LANZA', 
+    'H. CORTE', 'H. GOLPE', 'H. ELECTRICA', 'H. NEUMATICA', 'H. HIDRAULICA', 
+    'MEDICO', 'ILUMINACION', 'COMUNICACION', 'LOGISTICA', 'DOCUMENTACION'
+];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
@@ -64,7 +68,7 @@ export default function MaterialsReportPage() {
 
     const loggedInFirefighter = useMemo(() => {
         if (!user) return null;
-        return allFirefighters.find(f => f.legajo === user.id);
+        return allFirefighters.find(f => f.id === user.id);
     }, [user, allFirefighters]);
     
     const canManageMaterial = (material: Material) => {
@@ -107,7 +111,6 @@ export default function MaterialsReportPage() {
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
-                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
              }
         }
         fetchLogo();
@@ -120,7 +123,7 @@ export default function MaterialsReportPage() {
 
     const handleDelete = async (materialId: string) => {
         try {
-            await deleteMaterial(materialId);
+            await deleteMaterial(materialId, user);
             toast({ title: "¡Éxito!", description: "El material ha sido eliminado." });
             fetchAllData();
         } catch (error: any) {
@@ -131,7 +134,7 @@ export default function MaterialsReportPage() {
     const handleBulkDelete = async () => {
         const target = deleteTarget === 'all' ? undefined : deleteTarget;
         try {
-            const count = await deleteAllMaterials(target);
+            const count = await deleteAllMaterials(user, target);
             const targetName = target ? `del Móvil ${vehicles.find(v => v.id === target)?.numeroMovil}` : 'totales';
             toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales ${targetName}.` });
             setConfirmationText('');
@@ -260,19 +263,19 @@ export default function MaterialsReportPage() {
         if (total === 0) {
             return {
                 byCondition: { Bueno: 0, Regular: 0, Malo: 0 },
-                byType: {}
+                byType: {} as Record<string, number>
             };
         }
 
         const byCondition = listToAnalyze.reduce((acc, mat) => {
             acc[mat.condicion] = (acc[mat.condicion] || 0) + 1;
             return acc;
-        }, {} as Record<Material['condicion'], number>);
+        }, { Bueno: 0, Regular: 0, Malo: 0 } as Record<Material['condicion'], number>);
 
         const byType = listToAnalyze.reduce((acc, mat) => {
             acc[mat.tipo] = (acc[mat.tipo] || 0) + 1;
             return acc;
-        }, {} as Record<Material['tipo'], number>);
+        }, {} as Record<string, number>);
 
         return { byCondition, byType };
     }, [generalFilteredMaterials]);

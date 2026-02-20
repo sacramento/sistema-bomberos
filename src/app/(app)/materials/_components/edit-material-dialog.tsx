@@ -14,7 +14,11 @@ import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 
-const materialTypes: Material['tipo'][] = ['PROTECCIÓN', 'RESPIRACIÓN', 'MÉDICO', 'HERRAMIENTAS', 'RESCATE (EQUIPOS)', 'EXTINCIÓN', 'ILUMINACIÓN', 'COMUNICACIÓN', 'ACCESO', 'LOGÍSTICA', 'DOCUMENTACIÓN', 'SEÑALIZACIÓN'];
+const materialTypes: Material['tipo'][] = [
+    'PROTECCION', 'RESPIRACION', 'MANGA', 'LANZA', 
+    'H. CORTE', 'H. GOLPE', 'H. ELECTRICA', 'H. NEUMATICA', 'H. HIDRAULICA', 
+    'MEDICO', 'ILUMINACION', 'COMUNICACION', 'LOGISTICA', 'DOCUMENTACION'
+];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
@@ -44,7 +48,6 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [locationType, setLocationType] = useState<'deposito' | 'vehiculo'>('deposito');
     const [vehiculoId, setVehiculoId] = useState('');
     const [baulera, setBaulera] = useState('');
-    const [deposito, setDeposito] = useState<Material['cuartel'] | ''>('');
 
     useEffect(() => {
         if (open) {
@@ -60,7 +63,6 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setLocationType(material.ubicacion.type);
             setVehiculoId(material.ubicacion.vehiculoId || '');
             setBaulera(material.ubicacion.baulera || '');
-            setDeposito(material.ubicacion.deposito || '');
         }
     }, [open, material, toast]);
 
@@ -87,12 +89,6 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setLoading(false);
         }
     };
-    
-    useEffect(() => {
-        if (locationType === 'deposito') {
-            setDeposito(cuartel);
-        }
-    }, [cuartel, locationType]);
     
     useEffect(() => {
         if (locationType === 'vehiculo' && vehiculoId) {
