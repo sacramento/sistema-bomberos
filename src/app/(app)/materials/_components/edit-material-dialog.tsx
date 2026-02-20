@@ -15,9 +15,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 
 const materialTypes: Material['tipo'][] = [
-    'PROTECCION', 'RESPIRACION', 'MANGA', 'LANZA', 
-    'H. CORTE', 'H. GOLPE', 'H. ELECTRICA', 'H. NEUMATICA', 'H. HIDRAULICA', 
-    'MEDICO', 'ILUMINACION', 'COMUNICACION', 'LOGISTICA', 'DOCUMENTACION'
+    'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
+    'H. HIDRAULICA', 'H. NEUMATICA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
+    'LOGISTICA', 'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION'
 ];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
@@ -131,7 +131,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         </RadioGroup>
                         {locationType === 'vehiculo' && (
                             <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Seleccionar móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Seleccionar móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select></div>
                                 <div className="space-y-2">
                                     <Label htmlFor="baulera-edit">Ubicación en Móvil</Label>
                                     <Select value={baulera} onValueChange={setBaulera}>

@@ -30,9 +30,9 @@ import { Switch } from "@/components/ui/switch";
 
 
 const materialTypes: Material['tipo'][] = [
-    'PROTECCION', 'RESPIRACION', 'MANGA', 'LANZA', 
-    'H. CORTE', 'H. GOLPE', 'H. ELECTRICA', 'H. NEUMATICA', 'H. HIDRAULICA', 
-    'MEDICO', 'ILUMINACION', 'COMUNICACION', 'LOGISTICA', 'DOCUMENTACION'
+    'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
+    'H. HIDRAULICA', 'H. NEUMATICA', 'ILUMINACION', 'INSTRUMENTO', 'LANZA', 
+    'LOGISTICA', 'MANGA', 'MEDICO', 'PROTECCION', 'RESPIRACION'
 ];
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'VARIOS'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
