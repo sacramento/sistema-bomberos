@@ -60,6 +60,27 @@ export const getMaterials = async (): Promise<Material[]> => {
     return materials;
 }
 
+/**
+ * Generates the next sequential number for a given code prefix.
+ * Example: for prefix 'REHA', if 'REHA01' exists, returns 2.
+ */
+export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
+    const q = query(materialsCollection, where("codigo", ">=", prefix), where("codigo", "<=", prefix + '\uf8ff'));
+    const querySnapshot = await getDocs(q);
+    
+    let maxNum = 0;
+    querySnapshot.forEach(doc => {
+        const code = doc.data().codigo as string;
+        const numPart = code.substring(prefix.length);
+        const num = parseInt(numPart);
+        if (!isNaN(num) && num > maxNum) {
+            maxNum = num;
+        }
+    });
+    
+    return maxNum + 1;
+};
+
 export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
     const q = query(materialsCollection, where("codigo", "==", materialData.codigo));
     const querySnapshot = await getDocs(q);

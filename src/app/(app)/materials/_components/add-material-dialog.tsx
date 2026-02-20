@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useCallback } from "react";
 import { Material, Specialization, Vehicle } from "@/lib/types";
-import { addMaterial } from "@/services/materials.service";
+import { addMaterial, getNextMaterialSequence } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const materialTypes: Material['tipo'][] = [
     'COMUNICACION', 'DOCUMENTACION', 'H. CORTE', 'H. ELECTRICA', 'H. GOLPE', 
@@ -42,6 +43,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [internalOpen, setInternalOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [generatingCode, setGeneratingCode] = useState(false);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -88,6 +90,31 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
             }
         }
     }, [open, initialData, toast, resetForm]);
+
+    const handleAutoGenerateCode = async () => {
+        if (!tipo || !especialidad) {
+            toast({ title: "Faltan datos", description: "Seleccione Tipo y Especialidad para generar un código." });
+            return;
+        }
+
+        setGeneratingCode(true);
+        try {
+            // Formula: 2 chars of Type + 2 chars of Spec + Sequence
+            const cleanType = tipo.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
+            const cleanSpec = especialidad.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
+            const prefix = `${cleanType}${cleanSpec}`;
+            
+            const sequence = await getNextMaterialSequence(prefix);
+            const formattedCode = `${prefix}${sequence.toString().padStart(2, '0')}`;
+            
+            setCodigo(formattedCode);
+            toast({ title: "Código generado", description: `Se ha asignado el código único: ${formattedCode}` });
+        } catch (error) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el código único." });
+        } finally {
+            setGeneratingCode(false);
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -136,7 +163,22 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2"><Label htmlFor="codigo">Código (Único)</Label><Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ingrese un nuevo código" /></div>
+                        <div className="space-y-2">
+                            <Label htmlFor="codigo">Código (Único)</Label>
+                            <div className="flex gap-2">
+                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ej: REHA01" className="flex-grow" />
+                                <Button 
+                                    type="button" 
+                                    variant="outline" 
+                                    size="icon" 
+                                    onClick={handleAutoGenerateCode}
+                                    disabled={generatingCode || !tipo || !especialidad}
+                                    title="Auto-generar código"
+                                >
+                                    {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                                </Button>
+                            </div>
+                        </div>
                         <div className="space-y-2"><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar tipo..."/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar especialidad..." /></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
