@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -35,12 +36,13 @@ import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
     'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
-    'ILUMINACION', 'INMOVILIZACION', 'LANZA', 'LOGISTICA', 'MANGA', 'MEDICION', 
+    'ILUMINACION', 'INMOVILIZACION', 'MEDICION', 'LANZA', 'LOGISTICA', 'MANGA', 
     'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
 ].sort() as Material['tipo'][];
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const standardDiameters = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 
 const STATUS_COLORS: Record<string, string> = {
     'En Servicio': "#22C55E",
@@ -248,7 +250,7 @@ export default function MaterialsReportPage() {
     }, [filteredMaterials]);
 
     const availableDiameters = useMemo(() => {
-        const diameters = new Set<string>();
+        const diameters = new Set<string>(standardDiameters);
         materials.forEach(m => { if(m.medida) diameters.add(m.medida); });
         return Array.from(diameters).sort();
     }, [materials]);
