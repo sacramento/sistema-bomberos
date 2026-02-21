@@ -27,6 +27,8 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
+const diameterOptions = ['38mm', '44.5mm', '63.5mm', '70mm'];
+
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
     'Baulera 1', 'Baulera 2', 'Baulera 3', 'Baulera 4', 'Baulera 5',
@@ -46,6 +48,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [tipo, setTipo] = useState<Material['tipo'] | ''>('');
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
+    const [medida, setMedida] = useState('');
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
@@ -61,6 +64,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setTipo(material.tipo);
             setEspecialidad(material.especialidad);
             setCaracteristicas(material.caracteristicas || '');
+            setMedida(material.medida || '');
             setEstado(material.estado);
             setCondicion(material.condicion || 'Bueno');
             setCuartel(material.cuartel);
@@ -107,7 +111,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
         setLoading(true);
         try {
-            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, medida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
             onMaterialUpdated();
             setOpen(false);
@@ -130,6 +134,8 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const handleOpenChange = useCallback((isOpen: boolean) => {
         setOpen(isOpen);
     }, []);
+
+    const isMedidaType = tipo === 'MANGA' || tipo === 'LANZA';
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -160,6 +166,26 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         <div className="space-y-2"><Label htmlFor="nombre-edit">Nombre</Label><Input id="nombre-edit" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        
+                        {isMedidaType && (
+                            <div className="space-y-2">
+                                <Label>Diámetro / Medida</Label>
+                                <Select value={medida} onValueChange={setMedida}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar diámetro..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                        <SelectItem value="Otra">Otra medida...</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        {medida === 'Otra' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="medida-manual-edit">Especificar Medida</Label>
+                                <Input id="medida-manual-edit" value={medida === 'Otra' ? '' : medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
+                            </div>
+                        )}
+
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2">

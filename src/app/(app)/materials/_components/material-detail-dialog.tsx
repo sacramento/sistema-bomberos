@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Material } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse } from 'lucide-react';
+import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse, Ruler } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 
@@ -95,9 +95,16 @@ export default function MaterialDetailDialog({
                 label="Especialidad" 
                 value={<Badge variant="outline">{material.especialidad}</Badge>} 
             />
+            {material.medida && (
+                <DetailItem 
+                    icon={Ruler} 
+                    label="Medida / Diámetro" 
+                    value={<span className="font-bold text-primary">{material.medida}</span>} 
+                />
+            )}
             <DetailItem 
                 icon={Shield} 
-                label="Estado" 
+                label="Estado Operativo" 
                 value={
                     <Badge className={cn(getStatusClass(material.estado))}>
                         {getStatusIcon(material.estado)}
@@ -107,7 +114,7 @@ export default function MaterialDetailDialog({
             />
              <DetailItem 
                 icon={HeartPulse} 
-                label="Condición" 
+                label="Condición Física" 
                 value={
                     <Badge className={cn(getCondicionClass(material.condicion))}>
                         {material.condicion}
@@ -121,7 +128,7 @@ export default function MaterialDetailDialog({
             />
             <DetailItem
                 icon={Tag}
-                label="Cuartel"
+                label="Cuartel Propietario"
                 value={material.cuartel}
             />
             {material.caracteristicas && (

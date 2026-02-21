@@ -152,6 +152,7 @@ export type Material = {
   tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICION' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
   especialidad: Specialization;
   caracteristicas?: string;
+  medida?: string; // New field for diameter/size (e.g. 38mm)
   ubicacion: {
     type: 'vehiculo' | 'deposito';
     vehiculoId?: string; // Firestore ID of the vehicle

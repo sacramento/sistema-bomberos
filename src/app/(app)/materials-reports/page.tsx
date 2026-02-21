@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Download, Loader2 } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Download, Loader2, Package, Shield, HeartPulse, Truck, Search, ChevronsUpDown, Check, Ruler } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial, deleteAllMaterials } from "@/services/materials.service";
@@ -28,7 +28,9 @@ import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Switch } from "@/components/ui/switch";
-
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
@@ -40,25 +42,101 @@ const materialTypes: Material['tipo'][] = [
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
+const MultiSelectFilter = ({
+    title,
+    options,
+    selected,
+    onSelectedChange,
+    searchPlaceholder,
+    renderBadge
+}: {
+    title: string;
+    options: { value: string; label: string }[];
+    selected: string[];
+    onSelectedChange: (selected: string[]) => void;
+    searchPlaceholder?: string;
+    renderBadge?: (value: string) => React.ReactNode;
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        if (isSelected) {
+            onSelectedChange(selected.filter(s => s !== value));
+        } else {
+            onSelectedChange([...selected, value]);
+        }
+    };
+    
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? (
+                            selected.map(value => renderBadge ? renderBadge(value) : <Badge variant="secondary" key={value}>{options.find(o => o.value === value)?.label || value}</Badge>)
+                        ) : (
+                            `Seleccionar ${title.toLowerCase()}...`
+                        )}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder || `Buscar ${title.toLowerCase()}...`} />
+                    <CommandList>
+                        <CommandEmpty>No se encontraron opciones.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((option) => (
+                                <CommandItem key={option.value} value={option.label} onSelect={() => handleSelect(option.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(option.value) ? "opacity-100" : "opacity-0")} />
+                                    {option.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+const KpiCard = ({ title, value, icon: Icon, description, colorClass }: { title: string, value: string | number, icon: any, description?: string, colorClass?: string }) => (
+    <Card className={cn("shadow-sm", colorClass)}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            <Icon className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+            <div className="text-2xl font-bold">{value}</div>
+            {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+        </CardContent>
+    </Card>
+);
+
 export default function MaterialsReportPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
-    const [filterType, setFilterType] = useState('all');
-    const [filterFirehouse, setFilterFirehouse] = useState('all');
-    const [filterSpecialization, setFilterSpecialization] = useState('all');
-    const [filterVehicle, setFilterVehicle] = useState('all');
+    
+    // Multi-select Filters
+    const [filterTypes, setFilterTypes] = useState<string[]>([]);
+    const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
+    const [filterSpecializations, setFilterSpecializations] = useState<string[]>([]);
+    const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
+    const [filterDiameters, setFilterDiameters] = useState<string[]>([]);
+    const [filterStates, setFilterStates] = useState<string[]>([]);
+    const [filterConditions, setFilterConditions] = useState<string[]>([]);
+    
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     
     // State for deletion
-    const [deleteTarget, setDeleteTarget] = useState('all'); // 'all' or vehicle.id
+    const [deleteTarget, setDeleteTarget] = useState('all');
     const [confirmationText, setConfirmationText] = useState('');
 
-
-    const [includeConditionSummary, setIncludeConditionSummary] = useState(true);
-    const [includeTypeSummary, setIncludeTypeSummary] = useState(true);
+    const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
     const { toast } = useToast();
@@ -66,21 +144,7 @@ export default function MaterialsReportPage() {
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
-
     const canManageGlobally = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
-
-    const loggedInFirefighter = useMemo(() => {
-        if (!user) return null;
-        return allFirefighters.find(f => f.id === user.id);
-    }, [user, allFirefighters]);
-    
-    const canManageMaterial = (material: Material) => {
-        if (canManageGlobally) return true;
-        if (activeRole === 'Encargado' && loggedInFirefighter) {
-            return material.cuartel === loggedInFirefighter.firehouse;
-        }
-        return false;
-    }
 
     const fetchAllData = async () => {
         setLoading(true);
@@ -102,15 +166,12 @@ export default function MaterialsReportPage() {
     
     useEffect(() => {
         fetchAllData();
-        
         const fetchLogo = async () => {
              try {
                 const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
                 const blob = await response.blob();
                 const reader = new FileReader();
-                reader.onloadend = () => {
-                    setLogoDataUrl(reader.result as string);
-                };
+                reader.onloadend = () => { setLogoDataUrl(reader.result as string); };
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
@@ -147,14 +208,44 @@ export default function MaterialsReportPage() {
         }
     }
 
+    const filteredMaterials = useMemo(() => {
+        return materials.filter(material => {
+            if (filterTypes.length > 0 && !filterTypes.includes(material.tipo)) return false;
+            if (filterFirehouses.length > 0 && !filterFirehouses.includes(material.cuartel)) return false;
+            if (filterSpecializations.length > 0 && !filterSpecializations.includes(material.especialidad)) return false;
+            if (filterVehicles.length > 0 && (!material.ubicacion?.vehiculoId || !filterVehicles.includes(material.ubicacion.vehiculoId))) return false;
+            if (filterDiameters.length > 0 && (!material.medida || !filterDiameters.includes(material.medida))) return false;
+            if (filterStates.length > 0 && !filterStates.includes(material.estado)) return false;
+            if (filterConditions.length > 0 && !filterConditions.includes(material.condicion)) return false;
+            return true;
+        });
+    }, [materials, filterTypes, filterFirehouses, filterSpecializations, filterVehicles, filterDiameters, filterStates, filterConditions]);
+
+    const kpis = useMemo(() => {
+        const total = filteredMaterials.length;
+        if (total === 0) return { total: 0, inService: 0, servicePercent: '0%', goodCondition: 0, goodConditionPercent: '0%' };
+        
+        const inService = filteredMaterials.filter(m => m.estado === 'En Servicio').length;
+        const goodCondition = filteredMaterials.filter(m => m.condicion === 'Bueno').length;
+        
+        return {
+            total,
+            inService,
+            servicePercent: `${((inService / total) * 100).toFixed(0)}%`,
+            goodCondition,
+            goodConditionPercent: `${((goodCondition / total) * 100).toFixed(0)}%`
+        };
+    }, [filteredMaterials]);
+
+    const availableDiameters = useMemo(() => {
+        const diameters = new Set<string>();
+        materials.forEach(m => { if(m.medida) diameters.add(m.medida); });
+        return Array.from(diameters).sort();
+    }, [materials]);
+
     const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
-            return;
-        }
-
-        if (!includeConditionSummary && !includeTypeSummary && !includeInventoryDetails) {
-            toast({ title: "Contenido vacío", description: "Debe seleccionar al menos una sección para incluir en el reporte.", variant: "destructive" });
             return;
         }
 
@@ -167,401 +258,264 @@ export default function MaterialsReportPage() {
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Inventario", 14, 22);
+            doc.text("Reporte Avanzado de Inventario", 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
-            let currentY = 55;
+            let currentY = 45;
 
-            // --- Statistics Section ---
-            if (includeConditionSummary) {
+            // Header info
+            doc.setFontSize(10);
+            doc.setTextColor(100);
+            doc.text(`Generado el: ${format(new Date(), 'Pp', {locale: es})}`, 14, currentY);
+            currentY += 10;
+
+            if (includeKPIs) {
                 doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
+                doc.setTextColor(40);
                 doc.setFont('helvetica', 'bold');
-                doc.text("Resumen por Condición", 14, currentY);
+                doc.text("Resumen Ejecutivo", 14, currentY);
                 currentY += 8;
-
-                const conditionTotal = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
-                const conditionBody = (['Bueno', 'Regular', 'Malo'] as const).map(cond => {
-                    const count = statistics.byCondition?.[cond] || 0;
-                    const percentage = conditionTotal > 0 ? (count / conditionTotal) * 100 : 0;
-                    return [cond, count.toString(), `${percentage.toFixed(0)}%`];
-                });
 
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Condición', 'Cantidad', 'Porcentaje']],
-                    body: conditionBody,
-                    theme: 'striped',
+                    head: [['Métrica', 'Valor']],
+                    body: [
+                        ['Total de ítems filtrados', kpis.total.toString()],
+                        ['Operatividad (En Servicio)', kpis.servicePercent],
+                        ['Salud Física (En Buen Estado)', kpis.goodConditionPercent],
+                    ],
+                    theme: 'grid',
                     headStyles: { fillColor: '#6c757d' },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 12;
             }
 
-            if (includeTypeSummary) {
-                 if (currentY > 250) { doc.addPage(); currentY = 20; }
+            if (includeInventoryDetails && filteredMaterials.length > 0) {
                 doc.setFontSize(12);
                 doc.setFont('helvetica', 'bold');
-                doc.text("Resumen por Tipo de Material", 14, currentY);
-                currentY += 8;
-                const typeBody = Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => [type, count.toString()]);
-                
-                (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Tipo', 'Cantidad']],
-                    body: typeBody,
-                    theme: 'striped',
-                    headStyles: { fillColor: '#6c757d' },
-                });
-                currentY = (doc as any).lastAutoTable.finalY + 12;
-            }
-
-            // --- Main Inventory Table ---
-            if (includeInventoryDetails && generalFilteredMaterials.length > 0) {
-                 if (currentY > 250) { doc.addPage(); currentY = 20; }
-                doc.setFontSize(12);
-                doc.setTextColor(40, 40, 40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Detalle del Inventario", 14, currentY);
+                doc.text("Detalle de Equipamiento", 14, currentY);
                 currentY += 8;
 
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Ubicación', 'Cuartel', 'Estado', 'Condición']],
-                    body: generalFilteredMaterials.map(item => [
+                    head: [['Código', 'Nombre', 'Medida', 'Ubicación', 'Estado', 'Condición']],
+                    body: filteredMaterials.map(item => [
                         item.codigo,
                         item.nombre,
+                        item.medida || '-',
                         item.ubicacion.type === 'deposito' ? `Depósito ${item.cuartel}` : `Móvil ${item.vehiculo?.numeroMovil} (B: ${item.ubicacion.baulera})`,
-                        item.cuartel,
                         item.estado,
                         item.condicion,
                     ]),
                     theme: 'striped',
                     headStyles: { fillColor: '#333333' },
+                    styles: { fontSize: 8 }
                 });
-            } else if (includeInventoryDetails) {
-                 if (currentY > 250) { doc.addPage(); currentY = 20; }
-                doc.text("No se encontraron materiales con los filtros aplicados para el detalle.", 14, currentY);
             }
-            doc.save(`reporte-inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            
+            doc.save(`reporte-avanzado-inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
             toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
         } finally {
             setGeneratingPdf(false);
         }
     };
-    
-    const generalFilteredMaterials = useMemo(() => {
-        return materials.filter(material => {
-            if (filterType !== 'all' && material.tipo !== filterType) return false;
-            if (filterFirehouse !== 'all' && material.cuartel !== filterFirehouse) return false;
-            if (filterSpecialization !== 'all' && material.especialidad !== filterSpecialization) return false;
-            if (filterVehicle !== 'all' && material.ubicacion?.vehiculoId !== filterVehicle) return false;
-            return true;
-        });
-    }, [materials, filterType, filterFirehouse, filterSpecialization, filterVehicle]);
 
-    const statistics = useMemo(() => {
-        const listToAnalyze = generalFilteredMaterials;
-        const total = listToAnalyze.length;
-        if (total === 0) {
-            return {
-                byCondition: { Bueno: 0, Regular: 0, Malo: 0 },
-                byType: {} as Record<string, number>
-            };
-        }
-
-        const byCondition = listToAnalyze.reduce((acc, mat) => {
-            acc[mat.condicion] = (acc[mat.condicion] || 0) + 1;
-            return acc;
-        }, { Bueno: 0, Regular: 0, Malo: 0 } as Record<Material['condicion'], number>);
-
-        const byType = listToAnalyze.reduce((acc, mat) => {
-            acc[mat.tipo] = (acc[mat.tipo] || 0) + 1;
-            return acc;
-        }, {} as Record<string, number>);
-
-        return { byCondition, byType };
-    }, [generalFilteredMaterials]);
-
-    const renderLocation = (material: Material) => {
-        if (material.ubicacion.type === 'vehiculo') {
-            return `Móvil ${material.vehiculo?.numeroMovil || '?'} (B: ${material.ubicacion.baulera})`;
-        }
-        return `Depósito ${material.ubicacion.deposito}`;
-    };
-    
     return (
         <>
-            <PageHeader title="Reportes de Materiales" description="Filtre, analice y exporte el estado del inventario general."/>
+            <PageHeader title="Reportes Avanzados" description="Análisis detallado y jerárquico del inventario de materiales."/>
             
-            <div className="space-y-8">
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Filtros de Inventario</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                            <div className="space-y-2">
-                                <Label>Tipo</Label>
-                                <Select value={filterType} onValueChange={setFilterType}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        {materialTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Cuartel</Label>
-                                <Select value={filterFirehouse} onValueChange={setFilterFirehouse}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        {firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Especialidad</Label>
-                                <Select value={filterSpecialization} onValueChange={setFilterSpecialization}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todas</SelectItem>
-                                        {specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Móvil</Label>
-                                <Select value={filterVehicle} onValueChange={setFilterVehicle}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos</SelectItem>
-                                        {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                
-                    <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Estadísticas del Inventario</CardTitle>
-                        <CardDescription>Resumen de los materiales según los filtros aplicados.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <h4 className="font-semibold mb-3">Condición General</h4>
-                            <div className="space-y-2">
-                                {(['Bueno', 'Regular', 'Malo'] as const).map(cond => {
-                                    const count = statistics.byCondition?.[cond] || 0;
-                                    const total = (statistics.byCondition?.Bueno || 0) + (statistics.byCondition?.Regular || 0) + (statistics.byCondition?.Malo || 0);
-                                    const percentage = total > 0 ? (count / total) * 100 : 0;
-                                    const color = cond === 'Bueno' ? 'bg-green-500' : cond === 'Regular' ? 'bg-yellow-500' : 'bg-red-500';
-                                    return (
-                                        <div key={cond}>
-                                            <div className="flex justify-between text-sm mb-1">
-                                                <span>{cond}</span>
-                                                <span>{count} ({percentage.toFixed(0)}%)</span>
-                                            </div>
-                                            <Progress value={percentage} indicatorClassName={color} />
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div>
-                            <h4 className="font-semibold mb-3">Conteo por Tipo</h4>
-                            <div className="space-y-2 text-sm max-h-48 overflow-y-auto pr-2">
-                                {Object.keys(statistics.byType || {}).length > 0 ? Object.entries(statistics.byType || {}).sort(([a], [b]) => a.localeCompare(b)).map(([type, count]) => (
-                                    <div key={type} className="flex justify-between p-2 rounded-md even:bg-muted/50">
-                                        <span>{type}</span>
-                                        <span className="font-bold">{count}</span>
-                                    </div>
-                                )) : (
-                                    <p className="text-muted-foreground text-center pt-10">Sin datos para los filtros aplicados</p>
-                                )}
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Inventario Detallado</CardTitle>
-                        <CardDescription>Mostrando {generalFilteredMaterials.length} de {materials.length} materiales.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Código</TableHead>
-                                        <TableHead>Nombre</TableHead>
-                                        <TableHead>Ubicación</TableHead>
-                                        <TableHead>Estado</TableHead>
-                                        <TableHead><span className="sr-only">Acciones</span></TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {loading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                        ))
-                                    ) : generalFilteredMaterials.length > 0 ? (
-                                        generalFilteredMaterials.map(material => (
-                                            <TableRow key={material.id}>
-                                                <TableCell className="font-mono">{material.codigo}</TableCell>
-                                                <TableCell className="font-medium">{material.nombre}</TableCell>
-                                                <TableCell>{renderLocation(material)}</TableCell>
-                                                <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={material.estado === 'En Servicio' ? 'bg-green-600' : ''}>{material.estado}</Badge></TableCell>
-                                                <TableCell>
-                                                    <AlertDialog>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent>
-                                                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                                {canManageMaterial(material) && <>
-                                                                    <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
-                                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                                    </EditMaterialDialog>
-                                                                    <DropdownMenuSeparator />
-                                                                    <AlertDialogTrigger asChild>
-                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                                    </AlertDialogTrigger>
-                                                                </>}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                        <AlertDialogContent>
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                                <AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará permanentemente el material "{material.nombre}".</AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter>
-                                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow><TableCell colSpan={5} className="h-24 text-center">No se encontraron materiales con los filtros aplicados.</TableCell></TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="font-headline">Exportar Reporte</CardTitle>
-                        <CardDescription>Genere un archivo PDF con los resultados filtrados.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4 mb-6">
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="include-condition"
-                                    checked={includeConditionSummary}
-                                    onCheckedChange={setIncludeConditionSummary}
-                                />
-                                <Label htmlFor="include-condition">Incluir resumen por condición</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="include-type"
-                                    checked={includeTypeSummary}
-                                    onCheckedChange={setIncludeTypeSummary}
-                                />
-                                <Label htmlFor="include-type">Incluir resumen por tipo</Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                                <Switch
-                                    id="include-details"
-                                    checked={includeInventoryDetails}
-                                    onCheckedChange={setIncludeInventoryDetails}
-                                />
-                                <Label htmlFor="include-details">Incluir detalle del inventario</Label>
-                            </div>
-                        </div>
-                        <Button onClick={generatePdf} disabled={generatingPdf || generalFilteredMaterials.length === 0}>
-                            {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                            {generatingPdf ? "Generando..." : "Generar PDF"}
-                        </Button>
-                    </CardContent>
-                </Card>
-                {canManageGlobally && (
-                    <Card className="border-destructive/50">
-                        <CardHeader>
-                            <CardTitle className="font-headline text-destructive">Zona Peligrosa</CardTitle>
-                            <CardDescription>Esta acción es irreversible y eliminará materiales del inventario.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                                <div>
-                                <Label htmlFor="delete-target">Seleccionar qué eliminar</Label>
-                                <Select value={deleteTarget} onValueChange={setDeleteTarget}>
-                                    <SelectTrigger id="delete-target">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Todos los materiales</SelectItem>
-                                        {vehicles.map(v => (
-                                            <SelectItem key={v.id} value={v.id}>Solo del Móvil {v.numeroMovil}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                                <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Eliminar Materiales Seleccionados
-                                    </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-                                        {deleteTarget === 'all' ? (
-                                            <>
-                                                <AlertDialogDescription>
-                                                    Esta acción no se puede deshacer. Se eliminarán permanentemente **TODOS** los materiales del inventario. Para confirmar, escriba "ELIMINAR TODO" en el campo de abajo.
-                                                </AlertDialogDescription>
-                                                <Input 
-                                                    id="delete-confirm" 
-                                                    type="text" 
-                                                    placeholder='Escriba ELIMINAR TODO para confirmar'
-                                                    value={confirmationText}
-                                                    onChange={(e) => setConfirmationText(e.target.value)}
-                                                />
-                                            </>
-                                        ) : (
-                                            <AlertDialogDescription>
-                                                Esta acción no se puede deshacer. Se eliminarán permanentemente todos los materiales asignados al **Móvil {vehicles.find(v => v.id === deleteTarget)?.numeroMovil}**.
-                                            </AlertDialogDescription>
-                                        )}
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel onClick={() => setConfirmationText('')}>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction 
-                                            onClick={handleBulkDelete} 
-                                            variant="destructive"
-                                            disabled={deleteTarget === 'all' && confirmationText !== 'ELIMINAR TODO'}
-                                        >
-                                            Confirmar Eliminación
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
-                        </CardContent>
-                    </Card>
-                )}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <KpiCard title="Total Ítems" value={kpis.total} icon={Package} description="Materiales filtrados" />
+                <KpiCard title="Operatividad" value={kpis.servicePercent} icon={Shield} description={`${kpis.inService} en servicio`} colorClass={parseFloat(kpis.servicePercent) < 80 ? 'border-red-200' : 'border-green-200'} />
+                <KpiCard title="Buen Estado" value={kpis.goodConditionPercent} icon={HeartPulse} description={`${kpis.goodCondition} sin daños`} />
+                <KpiCard title="Uso en Móviles" value={filteredMaterials.filter(m => m.ubicacion.type === 'vehiculo').length} icon={Truck} description="Equipamiento en dotación" />
             </div>
+
+            <Card className="mb-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">Filtros Inteligentes</CardTitle>
+                    <CardDescription>Combina múltiples criterios para un filtrado ultra-específico.</CardDescription>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="space-y-2">
+                        <Label>Tipos de Material</Label>
+                        <MultiSelectFilter 
+                            title="Tipos" 
+                            options={materialTypes.map(t => ({ value: t, label: t }))} 
+                            selected={filterTypes} 
+                            onSelectedChange={setFilterTypes} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Cuarteles</Label>
+                        <MultiSelectFilter 
+                            title="Cuarteles" 
+                            options={firehouses.map(fh => ({ value: fh, label: fh }))} 
+                            selected={filterFirehouses} 
+                            onSelectedChange={setFilterFirehouses} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Especialidades</Label>
+                        <MultiSelectFilter 
+                            title="Especialidades" 
+                            options={specializations.map(s => ({ value: s, label: s }))} 
+                            selected={filterSpecializations} 
+                            onSelectedChange={setFilterSpecializations} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Móviles</Label>
+                        <MultiSelectFilter 
+                            title="Móviles" 
+                            options={vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` }))} 
+                            selected={filterVehicles} 
+                            onSelectedChange={setFilterVehicles} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Diámetros / Medidas</Label>
+                        <MultiSelectFilter 
+                            title="Medidas" 
+                            options={availableDiameters.map(d => ({ value: d, label: d }))} 
+                            selected={filterDiameters} 
+                            onSelectedChange={setFilterDiameters} 
+                            renderBadge={(v) => <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20" key={v}>{v}</Badge>}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Estado Operativo</Label>
+                        <MultiSelectFilter 
+                            title="Estados" 
+                            options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} 
+                            selected={filterStates} 
+                            onSelectedChange={setFilterStates} 
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Condición Física</Label>
+                        <MultiSelectFilter 
+                            title="Condiciones" 
+                            options={['Bueno', 'Regular', 'Malo'].map(c => ({ value: c, label: c }))} 
+                            selected={filterConditions} 
+                            onSelectedChange={setFilterConditions} 
+                        />
+                    </div>
+                    <div className="flex items-end pb-1">
+                        <Button variant="ghost" onClick={() => {
+                            setFilterTypes([]); setFilterFirehouses([]); setFilterSpecializations([]); 
+                            setFilterVehicles([]); setFilterDiameters([]); setFilterStates([]); setFilterConditions([]);
+                        }} className="text-xs h-8">Limpiar todos los filtros</Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Detalle del Inventario Filtrado</CardTitle>
+                    <CardDescription>Mostrando {filteredMaterials.length} materiales que cumplen con los criterios.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Código</TableHead>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Medida</TableHead>
+                                    <TableHead>Ubicación</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                    <TableHead>Condición</TableHead>
+                                    <TableHead><span className="sr-only">Acciones</span></TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {loading ? (
+                                    Array.from({ length: 5 }).map((_, i) => (
+                                        <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                    ))
+                                ) : filteredMaterials.length > 0 ? (
+                                    filteredMaterials.map(material => (
+                                        <TableRow key={material.id}>
+                                            <TableCell className="font-mono text-xs">{material.codigo}</TableCell>
+                                            <TableCell className="font-medium">{material.nombre}</TableCell>
+                                            <TableCell>{material.medida ? <span className="font-bold text-primary">{material.medida}</span> : '-'}</TableCell>
+                                            <TableCell className="text-xs">
+                                                {material.ubicacion.type === 'vehiculo' 
+                                                    ? `Móvil ${material.vehiculo?.numeroMovil} (B:${material.ubicacion.baulera})`
+                                                    : `Depósito ${material.cuartel}`
+                                                }
+                                            </TableCell>
+                                            <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", material.estado === 'En Servicio' ? 'bg-green-600' : '')}>{material.estado}</Badge></TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn(
+                                                    "text-[10px]",
+                                                    material.condicion === 'Bueno' ? 'text-green-600 border-green-200' : 
+                                                    material.condicion === 'Regular' ? 'text-yellow-600 border-yellow-200' : 'text-red-600 border-red-200'
+                                                )}>{material.condicion}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
+                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                        </EditMaterialDialog>
+                                                        <AlertDialog>
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive" onSelect={e => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                            <AlertDialogContent>
+                                                                <AlertDialogHeader>
+                                                                    <AlertDialogTitle>¿Eliminar material?</AlertDialogTitle>
+                                                                    <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+                                                                </AlertDialogHeader>
+                                                                <AlertDialogFooter>
+                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                                </AlertDialogFooter>
+                                                            </AlertDialogContent>
+                                                        </AlertDialog>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : (
+                                    <TableRow><TableCell colSpan={7} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Card className="mt-8">
+                <CardHeader>
+                    <CardTitle className="font-headline">Exportar Reporte Estratégico</CardTitle>
+                    <CardDescription>Genere un archivo PDF detallado con el análisis de los datos filtrados.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                            <Switch id="include-kpis" checked={includeKPIs} onCheckedChange={setIncludeKPIs} />
+                            <Label htmlFor="include-kpis">Incluir Resumen Ejecutivo</Label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <Switch id="include-details" checked={includeInventoryDetails} onCheckedChange={setIncludeInventoryDetails} />
+                            <Label htmlFor="include-details">Incluir Detalle Técnico</Label>
+                        </div>
+                    </div>
+                    <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0} className="w-full sm:w-auto">
+                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                        {generatingPdf ? "Generando Reporte..." : "Descargar Reporte PDF"}
+                    </Button>
+                </CardContent>
+            </Card>
         </>
     );
 }

@@ -27,6 +27,8 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
+const diameterOptions = ['38mm', '44.5mm', '63.5mm', '70mm'];
+
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
     'Baulera 1', 'Baulera 2', 'Baulera 3', 'Baulera 4', 'Baulera 5',
@@ -58,6 +60,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [tipo, setTipo] = useState<Material['tipo'] | ''>('');
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
+    const [medida, setMedida] = useState('');
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
@@ -66,7 +69,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [baulera, setBaulera] = useState('');
 
     const resetForm = useCallback(() => {
-        setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
+        setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
         setLocationType('deposito'); setVehiculoId(''); setBaulera('');
     }, []);
 
@@ -80,6 +83,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 setTipo(initialData.tipo);
                 setEspecialidad(initialData.especialidad);
                 setCaracteristicas(initialData.caracteristicas || '');
+                setMedida(initialData.medida || '');
                 setEstado(initialData.estado);
                 setCondicion(initialData.condicion || 'Bueno');
                 setCuartel(initialData.cuartel);
@@ -130,7 +134,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
         setLoading(true);
         try {
-            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, medida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
             setOpen(false);
@@ -183,6 +187,26 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                         <div className="space-y-2"><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar tipo..."/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar especialidad..." /></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        
+                        {(tipo === 'MANGA' || tipo === 'LANZA') && (
+                            <div className="space-y-2">
+                                <Label>Diámetro / Medida</Label>
+                                <Select value={medida} onValueChange={setMedida}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar diámetro..."/></SelectTrigger>
+                                    <SelectContent>
+                                        {diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                                        <SelectItem value="Otra">Otra medida...</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+                        {medida === 'Otra' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="medida-manual">Especificar Medida</Label>
+                                <Input id="medida-manual" value={medida === 'Otra' ? '' : medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
+                            </div>
+                        )}
+
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2">
