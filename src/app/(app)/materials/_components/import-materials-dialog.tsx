@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -19,11 +18,12 @@ import { Material } from '@/lib/types';
 import { batchAddMaterials } from '@/services/materials.service';
 import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText, Loader2, Upload } from 'lucide-react';
+import { FileText, Loader2, Upload, Info } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const REQUIRED_HEADERS = [
     'codigo', 'nombre', 'tipo', 'especialidad', 'cuartel', 'estado', 
-    'condicion', 'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
+    'condicion', 'medida', 'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
 ];
 
 export default function ImportMaterialsDialog({
@@ -85,13 +85,14 @@ export default function ImportMaterialsDialog({
                 : { type: 'deposito' as const, deposito: row.cuartel };
 
             return {
-                codigo: row.codigo?.trim() || '', // Can be empty for auto-generation
+                codigo: row.codigo?.trim() || '', // Si está vacío, el servicio lo genera
                 nombre: row.nombre.trim(),
                 tipo: row.tipo.trim(),
                 especialidad: row.especialidad.trim(),
                 cuartel: row.cuartel.trim(),
                 estado: row.estado.trim(),
                 condicion: row.condicion.trim(),
+                medida: row.medida?.trim() || '',
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
                 numero_movil: row.numero_movil?.trim() || ''
@@ -110,10 +111,10 @@ export default function ImportMaterialsDialog({
 
 
         try {
-          await batchAddMaterials(materialsToUpload);
+          await batchAddMaterials(materialsToUpload, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
           toast({
             title: '¡Éxito!',
-            description: `${materialsToUpload.length} materiales han sido procesados e importados.`,
+            description: `${materialsToUpload.length} materiales han sido procesados e importados correctamente.`,
           });
           onImportSuccess();
           resetDialog();
@@ -146,31 +147,51 @@ export default function ImportMaterialsDialog({
         if (!isOpen) resetDialog();
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-headline">Importar Materiales desde CSV</DialogTitle>
+          <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
           <DialogDescription>
-            Seleccione un archivo .csv para cargar materiales en lote.
+            Siga estas instrucciones para preparar su archivo CSV correctamente.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4 py-4">
-             <Alert>
-                <FileText className="h-4 w-4" />
-                <AlertTitle>Formato Inteligente</AlertTitle>
-                <AlertDescription>
-                    <p><strong>Códigos Automáticos:</strong> Si dejas la columna `codigo` vacía, el sistema generará automáticamente códigos de 3 dígitos (ej: REHA001) basados en el Tipo y Especialidad.</p>
-                    <p className='mt-2'><strong>Columnas obligatorias:</strong> {REQUIRED_HEADERS.join(', ')}.</p>
-                </AlertDescription>
-            </Alert>
-            <div className="grid w-full items-center gap-1.5">
-                <Label htmlFor="csv-file">Archivo CSV</Label>
-                <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                {file && <p className="text-sm text-muted-foreground">Archivo seleccionado: {file.name}</p>}
+        <ScrollArea className="flex-grow pr-4">
+            <div className="space-y-4 py-4 text-sm">
+                <Alert className="bg-blue-50 border-blue-200">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertTitle className="text-blue-800 font-bold">Código Automático</AlertTitle>
+                    <AlertDescription className="text-blue-700">
+                        Si dejas la columna <strong>codigo</strong> vacía, el sistema generará uno automáticamente basado en el Tipo y Especialidad (ej: MAFE001).
+                    </AlertDescription>
+                </Alert>
+
+                <div className="border rounded-md p-4 bg-muted/30">
+                    <h4 className="font-bold mb-2">Columnas Obligatorias:</h4>
+                    <ul className="list-disc pl-5 space-y-1">
+                        <li><strong>codigo</strong>: Único (o vacío para auto-generar).</li>
+                        <li><strong>nombre</strong>: Descripción del ítem.</li>
+                        <li><strong>tipo</strong>: (MANGA, LANZA, PROTECCION, etc.)</li>
+                        <li><strong>especialidad</strong>: (FUEGO, RESCATE, HAZ-MAT, etc.)</li>
+                        <li><strong>cuartel</strong>: Cuartel 1, Cuartel 2 o Cuartel 3.</li>
+                        <li><strong>estado</strong>: "En Servicio" o "Fuera de Servicio".</li>
+                        <li><strong>condicion</strong>: "Bueno", "Regular" o "Malo".</li>
+                        <li><strong>medida</strong>: Diámetro (ej: 38mm, 44.5mm). Opcional para otros tipos.</li>
+                        <li><strong>ubicacion_tipo</strong>: "deposito" o "vehiculo".</li>
+                        <li><strong>numero_movil</strong>: Ej: "Móvil 5" (Obligatorio si ubicacion_tipo es vehiculo).</li>
+                        <li><strong>ubicacion_baulera</strong>: Ej: "Baulera 1" (Obligatorio si ubicacion_tipo es vehiculo).</li>
+                        <li><strong>caracteristicas</strong>: Observaciones técnicas del ítem.</li>
+                    </ul>
+                </div>
+
+                <div className="grid w-full items-center gap-1.5 pt-2">
+                    <Label htmlFor="csv-file">Seleccionar Archivo CSV</Label>
+                    <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
+                    {file && <p className="text-xs font-medium text-green-600">✓ {file.name} seleccionado.</p>}
+                </div>
             </div>
-        </div>
+        </ScrollArea>
         
-        <DialogFooter>
+        <DialogFooter className="border-t pt-4">
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button onClick={handleImport} disabled={!file || loading}>
             {loading ? (
@@ -181,7 +202,7 @@ export default function ImportMaterialsDialog({
             ) : (
                <>
                 <Upload className="mr-2 h-4 w-4" />
-                Importar
+                Comenzar Importación
                </>
             )}
           </Button>
