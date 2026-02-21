@@ -175,7 +175,7 @@ export default function ImportMaterialsDialog({
                         <li><strong>cuartel</strong>: Cuartel 1, Cuartel 2 o Cuartel 3.</li>
                         <li><strong>estado</strong>: "En Servicio" o "Fuera de Servicio".</li>
                         <li><strong>condicion</strong>: "Bueno", "Regular" o "Malo".</li>
-                        <li><strong>medida</strong>: Diámetro (ej: 38mm, 44.5mm). Opcional para otros tipos.</li>
+                        <li><strong>medida</strong>: Diámetro (ej: 25mm, 38mm, 44.5mm). Opcional para otros tipos.</li>
                         <li><strong>ubicacion_tipo</strong>: "deposito" o "vehiculo".</li>
                         <li><strong>numero_movil</strong>: Ej: "Móvil 5" (Obligatorio si ubicacion_tipo es vehiculo).</li>
                         <li><strong>ubicacion_baulera</strong>: Ej: "Baulera 1" (Obligatorio si ubicacion_tipo es vehiculo).</li>

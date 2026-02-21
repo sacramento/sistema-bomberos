@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +26,7 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 
-const diameterOptions = ['38mm', '44.5mm', '63.5mm', '70mm'];
+const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
