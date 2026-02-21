@@ -3,12 +3,11 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Trash2, Edit, Download, Loader2, Package, Shield, HeartPulse, Truck, Search, ChevronsUpDown, Check, Ruler } from "lucide-react";
+import { MoreHorizontal, Trash2, Edit, Download, Loader2, Package, Shield, HeartPulse, Truck, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial, deleteAllMaterials } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
-import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -22,7 +21,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import EditMaterialDialog from "../materials/_components/edit-material-dialog";
-import { Progress } from "@/components/ui/progress";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
@@ -31,6 +29,9 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
@@ -41,6 +42,17 @@ const materialTypes: Material['tipo'][] = [
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+
+const STATUS_COLORS: Record<string, string> = {
+    'En Servicio': "#22C55E",
+    'Fuera de Servicio': "#EF4444",
+};
+
+const CONDITION_COLORS: Record<string, string> = {
+    'Bueno': "#22C55E",
+    'Regular': "#FBBF24",
+    'Malo': "#F97316",
+};
 
 const MultiSelectFilter = ({
     title,
@@ -70,10 +82,10 @@ const MultiSelectFilter = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-xs">
                     <div className="flex gap-1 flex-wrap">
                          {selected.length > 0 ? (
-                            selected.map(value => renderBadge ? renderBadge(value) : <Badge variant="secondary" key={value}>{options.find(o => o.value === value)?.label || value}</Badge>)
+                            selected.map(value => renderBadge ? renderBadge(value) : <Badge variant="secondary" key={value} className="text-[10px]">{options.find(o => o.value === value)?.label || value}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -117,10 +129,10 @@ const KpiCard = ({ title, value, icon: Icon, description, colorClass }: { title:
 export default function MaterialsReportPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-    const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     
-    // Multi-select Filters
+    // Filters
+    const [searchTerm, setSearchTerm] = useState('');
     const [filterTypes, setFilterTypes] = useState<string[]>([]);
     const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
     const [filterSpecializations, setFilterSpecializations] = useState<string[]>([]);
@@ -129,34 +141,32 @@ export default function MaterialsReportPage() {
     const [filterStates, setFilterStates] = useState<string[]>([]);
     const [filterConditions, setFilterConditions] = useState<string[]>([]);
     
+    // PDF Config
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
-    
-    // State for deletion
-    const [deleteTarget, setDeleteTarget] = useState('all');
-    const [confirmationText, setConfirmationText] = useState('');
-
     const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
+    const [includeCharts, setIncludeCharts] = useState(true);
+
+    // Deletion
+    const [deleteTarget, setDeleteTarget] = useState('all');
+    const [confirmationText, setConfirmationText] = useState('');
 
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
-
     const activeRole = getActiveRole(pathname);
     const canManageGlobally = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            const [materialsData, vehiclesData, firefightersData] = await Promise.all([
+            const [materialsData, vehiclesData] = await Promise.all([
                 getMaterials(),
                 getVehicles(),
-                getFirefighters(),
             ]);
             setMaterials(materialsData);
             setVehicles(vehiclesData);
-            setAllFirefighters(firefightersData);
         } catch (error) {
              toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
         } finally {
@@ -174,42 +184,25 @@ export default function MaterialsReportPage() {
                 reader.onloadend = () => { setLogoDataUrl(reader.result as string); };
                 reader.readAsDataURL(blob);
              } catch (error) {
-                 console.error("Failed to load logo for PDF", error);
+                 console.error("Failed to load logo", error);
              }
         }
         fetchLogo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const handleDataChange = () => {
-        fetchAllData();
-    };
-
-    const handleDelete = async (materialId: string) => {
-        try {
-            await deleteMaterial(materialId, user);
-            toast({ title: "¡Éxito!", description: "El material ha sido eliminado." });
-            fetchAllData();
-        } catch (error: any) {
-            toast({ title: "Error", description: error.message || "No se pudo eliminar the material.", variant: "destructive" });
-        }
-    };
-
-    const handleBulkDelete = async () => {
-        const target = deleteTarget === 'all' ? undefined : deleteTarget;
-        try {
-            const count = await deleteAllMaterials(user, target);
-            const targetName = target ? `del Móvil ${vehicles.find(v => v.id === target)?.numeroMovil}` : 'totales';
-            toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales ${targetName}.` });
-            setConfirmationText('');
-            fetchAllData();
-        } catch (error: any) {
-             toast({ title: "Error", description: error.message || "No se pudieron eliminar los materiales.", variant: "destructive" });
-        }
-    }
-
     const filteredMaterials = useMemo(() => {
         return materials.filter(material => {
+            // Text Search
+            if (searchTerm) {
+                const searchLower = searchTerm.toLowerCase();
+                const matchesSearch = material.nombre.toLowerCase().includes(searchLower) || 
+                                     material.codigo.toLowerCase().includes(searchLower) ||
+                                     material.caracteristicas?.toLowerCase().includes(searchLower);
+                if (!matchesSearch) return false;
+            }
+
+            // Multi-select Filters
             if (filterTypes.length > 0 && !filterTypes.includes(material.tipo)) return false;
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(material.cuartel)) return false;
             if (filterSpecializations.length > 0 && !filterSpecializations.includes(material.especialidad)) return false;
@@ -217,9 +210,10 @@ export default function MaterialsReportPage() {
             if (filterDiameters.length > 0 && (!material.medida || !filterDiameters.includes(material.medida))) return false;
             if (filterStates.length > 0 && !filterStates.includes(material.estado)) return false;
             if (filterConditions.length > 0 && !filterConditions.includes(material.condicion)) return false;
+            
             return true;
         });
-    }, [materials, filterTypes, filterFirehouses, filterSpecializations, filterVehicles, filterDiameters, filterStates, filterConditions]);
+    }, [materials, searchTerm, filterTypes, filterFirehouses, filterSpecializations, filterVehicles, filterDiameters, filterStates, filterConditions]);
 
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
@@ -237,184 +231,177 @@ export default function MaterialsReportPage() {
         };
     }, [filteredMaterials]);
 
+    const chartData = useMemo(() => {
+        const statusCounts = filteredMaterials.reduce((acc, m) => {
+            acc[m.estado] = (acc[m.estado] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const conditionCounts = filteredMaterials.reduce((acc, m) => {
+            acc[m.condicion] = (acc[m.condicion] || 0) + 1;
+            return acc;
+        }, {} as Record<string, number>);
+
+        return {
+            status: Object.entries(statusCounts).map(([name, value]) => ({ name, value, fill: STATUS_COLORS[name] || '#ccc' })),
+            condition: Object.entries(conditionCounts).map(([name, value]) => ({ name, value, fill: CONDITION_COLORS[name] || '#ccc' })),
+        };
+    }, [filteredMaterials]);
+
     const availableDiameters = useMemo(() => {
         const diameters = new Set<string>();
         materials.forEach(m => { if(m.medida) diameters.add(m.medida); });
         return Array.from(diameters).sort();
     }, [materials]);
 
-    const generatePdf = async () => {
-        if (!logoDataUrl) {
-            toast({ title: "Espere un momento", description: "El logo para el PDF aún se está cargando.", variant: "destructive" });
+    const handleQrScan = (code: string) => {
+        setSearchTerm(code);
+        toast({ title: "Material Identificado", description: `Buscando código: ${code}` });
+    };
+
+    const handleBulkDelete = async () => {
+        if (confirmationText !== 'ELIMINAR') {
+            toast({ variant: "destructive", title: "Confirmación incorrecta", description: "Escriba ELIMINAR para proceder." });
             return;
         }
+        const target = deleteTarget === 'all' ? undefined : deleteTarget;
+        try {
+            const count = await deleteAllMaterials(user, target);
+            toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales.` });
+            setConfirmationText('');
+            fetchAllData();
+        } catch (error: any) {
+             toast({ variant: "destructive", title: "Error", description: error.message });
+        }
+    }
 
+    const generatePdf = async () => {
+        if (!logoDataUrl) { toast({ title: "Espere un momento", description: "Cargando componentes del PDF..." }); return; }
         setGeneratingPdf(true);
         const doc = new jsPDF();
-        
         try {
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont('helvetica', 'bold');
-            doc.text("Reporte Avanzado de Inventario", 14, 22);
-            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.text("Reporte Estratégico de Inventario", 14, 22);
+            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             let currentY = 45;
-
-            // Header info
             doc.setFontSize(10);
             doc.setTextColor(100);
-            doc.text(`Generado el: ${format(new Date(), 'Pp', {locale: es})}`, 14, currentY);
+            doc.text(`Generado: ${format(new Date(), 'Pp', {locale: es})}`, 14, currentY);
             currentY += 10;
 
             if (includeKPIs) {
-                doc.setFontSize(12);
-                doc.setTextColor(40);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Resumen Ejecutivo", 14, currentY);
-                currentY += 8;
-
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Métrica', 'Valor']],
                     body: [
                         ['Total de ítems filtrados', kpis.total.toString()],
                         ['Operatividad (En Servicio)', kpis.servicePercent],
-                        ['Salud Física (En Buen Estado)', kpis.goodConditionPercent],
+                        ['Salud Física (Bueno)', kpis.goodConditionPercent],
                     ],
                     theme: 'grid',
                     headStyles: { fillColor: '#6c757d' },
                 });
-                currentY = (doc as any).lastAutoTable.finalY + 12;
+                currentY = (doc as any).lastAutoTable.finalY + 10;
             }
 
             if (includeInventoryDetails && filteredMaterials.length > 0) {
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text("Detalle de Equipamiento", 14, currentY);
-                currentY += 8;
-
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Medida', 'Ubicación', 'Estado', 'Condición']],
-                    body: filteredMaterials.map(item => [
-                        item.codigo,
-                        item.nombre,
-                        item.medida || '-',
-                        item.ubicacion.type === 'deposito' ? `Depósito ${item.cuartel}` : `Móvil ${item.vehiculo?.numeroMovil} (B: ${item.ubicacion.baulera})`,
-                        item.estado,
-                        item.condicion,
+                    head: [['Código', 'Nombre', 'Tipo', 'Ubicación', 'Estado', 'Condición']],
+                    body: filteredMaterials.map(m => [
+                        m.codigo, m.nombre, m.tipo,
+                        m.ubicacion.type === 'deposito' ? `Dep. ${m.cuartel}` : `Mov. ${m.vehiculo?.numeroMovil}`,
+                        m.estado, m.condicion
                     ]),
                     theme: 'striped',
-                    headStyles: { fillColor: '#333333' },
+                    headStyles: { fillColor: '#333' },
                     styles: { fontSize: 8 }
                 });
             }
-            
-            doc.save(`reporte-avanzado-inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`reporte-inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } catch (error) {
-            toast({ title: "Error al generar PDF", description: "Hubo un problema al crear el archivo PDF.", variant: "destructive" });
+            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el PDF." });
         } finally {
             setGeneratingPdf(false);
         }
     };
 
+    const RADIAN = Math.PI / 180;
+    const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+        if (percent < 0.05) return null;
+        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+        return <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">{`${(percent * 100).toFixed(0)}%`}</text>;
+    };
+
     return (
-        <>
-            <PageHeader title="Reportes Avanzados" description="Análisis detallado y jerárquico del inventario de materiales."/>
+        <div className="space-y-8 pb-20">
+            <PageHeader title="Consola de Reportes de Materiales" description="Herramienta avanzada de búsqueda, análisis y gestión de inventario."/>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <KpiCard title="Total Ítems" value={kpis.total} icon={Package} description="Materiales filtrados" />
-                <KpiCard title="Operatividad" value={kpis.servicePercent} icon={Shield} description={`${kpis.inService} en servicio`} colorClass={parseFloat(kpis.servicePercent) < 80 ? 'border-red-200' : 'border-green-200'} />
-                <KpiCard title="Buen Estado" value={kpis.goodConditionPercent} icon={HeartPulse} description={`${kpis.goodCondition} sin daños`} />
-                <KpiCard title="Uso en Móviles" value={filteredMaterials.filter(m => m.ubicacion.type === 'vehiculo').length} icon={Truck} description="Equipamiento en dotación" />
+            {/* Search and Quick Action */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="lg:col-span-2">
+                    <CardHeader><CardTitle className="font-headline text-lg">Búsqueda Rápida</CardTitle></CardHeader>
+                    <CardContent className="flex gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Buscar por código, nombre o características..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        </div>
+                        <QrScannerDialog onScan={handleQrScan}>
+                            <Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2" />Escanear</Button>
+                        </QrScannerDialog>
+                    </CardContent>
+                </Card>
+                <KpiCard title="Operatividad" value={kpis.servicePercent} icon={Shield} description={`${kpis.inService} de ${kpis.total} equipos`} colorClass={parseFloat(kpis.servicePercent) < 80 ? 'border-red-500 bg-red-50' : 'border-green-500 bg-green-50'} />
             </div>
 
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle className="font-headline">Filtros Inteligentes</CardTitle>
-                    <CardDescription>Combina múltiples criterios para un filtrado ultra-específico.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                        <Label>Tipos de Material</Label>
-                        <MultiSelectFilter 
-                            title="Tipos" 
-                            options={materialTypes.map(t => ({ value: t, label: t }))} 
-                            selected={filterTypes} 
-                            onSelectedChange={setFilterTypes} 
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Cuarteles</Label>
-                        <MultiSelectFilter 
-                            title="Cuarteles" 
-                            options={firehouses.map(fh => ({ value: fh, label: fh }))} 
-                            selected={filterFirehouses} 
-                            onSelectedChange={setFilterFirehouses} 
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Especialidades</Label>
-                        <MultiSelectFilter 
-                            title="Especialidades" 
-                            options={specializations.map(s => ({ value: s, label: s }))} 
-                            selected={filterSpecializations} 
-                            onSelectedChange={setFilterSpecializations} 
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Móviles</Label>
-                        <MultiSelectFilter 
-                            title="Móviles" 
-                            options={vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` }))} 
-                            selected={filterVehicles} 
-                            onSelectedChange={setFilterVehicles} 
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Diámetros / Medidas</Label>
-                        <MultiSelectFilter 
-                            title="Medidas" 
-                            options={availableDiameters.map(d => ({ value: d, label: d }))} 
-                            selected={filterDiameters} 
-                            onSelectedChange={setFilterDiameters} 
-                            renderBadge={(v) => <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20" key={v}>{v}</Badge>}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Estado Operativo</Label>
-                        <MultiSelectFilter 
-                            title="Estados" 
-                            options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} 
-                            selected={filterStates} 
-                            onSelectedChange={setFilterStates} 
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Condición Física</Label>
-                        <MultiSelectFilter 
-                            title="Condiciones" 
-                            options={['Bueno', 'Regular', 'Malo'].map(c => ({ value: c, label: c }))} 
-                            selected={filterConditions} 
-                            onSelectedChange={setFilterConditions} 
-                        />
-                    </div>
-                    <div className="flex items-end pb-1">
-                        <Button variant="ghost" onClick={() => {
-                            setFilterTypes([]); setFilterFirehouses([]); setFilterSpecializations([]); 
-                            setFilterVehicles([]); setFilterDiameters([]); setFilterStates([]); setFilterConditions([]);
-                        }} className="text-xs h-8">Limpiar todos los filtros</Button>
-                    </div>
+            {/* Visual Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Estado Operativo</CardTitle></CardHeader>
+                    <CardContent className="h-48">
+                        <ChartContainer config={{}} className="h-full w-full">
+                            <ResponsiveContainer><PieChart><Pie data={chartData.status} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={60}>{chartData.status.map((e, i) => (<Cell key={i} fill={e.fill} />))}</Pie><Legend iconType="circle" wrapperStyle={{fontSize: '12px'}} /></PieChart></ResponsiveContainer>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader><CardTitle className="text-sm font-semibold">Condición Física</CardTitle></CardHeader>
+                    <CardContent className="h-48">
+                        <ChartContainer config={{}} className="h-full w-full">
+                            <ResponsiveContainer><PieChart><Pie data={chartData.condition} dataKey="value" nameKey="name" cx="50%" cy="50%" labelLine={false} label={renderCustomizedLabel} outerRadius={60}>{chartData.condition.map((e, i) => (<Cell key={i} fill={e.fill} />))}</Pie><Legend iconType="circle" wrapperStyle={{fontSize: '12px'}} /></PieChart></ResponsiveContainer>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Filters */}
+            <Card>
+                <CardHeader><CardTitle className="font-headline text-lg">Filtros Inteligentes</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="space-y-1"><Label className="text-xs">Tipo de Material</Label><MultiSelectFilter title="Tipos" options={materialTypes.map(t => ({ value: t, label: t }))} selected={filterTypes} onSelectedChange={setFilterTypes} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Especialidad</Label><MultiSelectFilter title="Especialidades" options={specializations.map(s => ({ value: s, label: s }))} selected={filterSpecializations} onSelectedChange={setFilterSpecializations} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Ubicación (Móviles)</Label><MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Medidas/Diámetros</Label><MultiSelectFilter title="Medidas" options={availableDiameters.map(d => ({ value: d, label: d }))} selected={filterDiameters} onSelectedChange={setFilterDiameters} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={firehouses.map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Condición</Label><MultiSelectFilter title="Condiciones" options={['Bueno', 'Regular', 'Malo'].map(c => ({ value: c, label: c }))} selected={filterConditions} onSelectedChange={setFilterConditions} /></div>
+                    <div className="flex items-end pb-1"><Button variant="ghost" size="sm" onClick={() => { setSearchTerm(''); setFilterTypes([]); setFilterFirehouses([]); setFilterSpecializations([]); setFilterVehicles([]); setFilterDiameters([]); setFilterStates([]); setFilterConditions([]); }} className="text-xs">Limpiar Todo</Button></div>
                 </CardContent>
             </Card>
 
+            {/* Results Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle className="font-headline">Detalle del Inventario Filtrado</CardTitle>
-                    <CardDescription>Mostrando {filteredMaterials.length} materiales que cumplen con los criterios.</CardDescription>
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="font-headline">Detalle de Equipamiento ({filteredMaterials.length})</CardTitle>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto">
@@ -426,96 +413,69 @@ export default function MaterialsReportPage() {
                                     <TableHead>Medida</TableHead>
                                     <TableHead>Ubicación</TableHead>
                                     <TableHead>Estado</TableHead>
-                                    <TableHead>Condición</TableHead>
-                                    <TableHead><span className="sr-only">Acciones</span></TableHead>
+                                    <TableHead>Acciones</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {loading ? (
-                                    Array.from({ length: 5 }).map((_, i) => (
-                                        <TableRow key={i}><TableCell colSpan={7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                    ))
-                                ) : filteredMaterials.length > 0 ? (
-                                    filteredMaterials.map(material => (
-                                        <TableRow key={material.id}>
-                                            <TableCell className="font-mono text-xs">{material.codigo}</TableCell>
-                                            <TableCell className="font-medium">{material.nombre}</TableCell>
-                                            <TableCell>{material.medida ? <span className="font-bold text-primary">{material.medida}</span> : '-'}</TableCell>
-                                            <TableCell className="text-xs">
-                                                {material.ubicacion.type === 'vehiculo' 
-                                                    ? `Móvil ${material.vehiculo?.numeroMovil} (B:${material.ubicacion.baulera})`
-                                                    : `Depósito ${material.cuartel}`
-                                                }
-                                            </TableCell>
-                                            <TableCell><Badge variant={material.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", material.estado === 'En Servicio' ? 'bg-green-600' : '')}>{material.estado}</Badge></TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className={cn(
-                                                    "text-[10px]",
-                                                    material.condicion === 'Bueno' ? 'text-green-600 border-green-200' : 
-                                                    material.condicion === 'Regular' ? 'text-yellow-600 border-yellow-200' : 'text-red-600 border-red-200'
-                                                )}>{material.condicion}</Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <EditMaterialDialog material={material} onMaterialUpdated={handleDataChange}>
-                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
-                                                        </EditMaterialDialog>
-                                                        <AlertDialog>
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive" onSelect={e => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                            <AlertDialogContent>
-                                                                <AlertDialogHeader>
-                                                                    <AlertDialogTitle>¿Eliminar material?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
-                                                                </AlertDialogHeader>
-                                                                <AlertDialogFooter>
-                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(material.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                                </AlertDialogFooter>
-                                                            </AlertDialogContent>
-                                                        </AlertDialog>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : (
-                                    <TableRow><TableCell colSpan={7} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>
-                                )}
+                                {loading ? <TableRow><TableCell colSpan={6}><Skeleton className="h-20 w-full"/></TableCell></TableRow> : 
+                                filteredMaterials.length > 0 ? filteredMaterials.map(m => (
+                                    <TableRow key={m.id}>
+                                        <TableCell className="font-mono text-xs font-bold">{m.codigo}</TableCell>
+                                        <TableCell className="text-sm">{m.nombre}</TableCell>
+                                        <TableCell className="font-bold text-primary">{m.medida || '-'}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil} (B:${m.ubicacion.baulera})` : `Depósito ${m.cuartel}`}</TableCell>
+                                        <TableCell><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", m.estado === 'En Servicio' && 'bg-green-600')}>{m.estado}</Badge></TableCell>
+                                        <TableCell>
+                                            <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}><Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4"/></Button></EditMaterialDialog>
+                                        </TableCell>
+                                    </TableRow>
+                                )) : <TableRow><TableCell colSpan={6} className="h-24 text-center">No se encontraron materiales.</TableCell></TableRow>}
                             </TableBody>
                         </Table>
                     </div>
                 </CardContent>
             </Card>
 
-            <Card className="mt-8">
-                <CardHeader>
-                    <CardTitle className="font-headline">Exportar Reporte Estratégico</CardTitle>
-                    <CardDescription>Genere un archivo PDF detallado con el análisis de los datos filtrados.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                        <div className="flex items-center space-x-2">
-                            <Switch id="include-kpis" checked={includeKPIs} onCheckedChange={setIncludeKPIs} />
-                            <Label htmlFor="include-kpis">Incluir Resumen Ejecutivo</Label>
+            {/* Export and Advanced Tools */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader><CardTitle className="font-headline">Exportar Reporte PDF</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="flex items-center space-x-2"><Switch id="kpi" checked={includeKPIs} onCheckedChange={setIncludeKPIs} /><Label htmlFor="kpi">Incluir KPIs</Label></div>
+                            <div className="flex items-center space-x-2"><Switch id="detail" checked={includeInventoryDetails} onCheckedChange={setIncludeInventoryDetails} /><Label htmlFor="detail">Incluir Listado</Label></div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <Switch id="include-details" checked={includeInventoryDetails} onCheckedChange={setIncludeInventoryDetails} />
-                            <Label htmlFor="include-details">Incluir Detalle Técnico</Label>
-                        </div>
-                    </div>
-                    <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0} className="w-full sm:w-auto">
-                        {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                        {generatingPdf ? "Generando Reporte..." : "Descargar Reporte PDF"}
-                    </Button>
-                </CardContent>
-            </Card>
-        </>
+                        <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0} className="w-full">
+                            {generatingPdf ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />} Generar Reporte
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {canManageGlobally && (
+                    <Card className="border-destructive/20 bg-destructive/5">
+                        <CardHeader><CardTitle className="text-destructive font-headline">Zona de Peligro</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
+                                    <Label>Objetivo de Borrado</Label>
+                                    <Select value={deleteTarget} onValueChange={setDeleteTarget}>
+                                        <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Todo el Inventario</SelectItem>
+                                            {vehicles.map(v => <SelectItem key={v.id} value={v.id}>Móvil {v.numeroMovil}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Confirmar (Escriba ELIMINAR)</Label>
+                                    <Input placeholder="ELIMINAR" className="bg-background" value={confirmationText} onChange={e => setConfirmationText(e.target.value)} />
+                                </div>
+                            </div>
+                            <Button variant="destructive" className="w-full" onClick={handleBulkDelete} disabled={confirmationText !== 'ELIMINAR'}><Trash className="mr-2" /> Ejecutar Borrado Masivo</Button>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+        </div>
     );
 }
