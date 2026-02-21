@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -158,7 +157,7 @@ export default function MaterialsReportPage() {
     const activeRole = getActiveRole(pathname);
     const canManageGlobally = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    const fetchAllData = async () => {
+    const handleDataChange = async () => {
         setLoading(true);
         try {
             const [materialsData, vehiclesData] = await Promise.all([
@@ -175,7 +174,7 @@ export default function MaterialsReportPage() {
     };
     
     useEffect(() => {
-        fetchAllData();
+        handleDataChange();
         const fetchLogo = async () => {
              try {
                 const response = await fetch('https://i.ibb.co/yF0SYDNF/logo.png');
@@ -269,7 +268,7 @@ export default function MaterialsReportPage() {
             const count = await deleteAllMaterials(user, target);
             toast({ title: "¡Éxito!", description: `Se eliminaron ${count} materiales.` });
             setConfirmationText('');
-            fetchAllData();
+            handleDataChange();
         } catch (error: any) {
              toast({ variant: "destructive", title: "Error", description: error.message });
         }
