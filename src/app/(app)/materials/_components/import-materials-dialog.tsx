@@ -80,19 +80,19 @@ export default function ImportMaterialsDialog({
         }
 
         const materialsToUpload = results.data.map(row => {
-            const ubicacion = row.ubicacion_tipo === 'vehiculo'
-                ? { type: 'vehiculo' as const, baulera: row.ubicacion_baulera }
-                : { type: 'deposito' as const, deposito: row.cuartel };
+            const ubicacion = row.ubicacion_tipo?.trim().toLowerCase() === 'vehiculo'
+                ? { type: 'vehiculo' as const, baulera: row.ubicacion_baulera?.trim() }
+                : { type: 'deposito' as const, deposito: row.cuartel?.trim() };
 
             return {
-                codigo: row.codigo?.trim() || '', // Si está vacío, el servicio lo genera
-                nombre: row.nombre.trim(),
-                tipo: row.tipo.trim(),
-                especialidad: row.especialidad.trim(),
-                cuartel: row.cuartel.trim(),
-                estado: row.estado.trim(),
-                condicion: row.condicion.trim(),
-                medida: row.medida?.trim() || '',
+                codigo: row.codigo?.trim() || '', 
+                nombre: row.nombre?.trim() || '',
+                tipo: row.tipo?.trim().toUpperCase() || '',
+                especialidad: row.especialidad?.trim().toUpperCase() || '',
+                cuartel: row.cuartel?.trim() || '',
+                estado: row.estado?.trim() || 'En Servicio',
+                condicion: row.condicion?.trim() || 'Bueno',
+                medida: row.medida?.trim().replace(/\s/g, '') || '', // Elimina espacios en la medida (ej: "38 mm" -> "38mm")
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
                 numero_movil: row.numero_movil?.trim() || ''
@@ -151,7 +151,7 @@ export default function ImportMaterialsDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
           <DialogDescription>
-            Siga estas instrucciones para preparar su archivo CSV correctamente.
+            Configure su Excel con estos valores exactos para asegurar una carga exitosa.
           </DialogDescription>
         </DialogHeader>
         
@@ -159,28 +159,40 @@ export default function ImportMaterialsDialog({
             <div className="space-y-4 py-4 text-sm">
                 <Alert className="bg-blue-50 border-blue-200">
                     <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800 font-bold">Código Automático</AlertTitle>
+                    <AlertTitle className="text-blue-800 font-bold">Importante: Formato de Medidas</AlertTitle>
                     <AlertDescription className="text-blue-700">
-                        Si dejas la columna <strong>codigo</strong> vacía, el sistema generará uno automáticamente basado en el Tipo y Especialidad (ej: MAFE001).
+                        Para las columnas <strong>medida</strong>, use el formato: 25mm, 38mm, 44.5mm, 63.5mm o 70mm (sin espacios).
                     </AlertDescription>
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Columnas Obligatorias:</h4>
-                    <ul className="list-disc pl-5 space-y-1">
-                        <li><strong>codigo</strong>: Único (o vacío para auto-generar).</li>
-                        <li><strong>nombre</strong>: Descripción del ítem.</li>
-                        <li><strong>tipo</strong>: (MANGA, LANZA, PROTECCION, etc.)</li>
-                        <li><strong>especialidad</strong>: (FUEGO, RESCATE, HAZ-MAT, etc.)</li>
-                        <li><strong>cuartel</strong>: Cuartel 1, Cuartel 2 o Cuartel 3.</li>
-                        <li><strong>estado</strong>: "En Servicio" o "Fuera de Servicio".</li>
-                        <li><strong>condicion</strong>: "Bueno", "Regular" o "Malo".</li>
-                        <li><strong>medida</strong>: Diámetro (ej: 25mm, 38mm, 44.5mm). Opcional para otros tipos.</li>
-                        <li><strong>ubicacion_tipo</strong>: "deposito" o "vehiculo".</li>
-                        <li><strong>numero_movil</strong>: Ej: "Móvil 5" (Obligatorio si ubicacion_tipo es vehiculo).</li>
-                        <li><strong>ubicacion_baulera</strong>: Ej: "Baulera 1" (Obligatorio si ubicacion_tipo es vehiculo).</li>
-                        <li><strong>caracteristicas</strong>: Observaciones técnicas del ítem.</li>
-                    </ul>
+                    <h4 className="font-bold mb-2">Valores Permitidos para Listas Desplegables:</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                        <div>
+                            <p className="font-semibold text-primary">Estado:</p>
+                            <p>En Servicio, Fuera de Servicio</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-primary">Condición:</p>
+                            <p>Bueno, Regular, Malo</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-primary">Cuartel:</p>
+                            <p>Cuartel 1, Cuartel 2, Cuartel 3</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-primary">Ubicación Tipo:</p>
+                            <p>deposito, vehiculo</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-primary">Especialidad:</p>
+                            <p>FUEGO, RESCATE, APH, HAZ-MAT, FORESTAL, GENERAL...</p>
+                        </div>
+                        <div>
+                            <p className="font-semibold text-primary">Medida (Diámetros):</p>
+                            <p>25mm, 38mm, 44.5mm, 63.5mm, 70mm</p>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid w-full items-center gap-1.5 pt-2">
