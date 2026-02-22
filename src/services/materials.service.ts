@@ -1,4 +1,3 @@
-
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -46,6 +45,7 @@ const docToMaterial = async (
         tipo: data.tipo,
         especialidad: data.especialidad,
         caracteristicas: data.caracteristicas,
+        medida: data.medida, // SE CORRIGIÓ: Ahora se mapea el campo medida desde Firestore
         ubicacion: data.ubicacion,
         estado: data.estado,
         condicion: data.condicion || 'Bueno',
@@ -109,7 +109,6 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
     const allVehicles = await getVehicles();
     const vehicleMapByNumber = new Map(allVehicles.map(v => [v.numeroMovil, v]));
     
-    // To handle auto-generation in batch, we need to track local counters for prefixes
     const prefixCounters = new Map<string, number>();
     const existingMaterials = await getMaterials();
     const existingCodes = existingMaterials.map(m => m.codigo);
@@ -117,11 +116,9 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
     for (const material of materials) {
         const materialToSave: any = { ...material };
         
-        // Handle auto-generation if code is missing
         if (!materialToSave.codigo) {
             const prefix = calculatePrefix(materialToSave.tipo, materialToSave.especialidad);
             if (!prefixCounters.has(prefix)) {
-                // Find initial max sequence from DB for this prefix
                 let maxNum = 0;
                 existingCodes.filter(c => c.startsWith(prefix)).forEach(code => {
                     const numPart = code.substring(prefix.length);
@@ -142,7 +139,6 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
                 materialToSave.ubicacion.vehiculoId = vehicle.id;
                 materialToSave.cuartel = vehicle.cuartel;
             } else {
-                console.warn(`Vehículo con número "${material.numero_movil}" no encontrado. El material "${material.nombre}" no será asignado a un vehículo.`);
                 materialToSave.ubicacion.type = 'deposito';
                 materialToSave.ubicacion.deposito = materialToSave.cuartel;
             }

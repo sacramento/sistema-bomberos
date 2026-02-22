@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -115,7 +114,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
         setLoading(true);
         try {
-            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, medida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            // Aseguramos que medida se envíe limpia
+            const finalMedida = medida.trim();
+            
+            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, medida: finalMedida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
             onMaterialUpdated();
             setOpen(false);
@@ -138,7 +140,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const handleMedidaChange = (value: string) => {
         if (value === 'Otra') {
             setShowCustomMedida(true);
-            setMedida('');
+            // No reseteamos la medida inmediatamente para que si ya tiene una personalizada no se borre al cambiar el dropdown
         } else {
             setShowCustomMedida(false);
             setMedida(value);
@@ -197,7 +199,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         )}
 
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondition(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2">
                             <Label>Cuartel</Label>
                             <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)}>
