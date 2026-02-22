@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -45,7 +46,7 @@ const docToMaterial = async (
         tipo: data.tipo,
         especialidad: data.especialidad,
         caracteristicas: data.caracteristicas,
-        medida: data.medida, // SE CORRIGIÓ: Ahora se mapea el campo medida desde Firestore
+        medida: data.medida,
         ubicacion: data.ubicacion,
         estado: data.estado,
         condicion: data.condicion || 'Bueno',
@@ -116,6 +117,11 @@ export const batchAddMaterials = async (materials: (Omit<Material, 'id' | 'vehic
     for (const material of materials) {
         const materialToSave: any = { ...material };
         
+        // Normalizar medida en importación masiva (puntos en lugar de comas)
+        if (materialToSave.medida) {
+            materialToSave.medida = materialToSave.medida.replace(',', '.');
+        }
+
         if (!materialToSave.codigo) {
             const prefix = calculatePrefix(materialToSave.tipo, materialToSave.especialidad);
             if (!prefixCounters.has(prefix)) {

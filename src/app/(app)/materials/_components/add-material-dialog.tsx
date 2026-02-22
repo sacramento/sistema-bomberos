@@ -135,7 +135,10 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
         setLoading(true);
         try {
-            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, medida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            // Normalizar medida (reemplazar comas por puntos y limpiar espacios)
+            const normalizedMedida = medida.trim().replace(',', '.');
+            
+            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, medida: normalizedMedida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
             setOpen(false);

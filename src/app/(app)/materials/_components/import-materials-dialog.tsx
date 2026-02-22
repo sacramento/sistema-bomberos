@@ -93,7 +93,8 @@ export default function ImportMaterialsDialog({
                 cuartel: row.cuartel?.trim() || '',
                 estado: row.estado?.trim() || 'En Servicio',
                 condicion: row.condicion?.trim() || 'Bueno',
-                medida: row.medida?.trim().replace(/\s/g, '') || '',
+                // Normalizar medida: quitar espacios y pasar comas a puntos
+                medida: row.medida?.trim().replace(/\s/g, '').replace(',', '.') || '',
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
                 numero_movil: row.numero_movil?.trim() || ''
@@ -143,7 +144,7 @@ export default function ImportMaterialsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
+    <Dialog open={open} onOpenChange={(isOpen) => { 
         setOpen(isOpen)
         if (!isOpen) resetDialog();
     }}>
@@ -189,6 +190,7 @@ export default function ImportMaterialsDialog({
                         </div>
                         <div>
                             <p className="font-semibold text-primary">Medida (Columna 'medida'):</p>
+                            <p className="text-red-600 font-bold">IMPORTANTE: Usar punto decimal.</p>
                             <p>25mm, 38mm, 44.5mm, 63.5mm, 70mm</p>
                         </div>
                     </div>

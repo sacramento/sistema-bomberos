@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -114,10 +115,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
         setLoading(true);
         try {
-            // Aseguramos que medida se envíe limpia
-            const finalMedida = medida.trim();
+            // Normalizar medida (reemplazar comas por puntos y limpiar espacios)
+            const normalizedMedida = medida.trim().replace(',', '.');
             
-            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, medida: finalMedida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            await updateMaterial(material.id, { codigo, nombre, tipo, especialidad, caracteristicas, medida: normalizedMedida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
             toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
             onMaterialUpdated();
             setOpen(false);
@@ -140,7 +141,6 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const handleMedidaChange = (value: string) => {
         if (value === 'Otra') {
             setShowCustomMedida(true);
-            // No reseteamos la medida inmediatamente para que si ya tiene una personalizada no se borre al cambiar el dropdown
         } else {
             setShowCustomMedida(false);
             setMedida(value);

@@ -208,7 +208,14 @@ export default function MaterialsReportPage() {
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(material.cuartel)) return false;
             if (filterSpecializations.length > 0 && !filterSpecializations.includes(material.especialidad)) return false;
             if (filterVehicles.length > 0 && (!material.ubicacion?.vehiculoId || !filterVehicles.includes(material.ubicacion.vehiculoId))) return false;
-            if (filterDiameters.length > 0 && (!material.medida || !filterDiameters.includes(material.medida))) return false;
+            
+            // Filtro de diámetros: Normalizamos para que 44,5 y 44.5 sean lo mismo
+            if (filterDiameters.length > 0) {
+                if (!material.medida) return false;
+                const normalizedMedida = material.medida.replace(',', '.');
+                if (!filterDiameters.includes(normalizedMedida)) return false;
+            }
+
             if (filterStates.length > 0 && !filterStates.includes(material.estado)) return false;
             if (filterConditions.length > 0 && !filterConditions.includes(material.condicion)) return false;
             
@@ -251,7 +258,12 @@ export default function MaterialsReportPage() {
 
     const availableDiameters = useMemo(() => {
         const diameters = new Set<string>(standardDiameters);
-        materials.forEach(m => { if(m.medida) diameters.add(m.medida); });
+        materials.forEach(m => { 
+            if(m.medida) {
+                // Normalizar a punto decimal antes de agregar al set de filtros
+                diameters.add(m.medida.replace(',', '.'));
+            }
+        });
         return Array.from(diameters).sort();
     }, [materials]);
 
