@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -92,7 +93,7 @@ export default function ImportMaterialsDialog({
                 cuartel: row.cuartel?.trim() || '',
                 estado: row.estado?.trim() || 'En Servicio',
                 condicion: row.condicion?.trim() || 'Bueno',
-                medida: row.medida?.trim().replace(/\s/g, '') || '', // Elimina espacios en la medida (ej: "38 mm" -> "38mm")
+                medida: row.medida?.trim().replace(/\s/g, '') || '',
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
                 numero_movil: row.numero_movil?.trim() || ''
@@ -159,9 +160,11 @@ export default function ImportMaterialsDialog({
             <div className="space-y-4 py-4 text-sm">
                 <Alert className="bg-blue-50 border-blue-200">
                     <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800 font-bold">Importante: Formato de Medidas</AlertTitle>
+                    <AlertTitle className="text-blue-800 font-bold">Encabezados Exactos (Fila 1)</AlertTitle>
                     <AlertDescription className="text-blue-700">
-                        Para las columnas <strong>medida</strong>, use el formato: 25mm, 38mm, 44.5mm, 63.5mm o 70mm (sin espacios).
+                        <code className="text-[10px] block bg-black/10 text-black p-2 rounded mt-2 overflow-x-auto whitespace-nowrap">
+                            codigo, nombre, tipo, especialidad, cuartel, estado, condicion, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
+                        </code>
                     </AlertDescription>
                 </Alert>
 
@@ -185,11 +188,7 @@ export default function ImportMaterialsDialog({
                             <p>deposito, vehiculo</p>
                         </div>
                         <div>
-                            <p className="font-semibold text-primary">Especialidad:</p>
-                            <p>FUEGO, RESCATE, APH, HAZ-MAT, FORESTAL, GENERAL...</p>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-primary">Medida (Diámetros):</p>
+                            <p className="font-semibold text-primary">Medida (Columna 'medida'):</p>
                             <p>25mm, 38mm, 44.5mm, 63.5mm, 70mm</p>
                         </div>
                     </div>
