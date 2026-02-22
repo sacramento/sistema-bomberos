@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
     'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
-    'ILUMINACION', 'INMOVILIZACION', 'LANZA', 'LOGISTICA', 'MANGA', 'MEDICION', 
+    'ILUMINACION', 'INMOVILIZACION', 'MEDICION', 'LANZA', 'LOGISTICA', 'MANGA', 
     'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
 ].sort() as Material['tipo'][];
 
@@ -60,6 +61,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
+    const [showCustomMedida, setShowCustomMedida] = useState(false);
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
@@ -69,7 +71,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
     const resetForm = useCallback(() => {
         setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
-        setLocationType('deposito'); setVehiculoId(''); setBaulera('');
+        setLocationType('deposito'); setVehiculoId(''); setBaulera(''); setShowCustomMedida(false);
     }, []);
 
     useEffect(() => {
@@ -77,7 +79,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
             getVehicles().then(setVehicles).catch(() => toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los vehículos." }));
             
             if (initialData) {
-                // Pre-fill form for cloning
                 setNombre(initialData.nombre);
                 setTipo(initialData.tipo);
                 setEspecialidad(initialData.especialidad);
@@ -90,6 +91,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 setVehiculoId(initialData.ubicacion.vehiculoId || '');
                 setBaulera(initialData.ubicacion.baulera || '');
                 setCodigo('');
+                setShowCustomMedida(!!initialData.medida && !diameterOptions.includes(initialData.medida));
             } else {
                 resetForm();
             }
@@ -153,16 +155,26 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
         }
     }, [vehiculoId, vehicles, locationType]);
 
-    const isCloning = !!initialData;
+    const isMedidaType = tipo === 'MANGA' || tipo === 'LANZA';
+
+    const handleMedidaChange = (value: string) => {
+        if (value === 'Otra') {
+            setShowCustomMedida(true);
+            setMedida('');
+        } else {
+            setShowCustomMedida(false);
+            setMedida(value);
+        }
+    }
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">{isCloning ? 'Clonar Material' : 'Agregar Nuevo Material'}</DialogTitle>
+                    <DialogTitle className="font-headline">{initialData ? 'Clonar Material' : 'Agregar Nuevo Material'}</DialogTitle>
                     <DialogDescription>
-                        {isCloning ? `Complete el código único para clonar "${initialData.nombre}". El resto de los datos han sido copiados.` : 'Complete los detalles del nuevo ítem de inventario.'}
+                        {initialData ? `Complete el código único para clonar "${initialData.nombre}".` : 'Complete los detalles del nuevo ítem.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
@@ -177,7 +189,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                                     size="icon" 
                                     onClick={handleAutoGenerateCode}
                                     disabled={generatingCode || !tipo || !especialidad}
-                                    title="Auto-generar código (3 dígitos)"
+                                    title="Auto-generar código"
                                 >
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
@@ -187,10 +199,10 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                         <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar tipo..."/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar especialidad..." /></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         
-                        {(tipo === 'MANGA' || tipo === 'LANZA') && (
+                        {isMedidaType && (
                             <div className="space-y-2">
                                 <Label>Diámetro / Medida</Label>
-                                <Select value={medida} onValueChange={setMedida}>
+                                <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={handleMedidaChange}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar diámetro..."/></SelectTrigger>
                                     <SelectContent>
                                         {diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -199,10 +211,10 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                                 </Select>
                             </div>
                         )}
-                        {medida === 'Otra' && (
+                        {isMedidaType && showCustomMedida && (
                             <div className="space-y-2">
                                 <Label htmlFor="medida-manual">Especificar Medida</Label>
-                                <Input id="medida-manual" value={medida === 'Otra' ? '' : medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
+                                <Input id="medida-manual" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
                             </div>
                         )}
 

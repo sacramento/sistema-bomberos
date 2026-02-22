@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import { Sparkles, Loader2 } from "lucide-react";
 const materialTypes: Material['tipo'][] = [
     'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
     'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
-    'ILUMINACION', 'INMOVILIZACION', 'LANZA', 'LOGISTICA', 'MANGA', 'MEDICION', 
+    'ILUMINACION', 'INMOVILIZACION', 'MEDICION', 'LANZA', 'LOGISTICA', 'MANGA', 
     'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
 ].sort() as Material['tipo'][];
 
@@ -48,6 +49,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
+    const [showCustomMedida, setShowCustomMedida] = useState(false);
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
     const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
@@ -70,6 +72,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setLocationType(material.ubicacion.type);
             setVehiculoId(material.ubicacion.vehiculoId || '');
             setBaulera(material.ubicacion.baulera || '');
+            
+            const isCustom = !!material.medida && !diameterOptions.includes(material.medida);
+            setShowCustomMedida(isCustom);
         }
     }, [open, material, toast]);
 
@@ -130,14 +135,20 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     }, [vehiculoId, vehicles, locationType]);
 
-    const handleOpenChange = useCallback((isOpen: boolean) => {
-        setOpen(isOpen);
-    }, []);
+    const handleMedidaChange = (value: string) => {
+        if (value === 'Otra') {
+            setShowCustomMedida(true);
+            setMedida('');
+        } else {
+            setShowCustomMedida(false);
+            setMedida(value);
+        }
+    }
 
     const isMedidaType = tipo === 'MANGA' || tipo === 'LANZA';
 
     return (
-        <Dialog open={open} onOpenChange={handleOpenChange}>
+        <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
@@ -156,7 +167,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                                     size="icon" 
                                     onClick={handleAutoGenerateCode}
                                     disabled={generatingCode || !tipo || !especialidad}
-                                    title="Auto-generar código (3 dígitos)"
+                                    title="Auto-generar código"
                                 >
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
@@ -169,7 +180,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         {isMedidaType && (
                             <div className="space-y-2">
                                 <Label>Diámetro / Medida</Label>
-                                <Select value={medida} onValueChange={setMedida}>
+                                <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={handleMedidaChange}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar diámetro..."/></SelectTrigger>
                                     <SelectContent>
                                         {diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
@@ -178,10 +189,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                                 </Select>
                             </div>
                         )}
-                        {medida === 'Otra' && (
+                        {isMedidaType && showCustomMedida && (
                             <div className="space-y-2">
                                 <Label htmlFor="medida-manual-edit">Especificar Medida</Label>
-                                <Input id="medida-manual-edit" value={medida === 'Otra' ? '' : medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
+                                <Input id="medida-manual-edit" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
                             </div>
                         )}
 
