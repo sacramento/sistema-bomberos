@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -13,6 +12,8 @@ import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import AddMaterialDialog from "./_components/add-material-dialog";
 import EditMaterialDialog from "./_components/edit-material-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
@@ -20,6 +21,7 @@ import MaterialDetailDialog from "./_components/material-detail-dialog";
 import ImportMaterialsDialog from "./_components/import-materials-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 
 export default function MaterialsPage() {
@@ -119,6 +121,52 @@ export default function MaterialsPage() {
 
     const canDeleteMaterial = (m: Material) => {
         return isPrivileged; // Solo administradores pueden borrar definitivamente
+    }
+
+    if (activeRole === 'Bombero' || activeRole === 'Oficial') {
+        return (
+            <>
+                <PageHeader title="Inventario de Materiales" description="Consulta rápida de equipamiento."/>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
+                            <CardDescription>
+                            Ingrese un código para buscar, o use el escáner QR.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                            <form onSubmit={handleFormSubmit} className="space-y-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <div className="relative flex-grow">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        id="search-term-minimal"
+                                        placeholder="Buscar por código..." 
+                                        className="pl-9" 
+                                        value={searchTerm} 
+                                        onChange={(e) => setSearchTerm(e.target.value)} 
+                                    />
+                                </div>
+                                <QrScannerDialog onScan={handleQrScan}>
+                                    <Button variant="outline" type="button" className="w-full sm:w-auto">
+                                        <QrCode className="mr-2 h-4 w-4" />
+                                        Escanear QR
+                                    </Button>
+                                </QrScannerDialog>
+                                <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
+                            </div>
+                        </form>
+                    </CardContent>
+                </Card>
+                <MaterialDetailDialog
+                    material={detailItem}
+                    open={!!detailItem}
+                    onOpenChange={(isOpen) => {
+                        if (!isOpen) setDetailItem(null);
+                    }}
+                />
+            </>
+        )
     }
 
     return (
