@@ -1,4 +1,3 @@
-
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -18,6 +17,11 @@ const materialsCollection = collection(db, 'materials');
 const getAllVehiclesCached = cache(async () => {
     const vehicles = await getVehicles();
     return new Map(vehicles.map(v => [v.id, v]));
+});
+
+const getAllVehiclesByNumberCached = cache(async () => {
+    const vehicles = await getVehicles();
+    return new Map(vehicles.map(v => [v.numeroMovil, v]));
 });
 
 // Helper to enrich material data with vehicle details
@@ -117,6 +121,52 @@ export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<v
     const details = docSnap.exists() ? { nombre: docSnap.data().nombre } : {};
     await deleteDoc(docRef);
     await logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id }, details);
+};
+
+export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Promise<void> => {
+    if (!items || items.length === 0) return;
+
+    const batch = writeBatch(db);
+    const vehicleMap = await getAllVehiclesByNumberCached();
+    const existingCodesQuery = await getDocs(query(materialsCollection));
+    const existingCodes = new Set(existingCodesQuery.docs.map(doc => doc.data().codigo));
+
+    for (const item of items) {
+        if (existingCodes.has(item.codigo)) continue;
+
+        const docRef = doc(materialsCollection);
+        let finalCuartel = item.cuartel;
+        let finalUbicacion = item.ubicacion;
+
+        // Si es vehículo, buscar el vehiculoId y el cuartel del móvil
+        if (item.ubicacion.type === 'vehiculo' && item.numero_movil) {
+            const v = vehicleMap.get(item.numero_movil);
+            if (v) {
+                finalUbicacion = { ...item.ubicacion, vehiculoId: v.id };
+                finalCuartel = v.cuartel;
+            }
+        }
+
+        const materialData = {
+            codigo: item.codigo,
+            nombre: item.nombre,
+            categoryId: item.categoryId || '',
+            subCategoryId: item.subCategoryId || '',
+            itemTypeId: item.itemTypeId || '',
+            caracteristicas: item.caracteristicas || '',
+            medida: item.medida || '',
+            estado: item.estado || 'En Servicio',
+            condicion: item.condicion || 'Bueno',
+            cuartel: finalCuartel,
+            ubicacion: finalUbicacion
+        };
+
+        batch.set(docRef, materialData);
+        existingCodes.add(item.codigo);
+    }
+
+    await batch.commit();
+    await logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
 };
 
 export const deleteAllMaterials = async (actor: LoggedInUser, vehicleId?: string): Promise<number> => {

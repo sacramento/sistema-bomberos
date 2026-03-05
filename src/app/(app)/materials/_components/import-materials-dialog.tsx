@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -23,8 +22,9 @@ import { FileText, Loader2, Upload, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const REQUIRED_HEADERS = [
-    'codigo', 'nombre', 'tipo', 'especialidad', 'cuartel', 'estado', 
-    'condicion', 'medida', 'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
+    'codigo', 'nombre', 'category_id', 'subcategory_id', 'item_type_id', 
+    'cuartel', 'estado', 'condicion', 'medida', 'ubicacion_tipo', 
+    'numero_movil', 'ubicacion_baulera', 'caracteristicas'
 ];
 
 export default function ImportMaterialsDialog({
@@ -88,17 +88,17 @@ export default function ImportMaterialsDialog({
             return {
                 codigo: row.codigo?.trim() || '', 
                 nombre: row.nombre?.trim() || '',
-                tipo: row.tipo?.trim().toUpperCase() || '',
-                especialidad: row.especialidad?.trim().toUpperCase() || '',
+                categoryId: row.category_id?.trim() || '',
+                subCategoryId: row.subcategory_id?.trim() || '',
+                itemTypeId: row.item_type_id?.trim() || '',
                 cuartel: row.cuartel?.trim() || '',
                 estado: row.estado?.trim() || 'En Servicio',
                 condicion: row.condicion?.trim() || 'Bueno',
-                // Normalizar medida: quitar espacios y pasar comas a puntos
                 medida: row.medida?.trim().replace(/\s/g, '').replace(',', '.') || '',
                 ubicacion: ubicacion,
                 caracteristicas: row.caracteristicas?.trim() || '',
                 numero_movil: row.numero_movil?.trim() || ''
-            } as Omit<Material, 'id' | 'vehiculo'> & { numero_movil?: string };
+            };
         });
         
         if (materialsToUpload.length === 0) {
@@ -110,7 +110,6 @@ export default function ImportMaterialsDialog({
             setLoading(false);
             return;
         }
-
 
         try {
           await batchAddMaterials(materialsToUpload, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
@@ -153,7 +152,7 @@ export default function ImportMaterialsDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
           <DialogDescription>
-            Configure su Excel con estos valores exactos para asegurar una carga exitosa.
+            Configure su Excel con la nueva jerarquía numérica.
           </DialogDescription>
         </DialogHeader>
         
@@ -164,35 +163,18 @@ export default function ImportMaterialsDialog({
                     <AlertTitle className="text-blue-800 font-bold">Encabezados Exactos (Fila 1)</AlertTitle>
                     <AlertDescription className="text-blue-700">
                         <code className="text-[10px] block bg-black/10 text-black p-2 rounded mt-2 overflow-x-auto whitespace-nowrap">
-                            codigo, nombre, tipo, especialidad, cuartel, estado, condicion, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
+                            codigo, nombre, category_id, subcategory_id, item_type_id, cuartel, estado, condicion, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
                         </code>
                     </AlertDescription>
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Valores Permitidos para Listas Desplegables:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-xs">
-                        <div>
-                            <p className="font-semibold text-primary">Estado:</p>
-                            <p>En Servicio, Fuera de Servicio</p>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-primary">Condición:</p>
-                            <p>Bueno, Regular, Malo</p>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-primary">Cuartel:</p>
-                            <p>Cuartel 1, Cuartel 2, Cuartel 3</p>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-primary">Ubicación Tipo:</p>
-                            <p>deposito, vehiculo</p>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-primary">Medida (Columna 'medida'):</p>
-                            <p className="text-red-600 font-bold">IMPORTANTE: Usar punto decimal.</p>
-                            <p>25mm, 38mm, 44.5mm, 63.5mm, 70mm</p>
-                        </div>
+                    <h4 className="font-bold mb-2">Valores para Jerarquía:</h4>
+                    <p className="text-xs mb-2">Use los códigos numéricos para las categorías:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
+                        <div><strong>category_id:</strong> 01, 02, 03... 10</div>
+                        <div><strong>subcategory_id:</strong> 01.1, 02.2...</div>
+                        <div><strong>item_type_id:</strong> 01.1.1, 02.2.1...</div>
                     </div>
                 </div>
 
