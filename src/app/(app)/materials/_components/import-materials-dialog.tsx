@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -21,6 +20,7 @@ import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload, Info } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/context/auth-context';
 
 const REQUIRED_HEADERS = [
     'codigo', 'nombre', 'category_id', 'subcategory_id', 'item_type_id', 
@@ -39,6 +39,7 @@ export default function ImportMaterialsDialog({
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -59,6 +60,11 @@ export default function ImportMaterialsDialog({
         variant: 'destructive',
       });
       return;
+    }
+
+    if (!user) {
+        toast({ title: 'Acceso denegado', description: 'Debe iniciar sesión para importar.', variant: 'destructive' });
+        return;
     }
 
     setLoading(true);
@@ -116,7 +122,7 @@ export default function ImportMaterialsDialog({
         }
 
         try {
-          await batchAddMaterials(materialsToUpload, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+          await batchAddMaterials(materialsToUpload, user);
           toast({
             title: '¡Éxito!',
             description: `${materialsToUpload.length} materiales han sido procesados e importados correctamente.`,
@@ -156,7 +162,7 @@ export default function ImportMaterialsDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
           <DialogDescription>
-            Prepare su Excel con los nuevos campos de marca, modelo y acople.
+            Prepare su Excel con los campos técnicos requeridos.
           </DialogDescription>
         </DialogHeader>
         
@@ -173,12 +179,11 @@ export default function ImportMaterialsDialog({
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Instrucciones para nuevos campos:</h4>
+                    <h4 className="font-bold mb-2">Instrucciones clave:</h4>
                     <ul className="list-disc pl-5 space-y-1 text-xs">
-                        <li><strong>marca / modelo:</strong> Texto libre.</li>
+                        <li><strong>medida:</strong> Use punto para decimales (ej: 44.5mm).</li>
                         <li><strong>acople:</strong> Storz, NH, QC, DSP, Withworth, Otro.</li>
-                        <li><strong>medida:</strong> 25mm, 38mm, 44.5mm, 63.5mm, 70mm (use punto para decimales).</li>
-                        <li><strong>codigo:</strong> Si lo deja vacío, el sistema lo generará automáticamente siguiendo la jerarquía.</li>
+                        <li><strong>IDs Categoría:</strong> Use los IDs numéricos (ej: category_id: 01, subcategory_id: 01.5, item_type_id: 01.5.3).</li>
                     </ul>
                 </div>
 

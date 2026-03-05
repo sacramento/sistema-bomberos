@@ -1,4 +1,3 @@
-
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -71,7 +70,7 @@ export const getMaterials = async (): Promise<Material[]> => {
 }
 
 /**
- * Generates the next sequential number for a given code prefix (XX-XX-).
+ * Generates the next sequential number for a given code prefix.
  */
 export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
     const q = query(materialsCollection, where("codigo", ">=", prefix), where("codigo", "<=", prefix + '\uf8ff'));
@@ -80,7 +79,6 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
     let maxNum = 0;
     querySnapshot.forEach(doc => {
         const code = doc.data().codigo as string;
-        // Prefix is usually like "02-21-"
         const numPart = code.substring(prefix.length);
         const num = parseInt(numPart);
         if (!isNaN(num) && num > maxNum) {
@@ -142,7 +140,6 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
         let finalCuartel = item.cuartel;
         let finalUbicacion = item.ubicacion;
 
-        // Si es vehículo, buscar el vehiculoId y el cuartel del móvil
         if (item.ubicacion.type === 'vehiculo' && item.numero_movil) {
             const v = vehicleMap.get(item.numero_movil);
             if (v) {
