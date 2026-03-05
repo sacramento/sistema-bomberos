@@ -3,43 +3,57 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Download, Loader2, Copy, Upload } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Specialization, Vehicle, Firefighter } from "@/lib/types";
-import { getMaterials, deleteMaterial, deleteAllMaterials } from "@/services/materials.service";
+import { Material, Vehicle } from "@/lib/types";
+import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
-import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import AddMaterialDialog from "./_components/add-material-dialog";
+import EditMaterialDialog from "./_components/edit-material-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import MaterialDetailDialog from "./_components/material-detail-dialog";
 import ImportMaterialsDialog from "./_components/import-materials-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
-    const [cloningMaterial, setCloningMaterial] = useState<Material | null>(null);
-    const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
     
     const { toast } = useToast();
-    const { getActiveRole } = useAuth();
+    const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
-    const canManageGlobally = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
+    const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
+    const isEncargado = activeRole === 'Encargado';
+    
+    // De qué vehículos es encargado de materiales el usuario logueado
+    const managedVehicleIds = useMemo(() => {
+        if (!user || !isEncargado) return new Set<string>();
+        return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(user.id)).map(v => v.id));
+    }, [user, vehicles, isEncargado]);
+
+    const canAdd = isPrivileged || (isEncargado && managedVehicleIds.size > 0);
 
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            const materialsData = await getMaterials();
+            const [materialsData, vehiclesData] = await Promise.all([
+                getMaterials(),
+                getVehicles()
+            ]);
             setMaterials(materialsData);
+            setVehicles(vehiclesData);
         } catch (error) {
              toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
         } finally {
@@ -55,6 +69,17 @@ export default function MaterialsPage() {
     const handleDataChange = () => {
         fetchAllData();
     };
+
+    const handleDelete = async (materialId: string) => {
+        if (!user) return;
+        try {
+            await deleteMaterial(materialId, user);
+            toast({ title: "Material eliminado" });
+            fetchAllData();
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        }
+    }
 
     const handleSearch = (code: string) => {
         if (!code) {
@@ -84,25 +109,39 @@ export default function MaterialsPage() {
         handleSearch(code);
     };
 
+    const canEditMaterial = (m: Material) => {
+        if (isPrivileged) return true;
+        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
+            return true;
+        }
+        return false;
+    }
+
+    const canDeleteMaterial = (m: Material) => {
+        return isPrivileged; // Solo administradores pueden borrar definitivamente
+    }
+
     return (
         <>
-            <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos del cuartel.">
-                {canManageGlobally && (
-                    <div className='flex flex-col sm:flex-row gap-2'>
+            <PageHeader title="Inventario de Materiales" description="Busque, filtre y gestione el inventario de materiales y equipos.">
+                <div className='flex flex-col sm:flex-row gap-2'>
+                    {isPrivileged && (
                         <ImportMaterialsDialog onImportSuccess={handleDataChange}>
                              <Button variant="outline" className="w-full">
                                 <Upload className="mr-2 h-4 w-4" />
                                 Importar CSV
                             </Button>
                         </ImportMaterialsDialog>
+                    )}
+                    {canAdd && (
                         <AddMaterialDialog onMaterialAdded={handleDataChange}>
                             <Button className="w-full">
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Agregar Material
                             </Button>
                         </AddMaterialDialog>
-                    </div>
-                )}
+                    )}
+                </div>
             </PageHeader>
             
              <Card>
@@ -137,28 +176,90 @@ export default function MaterialsPage() {
                 </CardContent>
             </Card>
 
-            <div className="mt-6 text-center text-muted-foreground py-16 border-2 border-dashed rounded-lg">
-                <p>Realice una búsqueda o escanee un código QR para ver los detalles de un material.</p>
-            </div>
-            
-            <AddMaterialDialog 
-                open={isCloneDialogOpen}
-                onOpenChange={setIsCloneDialogOpen}
-                onMaterialAdded={() => {
-                    handleDataChange();
-                    setIsCloneDialogOpen(false); // Close dialog on success
-                }}
-                initialData={cloningMaterial}
-            />
+            <Card className="mt-6">
+                <CardHeader>
+                    <CardTitle className="text-lg">Equipamiento Reciente / Filtrado</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Código</TableHead>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Ubicación</TableHead>
+                                <TableHead>Estado</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                ))
+                            ) : materials.slice(0, 20).map(m => (
+                                <TableRow key={m.id}>
+                                    <TableCell className="font-mono font-bold text-xs">{m.codigo}</TableCell>
+                                    <TableCell className="font-medium">{m.nombre}</TableCell>
+                                    <TableCell className="text-xs">
+                                        {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito ${m.cuartel}`}
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={m.estado === 'En Servicio' ? 'bg-green-600' : ''}>
+                                            {m.estado}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <AlertDialog>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                    <DropdownMenuItem onClick={() => setDetailItem(m)}>Ver Detalles</DropdownMenuItem>
+                                                    {canEditMaterial(m) && (
+                                                        <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
+                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                                                <Edit className="mr-2 h-4 w-4"/> Editar
+                                                            </DropdownMenuItem>
+                                                        </EditMaterialDialog>
+                                                    )}
+                                                    {canDeleteMaterial(m) && (
+                                                        <>
+                                                            <DropdownMenuSeparator />
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                    <Trash2 className="mr-2 h-4 w-4"/> Eliminar
+                                                                </DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                    <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente.</AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={() => handleDelete(m.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
             
             <MaterialDetailDialog
                 material={detailItem}
                 open={!!detailItem}
                 onOpenChange={(isOpen) => {
-                    if (!isOpen) {
-                        setDetailItem(null);
-                        setSearchTerm(''); // Clear search term after closing dialog
-                    }
+                    if (!isOpen) setDetailItem(null);
                 }}
             />
         </>

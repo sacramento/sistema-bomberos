@@ -15,6 +15,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2 } from "lucide-react";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
+import { useAuth } from "@/context/auth-context";
+import { usePathname } from "next/navigation";
 
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
@@ -31,9 +33,14 @@ const vehicleCompartments = [
 export default function EditMaterialDialog({ children, material, onMaterialUpdated }: { children: React.ReactNode, material: Material, onMaterialUpdated: () => void }) {
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
     const [loading, setLoading] = useState(false);
     const [generatingCode, setGeneratingCode] = useState(false);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+
+    const activeRole = getActiveRole(pathname);
+    const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
 
     // Form state
     const [codigo, setCodigo] = useState('');
@@ -88,24 +95,12 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     }, [open, material]);
 
     const handleAutoGenerateCode = async () => {
-        if (!categoryId || !subCategoryId || !itemTypeId) {
-            toast({ title: "Faltan datos", description: "Seleccione Categoría, Subcategoría y Tipo de Ítem." });
-            return;
-        }
-
+        if (!categoryId || !subCategoryId || !itemTypeId) return;
         setGeneratingCode(true);
         try {
-            // New logic: Cat(2) + Sub(1) + Item(1) = 4 digits prefix
-            const cat = categoryId; // "01"
-            const sub = subCategoryId.split('.').pop(); // "5"
-            const item = itemTypeId.split('.').pop(); // "3"
-            const prefix = `${cat}${sub}${item}`; // "0153"
-            
+            const prefix = `${categoryId}${subCategoryId.split('.').pop()}${itemTypeId.split('.').pop()}`;
             const sequence = await getNextMaterialSequence(prefix);
-            const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
-            
-            setCodigo(formattedCode);
-            toast({ title: "Código generado", description: formattedCode });
+            setCodigo(`${prefix}${sequence.toString().padStart(3, '0')}`);
         } catch (error) {
             toast({ variant: "destructive", title: "Error" });
         } finally {
@@ -126,11 +121,6 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        if (!codigo || !nombre || !categoryId || !subCategoryId || !itemTypeId || !estado || !condicion || !finalCuartel) {
-            toast({ variant: "destructive", title: "Campos incompletos" });
-            return;
-        }
-
         setLoading(true);
         try {
             const normalizedMedida = medida.trim().replace(',', '.');
@@ -149,12 +139,12 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 ubicacion, 
                 cuartel: finalCuartel as any, 
                 condicion 
-            }, null);
-            toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
+            }, user);
+            toast({ title: "¡Éxito!", description: "Material actualizado." });
             onMaterialUpdated();
             setOpen(false);
         } catch (error: any) {
-            toast({ variant: "destructive", title: "Error al actualizar", description: error.message });
+            toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
             setLoading(false);
         }
@@ -168,22 +158,22 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Editar Material</DialogTitle>
-                    <DialogDescription>Modifique la clasificación y ubicación del equipo.</DialogDescription>
+                    <DialogDescription>Modifique las características técnicas o el estado operativo.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2 col-span-full">
-                            <Label>Clasificación (Jerarquía)</Label>
+                        <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
+                            <Label className="text-xs font-bold">Clasificación</Label>
                             <div className="grid grid-cols-1 gap-2">
-                                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
+                                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }} disabled={!isPrivileged}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
                                     <SelectContent>{MATERIAL_CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}</SelectContent>
                                 </Select>
-                                <Select value={subCategoryId} onValueChange={(v) => { setSubCategoryId(v); setItemTypeId(''); }} disabled={!categoryId}>
+                                <Select value={subCategoryId} onValueChange={(v) => { setSubCategoryId(v); setItemTypeId(''); }} disabled={!isPrivileged || !categoryId}>
                                     <SelectTrigger><SelectValue placeholder="2. Subcategoría" /></SelectTrigger>
                                     <SelectContent>{subCategories.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
                                 </Select>
-                                <Select value={itemTypeId} onValueChange={setItemTypeId} disabled={!subCategoryId}>
+                                <Select value={itemTypeId} onValueChange={setItemTypeId} disabled={!isPrivileged || !subCategoryId}>
                                     <SelectTrigger><SelectValue placeholder="3. Tipo de Ítem" /></SelectTrigger>
                                     <SelectContent>{itemTypes.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent>
                                 </Select>
@@ -191,15 +181,17 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="codigo-edit">Código Único</Label>
+                            <Label htmlFor="codigo-edit">Código</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} required className="font-mono" />
-                                <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId} title="Auto-generar">
-                                    {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
-                                </Button>
+                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} required disabled={!isPrivileged} />
+                                {isPrivileged && (
+                                    <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode}>
+                                        <Sparkles className="h-4 w-4 text-primary" />
+                                    </Button>
+                                )}
                             </div>
                         </div>
-                        <div className="space-y-2"><Label htmlFor="nombre-edit">Nombre del Equipo</Label><Input id="nombre-edit" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
+                        <div className="space-y-2"><Label htmlFor="nombre-edit">Nombre</Label><Input id="nombre-edit" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         
                         <div className="space-y-2"><Label htmlFor="marca-edit">Marca</Label><Input id="marca-edit" value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
                         <div className="space-y-2"><Label htmlFor="modelo-edit">Modelo</Label><Input id="modelo-edit" value={modelo} onChange={(e) => setModelo(e.target.value)} /></div>
@@ -207,19 +199,19 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         {needsTechnicalDetails && (
                             <>
                                 <div className="space-y-2">
-                                    <Label>Tipo de Acople</Label>
+                                    <Label>Acople</Label>
                                     <Select value={acople} onValueChange={(v) => setAcople(v as any)}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                        <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Diámetro / Medida</Label>
+                                    <Label>Medida</Label>
                                     <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
+                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra...</SelectItem></SelectContent>
                                     </Select>
-                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
+                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} />}
                                 </div>
                             </>
                         )}
@@ -229,31 +221,33 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
-                        <Label>Ubicación</Label>
-                        <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)}>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-deposito-edit" /><Label htmlFor="r-deposito-edit">En Depósito</Label></div>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-vehiculo-edit" /><Label htmlFor="r-vehiculo-edit">En Vehículo</Label></div>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación</Label>
+                        <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)} disabled={!isPrivileged}>
+                            {isPrivileged && <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>}
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>
                         </RadioGroup>
                         
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
-                                <Label>Seleccionar Cuartel</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)}>
+                                <Label>Cuartel</Label>
+                                <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)} disabled={!isPrivileged}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select></div>
-                                <div className="space-y-2"><Label>Lugar</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId} disabled={!isPrivileged}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2"><Label>Baulera</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
                             </div>
                         )}
                     </div>
 
-                    <div className="space-y-2"><Label htmlFor="caracteristicas-edit">Características</Label><Textarea id="caracteristicas-edit" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Características</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
-                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Cambios"}</Button></DialogFooter>
+                <DialogFooter className="border-t pt-4">
+                    <Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Cambios"}</Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

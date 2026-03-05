@@ -10,7 +10,7 @@ import { getVehicleById } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle, List, History, FileText, Construction } from "lucide-react";
+import { ArrowLeft, Edit, Trash2, Gauge, Calendar, Droplets, MapPin, Wrench, Shield, Truck, UserCircle, MessageSquare, PlusCircle, List, History, FileText, Construction, Package } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import EditVehicleDialog from "../_components/edit-vehicle-dialog";
@@ -65,11 +65,14 @@ export default function VehicleDetailPage() {
     const activeRole = getActiveRole(`/vehicles/${vehicleId}`);
     
     const canManage = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
-    const canEdit = useMemo(() => {
-      if (canManage) return true;
-      if (activeRole === 'Encargado Móvil' && user?.id && vehicle?.encargadoIds.includes(user.id)) return true;
-      return false;
-    }, [canManage, activeRole, user, vehicle]);
+    
+    const isMantenimientoEncargado = useMemo(() => 
+        user?.id && vehicle?.encargadoIds.includes(user.id), 
+    [user, vehicle]);
+
+    const canEditFicha = useMemo(() => canManage, [canManage]);
+    
+    const canLogMaintenance = useMemo(() => canManage || isMantenimientoEncargado, [canManage, isMantenimientoEncargado]);
     
     const canLogRepairs = useMemo(() => ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'].includes(activeRole), [activeRole]);
 
@@ -81,7 +84,7 @@ export default function VehicleDetailPage() {
                 if (data) {
                     setVehicle(data);
                 } else {
-                    toast({ title: "Error", description: "No se encontró el móvil solicitado.", variant: "destructive" });
+                    toast({ title: "Error", description: "No se encontró el móvil.", variant: "destructive" });
                     router.push('/vehicles');
                 }
             } catch (error) {
@@ -131,9 +134,12 @@ export default function VehicleDetailPage() {
 
     if (!vehicle || !user) return null;
     
-    const activeEncargados = vehicle.encargados?.filter(e => e.status === 'Active' || e.status === 'Auxiliar') || [];
-    const encargadosDisplay = activeEncargados.length > 0
-        ? activeEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+    const maintenanceEncargadosDisplay = vehicle.materialEncargados?.length 
+        ? vehicle.materialEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+        : 'Sin Asignar';
+
+    const materialEncargadosDisplay = vehicle.materialEncargados?.length 
+        ? vehicle.materialEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
         : 'Sin Asignar';
 
     return (
@@ -145,7 +151,7 @@ export default function VehicleDetailPage() {
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Volver
                         </Button>
-                        {canEdit && (
+                        {canEditFicha && (
                             <EditVehicleDialog vehicle={vehicle} onVehicleUpdated={handleDataChange}>
                                 <Button variant="secondary"><Edit className="mr-2 h-4 w-4" />Editar Ficha</Button>
                             </EditVehicleDialog>
@@ -160,7 +166,7 @@ export default function VehicleDetailPage() {
                                 </Button>
                             </AddRepairRecordDialog>
                         )}
-                        {canEdit && (
+                        {canLogMaintenance && (
                             <AddMaintenanceRecordDialog vehicle={vehicle} onRecordAdded={handleDataChange}>
                                 <Button>
                                     <PlusCircle className="mr-2" />
@@ -188,14 +194,13 @@ export default function VehicleDetailPage() {
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                 <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
-                                <DetailItem icon={Calendar} label="Año" value={vehicle.ano} />
                                 <DetailItem icon={FileText} label="Dominio" value={vehicle.dominio} />
                                 <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
-                                <DetailItem icon={Wrench} label="Tracción" value={vehicle.traccion} />
                                 <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
                                 <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
                                 <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
-                                <DetailItem icon={UserCircle} label="Encargado(s)" value={encargadosDisplay} />
+                                <DetailItem icon={UserCircle} label="Encargado Mecánica" value={maintenanceEncargadosDisplay} />
+                                <DetailItem icon={Package} label="Encargado Materiales" value={materialEncargadosDisplay} />
                             </div>
                             <Separator className="my-6" />
                             <div>
@@ -217,7 +222,7 @@ export default function VehicleDetailPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span> y todo su historial de mantenimiento.
+                                                        Esta acción es irreversible. Se eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span> y todo su historial.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -245,7 +250,7 @@ export default function VehicleDetailPage() {
                     </TabsContent>
                 )}
                 <TabsContent value="historial">
-                    <MaintenanceHistory vehicleId={vehicleId} canEdit={canEdit} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
+                    <MaintenanceHistory vehicleId={vehicleId} canEdit={canLogMaintenance} refreshSignal={refreshSignal} onDataChange={handleDataChange} />
                 </TabsContent>
                 <TabsContent value="reparaciones">
                     <RepairHistory vehicleId={vehicleId} canManage={canManage} refreshSignal={refreshSignal} actor={user} />

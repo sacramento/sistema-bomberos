@@ -31,6 +31,7 @@ const docToVehicle = async (
     const data = docSnap.data();
     
     const encargados = (data.encargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
+    const materialEncargados = (data.materialEncargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     const maintenanceItems = (data.maintenanceItemIds || []).map((id: string) => maintenanceItemMap.get(id)).filter(Boolean) as MaintenanceItem[];
 
     const vehicle: Vehicle = {
@@ -46,10 +47,12 @@ const docToVehicle = async (
         capacidadAgua: data.capacidadAgua,
         tipoVehiculo: data.tipoVehiculo,
         traccion: data.traccion,
-        encargadoIds: data.encargadoIds,
+        encargadoIds: data.encargadoIds || [],
+        materialEncargadoIds: data.materialEncargadoIds || [],
         observaciones: data.observaciones,
         maintenanceItemIds: data.maintenanceItemIds || [],
         encargados,
+        materialEncargados,
         maintenanceItems,
     };
     return vehicle;
@@ -59,7 +62,6 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
     const q = query(vehiclesCollection, orderBy('numeroMovil', 'asc'));
     const querySnapshot = await getDocs(q);
 
-    // Fetch dependent data inside the function
     const [firefighterMap, maintenanceItems] = await Promise.all([
         getAllFirefightersCached(),
         getMaintenanceItems()
@@ -87,7 +89,7 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     return null;
 }
 
-export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
+export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
     const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
     const querySnapshot = await getDocs(q);
     if (!querySnapshot.empty) {
@@ -97,13 +99,14 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
     const dataToSave = { 
         ...vehicleData,
         maintenanceItemIds: vehicleData.maintenanceItemIds || [],
+        materialEncargadoIds: vehicleData.materialEncargadoIds || [],
      };
     const docRef = await addDoc(vehiclesCollection, dataToSave);
     await logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, dataToSave);
     return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
+export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
 
     if (vehicleData.numeroMovil) {

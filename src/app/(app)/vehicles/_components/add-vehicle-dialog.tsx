@@ -113,7 +113,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   
   // Form State
-  const [formData, setFormData] = useState<Omit<Vehicle, 'id' | 'encargados'>>({
+  const [formData, setFormData] = useState<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>({
     numeroMovil: '',
     dominio: '',
     marca: '',
@@ -126,6 +126,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     tipoVehiculo: 'Liviana',
     traccion: '4x4',
     encargadoIds: [],
+    materialEncargadoIds: [],
     observaciones: ''
   });
 
@@ -162,6 +163,10 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     setFormData(prev => ({ ...prev, encargadoIds: encargados.map(f => f.id) }));
   }
 
+  const handleMaterialEncargadosChange = (encargados: Firefighter[]) => {
+    setFormData(prev => ({ ...prev, materialEncargadoIds: encargados.map(f => f.id) }));
+  }
+
   const resetForm = useCallback(() => {
     setFormData({
         numeroMovil: '',
@@ -176,6 +181,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         tipoVehiculo: 'Liviana',
         traccion: '4x4',
         encargadoIds: [],
+        materialEncargadoIds: [],
         observaciones: ''
     });
   }, []);
@@ -189,21 +195,20 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo || formData.encargadoIds.length === 0) {
-        toast({ title: "Error", description: "Móvil, dominio, marca, modelo y al menos un encargado son campos obligatorios.", variant: "destructive" });
+    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo) {
+        toast({ title: "Error", description: "Móvil, dominio, marca y modelo son campos obligatorios.", variant: "destructive" });
         return;
     }
     
     setLoading(true);
 
     try {
-      await addVehicle(formData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+      await addVehicle(formData, null);
       toast({ title: "¡Éxito!", description: "El nuevo móvil ha sido agregado." });
       onVehicleAdded();
       resetForm();
       setOpen(false);
     } catch (error: any) {
-      console.error(error);
       toast({ title: "Error", description: error.message || "No se pudo agregar el móvil.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -220,7 +225,6 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
-            {/* Column 1 */}
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="numeroMovil">Número de Móvil</Label>
@@ -238,16 +242,11 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     <Label htmlFor="modelo">Modelo</Label>
                     <Input id="modelo" value={formData.modelo} onChange={handleInputChange} required />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="ano">Año</Label>
-                    <Input id="ano" type="number" value={formData.ano} onChange={handleInputChange} />
-                </div>
             </div>
-            {/* Column 2 */}
             <div className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="kilometraje">Kilometraje</Label>
-                    <Input id="kilometraje" type="text" inputMode="numeric" pattern="[0-9]*" value={formData.kilometraje || ''} onChange={e => setFormData(prev => ({ ...prev, kilometraje: Number(e.target.value.replace(/\D/g, '')) }))} />
+                    <Input id="kilometraje" type="number" value={formData.kilometraje || ''} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="cuartel">Cuartel</Label>
@@ -257,14 +256,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="especialidad">Especialidad</Label>
-                    <Select value={formData.especialidad} onValueChange={(v) => handleSelectChange('especialidad', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="encargadoIds">Encargado(s)</Label>
+                    <Label>Encargado de Mantenimiento</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={activeFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
@@ -272,12 +264,20 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                         firefighters={activeFirefighters}
                     />
                 </div>
+                 <div className="space-y-2">
+                    <Label>Encargado de Materiales</Label>
+                    <MultiFirefighterSelect
+                        title="encargados de inventario"
+                        selected={activeFirefighters.filter(f => formData.materialEncargadoIds.includes(f.id))}
+                        onSelectedChange={handleMaterialEncargadosChange}
+                        firefighters={activeFirefighters}
+                    />
+                </div>
             </div>
-            {/* Column 3 */}
             <div className="space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="capacidadAgua">Capacidad de Agua (L)</Label>
-                    <Input id="capacidadAgua" type="text" inputMode="numeric" pattern="[0-9]*" value={formData.capacidadAgua || ''} onChange={e => setFormData(prev => ({ ...prev, capacidadAgua: Number(e.target.value.replace(/\D/g, '')) }))} />
+                    <Input id="capacidadAgua" type="number" value={formData.capacidadAgua || ''} onChange={handleInputChange} />
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
@@ -296,12 +296,12 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
             </div>
             <div className="space-y-2 md:col-span-2 lg:col-span-3">
                 <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea id="observaciones" value={formData.observaciones} onChange={handleInputChange} placeholder="Anotaciones sobre mantenimiento, estado general, etc." />
+                <Textarea id="observaciones" value={formData.observaciones} onChange={handleInputChange} />
             </div>
           </div>
         </form>
          <DialogFooter className="pt-4 border-t">
-            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>{loading ? 'Guardando...' : 'Guardar Móvil'}</Button>
+            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>Guardar Móvil</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
