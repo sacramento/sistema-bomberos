@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -43,6 +44,9 @@ const docToMaterial = async (
         categoryId: data.categoryId || '',
         subCategoryId: data.subCategoryId || '',
         itemTypeId: data.itemTypeId || '',
+        marca: data.marca,
+        modelo: data.modelo,
+        acople: data.acople,
         caracteristicas: data.caracteristicas,
         medida: data.medida,
         ubicacion: data.ubicacion,
@@ -153,6 +157,9 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
             categoryId: item.categoryId || '',
             subCategoryId: item.subCategoryId || '',
             itemTypeId: item.itemTypeId || '',
+            marca: item.marca || '',
+            modelo: item.modelo || '',
+            acople: item.acople || '',
             caracteristicas: item.caracteristicas || '',
             medida: item.medida || '',
             estado: item.estado || 'En Servicio',

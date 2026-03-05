@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -23,8 +24,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 const REQUIRED_HEADERS = [
     'codigo', 'nombre', 'category_id', 'subcategory_id', 'item_type_id', 
-    'cuartel', 'estado', 'condicion', 'medida', 'ubicacion_tipo', 
-    'numero_movil', 'ubicacion_baulera', 'caracteristicas'
+    'cuartel', 'estado', 'condicion', 'marca', 'modelo', 'acople', 'medida', 
+    'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
 ];
 
 export default function ImportMaterialsDialog({
@@ -91,6 +92,9 @@ export default function ImportMaterialsDialog({
                 categoryId: row.category_id?.trim() || '',
                 subCategoryId: row.subcategory_id?.trim() || '',
                 itemTypeId: row.item_type_id?.trim() || '',
+                marca: row.marca?.trim() || '',
+                modelo: row.modelo?.trim() || '',
+                acople: row.acople?.trim() || '',
                 cuartel: row.cuartel?.trim() || '',
                 estado: row.estado?.trim() || 'En Servicio',
                 condicion: row.condicion?.trim() || 'Bueno',
@@ -152,7 +156,7 @@ export default function ImportMaterialsDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
           <DialogDescription>
-            Configure su Excel con la nueva jerarquía numérica.
+            Prepare su Excel con los nuevos campos de marca, modelo y acople.
           </DialogDescription>
         </DialogHeader>
         
@@ -160,22 +164,22 @@ export default function ImportMaterialsDialog({
             <div className="space-y-4 py-4 text-sm">
                 <Alert className="bg-blue-50 border-blue-200">
                     <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800 font-bold">Encabezados Exactos (Fila 1)</AlertTitle>
+                    <AlertTitle className="text-blue-800 font-bold">Encabezados Requeridos</AlertTitle>
                     <AlertDescription className="text-blue-700">
                         <code className="text-[10px] block bg-black/10 text-black p-2 rounded mt-2 overflow-x-auto whitespace-nowrap">
-                            codigo, nombre, category_id, subcategory_id, item_type_id, cuartel, estado, condicion, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
+                            codigo, nombre, category_id, subcategory_id, item_type_id, cuartel, estado, condicion, marca, modelo, acople, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
                         </code>
                     </AlertDescription>
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Valores para Jerarquía:</h4>
-                    <p className="text-xs mb-2">Use los códigos numéricos para las categorías:</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-[11px]">
-                        <div><strong>category_id:</strong> 01, 02, 03... 10</div>
-                        <div><strong>subcategory_id:</strong> 01.1, 02.2...</div>
-                        <div><strong>item_type_id:</strong> 01.1.1, 02.2.1...</div>
-                    </div>
+                    <h4 className="font-bold mb-2">Instrucciones para nuevos campos:</h4>
+                    <ul className="list-disc pl-5 space-y-1 text-xs">
+                        <li><strong>marca / modelo:</strong> Texto libre.</li>
+                        <li><strong>acople:</strong> Storz, NH, QC, DSP, Withworth, Otro.</li>
+                        <li><strong>medida:</strong> 25mm, 38mm, 44.5mm, 63.5mm, 70mm (use punto para decimales).</li>
+                        <li><strong>codigo:</strong> Si lo deja vacío, el sistema lo generará automáticamente siguiendo la jerarquía.</li>
+                    </ul>
                 </div>
 
                 <div className="grid w-full items-center gap-1.5 pt-2">

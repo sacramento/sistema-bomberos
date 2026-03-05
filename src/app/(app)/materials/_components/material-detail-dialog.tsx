@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Material } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Warehouse, Package, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse, Ruler, Layers } from 'lucide-react';
+import { Truck, Warehouse, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse, Ruler, Layers, Settings2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { MATERIAL_CATEGORIES } from '@/app/lib/constants/material-categories';
@@ -78,8 +78,22 @@ export default function MaterialDetailDialog({ material, open, onOpenChange }: {
                 </div>
             } />
             
-            {material.medida && <DetailItem icon={Ruler} label="Medida / Diámetro" value={material.medida} />}
+            <Separator />
+
+            <div className="grid grid-cols-2 gap-4">
+                <DetailItem icon={Tag} label="Marca" value={material.marca || 'N/A'} />
+                <DetailItem icon={Tag} label="Modelo" value={material.modelo || 'N/A'} />
+            </div>
+
+            {(material.acople || material.medida) && (
+                <div className="grid grid-cols-2 gap-4">
+                    {material.acople && <DetailItem icon={Settings2} label="Acople" value={<Badge variant="secondary">{material.acople}</Badge>} />}
+                    {material.medida && <DetailItem icon={Ruler} label="Medida" value={material.medida} />}
+                </div>
+            )}
             
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4">
                 <DetailItem icon={Shield} label="Estado" value={getStatusBadge(material.estado)} />
                 <DetailItem icon={HeartPulse} label="Condición" value={getCondicionBadge(material.condicion)} />
@@ -90,7 +104,7 @@ export default function MaterialDetailDialog({ material, open, onOpenChange }: {
             {material.caracteristicas && (
               <>
                 <Separator />
-                <DetailItem icon={FileText} label="Características" value={<p className="text-sm whitespace-pre-wrap">{material.caracteristicas}</p>} />
+                <DetailItem icon={FileText} label="Notas Adicionales" value={<p className="text-sm whitespace-pre-wrap text-muted-foreground">{material.caracteristicas}</p>} />
               </>
             )}
         </div>

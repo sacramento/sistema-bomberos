@@ -20,6 +20,7 @@ const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
+const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
 
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
@@ -51,6 +52,9 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [categoryId, setCategoryId] = useState('');
     const [subCategoryId, setSubCategoryId] = useState('');
     const [itemTypeId, setItemTypeId] = useState('');
+    const [marca, setMarca] = useState('');
+    const [modelo, setModelo] = useState('');
+    const [acople, setAcople] = useState<Material['acople'] | ''>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
     const [showCustomMedida, setShowCustomMedida] = useState(false);
@@ -71,6 +75,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
     const resetForm = useCallback(() => {
         setCodigo(''); setNombre(''); setCategoryId(''); setSubCategoryId(''); setItemTypeId('');
+        setMarca(''); setModelo(''); setAcople('');
         setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
         setLocationType('deposito'); setVehiculoId(''); setBaulera(''); setShowCustomMedida(false);
     }, []);
@@ -83,6 +88,9 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 setCategoryId(initialData.categoryId || '');
                 setSubCategoryId(initialData.subCategoryId || '');
                 setItemTypeId(initialData.itemTypeId || '');
+                setMarca(initialData.marca || '');
+                setModelo(initialData.modelo || '');
+                setAcople(initialData.acople || '');
                 setCaracteristicas(initialData.caracteristicas || '');
                 setMedida(initialData.medida || '');
                 setEstado(initialData.estado);
@@ -106,7 +114,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
         setGeneratingCode(true);
         try {
-            // New prefix format: "02-21-"
             const cat = categoryId;
             const sub = subCategoryId.split('.')[1] || subCategoryId;
             const prefix = `${cat}-${sub}-`;
@@ -149,6 +156,9 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 categoryId, 
                 subCategoryId, 
                 itemTypeId, 
+                marca,
+                modelo,
+                acople: acople === '' ? undefined : acople as any,
                 caracteristicas, 
                 medida: medida.trim().replace(',', '.'), 
                 estado, 
@@ -166,7 +176,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
         }
     };
 
-    const isMedidaType = categoryId === '02' && subCategoryId === '02.2'; // Mangueras
+    const needsTechnicalDetails = categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2'); // Lanzas y Mangueras
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -205,23 +215,33 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                                 </Button>
                             </div>
                         </div>
-                        <div className="space-y-2"><Label htmlFor="nombre">Nombre del Equipo</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Manguera de 38mm Expansiva" /></div>
+                        <div className="space-y-2"><Label htmlFor="nombre">Nombre del Equipo</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Lanza de 38mm" /></div>
                         
-                        {isMedidaType && (
-                            <div className="space-y-2">
-                                <Label>Diámetro / Medida</Label>
-                                <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
-                                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                    <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
-                                </Select>
-                            </div>
-                        )}
-                        {isMedidaType && showCustomMedida && (
-                            <div className="space-y-2"><Label>Especificar Medida</Label><Input value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" /></div>
+                        <div className="space-y-2"><Label htmlFor="marca">Marca</Label><Input id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} placeholder="Ej: Task Force Tips" /></div>
+                        <div className="space-y-2"><Label htmlFor="modelo">Modelo</Label><Input id="modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} placeholder="Ej: G-Force" /></div>
+
+                        {needsTechnicalDetails && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label>Tipo de Acople</Label>
+                                    <Select value={acople} onValueChange={(v) => setAcople(v as any)}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                        <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Diámetro / Medida</Label>
+                                    <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
+                                    </Select>
+                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
+                                </div>
+                            </>
                         )}
 
                         <div className="space-y-2"><Label>Estado Operativo</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Condición Física</Label><Select value={condicion} onValueChange={(v) => setCondition(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condición Física</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
@@ -247,7 +267,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                         )}
                     </div>
 
-                    <div className="space-y-2"><Label htmlFor="caracteristicas">Características Técnicas</Label><Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} placeholder="Modelo, N/S, vencimientos, etc." /></div>
+                    <div className="space-y-2"><Label htmlFor="caracteristicas">Características Técnicas</Label><Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} placeholder="Observaciones adicionales, vencimientos, etc." /></div>
                 </form>
                 <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Material"}</Button></DialogFooter>
             </DialogContent>
