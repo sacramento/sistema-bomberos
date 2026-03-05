@@ -88,18 +88,22 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     }, [open, material]);
 
     const handleAutoGenerateCode = async () => {
-        if (!categoryId || !subCategoryId) {
-            toast({ title: "Faltan datos", description: "Seleccione Categoría y Subcategoría." });
+        if (!categoryId || !subCategoryId || !itemTypeId) {
+            toast({ title: "Faltan datos", description: "Seleccione Categoría, Subcategoría y Tipo de Ítem." });
             return;
         }
 
         setGeneratingCode(true);
         try {
-            const cat = categoryId;
-            const sub = subCategoryId.split('.')[1] || subCategoryId;
-            const prefix = `${cat}-${sub}-`;
+            // New logic: Cat(2) + Sub(1) + Item(1) = 4 digits prefix
+            const cat = categoryId; // "01"
+            const sub = subCategoryId.split('.').pop(); // "5"
+            const item = itemTypeId.split('.').pop(); // "3"
+            const prefix = `${cat}${sub}${item}`; // "0153"
+            
             const sequence = await getNextMaterialSequence(prefix);
             const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
+            
             setCodigo(formattedCode);
             toast({ title: "Código generado", description: formattedCode });
         } catch (error) {
@@ -129,6 +133,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
         setLoading(true);
         try {
+            const normalizedMedida = medida.trim().replace(',', '.');
             await updateMaterial(material.id, { 
                 codigo, 
                 nombre, 
@@ -139,7 +144,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 modelo,
                 acople: acople === '' ? undefined : acople as any,
                 caracteristicas, 
-                medida: medida.trim().replace(',', '.'), 
+                medida: normalizedMedida, 
                 estado, 
                 ubicacion, 
                 cuartel: finalCuartel as any, 
@@ -189,7 +194,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                             <Label htmlFor="codigo-edit">Código Único</Label>
                             <div className="flex gap-2">
                                 <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} required className="font-mono" />
-                                <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !subCategoryId} title="Auto-generar">
+                                <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId} title="Auto-generar">
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
                             </div>
