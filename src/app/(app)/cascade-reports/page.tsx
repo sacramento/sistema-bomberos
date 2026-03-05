@@ -22,7 +22,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, differenceInM
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -135,7 +135,8 @@ export default function CascadeReportsPage() {
                     getUsers(),
                 ]);
                 setAllCharges(chargesData);
-                setAllMaterials(materialsData.filter(m => m.tipo === 'RESPIRACIÓN'));
+                // Filter for ERA Cylinders (Item Type 01.5.2)
+                setAllMaterials(materialsData.filter(m => m.itemTypeId === '01.5.2'));
                 setSystemCharges(systemChargesData);
                 setAllUsers(usersData);
             } catch (error) {

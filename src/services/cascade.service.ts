@@ -19,7 +19,7 @@ export const addCascadeCharge = async (materialCode: string, actor: LoggedInUser
         throw new Error("Usuario no autenticado.");
     }
 
-    // Find the material (ERA tube) by its code
+    // Find the material (ERA cylinder) by its code
     const materialQuery = query(materialsCollection, where("codigo", "==", materialCode));
     const materialSnapshot = await getDocs(materialQuery);
 
@@ -30,8 +30,9 @@ export const addCascadeCharge = async (materialCode: string, actor: LoggedInUser
     const materialDoc = materialSnapshot.docs[0];
     const material = { id: materialDoc.id, ...materialDoc.data() } as Material;
 
-    if (material.tipo !== 'RESPIRACIÓN') {
-        throw new Error(`El material escaneado (código: ${materialCode}) no es un equipo de respiración.`);
+    // Check if the material is an ERA Cylinder (Item Type 01.5.2)
+    if (material.itemTypeId !== '01.5.2') {
+        throw new Error(`El material escaneado (código: ${materialCode}) no es un cilindro de aire comprimido (ERA). Verifique que el equipo esté cargado como tipo "01.5.2" en el inventario.`);
     }
 
     const chargeData = {

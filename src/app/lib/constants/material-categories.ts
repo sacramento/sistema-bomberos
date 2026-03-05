@@ -55,6 +55,15 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "01.4.1", label: "01.4.1 Tapones / orejeras para ruido" },
                     { id: "01.4.2", label: "01.4.2 Mascarillas de filtro mecánico (no ERA)" }
                 ]
+            },
+            {
+                id: "01.5",
+                label: "01.5 Protección Respiratoria Especializada (ERA)",
+                items: [
+                    { id: "01.5.1", label: "01.5.1 Equipos Completos (Arnés + Pulmonar + Máscara)" },
+                    { id: "01.5.2", label: "01.5.2 Cilindros de Aire Comprimido (Tubos)" },
+                    { id: "01.5.3", label: "01.5.3 Máscaras de repuesto y accesorios" }
+                ]
             }
         ]
     },
@@ -279,7 +288,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 items: [
                     { id: "07.1.1", label: "07.1.1 Hachas de bombero (filo/contragolpe)" },
                     { id: "07.1.2", label: "07.1.2 Machetes, hachuelas y podones" },
-                    { id: "07.1.3", label: "07.1.3 Picas, palancas y barras de uña (Halligan, etc)" },
+                    { id: "07.1.3", label: "07.1.3 Picas, palancas y barras de uña" },
                     { id: "07.1.4", label: "07.1.4 Mazos, martillos y porras de rescate" },
                     { id: "07.1.5", label: "07.1.5 Cuñas, calzos y herramientas de estabilización manual" },
                     { id: "07.1.6", label: "07.1.6 Herramientas de cerrajería básica" }
