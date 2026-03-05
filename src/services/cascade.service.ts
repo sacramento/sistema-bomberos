@@ -30,9 +30,9 @@ export const addCascadeCharge = async (materialCode: string, actor: LoggedInUser
     const materialDoc = materialSnapshot.docs[0];
     const material = { id: materialDoc.id, ...materialDoc.data() } as Material;
 
-    // Check if the material is an ERA Cylinder (Item Type 01.5.2)
-    if (material.itemTypeId !== '01.5.2') {
-        throw new Error(`El material escaneado (código: ${materialCode}) no es un cilindro de aire comprimido (ERA). Verifique que el equipo esté cargado como tipo "01.5.2" en el inventario.`);
+    // Check if the material is a Tubo ERA (Item Type 01.5.3)
+    if (material.itemTypeId !== '01.5.3') {
+        throw new Error(`El material escaneado (código: ${materialCode}) no es un tubo de aire comprimido (ERA). Verifique que el equipo esté cargado como tipo "01.5.3" en el inventario.`);
     }
 
     const chargeData = {

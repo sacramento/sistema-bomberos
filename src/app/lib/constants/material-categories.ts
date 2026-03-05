@@ -60,9 +60,9 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 id: "01.5",
                 label: "01.5 Protección Respiratoria Especializada (ERA)",
                 items: [
-                    { id: "01.5.1", label: "01.5.1 Equipos Completos (Arnés + Pulmonar + Máscara)" },
-                    { id: "01.5.2", label: "01.5.2 Cilindros de Aire Comprimido (Tubos)" },
-                    { id: "01.5.3", label: "01.5.3 Máscaras de repuesto y accesorios" }
+                    { id: "01.5.1", label: "01.5.1 Máscaras" },
+                    { id: "01.5.2", label: "01.5.2 Mochilas (Arneses)" },
+                    { id: "01.5.3", label: "01.5.3 Tubos (Cilindros de Aire)" }
                 ]
             }
         ]

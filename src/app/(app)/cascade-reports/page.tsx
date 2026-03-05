@@ -135,8 +135,8 @@ export default function CascadeReportsPage() {
                     getUsers(),
                 ]);
                 setAllCharges(chargesData);
-                // Filter for ERA Cylinders (Item Type 01.5.2)
-                setAllMaterials(materialsData.filter(m => m.itemTypeId === '01.5.2'));
+                // Filter for ERA Tubos (Item Type 01.5.3)
+                setAllMaterials(materialsData.filter(m => m.itemTypeId === '01.5.3'));
                 setSystemCharges(systemChargesData);
                 setAllUsers(usersData);
             } catch (error) {
