@@ -7,26 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useCallback } from "react";
-import { Material, Specialization, Vehicle } from "@/lib/types";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Material, Vehicle } from "@/lib/types";
 import { addMaterial, getNextMaterialSequence } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2 } from "lucide-react";
+import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 
-const materialTypes: Material['tipo'][] = [
-    'BOMBEO', 'COMUNICACION', 'DOCUMENTACION', 'ESTABILIZACION', 'H. CORTE', 
-    'H. ELECTRICA', 'H. GOLPE', 'H. HIDRAULICA', 'H. NEUMATICA', 'HERRAMIENTA', 
-    'ILUMINACION', 'INMOVILIZACION', 'MEDICION', 'LANZA', 'LOGISTICA', 'MANGA', 
-    'MEDICO', 'PROTECCION', 'RESPIRACION', 'TRANSPORTE'
-].sort() as Material['tipo'][];
-
-const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
-
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 
 const vehicleCompartments = [
@@ -53,12 +45,12 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = setControlledOpen !== undefined ? setControlledOpen : setInternalOpen;
 
-
     // Form state
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
-    const [tipo, setTipo] = useState<Material['tipo'] | ''>('');
-    const [especialidad, setEspecialidad] = useState<Specialization | ''>('');
+    const [categoryId, setCategoryId] = useState('');
+    const [subCategoryId, setSubCategoryId] = useState('');
+    const [itemTypeId, setItemTypeId] = useState('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
     const [showCustomMedida, setShowCustomMedida] = useState(false);
@@ -69,19 +61,28 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
     const [vehiculoId, setVehiculoId] = useState('');
     const [baulera, setBaulera] = useState('');
 
+    const subCategories = useMemo(() => {
+        return MATERIAL_CATEGORIES.find(c => c.id === categoryId)?.subCategories || [];
+    }, [categoryId]);
+
+    const itemTypes = useMemo(() => {
+        return subCategories.find(s => s.id === subCategoryId)?.items || [];
+    }, [subCategoryId, subCategories]);
+
     const resetForm = useCallback(() => {
-        setCodigo(''); setNombre(''); setTipo(''); setEspecialidad(''); setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
+        setCodigo(''); setNombre(''); setCategoryId(''); setSubCategoryId(''); setItemTypeId('');
+        setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
         setLocationType('deposito'); setVehiculoId(''); setBaulera(''); setShowCustomMedida(false);
     }, []);
 
     useEffect(() => {
         if (open) {
-            getVehicles().then(setVehicles).catch(() => toast({ variant: "destructive", title: "Error", description: "No se pudieron cargar los vehículos." }));
-            
+            getVehicles().then(setVehicles);
             if (initialData) {
                 setNombre(initialData.nombre);
-                setTipo(initialData.tipo);
-                setEspecialidad(initialData.especialidad);
+                setCategoryId(initialData.categoryId || '');
+                setSubCategoryId(initialData.subCategoryId || '');
+                setItemTypeId(initialData.itemTypeId || '');
                 setCaracteristicas(initialData.caracteristicas || '');
                 setMedida(initialData.medida || '');
                 setEstado(initialData.estado);
@@ -91,32 +92,32 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
                 setVehiculoId(initialData.ubicacion.vehiculoId || '');
                 setBaulera(initialData.ubicacion.baulera || '');
                 setCodigo('');
-                setShowCustomMedida(!!initialData.medida && !diameterOptions.includes(initialData.medida));
             } else {
                 resetForm();
             }
         }
-    }, [open, initialData, toast, resetForm]);
+    }, [open, initialData, resetForm]);
 
     const handleAutoGenerateCode = async () => {
-        if (!tipo || !especialidad) {
-            toast({ title: "Faltan datos", description: "Seleccione Tipo y Especialidad para generar un código." });
+        if (!categoryId || !subCategoryId) {
+            toast({ title: "Faltan datos", description: "Seleccione Categoría y Subcategoría." });
             return;
         }
 
         setGeneratingCode(true);
         try {
-            const cleanType = tipo.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
-            const cleanSpec = especialidad.replace(/[\s.]/g, '').substring(0, 2).toUpperCase();
-            const prefix = `${cleanType}${cleanSpec}`;
+            // New prefix format: "02-21-"
+            const cat = categoryId;
+            const sub = subCategoryId.split('.')[1] || subCategoryId;
+            const prefix = `${cat}-${sub}-`;
             
             const sequence = await getNextMaterialSequence(prefix);
             const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
             
             setCodigo(formattedCode);
-            toast({ title: "Código generado", description: `Se ha asignado el código único: ${formattedCode}` });
+            toast({ title: "Código generado", description: `Se ha asignado el código: ${formattedCode}` });
         } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el código único." });
+            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el código." });
         } finally {
             setGeneratingCode(false);
         }
@@ -124,21 +125,37 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        let finalCuartel = cuartel;
+        if (locationType === 'vehiculo' && vehiculoId) {
+            const v = vehicles.find(v => v.id === vehiculoId);
+            if (v) finalCuartel = v.cuartel;
+        }
+
         const ubicacion = locationType === 'deposito' 
-            ? { type: 'deposito' as const, deposito: cuartel as Material['cuartel'] } 
+            ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        if (!codigo || !nombre || !tipo || !especialidad || !estado || !condicion || !cuartel || (locationType === 'vehiculo' && (!vehiculoId || !baulera))) {
+        if (!codigo || !nombre || !categoryId || !subCategoryId || !itemTypeId || !estado || !condicion || !finalCuartel) {
             toast({ variant: "destructive", title: "Campos incompletos", description: "Por favor, complete todos los campos requeridos." });
             return;
         }
 
         setLoading(true);
         try {
-            // Normalizar medida (reemplazar comas por puntos y limpiar espacios)
-            const normalizedMedida = medida.trim().replace(',', '.');
-            
-            await addMaterial({ codigo, nombre, tipo, especialidad, caracteristicas, medida: normalizedMedida, estado, ubicacion, cuartel, condicion }, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+            await addMaterial({ 
+                codigo, 
+                nombre, 
+                categoryId, 
+                subCategoryId, 
+                itemTypeId, 
+                caracteristicas, 
+                medida: medida.trim().replace(',', '.'), 
+                estado, 
+                ubicacion, 
+                cuartel: finalCuartel as any, 
+                condicion 
+            }, null);
             toast({ title: "¡Éxito!", description: "El material ha sido agregado." });
             onMaterialAdded();
             setOpen(false);
@@ -148,27 +165,8 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
             setLoading(false);
         }
     };
-    
-    useEffect(() => {
-        if (locationType === 'vehiculo' && vehiculoId) {
-            const selectedVehicle = vehicles.find(v => v.id === vehiculoId);
-            if (selectedVehicle) {
-                setCuartel(selectedVehicle.cuartel);
-            }
-        }
-    }, [vehiculoId, vehicles, locationType]);
 
-    const isMedidaType = tipo === 'MANGA' || tipo === 'LANZA';
-
-    const handleMedidaChange = (value: string) => {
-        if (value === 'Otra') {
-            setShowCustomMedida(true);
-            setMedida('');
-        } else {
-            setShowCustomMedida(false);
-            setMedida(value);
-        }
-    }
+    const isMedidaType = categoryId === '02' && subCategoryId === '02.2'; // Mangueras
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -176,88 +174,80 @@ export default function AddMaterialDialog({ children, onMaterialAdded, initialDa
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">{initialData ? 'Clonar Material' : 'Agregar Nuevo Material'}</DialogTitle>
-                    <DialogDescription>
-                        {initialData ? `Complete el código único para clonar "${initialData.nombre}".` : 'Complete los detalles del nuevo ítem.'}
-                    </DialogDescription>
+                    <DialogDescription>Complete la clasificación y ubicación del equipo.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2 col-span-full">
+                            <Label>Clasificación (Jerarquía)</Label>
+                            <div className="grid grid-cols-1 gap-2">
+                                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
+                                    <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
+                                    <SelectContent>{MATERIAL_CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}</SelectContent>
+                                </Select>
+                                <Select value={subCategoryId} onValueChange={(v) => { setSubCategoryId(v); setItemTypeId(''); }} disabled={!categoryId}>
+                                    <SelectTrigger><SelectValue placeholder="2. Subcategoría" /></SelectTrigger>
+                                    <SelectContent>{subCategories.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
+                                </Select>
+                                <Select value={itemTypeId} onValueChange={setItemTypeId} disabled={!subCategoryId}>
+                                    <SelectTrigger><SelectValue placeholder="3. Tipo de Ítem" /></SelectTrigger>
+                                    <SelectContent>{itemTypes.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
                         <div className="space-y-2">
-                            <Label htmlFor="codigo">Código (Único)</Label>
+                            <Label htmlFor="codigo">Código Único</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ej: REHA001" className="flex-grow font-mono" />
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    size="icon" 
-                                    onClick={handleAutoGenerateCode}
-                                    disabled={generatingCode || !tipo || !especialidad}
-                                    title="Auto-generar código"
-                                >
+                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Ej: 02-21-001" className="flex-grow font-mono" />
+                                <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !subCategoryId} title="Auto-generar">
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
                             </div>
                         </div>
-                        <div className="space-y-2"><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
-                        <div className="space-y-2"><Label>Tipo</Label><Select value={tipo} onValueChange={(v) => setTipo(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar tipo..."/></SelectTrigger><SelectContent>{materialTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Especialidad</Label><Select value={especialidad} onValueChange={(v) => setEspecialidad(v as any)}><SelectTrigger><SelectValue placeholder="Seleccionar especialidad..." /></SelectTrigger><SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label htmlFor="nombre">Nombre del Equipo</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder="Ej: Manguera de 38mm Expansiva" /></div>
                         
                         {isMedidaType && (
                             <div className="space-y-2">
                                 <Label>Diámetro / Medida</Label>
-                                <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={handleMedidaChange}>
-                                    <SelectTrigger><SelectValue placeholder="Seleccionar diámetro..."/></SelectTrigger>
-                                    <SelectContent>
-                                        {diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                                        <SelectItem value="Otra">Otra medida...</SelectItem>
-                                    </SelectContent>
+                                <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                    <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
                                 </Select>
                             </div>
                         )}
                         {isMedidaType && showCustomMedida && (
-                            <div className="space-y-2">
-                                <Label htmlFor="medida-manual">Especificar Medida</Label>
-                                <Input id="medida-manual" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" />
-                            </div>
+                            <div className="space-y-2"><Label>Especificar Medida</Label><Input value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Ej: 100mm" /></div>
                         )}
 
-                        <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2">
-                            <Label>Cuartel</Label>
-                            <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar cuartel..." /></SelectTrigger>
-                                <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <div className="space-y-2 col-span-1 md:col-span-2">
-                        <Label htmlFor="caracteristicas">Características</Label>
-                        <Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} placeholder="Modelo, N/S, vencimiento, etc." />
+                        <div className="space-y-2"><Label>Estado Operativo</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condición Física</Label><Select value={condicion} onValueChange={(v) => setCondition(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
-                        <Label>Ubicación</Label>
-                        <RadioGroup defaultValue="deposito" value={locationType} onValueChange={(v) => setLocationType(v as any)}>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-deposito" /><Label htmlFor="r-deposito">Depósito</Label></div>
-                            <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-vehiculo" /><Label htmlFor="r-vehiculo">Vehículo</Label></div>
+                        <Label>Ubicación y Cuartel</Label>
+                        <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-deposito" /><Label htmlFor="r-deposito">En Depósito</Label></div>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-vehiculo" /><Label htmlFor="r-vehiculo">En Vehículo</Label></div>
                         </RadioGroup>
-                        {locationType === 'vehiculo' && (
+                        
+                        {locationType === 'deposito' ? (
+                            <div className="space-y-2 pt-2">
+                                <Label>Seleccionar Cuartel del Depósito</Label>
+                                <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar cuartel..." /></SelectTrigger>
+                                    <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                        ) : (
                             <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Seleccionar móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select></div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="baulera">Ubicación en Móvil</Label>
-                                    <Select value={baulera} onValueChange={setBaulera}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar ubicación..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Móvil..." /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2"><Label>Baulera / Lugar</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
                             </div>
                         )}
                     </div>
+
+                    <div className="space-y-2"><Label htmlFor="caracteristicas">Características Técnicas</Label><Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} placeholder="Modelo, N/S, vencimientos, etc." /></div>
                 </form>
                 <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Material"}</Button></DialogFooter>
             </DialogContent>

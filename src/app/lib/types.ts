@@ -149,14 +149,15 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'BOMBEO' | 'COMUNICACION' | 'DOCUMENTACION' | 'ESTABILIZACION' | 'H. CORTE' | 'H. ELECTRICA' | 'H. GOLPE' | 'H. HIDRAULICA' | 'H. NEUMATICA' | 'HERRAMIENTA' | 'ILUMINACION' | 'INMOVILIZACION' | 'LANZA' | 'LOGISTICA' | 'MANGA' | 'MEDICION' | 'MEDICO' | 'PROTECCION' | 'RESPIRACION' | 'TRANSPORTE';
-  especialidad: Specialization;
+  categoryId: string; // e.g. "01"
+  subCategoryId: string; // e.g. "01.1"
+  itemTypeId: string; // e.g. "01.1.1"
   caracteristicas?: string;
-  medida?: string; // New field for diameter/size (e.g. 38mm)
+  medida?: string; 
   ubicacion: {
     type: 'vehiculo' | 'deposito';
-    vehiculoId?: string; // Firestore ID of the vehicle
-    baulera?: string; // Name/number of the storage compartment
+    vehiculoId?: string; 
+    baulera?: string; 
     deposito?: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
   };
   estado: 'En Servicio' | 'Fuera de Servicio';
