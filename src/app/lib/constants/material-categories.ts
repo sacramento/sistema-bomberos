@@ -58,7 +58,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
             },
             {
                 id: "01.5",
-                label: "01.5 Protección Respiratoria Especializada (ERA)",
+                label: "01.5 ERA (Equipo de Respiración Autónoma)",
                 items: [
                     { id: "01.5.1", label: "01.5.1 Máscaras" },
                     { id: "01.5.2", label: "01.5.2 Mochilas (Arneses)" },
