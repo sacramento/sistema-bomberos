@@ -60,13 +60,13 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     const [itemTypeId, setItemTypeId] = useState('');
     const [marca, setMarca] = useState('');
     const [modelo, setModelo] = useState('');
-    const [acople, setAcople] = useState<Material['acople'] | ''>('');
+    const [acople, setAcople] = useState<string>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
     const [showCustomMedida, setShowCustomMedida] = useState(false);
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
-    const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
+    const [cuartel, setCuartel] = useState<string>('');
     const [locationType, setLocationType] = useState<'deposito' | 'vehiculo'>('deposito');
     const [vehiculoId, setVehiculoId] = useState('');
     const [baulera, setBaulera] = useState('');
@@ -134,8 +134,9 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        if (!codigo || !nombre || !categoryId || !subCategoryId || !itemTypeId || !estado || !condicion || !finalCuartel) {
-            toast({ variant: "destructive", title: "Campos incompletos" });
+        // Validaciones básicas: Permitimos código y categorías vacías para migración
+        if (!nombre || !estado || !condicion || !finalCuartel) {
+            toast({ variant: "destructive", title: "Campos incompletos", description: "Nombre, Estado, Condición y Ubicación son obligatorios." });
             return;
         }
 
@@ -185,7 +186,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación</Label>
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica (Opcional en carga básica)</Label>
                             <div className="grid grid-cols-1 gap-2">
                                 <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
@@ -205,7 +206,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                         <div className="space-y-2">
                             <Label htmlFor="codigo">Código</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} required placeholder="Auto-generar ->" className="font-mono" />
+                                <Input id="codigo" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="0000000" className="font-mono" />
                                 <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId}>
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
@@ -220,7 +221,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                             <>
                                 <div className="space-y-2">
                                     <Label>Tipo de Acople</Label>
-                                    <Select value={acople} onValueChange={(v) => setAcople(v as any)}>
+                                    <Select value={acople} onValueChange={(v) => setAcople(v)}>
                                         <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                                         <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -250,7 +251,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
                                 <Label>Seleccionar Cuartel del Depósito</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)}>
+                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                                     <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
                                 </Select>

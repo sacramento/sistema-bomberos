@@ -50,13 +50,13 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [itemTypeId, setItemTypeId] = useState('');
     const [marca, setMarca] = useState('');
     const [modelo, setModelo] = useState('');
-    const [acople, setAcople] = useState<Material['acople'] | ''>('');
+    const [acople, setAcople] = useState<string>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
     const [showCustomMedida, setShowCustomMedida] = useState(false);
     const [estado, setEstado] = useState<Material['estado']>('En Servicio');
     const [condicion, setCondicion] = useState<Material['condicion']>('Bueno');
-    const [cuartel, setCuartel] = useState<Material['cuartel'] | ''>('');
+    const [cuartel, setCuartel] = useState<string>('');
     const [locationType, setLocationType] = useState<'deposito' | 'vehiculo'>('deposito');
     const [vehiculoId, setVehiculoId] = useState('');
     const [baulera, setBaulera] = useState('');
@@ -72,7 +72,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     useEffect(() => {
         if (open) {
             getVehicles().then(setVehicles);
-            setCodigo(material.codigo);
+            setCodigo(material.codigo || '');
             setNombre(material.nombre);
             setCategoryId(material.categoryId || '');
             setSubCategoryId(material.subCategoryId || '');
@@ -84,7 +84,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setMedida(material.medida || '');
             setEstado(material.estado);
             setCondicion(material.condicion || 'Bueno');
-            setCuartel(material.cuartel);
+            setCuartel(material.cuartel || '');
             setLocationType(material.ubicacion.type);
             setVehiculoId(material.ubicacion.vehiculoId || '');
             setBaulera(material.ubicacion.baulera || '');
@@ -120,6 +120,11 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         const ubicacion = locationType === 'deposito' 
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
+
+        if (!nombre || !estado || !condicion || !finalCuartel) {
+            toast({ variant: "destructive", title: "Campos incompletos", description: "Nombre, Estado, Condición y Ubicación son obligatorios." });
+            return;
+        }
 
         setLoading(true);
         try {
@@ -165,7 +170,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
-                            <Label className="text-xs font-bold">Clasificación</Label>
+                            <Label className="text-xs font-bold">Clasificación Técnica</Label>
                             <div className="grid grid-cols-1 gap-2">
                                 <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }} disabled={!isPrivileged}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
@@ -185,9 +190,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         <div className="space-y-2">
                             <Label htmlFor="codigo-edit">Código</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} required disabled={!isPrivileged} />
+                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} disabled={!isPrivileged} className="font-mono" />
                                 {isPrivileged && (
-                                    <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode}>
+                                    <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId}>
                                         <Sparkles className="h-4 w-4 text-primary" />
                                     </Button>
                                 )}
@@ -202,7 +207,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                             <>
                                 <div className="space-y-2">
                                     <Label>Acople</Label>
-                                    <Select value={acople} onValueChange={(v) => setAcople(v as any)}>
+                                    <Select value={acople} onValueChange={(v) => setAcople(v)}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
                                     </Select>
@@ -232,7 +237,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
                                 <Label>Cuartel</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v as any)} disabled={!isPrivileged}>
+                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)} disabled={!isPrivileged}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
                                 </Select>
