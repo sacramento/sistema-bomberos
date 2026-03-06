@@ -1,4 +1,5 @@
 
+'use server';
 
 import { User, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
@@ -13,7 +14,6 @@ const usersCollection = collection(db, 'users');
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
-    // Se asegura que el objeto `roles` exista y tenga todas las propiedades.
     const rolesData = data.roles || {};
     const roles = {
         asistencia: rolesData.asistencia || 'Ninguno',
@@ -55,7 +55,6 @@ export const getUserById = async (id: string): Promise<User | null> => {
 }
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser): Promise<void> => {
-    // Here, 'id' is the firefighter's legajo.
     const docRef = doc(db, 'users', id);
     const docSnap = await getDoc(docRef);
 
@@ -76,7 +75,6 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
         throw new Error(`El usuario con el legajo ${id} no fue encontrado.`);
     }
 
-    // Prevent password from being updated if it's an empty string
     if (userData.password === '') {
         delete userData.password;
     }

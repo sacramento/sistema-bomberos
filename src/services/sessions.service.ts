@@ -1,4 +1,5 @@
 
+'use server';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
@@ -14,14 +15,11 @@ if (!db) {
 
 const sessionsCollection = collection(db, 'sessions');
 
-// Cache all firefighters for the duration of a single request
 const getAllFirefightersCached = cache(async () => {
     const firefighters = await getFirefighters();
     return new Map(firefighters.map(f => [f.id, f]));
 });
 
-// Helper to convert Firestore doc data to Session object
-// It fetches full Firefighter objects for instructors, assistants, and attendees
 const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Session> => {
     const data = docSnap.data();
     
@@ -71,7 +69,6 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
 }
 
 export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser): Promise<string> => {
-    // We only store the IDs in Firestore, not the full firefighter objects
     const sessionToStore = {
         title: sessionData.title,
         description: sessionData.description,
@@ -81,7 +78,7 @@ export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>
         instructorIds: sessionData.instructors.map(f => f.id),
         assistantIds: sessionData.assistants.map(f => f.id),
         attendeeIds: sessionData.attendees.map(f => f.id),
-        attendance: {}, // Initialize attendance as an empty object
+        attendance: {}, 
     };
     
     const docRef = await addDoc(sessionsCollection, sessionToStore);
@@ -103,7 +100,6 @@ export const updateSession = async (id: string, sessionData: Partial<Session>, a
         attendeeIds: sessionData.attendees?.map(f => f.id),
     };
 
-    // Remove undefined fields so they don't overwrite existing data
     Object.keys(sessionToUpdate).forEach(key => sessionToUpdate[key] === undefined && delete sessionToUpdate[key]);
 
     await updateDoc(docRef, sessionToUpdate);

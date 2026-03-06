@@ -1,4 +1,5 @@
 
+'use server';
 
 import { Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
@@ -12,7 +13,7 @@ if (!db) {
 const firefightersCollection = collection(db, 'firefighters');
 
 export const getFirefighters = async (): Promise<Firefighter[]> => {
-    // Simplificado para máxima robustez: obtener todos los documentos.
+    // Obtenemos todos los documentos de la colección de bomberos.
     const querySnapshot = await getDocs(firefightersCollection);
     const firefighters: Firefighter[] = [];
     querySnapshot.forEach((doc) => {
