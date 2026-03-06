@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Material, Vehicle } from "@/lib/types";
 import { addMaterial, getNextMaterialSequence } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
@@ -52,12 +52,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     const activeRole = getActiveRole(pathname);
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     
-    const managedVehicles = useMemo(() => {
-        if (!user) return [];
-        if (isPrivileged) return vehicles;
-        return vehicles.filter(v => v.materialEncargadoIds?.includes(user.id));
-    }, [user, vehicles, isPrivileged]);
-
     // Form state
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
@@ -90,16 +84,24 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
         setMarca(''); setModelo(''); setAcople('');
         setCaracteristicas(''); setMedida(''); setEstado('En Servicio'); setCondicion('Bueno'); setCuartel('');
         setLocationType(isPrivileged ? 'deposito' : 'vehiculo'); 
-        setVehiculoId(managedVehicles.length === 1 ? managedVehicles[0].id : '');
+        setVehiculoId('');
         setBaulera(''); setShowCustomMedida(false);
-    }, [isPrivileged, managedVehicles]);
+    }, [isPrivileged]);
 
     useEffect(() => {
         if (open) {
-            getVehicles().then(setVehicles);
+            getVehicles().then(data => {
+                setVehicles(data);
+                if (!isPrivileged && user) {
+                    const managed = data.filter(v => v.materialEncargadoIds?.includes(user.id));
+                    if (managed.length === 1) {
+                        setVehiculoId(managed[0].id);
+                    }
+                }
+            });
             resetForm();
         }
-    }, [open, resetForm]);
+    }, [open, resetForm, isPrivileged, user]);
 
     const handleAutoGenerateCode = async () => {
         if (!categoryId || !subCategoryId || !itemTypeId) {
@@ -259,7 +261,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                                     <Label>Móvil</Label>
                                     <Select value={vehiculoId} onValueChange={setVehiculoId}>
                                         <SelectTrigger><SelectValue placeholder="Móvil..." /></SelectTrigger>
-                                        <SelectContent>{managedVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">

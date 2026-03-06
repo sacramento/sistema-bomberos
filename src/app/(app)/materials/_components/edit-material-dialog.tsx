@@ -248,7 +248,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     <div className="space-y-2"><Label>Características</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
                 <DialogFooter className="border-t pt-4">
-                    <Button onClick={handleSubmit} disabled={loading}>"Guardar Cambios"</Button>
+                    <Button onClick={handleSubmit} disabled={loading}>Guardar Cambios</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
