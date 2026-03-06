@@ -1,9 +1,8 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash, Edit, Layers, Settings2 } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization } from "@/lib/types";
 import { getMaterials } from "@/services/materials.service";
