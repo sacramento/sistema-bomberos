@@ -95,14 +95,18 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     }, [open, material]);
 
     const handleAutoGenerateCode = async () => {
-        if (!categoryId || !subCategoryId || !itemTypeId) return;
+        if (!categoryId || !subCategoryId || !itemTypeId) {
+            toast({ title: "Faltan datos", description: "Seleccione la clasificación completa para generar un código." });
+            return;
+        }
         setGeneratingCode(true);
         try {
             const prefix = `${categoryId}${subCategoryId.split('.').pop()}${itemTypeId.split('.').pop()}`;
             const sequence = await getNextMaterialSequence(prefix);
-            setCodigo(`${prefix}${sequence.toString().padStart(3, '0')}`);
+            const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
+            setCodigo(formattedCode);
         } catch (error) {
-            toast({ variant: "destructive", title: "Error" });
+            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el código." });
         } finally {
             setGeneratingCode(false);
         }
@@ -145,7 +149,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 cuartel: finalCuartel as any, 
                 condicion 
             }, user);
-            toast({ title: "¡Éxito!", description: "Material actualizado." });
+            toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
             onMaterialUpdated();
             setOpen(false);
         } catch (error: any) {
@@ -165,22 +169,22 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Editar Material</DialogTitle>
-                    <DialogDescription>Modifique las características técnicas o el estado operativo.</DialogDescription>
+                    <DialogDescription>Modifique las características técnicas o el estado operativo del equipo.</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
-                            <Label className="text-xs font-bold">Clasificación Técnica</Label>
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica</Label>
                             <div className="grid grid-cols-1 gap-2">
-                                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }} disabled={!isPrivileged}>
+                                <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
                                     <SelectContent>{MATERIAL_CATEGORIES.map(c => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}</SelectContent>
                                 </Select>
-                                <Select value={subCategoryId} onValueChange={(v) => { setSubCategoryId(v); setItemTypeId(''); }} disabled={!isPrivileged || !categoryId}>
+                                <Select value={subCategoryId} onValueChange={(v) => { setSubCategoryId(v); setItemTypeId(''); }} disabled={!categoryId}>
                                     <SelectTrigger><SelectValue placeholder="2. Subcategoría" /></SelectTrigger>
                                     <SelectContent>{subCategories.map(s => <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>)}</SelectContent>
                                 </Select>
-                                <Select value={itemTypeId} onValueChange={setItemTypeId} disabled={!isPrivileged || !subCategoryId}>
+                                <Select value={itemTypeId} onValueChange={setItemTypeId} disabled={!subCategoryId}>
                                     <SelectTrigger><SelectValue placeholder="3. Tipo de Ítem" /></SelectTrigger>
                                     <SelectContent>{itemTypes.map(i => <SelectItem key={i.id} value={i.id}>{i.label}</SelectItem>)}</SelectContent>
                                 </Select>
@@ -190,12 +194,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         <div className="space-y-2">
                             <Label htmlFor="codigo-edit">Código</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} disabled={!isPrivileged} className="font-mono" />
-                                {isPrivileged && (
-                                    <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId}>
-                                        <Sparkles className="h-4 w-4 text-primary" />
-                                    </Button>
-                                )}
+                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="0000000" className="font-mono" />
+                                <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId}>
+                                    {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
+                                </Button>
                             </div>
                         </div>
                         <div className="space-y-2"><Label htmlFor="nombre-edit">Nombre</Label><Input id="nombre-edit" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
@@ -216,9 +218,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                                     <Label>Medida</Label>
                                     <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra...</SelectItem></SelectContent>
+                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
                                     </Select>
-                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} />}
+                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
                                 </div>
                             </>
                         )}
@@ -228,7 +230,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación</Label>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación (Solo lectura para encargados)</Label>
                         <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)} disabled={!isPrivileged}>
                             {isPrivileged && <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>}
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>
@@ -250,10 +252,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         )}
                     </div>
 
-                    <div className="space-y-2"><Label>Características</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
+                    <div className="space-y-2"><Label htmlFor="caracteristicas">Notas Adicionales</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
                 <DialogFooter className="border-t pt-4">
-                    <Button onClick={handleSubmit} disabled={loading}>Guardar Cambios</Button>
+                    <Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null} Guardar Cambios</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
