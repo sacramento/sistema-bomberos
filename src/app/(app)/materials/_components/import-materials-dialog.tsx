@@ -14,18 +14,18 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Material } from '@/lib/types';
 import { batchAddMaterials } from '@/services/materials.service';
 import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { FileText, Loader2, Upload, Info } from 'lucide-react';
+import { FileText, Loader2, Upload, Info, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 
+// Headers necesarios para una carga funcional (algunos pueden ir vacíos)
 const REQUIRED_HEADERS = [
-    'codigo', 'nombre', 'category_id', 'subcategory_id', 'item_type_id', 
-    'cuartel', 'estado', 'condicion', 'marca', 'modelo', 'acople', 'medida', 
-    'ubicacion_tipo', 'numero_movil', 'ubicacion_baulera', 'caracteristicas'
+    'nombre', 'cuartel', 'estado', 'condicion', 'marca', 'modelo', 
+    'acople', 'medida', 'ubicacion_tipo', 'numero_movil', 
+    'ubicacion_baulera', 'caracteristicas'
 ];
 
 export default function ImportMaterialsDialog({
@@ -56,14 +56,14 @@ export default function ImportMaterialsDialog({
     if (!file) {
       toast({
         title: 'Error',
-        description: 'Por favor, seleccione un archivo CSV para importar.',
+        description: 'Por favor, seleccione un archivo CSV.',
         variant: 'destructive',
       });
       return;
     }
 
     if (!user) {
-        toast({ title: 'Acceso denegado', description: 'Debe iniciar sesión para importar.', variant: 'destructive' });
+        toast({ title: 'Acceso denegado', description: 'Debe iniciar sesión.', variant: 'destructive' });
         return;
     }
 
@@ -72,7 +72,7 @@ export default function ImportMaterialsDialog({
     Papa.parse<any>(file, {
       header: true,
       skipEmptyLines: true,
-      transformHeader: header => header.toLowerCase().trim().replace(/\s+/g, '_'),
+      transformHeader: header => header.toLowerCase().trim().replace(/\s+/g, '_').replace(/[áéíóú]/g, (c: string) => ({'á':'a','é':'e','í':'i','ó':'o','ú':'u'}[c] || c)),
       complete: async (results) => {
         const headers = results.meta.fields || [];
         const missingHeaders = REQUIRED_HEADERS.filter(h => !headers.includes(h));
@@ -80,7 +80,7 @@ export default function ImportMaterialsDialog({
         if (missingHeaders.length > 0) {
           toast({
             title: 'Error de formato',
-            description: `El archivo CSV no contiene las columnas requeridas: ${missingHeaders.join(', ')}.`,
+            description: `Faltan columnas: ${missingHeaders.join(', ')}.`,
             variant: 'destructive',
           });
           setLoading(false);
@@ -93,8 +93,8 @@ export default function ImportMaterialsDialog({
                 : { type: 'deposito' as const, deposito: row.cuartel?.trim() };
 
             return {
-                codigo: row.codigo?.trim() || '', 
-                nombre: row.nombre?.trim() || '',
+                codigo: row.codigo?.trim() || '', // Puede ir vacío para asignar después
+                nombre: row.nombre?.trim() || 'Sin Nombre',
                 categoryId: row.category_id?.trim() || '',
                 subCategoryId: row.subcategory_id?.trim() || '',
                 itemTypeId: row.item_type_id?.trim() || '',
@@ -112,11 +112,7 @@ export default function ImportMaterialsDialog({
         });
         
         if (materialsToUpload.length === 0) {
-             toast({
-                title: 'Archivo vacío',
-                description: 'El archivo CSV no contiene datos para importar.',
-                variant: 'destructive',
-            });
+             toast({ title: 'Archivo vacío', variant: 'destructive' });
             setLoading(false);
             return;
         }
@@ -125,16 +121,15 @@ export default function ImportMaterialsDialog({
           await batchAddMaterials(materialsToUpload, user);
           toast({
             title: '¡Éxito!',
-            description: `${materialsToUpload.length} materiales han sido procesados e importados correctamente.`,
+            description: `${materialsToUpload.length} materiales importados. Ahora puedes clasificarlos uno por uno.`,
           });
           onImportSuccess();
           resetDialog();
           setOpen(false);
         } catch (error: any) {
-          console.error(error);
           toast({
             title: 'Error de importación',
-            description: error.message || 'No se pudieron guardar los datos.',
+            description: error.message,
             variant: 'destructive',
           });
         } finally {
@@ -142,11 +137,7 @@ export default function ImportMaterialsDialog({
         }
       },
       error: (error) => {
-        toast({
-            title: 'Error al leer el archivo',
-            description: `Hubo un problema al procesar el archivo CSV: ${error.message}`,
-            variant: 'destructive',
-        });
+        toast({ title: 'Error al leer el archivo', description: error.message, variant: 'destructive' });
         setLoading(false);
       }
     });
@@ -160,37 +151,40 @@ export default function ImportMaterialsDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle className="font-headline">Importar Materiales (Carga Masiva)</DialogTitle>
+          <DialogTitle className="font-headline">Importación de Materiales</DialogTitle>
           <DialogDescription>
-            Prepare su Excel con los campos técnicos requeridos.
+            Utilice esta herramienta para cargar su inventario actual de forma masiva.
           </DialogDescription>
         </DialogHeader>
         
         <ScrollArea className="flex-grow pr-4">
             <div className="space-y-4 py-4 text-sm">
-                <Alert className="bg-blue-50 border-blue-200">
-                    <Info className="h-4 w-4 text-blue-600" />
-                    <AlertTitle className="text-blue-800 font-bold">Encabezados Requeridos</AlertTitle>
-                    <AlertDescription className="text-blue-700">
-                        <code className="text-[10px] block bg-black/10 text-black p-2 rounded mt-2 overflow-x-auto whitespace-nowrap">
-                            codigo, nombre, category_id, subcategory_id, item_type_id, cuartel, estado, condicion, marca, modelo, acople, medida, ubicacion_tipo, numero_movil, ubicacion_baulera, caracteristicas
-                        </code>
+                <Alert className="bg-amber-50 border-amber-200">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    <AlertTitle className="text-amber-800 font-bold">Estrategia de Carga Recomendada</AlertTitle>
+                    <AlertDescription className="text-amber-700">
+                        No es necesario poner los códigos o categorías en el Excel. Puede subir solo los nombres y marcas, y luego utilizar el botón de <strong>"Brillitos"</strong> dentro de la app para generar los códigos automáticamente según nuestra nueva jerarquía.
                     </AlertDescription>
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Instrucciones clave:</h4>
+                    <h4 className="font-bold mb-2">Columnas del archivo CSV:</h4>
+                    <code className="text-[10px] block bg-black/10 text-black p-2 rounded mb-3 overflow-x-auto whitespace-nowrap">
+                        nombre, marca, modelo, estado, condicion, ubicacion_tipo, numero_movil, cuartel, caracteristicas
+                    </code>
                     <ul className="list-disc pl-5 space-y-1 text-xs">
-                        <li><strong>medida:</strong> Use punto para decimales (ej: 44.5mm).</li>
-                        <li><strong>acople:</strong> Storz, NH, QC, DSP, Withworth, Otro.</li>
-                        <li><strong>IDs Categoría:</strong> Use los IDs numéricos (ej: category_id: 01, subcategory_id: 01.5, item_type_id: 01.5.3).</li>
+                        <li><strong>nombre:</strong> Nombre del equipo (Ej: Lanza de ataque).</li>
+                        <li><strong>ubicacion_tipo:</strong> Escribir "vehiculo" o "deposito".</li>
+                        <li><strong>numero_movil:</strong> Si es vehículo, poner el número (Ej: 5).</li>
+                        <li><strong>cuartel:</strong> Si es depósito, poner "Cuartel 1", "Cuartel 2" o "Cuartel 3".</li>
+                        <li><strong>estado:</strong> "En Servicio" o "Fuera de Servicio".</li>
                     </ul>
                 </div>
 
                 <div className="grid w-full items-center gap-1.5 pt-2">
-                    <Label htmlFor="csv-file">Seleccionar Archivo CSV</Label>
+                    <Label htmlFor="csv-file">Seleccionar Archivo CSV (.csv)</Label>
                     <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                    {file && <p className="text-xs font-medium text-green-600">✓ {file.name} seleccionado.</p>}
+                    {file && <p className="text-xs font-medium text-green-600">✓ {file.name} listo para procesar.</p>}
                 </div>
             </div>
         </ScrollArea>
@@ -199,15 +193,9 @@ export default function ImportMaterialsDialog({
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
           <Button onClick={handleImport} disabled={!file || loading}>
             {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Procesando...
-              </>
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
             ) : (
-               <>
-                <Upload className="mr-2 h-4 w-4" />
-                Comenzar Importación
-               </>
+               <><Upload className="mr-2 h-4 w-4" /> Importar Ahora</>
             )}
           </Button>
         </DialogFooter>

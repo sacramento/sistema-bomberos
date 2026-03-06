@@ -38,26 +38,27 @@ const docToMaterial = async (
     
     const material: Material = {
         id: docSnap.id,
-        codigo: data.codigo,
+        codigo: data.codigo || '',
         nombre: data.nombre,
         categoryId: data.categoryId || '',
         subCategoryId: data.subCategoryId || '',
         itemTypeId: data.itemTypeId || '',
-        marca: data.marca,
-        modelo: data.modelo,
+        marca: data.marca || '',
+        modelo: data.modelo || '',
         acople: data.acople,
-        caracteristicas: data.caracteristicas,
-        medida: data.medida,
+        caracteristicas: data.caracteristicas || '',
+        medida: data.medida || '',
         ubicacion: data.ubicacion,
         estado: data.estado,
         condicion: data.condicion || 'Bueno',
-        cuartel: data.cuartel,
+        cuartel: data.cuartel || '',
         vehiculo: vehiculo,
     };
     return material;
 }
 
 export const getMaterials = async (): Promise<Material[]> => {
+    // Obtenemos los materiales ordenados por código, pero permitiendo nulos al final
     const q = query(materialsCollection, orderBy('codigo', 'asc'));
     const querySnapshot = await getDocs(q);
 
@@ -90,10 +91,12 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
 };
 
 export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
-    const q = query(materialsCollection, where("codigo", "==", materialData.codigo));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        throw new Error(`El material con el código ${materialData.codigo} ya existe.`);
+    if (materialData.codigo) {
+        const q = query(materialsCollection, where("codigo", "==", materialData.codigo));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            throw new Error(`El material con el código ${materialData.codigo} ya existe.`);
+        }
     }
 
     const docRef = await addDoc(materialsCollection, materialData);
@@ -130,18 +133,22 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
 
     const batch = writeBatch(db);
     const vehicleMap = await getAllVehiclesByNumberCached();
+    
+    // Obtener todos los códigos existentes para evitar duplicados
     const existingCodesQuery = await getDocs(query(materialsCollection));
-    const existingCodes = new Set(existingCodesQuery.docs.map(doc => doc.data().codigo));
+    const existingCodes = new Set(existingCodesQuery.docs.map(doc => doc.data().codigo).filter(Boolean));
 
     for (const item of items) {
-        if (existingCodes.has(item.codigo)) continue;
+        // Si tiene código y ya existe, saltar
+        if (item.codigo && existingCodes.has(item.codigo)) continue;
 
         const docRef = doc(materialsCollection);
         let finalCuartel = item.cuartel;
         let finalUbicacion = item.ubicacion;
 
+        // Si es ubicación vehículo, intentar mapear número de móvil a ID de Firestore
         if (item.ubicacion.type === 'vehiculo' && item.numero_movil) {
-            const v = vehicleMap.get(item.numero_movil);
+            const v = vehicleMap.get(item.numero_movil.toString());
             if (v) {
                 finalUbicacion = { ...item.ubicacion, vehiculoId: v.id };
                 finalCuartel = v.cuartel;
@@ -149,8 +156,8 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
         }
 
         const materialData = {
-            codigo: item.codigo,
-            nombre: item.nombre,
+            codigo: item.codigo || '',
+            nombre: item.nombre || 'Sin nombre',
             categoryId: item.categoryId || '',
             subCategoryId: item.subCategoryId || '',
             itemTypeId: item.itemTypeId || '',
@@ -161,12 +168,12 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
             medida: item.medida || '',
             estado: item.estado || 'En Servicio',
             condicion: item.condicion || 'Bueno',
-            cuartel: finalCuartel,
+            cuartel: finalCuartel || '',
             ubicacion: finalUbicacion
         };
 
         batch.set(docRef, materialData);
-        existingCodes.add(item.codigo);
+        if (item.codigo) existingCodes.add(item.codigo);
     }
 
     await batch.commit();

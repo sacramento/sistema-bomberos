@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -39,7 +39,6 @@ export default function MaterialsPage() {
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     const isEncargado = activeRole === 'Encargado';
     
-    // De qué vehículos es encargado de materiales el usuario logueado
     const managedVehicleIds = useMemo(() => {
         if (!user || !isEncargado) return new Set<string>();
         return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(user.id)).map(v => v.id));
@@ -120,7 +119,7 @@ export default function MaterialsPage() {
     }
 
     const canDeleteMaterial = (m: Material) => {
-        return isPrivileged; // Solo administradores pueden borrar definitivamente
+        return isPrivileged;
     }
 
     if (activeRole === 'Bombero' || activeRole === 'Oficial') {
@@ -226,7 +225,8 @@ export default function MaterialsPage() {
 
             <Card className="mt-6">
                 <CardHeader>
-                    <CardTitle className="text-lg">Equipamiento Reciente / Filtrado</CardTitle>
+                    <CardTitle className="text-lg font-headline">Equipamiento Reciente</CardTitle>
+                    <CardDescription>Listado de materiales. Los equipos sin clasificar aparecen resaltados.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
@@ -244,15 +244,27 @@ export default function MaterialsPage() {
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                 ))
-                            ) : materials.slice(0, 20).map(m => (
+                            ) : materials.length > 0 ? (
+                                materials.slice(0, 50).map(m => (
                                 <TableRow key={m.id}>
-                                    <TableCell className="font-mono font-bold text-xs">{m.codigo}</TableCell>
-                                    <TableCell className="font-medium">{m.nombre}</TableCell>
+                                    <TableCell>
+                                        {m.codigo ? (
+                                            <span className="font-mono font-bold text-xs">{m.codigo}</span>
+                                        ) : (
+                                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] flex items-center gap-1 w-fit">
+                                                <AlertCircle className="h-3 w-3" /> Pendiente
+                                            </Badge>
+                                        )}
+                                    </TableCell>
+                                    <TableCell className="font-medium text-sm">
+                                        {m.nombre}
+                                        {m.marca && <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>}
+                                    </TableCell>
                                     <TableCell className="text-xs">
                                         {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito ${m.cuartel}`}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={m.estado === 'En Servicio' ? 'bg-green-600' : ''}>
+                                        <Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : '')}>
                                             {m.estado}
                                         </Badge>
                                     </TableCell>
@@ -260,7 +272,7 @@ export default function MaterialsPage() {
                                         <AlertDialog>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuLabel>Acciones</DropdownMenuLabel>
@@ -287,7 +299,7 @@ export default function MaterialsPage() {
                                             <AlertDialogContent>
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente.</AlertDialogDescription>
+                                                    <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente de la base de datos.</AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
@@ -297,7 +309,9 @@ export default function MaterialsPage() {
                                         </AlertDialog>
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            ))) : (
+                                <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No se encontraron materiales.</TableCell></TableRow>
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
