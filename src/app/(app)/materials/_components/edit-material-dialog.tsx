@@ -150,7 +150,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     };
 
-    const needsTechnicalDetails = categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2');
+    const needsTechnicalDetails = 
+        (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) ||
+        (categoryId === '11' && subCategoryId === '11.2');
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -246,7 +248,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     <div className="space-y-2"><Label>Características</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
                 <DialogFooter className="border-t pt-4">
-                    <Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Cambios"}</Button>
+                    <Button onClick={handleSubmit} disabled={loading}>"Guardar Cambios"</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

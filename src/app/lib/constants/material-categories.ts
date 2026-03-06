@@ -69,7 +69,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
     },
     {
         id: "02",
-        label: "02 - EXTINCIÓN DE INCENDIOS",
+        label: "02 - EXTINCIÓN DE INCENDIOS (ESTRUCTURAL)",
         subCategories: [
             {
                 id: "02.1",
@@ -85,8 +85,8 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 id: "02.2",
                 label: "02.2 Mangueras y Accesorios de Conducción",
                 items: [
-                    { id: "02.2.1", label: "02.2.1 Mangueras de ataque (38 / 45 mm)" },
-                    { id: "02.2.2", label: "02.2.2 Mangueras de gran caudal (70 / 100 mm)" },
+                    { id: "02.2.1", label: "02.2.1 Mangueras de ataque" },
+                    { id: "02.2.2", label: "02.2.2 Mangueras de gran caudal" },
                     { id: "02.2.3", label: "02.2.3 Acoples Storz / Rosca / Instantáneos" },
                     { id: "02.2.4", label: "02.2.4 Bifurcaciones, reducciones y colectores" },
                     { id: "02.2.5", label: "02.2.5 Llaves de paso, válvulas y retenedores" }
@@ -288,7 +288,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 items: [
                     { id: "07.1.1", label: "07.1.1 Hachas de bombero (filo/contragolpe)" },
                     { id: "07.1.2", label: "07.1.2 Machetes, hachuelas y podones" },
-                    { id: "07.1.3", label: "07.1.3 Picas, palancas y barras de uña" },
+                    { id: "07.1.3", label: "07.1.3 Picas, palancas y barras de uña (Halligan)" },
                     { id: "07.1.4", label: "07.1.4 Mazos, martillos y porras de rescate" },
                     { id: "07.1.5", label: "07.1.5 Cuñas, calzos y herramientas de estabilización manual" },
                     { id: "07.1.6", label: "07.1.6 Herramientas de cerrajería básica" }
@@ -320,7 +320,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 items: [
                     { id: "07.4.1", label: "07.4.1 Cintas métricas, láser y niveles" },
                     { id: "07.4.2", label: "07.4.2 Marcadores, tizas y punzones" },
-                    { id: "07.4.3", label: "07.4.3 Detectores de metales / tensión / gas" }
+                    { id: "07.4.3", label: "07.4.3 Detectores de metales / tensión / gas (portátiles)" }
                 ]
             }
         ]
@@ -343,7 +343,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 id: "08.2",
                 label: "08.2 Ventilación y Extracción",
                 items: [
-                    { id: "08.2.1", label: "08.2.1 Ventiladores de ataque (PPA/PPV)" },
+                    { id: "08.2.1", label: "08.2.1 Ventiladores de ataque (PPA/PPV) a combustible" },
                     { id: "08.2.2", label: "08.2.2 Ventiladores eléctricos portátiles" },
                     { id: "08.2.3", label: "08.2.3 Extractores de humo y equipos de presurización" }
                 ]
@@ -440,6 +440,50 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "10.4.1", label: "10.4.1 Cajas, baúles y contenedores estancos" },
                     { id: "10.4.2", label: "10.4.2 Mochilas, bolsas de equipo y fundas" },
                     { id: "10.4.3", label: "10.4.3 Carros, diablitos y sistemas de carga" }
+                ]
+            }
+        ]
+    },
+    {
+        id: "11",
+        label: "11 - INCENDIO FORESTAL",
+        subCategories: [
+            {
+                id: "11.1",
+                label: "11.1 Herramientas Manuales Forestales",
+                items: [
+                    { id: "11.1.1", label: "11.1.1 Batefuegos" },
+                    { id: "11.1.2", label: "11.1.2 McLeod" },
+                    { id: "11.1.3", label: "11.1.3 Pulaski / Hacha-Azada" },
+                    { id: "11.1.4", label: "11.1.4 Rozones / Herramientas de corte" },
+                    { id: "11.1.5", label: "11.1.5 Otras herramientas de zapa" }
+                ]
+            },
+            {
+                id: "11.2",
+                label: "11.2 Conducción y Ataque Forestal",
+                items: [
+                    { id: "11.2.1", label: "11.2.1 Mangueras Forestales" },
+                    { id: "11.2.2", label: "11.2.2 Lanzas y Boquillas Forestales" },
+                    { id: "11.2.3", label: "11.2.3 Adaptadores, reducciones y derivaciones forestales" }
+                ]
+            },
+            {
+                id: "11.3",
+                label: "11.3 Equipos de Bombeo y Mochilas",
+                items: [
+                    { id: "11.3.1", label: "11.3.1 Mochilas de extinción (Manuales)" },
+                    { id: "11.3.2", label: "11.3.2 Motobombas forestales portátiles" },
+                    { id: "11.3.3", label: "11.3.3 Tanques colapsables / piletas forestales" }
+                ]
+            },
+            {
+                id: "11.4",
+                label: "11.4 Accesorios y Logística Forestal",
+                items: [
+                    { id: "11.4.1", label: "11.4.1 Antorchas de goteo / encendido" },
+                    { id: "11.4.2", label: "11.4.2 Retardantes y espumígenos forestales" },
+                    { id: "11.4.3", label: "11.4.3 Estaciones meteorológicas portátiles" }
                 ]
             }
         ]

@@ -166,7 +166,9 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
         }
     };
 
-    const needsTechnicalDetails = categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2');
+    const needsTechnicalDetails = 
+        (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) ||
+        (categoryId === '11' && subCategoryId === '11.2');
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
