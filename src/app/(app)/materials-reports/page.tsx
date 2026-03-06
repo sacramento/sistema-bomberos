@@ -1,8 +1,9 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization } from "@/lib/types";
 import { getMaterials } from "@/services/materials.service";
@@ -183,10 +184,24 @@ export default function MaterialsReportPage() {
 
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
-        if (total === 0) return { total: 0, servicePercent: '0%', goodPercent: '0%' };
+        if (total === 0) return { total: 0, inService: 0, outOfService: 0, good: 0, regular: 0, bad: 0, servicePercent: '0%', goodPercent: '0%' };
+        
         const inService = filteredMaterials.filter(m => m.estado === 'En Servicio').length;
+        const outOfService = total - inService;
         const good = filteredMaterials.filter(m => m.condicion === 'Bueno').length;
-        return { total, servicePercent: `${((inService / total) * 100).toFixed(0)}%`, goodPercent: `${((good / total) * 100).toFixed(0)}%` };
+        const regular = filteredMaterials.filter(m => m.condicion === 'Regular').length;
+        const bad = filteredMaterials.filter(m => m.condicion === 'Malo').length;
+        
+        return { 
+            total, 
+            inService, 
+            outOfService,
+            good, 
+            regular, 
+            bad,
+            servicePercent: `${((inService / total) * 100).toFixed(0)}%`, 
+            goodPercent: `${((good / total) * 100).toFixed(0)}%` 
+        };
     }, [filteredMaterials]);
 
     const generatePdf = async () => {
@@ -195,7 +210,7 @@ export default function MaterialsReportPage() {
             return;
         }
         setGeneratingPdf(true);
-        const doc = new jsPDF('l', 'mm', 'a4'); // Paisaje para más columnas
+        const doc = new jsPDF('l', 'mm', 'a4'); 
         try {
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
@@ -206,8 +221,16 @@ export default function MaterialsReportPage() {
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Operatividad de Dotación: ${kpis.servicePercent}`, 14, currentY);
+                doc.text(`Resumen Estadístico del Inventario Filtrado`, 14, currentY);
                 currentY += 10;
+                
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text(`Total de elementos: ${kpis.total}`, 14, currentY); currentY += 6;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent}) | ${kpis.outOfService} Fuera de Servicio`, 14, currentY); currentY += 6;
+                doc.text(`Condición Física: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 10;
             }
 
             if (includeInventoryDetails && filteredMaterials.length > 0) {
@@ -215,7 +238,7 @@ export default function MaterialsReportPage() {
                     startY: currentY,
                     head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Estado']],
                     body: filteredMaterials.map(m => [
-                        m.codigo || 'S/C', 
+                        m.codigo || 'Pendiente', 
                         m.nombre,
                         `${m.marca || ''} ${m.modelo || ''}`.trim() || 'N/A',
                         m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
@@ -250,10 +273,74 @@ export default function MaterialsReportPage() {
                     </CardContent>
                 </Card>
                 <Card className="border-primary/50 bg-primary/5">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Materiales en Filtro</CardTitle></CardHeader>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total en Selección</CardTitle></CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div>
-                        <p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen el criterio</p>
+                        <p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen los filtros</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Panel de Resumen Estadístico */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                            <Activity className="h-3 w-3" /> Operatividad
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">En Servicio:</span>
+                            <span className="text-xl font-bold text-green-600">{kpis.inService}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Fuera de Servicio:</span>
+                            <span className="text-xl font-bold text-red-600">{kpis.outOfService}</span>
+                        </div>
+                        <div className="pt-1 text-[10px] text-muted-foreground text-right font-bold">
+                            {kpis.servicePercent} Operativo
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-amber-500">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                            <Shield className="h-3 w-3" /> Condición Física
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-3 gap-2">
+                        <div className="text-center">
+                            <p className="text-[10px] text-muted-foreground">Bueno</p>
+                            <p className="text-lg font-bold text-green-600">{kpis.good}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] text-muted-foreground">Regular</p>
+                            <p className="text-lg font-bold text-amber-600">{kpis.regular}</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-[10px] text-muted-foreground">Malo</p>
+                            <p className="text-lg font-bold text-red-600">{kpis.bad}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-slate-500">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                            <Package className="h-3 w-3" /> Integridad de Datos
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Codificados:</span>
+                            <span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                            <span className="text-sm font-medium">Pendientes:</span>
+                            <span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -323,7 +410,7 @@ export default function MaterialsReportPage() {
                         <div className="flex gap-2">
                             <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0}>
                                 {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                Generar PDF Detallado
+                                Generar PDF Resumen
                             </Button>
                         </div>
                     </div>
@@ -346,7 +433,9 @@ export default function MaterialsReportPage() {
                             ) : filteredMaterials.length > 0 ? (
                                 filteredMaterials.map(m => (
                                     <TableRow key={m.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-mono text-xs font-bold">{m.codigo || '-'}</TableCell>
+                                        <TableCell className="font-mono text-xs font-bold">
+                                            {m.codigo || <span className="text-amber-600 italic">Pendiente</span>}
+                                        </TableCell>
                                         <TableCell className="text-sm font-medium">
                                             {m.nombre}
                                             <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>
