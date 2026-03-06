@@ -21,12 +21,8 @@ import { FileText, Loader2, Upload, Info, AlertTriangle } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/context/auth-context';
 
-// Headers necesarios para una carga funcional (algunos pueden ir vacíos)
-const REQUIRED_HEADERS = [
-    'nombre', 'cuartel', 'estado', 'condicion', 'marca', 'modelo', 
-    'acople', 'medida', 'ubicacion_tipo', 'numero_movil', 
-    'ubicacion_baulera', 'caracteristicas'
-];
+// Solo el nombre es estrictamente obligatorio para iniciar una carga de migración
+const REQUIRED_HEADERS = ['nombre'];
 
 export default function ImportMaterialsDialog({
   children,
@@ -72,6 +68,7 @@ export default function ImportMaterialsDialog({
     Papa.parse<any>(file, {
       header: true,
       skipEmptyLines: true,
+      // Normalizamos los headers para que coincidan con nuestra lógica
       transformHeader: header => header.toLowerCase().trim().replace(/\s+/g, '_').replace(/[áéíóú]/g, (c: string) => ({'á':'a','é':'e','í':'i','ó':'o','ú':'u'}[c] || c)),
       complete: async (results) => {
         const headers = results.meta.fields || [];
@@ -80,7 +77,7 @@ export default function ImportMaterialsDialog({
         if (missingHeaders.length > 0) {
           toast({
             title: 'Error de formato',
-            description: `Faltan columnas: ${missingHeaders.join(', ')}.`,
+            description: `Faltan columnas obligatorias: ${missingHeaders.join(', ')}.`,
             variant: 'destructive',
           });
           setLoading(false);
@@ -88,13 +85,15 @@ export default function ImportMaterialsDialog({
         }
 
         const materialsToUpload = results.data.map(row => {
-            const ubicacion = row.ubicacion_tipo?.trim().toLowerCase() === 'vehiculo'
-                ? { type: 'vehiculo' as const, baulera: row.ubicacion_baulera?.trim() }
-                : { type: 'deposito' as const, deposito: row.cuartel?.trim() };
+            // Manejamos la ubicación de forma segura si las columnas existen
+            const type = row.ubicacion_tipo?.trim().toLowerCase();
+            const ubicacion = type === 'vehiculo'
+                ? { type: 'vehiculo' as const, baulera: row.ubicacion_baulera?.trim() || '' }
+                : { type: 'deposito' as const, deposito: row.cuartel?.trim() || '' };
 
             return {
-                codigo: row.codigo?.trim() || '', // Puede ir vacío para asignar después
-                nombre: row.nombre?.trim() || 'Sin Nombre',
+                codigo: row.codigo?.trim() || '', 
+                nombre: row.nombre?.trim() || 'Material sin nombre',
                 categoryId: row.category_id?.trim() || '',
                 subCategoryId: row.subcategory_id?.trim() || '',
                 itemTypeId: row.item_type_id?.trim() || '',
@@ -121,7 +120,7 @@ export default function ImportMaterialsDialog({
           await batchAddMaterials(materialsToUpload, user);
           toast({
             title: '¡Éxito!',
-            description: `${materialsToUpload.length} materiales importados. Ahora puedes clasificarlos uno por uno.`,
+            description: `${materialsToUpload.length} materiales importados. Ya puedes completarlos individualmente.`,
           });
           onImportSuccess();
           resetDialog();
@@ -153,7 +152,7 @@ export default function ImportMaterialsDialog({
         <DialogHeader>
           <DialogTitle className="font-headline">Importación de Materiales</DialogTitle>
           <DialogDescription>
-            Utilice esta herramienta para cargar su inventario actual de forma masiva.
+            Herramienta de migración rápida para cargar el inventario actual.
           </DialogDescription>
         </DialogHeader>
         
@@ -161,30 +160,29 @@ export default function ImportMaterialsDialog({
             <div className="space-y-4 py-4 text-sm">
                 <Alert className="bg-amber-50 border-amber-200">
                     <AlertTriangle className="h-4 w-4 text-amber-600" />
-                    <AlertTitle className="text-amber-800 font-bold">Estrategia de Carga Recomendada</AlertTitle>
+                    <AlertTitle className="text-amber-800 font-bold">Carga de Migración Flexible</AlertTitle>
                     <AlertDescription className="text-amber-700">
-                        No es necesario poner los códigos o categorías en el Excel. Puede subir solo los nombres y marcas, y luego utilizar el botón de <strong>"Brillitos"</strong> dentro de la app para generar los códigos automáticamente según nuestra nueva jerarquía.
+                        Solo la columna <strong>nombre</strong> es obligatoria. Puedes omitir acoples, medidas y ubicaciones en el Excel para cargarlos después con calma dentro de la app usando los selectores inteligentes.
                     </AlertDescription>
                 </Alert>
 
                 <div className="border rounded-md p-4 bg-muted/30">
-                    <h4 className="font-bold mb-2">Columnas del archivo CSV:</h4>
+                    <h4 className="font-bold mb-2">Columnas recomendadas (opcionales):</h4>
                     <code className="text-[10px] block bg-black/10 text-black p-2 rounded mb-3 overflow-x-auto whitespace-nowrap">
                         nombre, marca, modelo, estado, condicion, ubicacion_tipo, numero_movil, cuartel, caracteristicas
                     </code>
                     <ul className="list-disc pl-5 space-y-1 text-xs">
-                        <li><strong>nombre:</strong> Nombre del equipo (Ej: Lanza de ataque).</li>
-                        <li><strong>ubicacion_tipo:</strong> Escribir "vehiculo" o "deposito".</li>
-                        <li><strong>numero_movil:</strong> Si es vehículo, poner el número (Ej: 5).</li>
-                        <li><strong>cuartel:</strong> Si es depósito, poner "Cuartel 1", "Cuartel 2" o "Cuartel 3".</li>
-                        <li><strong>estado:</strong> "En Servicio" o "Fuera de Servicio".</li>
+                        <li><strong>nombre:</strong> (Obligatorio) Ej: Lanza de ataque.</li>
+                        <li><strong>ubicacion_tipo:</strong> "vehiculo" o "deposito".</li>
+                        <li><strong>numero_movil:</strong> Solo el número (Ej: 5).</li>
+                        <li><strong>cuartel:</strong> "Cuartel 1", "Cuartel 2" o "Cuartel 3".</li>
                     </ul>
                 </div>
 
                 <div className="grid w-full items-center gap-1.5 pt-2">
                     <Label htmlFor="csv-file">Seleccionar Archivo CSV (.csv)</Label>
                     <Input id="csv-file" type="file" accept=".csv" onChange={handleFileChange} />
-                    {file && <p className="text-xs font-medium text-green-600">✓ {file.name} listo para procesar.</p>}
+                    {file && <p className="text-xs font-medium text-green-600">✓ {file.name} listo para importar.</p>}
                 </div>
             </div>
         </ScrollArea>
@@ -195,7 +193,7 @@ export default function ImportMaterialsDialog({
             {loading ? (
               <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Procesando...</>
             ) : (
-               <><Upload className="mr-2 h-4 w-4" /> Importar Ahora</>
+               <><Upload className="mr-2 h-4 w-4" /> Importar Materiales</>
             )}
           </Button>
         </DialogFooter>
