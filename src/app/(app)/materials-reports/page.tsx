@@ -3,10 +3,10 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash, Edit, Layers } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash, Edit, Layers, Settings2 } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle } from "@/lib/types";
-import { getMaterials, deleteAllMaterials } from "@/services/materials.service";
+import { Material, Vehicle, Specialization } from "@/lib/types";
+import { getMaterials } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
@@ -35,9 +35,22 @@ import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 
 const STATUS_COLORS: Record<string, string> = { 'En Servicio': "#22C55E", 'Fuera de Servicio': "#EF4444" };
-const CONDITION_COLORS: Record<string, string> = { 'Bueno': "#22C55E", 'Regular': "#FBBF24", 'Malo': "#F97316" };
+const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
+const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 
-const MultiSelectFilter = ({ title, options, selected, onSelectedChange, searchPlaceholder }: { title: string; options: { value: string; label: string }[]; selected: string[]; onSelectedChange: (selected: string[]) => void; searchPlaceholder?: string; }) => {
+const MultiSelectFilter = ({ 
+    title, 
+    options, 
+    selected, 
+    onSelectedChange, 
+    searchPlaceholder 
+}: { 
+    title: string; 
+    options: { value: string; label: string }[]; 
+    selected: string[]; 
+    onSelectedChange: (selected: string[]) => void; 
+    searchPlaceholder?: string; 
+}) => {
     const [open, setOpen] = useState(false);
     const handleSelect = (value: string) => {
         const isSelected = selected.includes(value);
@@ -46,9 +59,13 @@ const MultiSelectFilter = ({ title, options, selected, onSelectedChange, searchP
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-xs">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-xs text-left">
                     <div className="flex gap-1 flex-wrap">
-                         {selected.length > 0 ? selected.map(v => <Badge variant="secondary" key={v} className="text-[10px]">{options.find(o => o.value === v)?.label || v}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                         {selected.length > 0 ? selected.map(v => (
+                             <Badge variant="secondary" key={v} className="text-[10px] py-0 px-1">
+                                 {options.find(o => o.value === v)?.label || v}
+                             </Badge>
+                         )) : `Filtrar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -58,7 +75,14 @@ const MultiSelectFilter = ({ title, options, selected, onSelectedChange, searchP
                     <CommandInput placeholder={searchPlaceholder || `Buscar...`} />
                     <CommandList>
                         <CommandEmpty>Sin resultados.</CommandEmpty>
-                        <CommandGroup>{options.map((opt) => (<CommandItem key={opt.value} value={opt.label} onSelect={() => handleSelect(opt.value)}><Check className={cn("mr-2 h-4 w-4", selected.includes(opt.value) ? "opacity-100" : "opacity-0")} />{opt.label}</CommandItem>))}</CommandGroup>
+                        <CommandGroup>
+                            {options.map((opt) => (
+                                <CommandItem key={opt.value} value={opt.label} onSelect={() => handleSelect(opt.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(opt.value) ? "opacity-100" : "opacity-0")} />
+                                    {opt.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
                     </CommandList>
                 </Command>
             </PopoverContent>
@@ -71,7 +95,17 @@ export default function MaterialsReportPage() {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // Filtros Jerárquicos
     const [filterCategories, setFilterCategories] = useState<string[]>([]);
+    const [filterSubCategories, setFilterSubCategories] = useState<string[]>([]);
+    const [filterItemTypes, setFilterItemTypes] = useState<string[]>([]);
+    
+    // Filtros Técnicos
+    const [filterAcoples, setFilterAcoples] = useState<string[]>([]);
+    const [filterMedidas, setFilterMedidas] = useState<string[]>([]);
+    
+    // Filtros Ubicación
     const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
     const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -85,7 +119,6 @@ export default function MaterialsReportPage() {
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
-    const canManageGlobally = activeRole === 'Master' || activeRole === 'Administrador';
 
     const handleDataChange = async () => {
         setLoading(true);
@@ -109,16 +142,45 @@ export default function MaterialsReportPage() {
         });
     }, []);
 
+    // Opciones dinámicas para los filtros jerárquicos
+    const subCategoryOptions = useMemo(() => {
+        if (filterCategories.length === 0) return [];
+        return MATERIAL_CATEGORIES
+            .filter(c => filterCategories.includes(c.id))
+            .flatMap(c => c.subCategories.map(s => ({ value: s.id, label: s.label })));
+    }, [filterCategories]);
+
+    const itemTypeOptions = useMemo(() => {
+        if (filterSubCategories.length === 0) return [];
+        return MATERIAL_CATEGORIES
+            .flatMap(c => c.subCategories)
+            .filter(s => filterSubCategories.includes(s.id))
+            .flatMap(s => s.items.map(i => ({ value: i.id, label: i.label })));
+    }, [filterSubCategories]);
+
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
             if (searchTerm && !m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) && !m.codigo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+            
+            // Jerarquía
             if (filterCategories.length > 0 && !filterCategories.includes(m.categoryId)) return false;
+            if (filterSubCategories.length > 0 && !filterSubCategories.includes(m.subCategoryId)) return false;
+            if (filterItemTypes.length > 0 && !filterItemTypes.includes(m.itemTypeId)) return false;
+            
+            // Técnico
+            if (filterAcoples.length > 0 && (!m.acople || !filterAcoples.includes(m.acople))) return false;
+            if (filterMedidas.length > 0 && (!m.medida || !filterMedidas.includes(m.medida))) return false;
+
+            // Ubicación
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(m.cuartel)) return false;
             if (filterVehicles.length > 0 && (!m.ubicacion?.vehiculoId || !filterVehicles.includes(m.ubicacion.vehiculoId))) return false;
+            
+            // Estado
             if (filterStates.length > 0 && !filterStates.includes(m.estado)) return false;
+            
             return true;
         });
-    }, [materials, searchTerm, filterCategories, filterFirehouses, filterVehicles, filterStates]);
+    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterFirehouses, filterVehicles, filterStates]);
 
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
@@ -128,133 +190,189 @@ export default function MaterialsReportPage() {
         return { total, servicePercent: `${((inService / total) * 100).toFixed(0)}%`, goodPercent: `${((good / total) * 100).toFixed(0)}%` };
     }, [filteredMaterials]);
 
-    const chartData = useMemo(() => {
-        const status = filteredMaterials.reduce((acc, m) => { acc[m.estado] = (acc[m.estado] || 0) + 1; return acc; }, {} as Record<string, number>);
-        return Object.entries(status).map(([name, value]) => ({ name, value, fill: STATUS_COLORS[name] || '#ccc' }));
-    }, [filteredMaterials]);
-
     const generatePdf = async () => {
-        if (!logoDataUrl) return;
+        if (!logoDataUrl) {
+            toast({ title: "Espere un momento", description: "Cargando logo..." });
+            return;
+        }
         setGeneratingPdf(true);
-        const doc = new jsPDF();
+        const doc = new jsPDF('l', 'mm', 'a4'); // Paisaje para más columnas
         try {
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Inventario Estratégico", 14, 22);
+            doc.text("Reporte de Inventario Técnico", 14, 22);
             doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             let currentY = 45;
             if (includeKPIs) {
-                (doc as any).autoTable({
-                    startY: currentY,
-                    head: [['Métrica', 'Valor']],
-                    body: [['Total Equipos', kpis.total], ['Operatividad', kpis.servicePercent], ['Buen Estado', kpis.goodPercent]],
-                    theme: 'grid',
-                });
-                currentY = (doc as any).lastAutoTable.finalY + 10;
+                doc.setFontSize(14); doc.setTextColor(40);
+                doc.text(`Operatividad de Dotación: ${kpis.servicePercent}`, 14, currentY);
+                currentY += 10;
             }
 
             if (includeInventoryDetails && filteredMaterials.length > 0) {
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Ubicación', 'Estado']],
+                    head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Estado']],
                     body: filteredMaterials.map(m => [
-                        m.codigo, m.nombre,
-                        m.ubicacion.type === 'vehiculo' ? `Mov. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
+                        m.codigo || 'S/C', 
+                        m.nombre,
+                        `${m.marca || ''} ${m.modelo || ''}`.trim() || 'N/A',
+                        m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
+                        m.medida || '-',
+                        m.acople || '-',
                         m.estado
                     ]),
                     theme: 'striped',
+                    headStyles: { fillColor: '#343a40' },
+                    styles: { fontSize: 8 }
                 });
             }
-            doc.save(`inventario-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`reporte-materiales-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
 
     return (
         <div className="space-y-8 pb-20">
-            <PageHeader title="Consola de Inventario" description="Gestión jerárquica y análisis de activos del departamento."/>
+            <PageHeader title="Reportes Avanzados de Materiales" description="Filtre por cualquier parámetro técnico para obtener inventarios precisos."/>
             
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-2">
-                    <CardHeader><CardTitle className="text-lg">Búsqueda Directa</CardTitle></CardHeader>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <Card className="lg:col-span-3">
+                    <CardHeader><CardTitle className="text-lg">Búsqueda Rápida</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
                         <div className="relative flex-grow">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Código o Nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            <Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                         </div>
-                        <QrScannerDialog onScan={(c) => {setSearchTerm(c); toast({title: "QR Escaneado", description: c});}}>
-                            <Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2" />Escanear</Button>
+                        <QrScannerDialog onScan={(c) => setSearchTerm(c)}>
+                            <Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button>
                         </QrScannerDialog>
                     </CardContent>
                 </Card>
                 <Card className="border-primary/50 bg-primary/5">
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Operatividad</CardTitle></CardHeader>
-                    <CardContent><div className="text-3xl font-bold text-primary">{kpis.servicePercent}</div><p className="text-xs text-muted-foreground mt-1">Sistemas en servicio activo</p></CardContent>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Materiales en Filtro</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div>
+                        <p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen el criterio</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card className="shadow-md">
+                <CardHeader className="bg-muted/30 border-b">
+                    <CardTitle className="text-base flex items-center gap-2"><Layers className="h-5 w-5 text-primary" /> Filtros de Clasificación Jerárquica</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold">1. Categoría</Label>
+                        <MultiSelectFilter title="Categorías" options={MATERIAL_CATEGORIES.map(c => ({ value: c.id, label: c.label }))} selected={filterCategories} onSelectedChange={(v) => { setFilterCategories(v); setFilterSubCategories([]); setFilterItemTypes([]); }} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold">2. Subcategoría</Label>
+                        <MultiSelectFilter title="Subcategorías" options={subCategoryOptions} selected={filterSubCategories} onSelectedChange={(v) => { setFilterSubCategories(v); setFilterItemTypes([]); }} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label className="text-xs font-bold">3. Tipo de Ítem</Label>
+                        <MultiSelectFilter title="Tipos" options={itemTypeOptions} selected={filterItemTypes} onSelectedChange={setFilterItemTypes} />
+                    </div>
+                </CardContent>
+            </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card>
+                    <CardHeader className="bg-muted/30 border-b">
+                        <CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Acople</Label>
+                            <MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Medida / Diámetro</Label>
+                            <MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} />
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="bg-muted/30 border-b">
+                        <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Cuartel</Label>
+                            <MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Móvil</Label>
+                            <MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móv ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Estado</Label>
+                            <MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} />
+                        </div>
+                    </CardContent>
                 </Card>
             </div>
 
             <Card>
-                <CardHeader><CardTitle className="text-lg">Filtros Avanzados</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-1">
-                        <Label className="text-xs">Categoría Principal</Label>
-                        <MultiSelectFilter title="Categorías" options={MATERIAL_CATEGORIES.map(c => ({ value: c.id, label: c.label }))} selected={filterCategories} onSelectedChange={setFilterCategories} />
+                <CardHeader className="border-b">
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
+                        <div className="flex gap-2">
+                            <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0}>
+                                {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                                Generar PDF Detallado
+                            </Button>
+                        </div>
                     </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs">Ubicación (Móviles)</Label>
-                        <MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs">Cuartel</Label>
-                        <MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} />
-                    </div>
-                    <div className="space-y-1">
-                        <Label className="text-xs">Estado</Label>
-                        <MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} />
-                    </div>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader><CardTitle className="font-headline">Detalle de Equipamiento ({filteredMaterials.length})</CardTitle></CardHeader>
-                <CardContent>
+                </CardHeader>
+                <CardContent className="p-0">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Código</TableHead>
+                                <TableHead className="w-[100px]">Código</TableHead>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Ubicación</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead>Acciones</TableHead>
+                                <TableHead>Medida</TableHead>
+                                <TableHead>Acople</TableHead>
+                                <TableHead className="text-right">Estado</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {loading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full"/></TableCell></TableRow> : 
-                            filteredMaterials.map(m => (
-                                <TableRow key={m.id}>
-                                    <TableCell className="font-mono text-xs font-bold">{m.codigo}</TableCell>
-                                    <TableCell className="text-sm font-medium">{m.nombre}</TableCell>
-                                    <TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Mov. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`}</TableCell>
-                                    <TableCell><Badge className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : 'bg-red-600')}>{m.estado}</Badge></TableCell>
-                                    <TableCell>
-                                        <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}><Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4"/></Button></EditMaterialDialog>
+                            {loading ? (
+                                <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
+                            ) : filteredMaterials.length > 0 ? (
+                                filteredMaterials.map(m => (
+                                    <TableRow key={m.id} className="hover:bg-muted/50">
+                                        <TableCell className="font-mono text-xs font-bold">{m.codigo || '-'}</TableCell>
+                                        <TableCell className="text-sm font-medium">
+                                            {m.nombre}
+                                            <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>
+                                        </TableCell>
+                                        <TableCell className="text-xs">
+                                            {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}
+                                        </TableCell>
+                                        <TableCell className="text-xs">{m.medida || '-'}</TableCell>
+                                        <TableCell className="text-xs">{m.acople || '-'}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Badge className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : 'bg-red-600')}>
+                                                {m.estado}
+                                            </Badge>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic">
+                                        No se encontraron materiales con los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader><CardTitle>Exportación Modular</CardTitle></CardHeader>
-                <CardContent className="flex flex-col sm:flex-row gap-6">
-                    <div className="flex items-center space-x-2"><Switch id="kpi" checked={includeKPIs} onCheckedChange={setIncludeKPIs} /><Label htmlFor="kpi">Incluir KPIs</Label></div>
-                    <div className="flex items-center space-x-2"><Switch id="list" checked={includeInventoryDetails} onCheckedChange={setIncludeInventoryDetails} /><Label htmlFor="list">Incluir Listado</Label></div>
-                    <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0} className="ml-auto">
-                        {generatingPdf ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />} Generar PDF
-                    </Button>
                 </CardContent>
             </Card>
         </div>
