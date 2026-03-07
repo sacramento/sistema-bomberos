@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
+const composicionOptions = ['Tela', 'Goma'];
 
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
@@ -50,6 +52,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const [marca, setMarca] = useState('');
     const [modelo, setModelo] = useState('');
     const [acople, setAcople] = useState<string>('');
+    const [composicion, setComposicion] = useState<string>('');
     const [caracteristicas, setCaracteristicas] = useState('');
     const [medida, setMedida] = useState('');
     const [showCustomMedida, setShowCustomMedida] = useState(false);
@@ -79,6 +82,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setMarca(material.marca || '');
             setModelo(material.modelo || '');
             setAcople(material.acople || '');
+            setComposicion(material.composicion || '');
             setCaracteristicas(material.caracteristicas || '');
             setMedida(material.medida || '');
             setEstado(material.estado);
@@ -141,6 +145,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 marca,
                 modelo,
                 acople: acople === '' ? undefined : acople as any,
+                composicion: composicion === '' ? undefined : composicion as any,
                 caracteristicas, 
                 medida: normalizedMedida, 
                 estado, 
@@ -157,6 +162,8 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             setLoading(false);
         }
     };
+
+    const isHose = itemTypeId === '02.2.1' || itemTypeId === '02.2.2' || itemTypeId === '11.2.1';
 
     const needsTechnicalDetails = 
         (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) ||
@@ -221,6 +228,15 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                                     </Select>
                                     {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
                                 </div>
+                                {isHose && (
+                                    <div className="space-y-2">
+                                        <Label>Composición</Label>
+                                        <Select value={composicion} onValueChange={setComposicion}>
+                                            <SelectTrigger><SelectValue placeholder="Tela/Goma..."/></SelectTrigger>
+                                            <SelectContent>{composicionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                    </div>
+                                )}
                             </>
                         )}
 

@@ -49,8 +49,8 @@ export type LeaveType = 'Ordinaria' | 'Extraordinaria' | 'Enfermedad' | 'Estudio
 
 export type Leave = {
   id: string;
-  firefighterId: string;
-  firefighterName: string;
+  firefighterId: string; // The immutable Firestore document ID
+  firefighterName: string; // Storing for easier display
   startDate: string;
   endDate: string;
   type: LeaveType;
@@ -90,10 +90,11 @@ export type Vehicle = {
   capacidadAgua: number;
   tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
   traccion: 'Trasera' | 'Delantera' | '4x4';
-  encargadoIds: string[]; // Mantenimiento/Mecánica
+  encargadoIds: string[]; // Firefighter IDs of the people in charge
   materialEncargadoIds: string[]; // Gestión de Inventario del móvil
   observaciones: string;
-  maintenanceItemIds?: string[];
+  maintenanceItemIds?: string[]; // IDs of MaintenanceItem that apply to this vehicle
+  // Enriched properties for client side
   encargados?: Firefighter[];
   materialEncargados?: Firefighter[];
   maintenanceItems?: MaintenanceItem[];
@@ -116,8 +117,8 @@ export type MaintenanceChecklistItem = {
 export type MaintenanceRecord = {
   id: string;
   vehicleId: string;
-  date: string;
-  mileage: number;
+  date: string; // Date of service
+  mileage: number; // Mileage at service
   nextServiceDate?: string;
   nextServiceMileage?: number;
   checklist: MaintenanceChecklistItem[];
@@ -131,12 +132,13 @@ export type RepairType = 'Mecanica' | 'Electrica' | 'Neumatica' | 'Hidraulica' |
 export type RepairRecord = {
   id: string;
   vehicleId: string;
-  date: string;
-  mileage: number;
+  date: string; // Date of repair
+  mileage: number; // Mileage at repair
   repairType: RepairType;
   details: string;
   externalPersonnel?: string;
   personnelIds: string[];
+  // Enriched properties
   personnel?: Firefighter[];
 };
 
@@ -149,12 +151,13 @@ export type Material = {
   id: string;
   codigo: string;
   nombre: string;
-  categoryId: string;
-  subCategoryId: string;
-  itemTypeId: string;
+  categoryId: string; // e.g. "01"
+  subCategoryId: string; // e.g. "01.1"
+  itemTypeId: string; // e.g. "01.1.1"
   marca?: string;
   modelo?: string;
   acople?: 'Storz' | 'NH' | 'QC' | 'DSP' | 'Withworth' | 'Otro';
+  composicion?: 'Tela' | 'Goma';
   caracteristicas?: string;
   medida?: string; 
   ubicacion: {
@@ -166,6 +169,7 @@ export type Material = {
   estado: 'En Servicio' | 'Fuera de Servicio';
   condicion: 'Bueno' | 'Regular' | 'Malo';
   cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+  // Enriched properties for client side
   vehiculo?: Vehicle;
 }
 
@@ -185,7 +189,7 @@ export type CascadeCharge = {
     id: string;
     materialId: string;
     materialCode: string;
-    chargeTimestamp: string | null;
+    chargeTimestamp: string | null; // ISO String
     cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
     actorId: string;
     actorName: string;
@@ -194,11 +198,12 @@ export type CascadeCharge = {
 export type CascadeSystemCharge = {
   id: string;
   tubes: ('Tubo 1' | 'Tubo 2' | 'Tubo 3' | 'Tubo 4')[];
-  startTime: string | null;
-  endTime: string | null;
+  startTime: string | null; // ISO String
+  endTime: string | null; // ISO String
   actorId: string;
   actorName: string;
 };
+
 
 export type AttendanceModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Bombero' | 'Ninguno';
 export type WeekModuleRole = 'Administrador' | 'Oficial' | 'Encargado' | 'Bombero' | 'Ninguno';
@@ -210,13 +215,14 @@ export type ServiciosModuleRole = 'Administrador' | 'Oficial' | 'Bombero' | 'Nin
 export type CascadaModuleRole = 'Administrador' | 'Encargado' | 'Bombero' | 'Ninguno';
 export type AspirantesModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 'Bombero' | 'Ninguno';
 
+
 export type GlobalRole = 'Master' | 'Usuario';
 
 export type User = {
-  id: string;
+  id: string; // This is the user's legajo
   name: string;
   password?: string;
-  role: GlobalRole;
+  role: GlobalRole; // Global role
   roles: {
     asistencia: AttendanceModuleRole;
     semanas: WeekModuleRole;
@@ -230,23 +236,27 @@ export type User = {
   };
 };
 
+// Tipo para el usuario logueado, puede ser nulo si no está autenticado
 export type LoggedInUser = Omit<User, 'password'> | null;
 
+
+// Types for "Semanas" Module
 export type Week = {
     id: string;
     name: string;
     firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
     periodStartDate: string;
     periodEndDate: string;
-    leadId: string;
-    driverId: string;
-    memberIds: string[];
-    allMemberIds: string[];
-    observations: string;
+    leadId: string; // Firefighter ID of the week lead
+    driverId: string; // Firefighter ID of the driver
+    memberIds: string[]; // List of firefighter IDs in the week (excluding lead and driver)
+    allMemberIds: string[]; // List of ALL firefighter IDs in the week
+    observations: string; // For the "Pizarra de Novedades"
+    // Enriched properties for client side
     lead: Firefighter | null;
     driver: Firefighter | null;
     members?: Firefighter[];
-    allMembers?: Firefighter[];
+    allMembers?: Firefighter[]; // Includes lead, driver, and members
 }
 
 export type Task = {
@@ -259,6 +269,7 @@ export type Task = {
     createdAt: string | null;
     startDate?: string;
     endDate?: string;
+    // Enriched properties for client side
     assignedTo?: Firefighter[];
 }
 
@@ -268,9 +279,11 @@ export type Driver = {
     id: string;
     firefighterId: string;
     habilitaciones: Habilitacion[];
+    // Enriched data
     firefighter?: Firefighter;
 }
 
+// Audit Log Type
 export type AuditLogAction = 
   | 'LOGIN_SUCCESS' | 'LOGIN_FAILURE'
   | 'CREATE_USER' | 'UPDATE_USER' | 'DELETE_USER'
@@ -297,7 +310,7 @@ export type AuditLogAction =
 
 export type AuditLog = {
     id: string;
-    timestamp: any;
+    timestamp: any; // Firestore ServerTimestamp
     userId: string;
     userName: string;
     action: AuditLogAction;
@@ -306,6 +319,7 @@ export type AuditLog = {
     details?: Record<string, any>;
 };
 
+// Types for "Roperia" Module
 export type ClothingCategory = 'Fajina' | 'Media Gala' | 'Servicios';
 export type ClothingSubCategory = 'General' | 'Incendio' | 'Rescate' | 'Forestal' | 'GORA' | 'Buceo';
 export type ClothingItemType = 
@@ -324,7 +338,58 @@ export type ClothingItem = {
     model?: string;
     observations?: string;
     state: 'Nuevo' | 'Bueno' | 'Regular' | 'Malo' | 'Baja';
-    firefighterId?: string;
+    firefighterId?: string; // Optional because it might be in storage
     deliveredAt?: string;
+    // Enriched properties
     firefighter?: Firefighter;
+}
+
+// Types for "Servicios" Module
+export type ServiceType = 'Incendio' | 'Rescate' | 'Accidente' | 'HazMat' | 'Forestal' | 'Especial' | 'G.O.R.A' | 'Buceo' | 'Otros';
+export type SummonMethod = 'Alarma' | 'VHF' | 'Teléfono' | 'En el Cuartel';
+
+export type InterveningVehicle = {
+    vehicleId: string;
+    departureDateTime: string;
+    returnDateTime: string;
+}
+
+export type Service = {
+    id: string; // Firestore auto-generated ID
+    cuartel: 'C1' | 'C2' | 'C3';
+    year: number;
+    manualId: number;
+    status?: 'Activo' | 'Anulado';
+    
+    startDateTime: string;
+    endDateTime: string;
+    serviceType: ServiceType;
+    serviceCode: string; 
+    zone: number; 
+    inConjunction: boolean; 
+    address: string;
+    latitude?: number;
+    longitude?: number;
+    locationDetails?: string; // B° / Paraje
+    
+    summonMethods: SummonMethod[];
+    
+    commandId: string;
+    serviceChiefId: string;
+    stationOfficerId: string; // Cuartelero
+    onDutyIds?: string[];
+    offDutyIds?: string[];
+    
+    interveningVehicles?: InterveningVehicle[];
+    
+    collaboration?: string;
+    recognition?: string;
+    observations?: string;
+    
+    // Enriched properties
+    command?: Firefighter;
+    serviceChief?: Firefighter;
+    stationOfficer?: Firefighter;
+    onDutyPersonnel?: Firefighter[];
+    offDutyPersonnel?: Firefighter[];
 }

@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dialog';
 import { Material } from '@/lib/types';
 import { Badge } from '@/components/ui/badge';
-import { Truck, Warehouse, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse, Ruler, Layers, Settings2 } from 'lucide-react';
+import { Truck, Warehouse, Sparkles, Tag, Check, X, Shield, FileText, HeartPulse, Ruler, Layers, Settings2, Droplets } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { MATERIAL_CATEGORIES } from '@/app/lib/constants/material-categories';
@@ -85,10 +85,11 @@ export default function MaterialDetailDialog({ material, open, onOpenChange }: {
                 <DetailItem icon={Tag} label="Modelo" value={material.modelo || 'N/A'} />
             </div>
 
-            {(material.acople || material.medida) && (
+            {(material.acople || material.medida || material.composicion) && (
                 <div className="grid grid-cols-2 gap-4">
                     {material.acople && <DetailItem icon={Settings2} label="Acople" value={<Badge variant="secondary">{material.acople}</Badge>} />}
                     {material.medida && <DetailItem icon={Ruler} label="Medida" value={material.medida} />}
+                    {material.composicion && <DetailItem icon={Droplets} label="Composición" value={<Badge variant="outline">{material.composicion}</Badge>} />}
                 </div>
             )}
             

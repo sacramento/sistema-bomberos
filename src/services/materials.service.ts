@@ -1,3 +1,4 @@
+
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -46,6 +47,7 @@ const docToMaterial = async (
         marca: data.marca || '',
         modelo: data.modelo || '',
         acople: data.acople,
+        composicion: data.composicion,
         caracteristicas: data.caracteristicas || '',
         medida: data.medida || '',
         ubicacion: data.ubicacion,
@@ -164,6 +166,7 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
             marca: item.marca || '',
             modelo: item.modelo || '',
             acople: item.acople || '',
+            composicion: item.composicion || '',
             caracteristicas: item.caracteristicas || '',
             medida: item.medida || '',
             estado: item.estado || 'En Servicio',

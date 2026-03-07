@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization } from "@/lib/types";
 import { getMaterials } from "@/services/materials.service";
@@ -37,6 +37,7 @@ import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 const STATUS_COLORS: Record<string, string> = { 'En Servicio': "#22C55E", 'Fuera de Servicio': "#EF4444" };
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
+const composicionOptions = ['Tela', 'Goma'];
 
 const MultiSelectFilter = ({ 
     title, 
@@ -104,6 +105,7 @@ export default function MaterialsReportPage() {
     // Filtros Técnicos
     const [filterAcoples, setFilterAcoples] = useState<string[]>([]);
     const [filterMedidas, setFilterMedidas] = useState<string[]>([]);
+    const [filterComposiciones, setFilterComposiciones] = useState<string[]>([]);
     
     // Filtros Ubicación
     const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
@@ -170,6 +172,7 @@ export default function MaterialsReportPage() {
             // Técnico
             if (filterAcoples.length > 0 && (!m.acople || !filterAcoples.includes(m.acople))) return false;
             if (filterMedidas.length > 0 && (!m.medida || !filterMedidas.includes(m.medida))) return false;
+            if (filterComposiciones.length > 0 && (!m.composicion || !filterComposiciones.includes(m.composicion))) return false;
 
             // Ubicación
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(m.cuartel)) return false;
@@ -180,7 +183,7 @@ export default function MaterialsReportPage() {
             
             return true;
         });
-    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterFirehouses, filterVehicles, filterStates]);
+    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
 
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
@@ -236,7 +239,7 @@ export default function MaterialsReportPage() {
             if (includeInventoryDetails && filteredMaterials.length > 0) {
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Estado']],
+                    head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Comp.', 'Estado']],
                     body: filteredMaterials.map(m => [
                         m.codigo || 'Pendiente', 
                         m.nombre,
@@ -244,6 +247,7 @@ export default function MaterialsReportPage() {
                         m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
                         m.medida || '-',
                         m.acople || '-',
+                        m.composicion || '-',
                         m.estado
                     ]),
                     theme: 'striped',
@@ -370,7 +374,7 @@ export default function MaterialsReportPage() {
                     <CardHeader className="bg-muted/30 border-b">
                         <CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-6">
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                         <div className="space-y-2">
                             <Label className="text-xs font-bold">Acople</Label>
                             <MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} />
@@ -378,6 +382,10 @@ export default function MaterialsReportPage() {
                         <div className="space-y-2">
                             <Label className="text-xs font-bold">Medida / Diámetro</Label>
                             <MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold">Composición</Label>
+                            <MultiSelectFilter title="Composición" options={composicionOptions.map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} />
                         </div>
                     </CardContent>
                 </Card>
@@ -415,7 +423,7 @@ export default function MaterialsReportPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0">
+                <CardContent className="p-0 overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -424,12 +432,13 @@ export default function MaterialsReportPage() {
                                 <TableHead>Ubicación</TableHead>
                                 <TableHead>Medida</TableHead>
                                 <TableHead>Acople</TableHead>
+                                <TableHead>Comp.</TableHead>
                                 <TableHead className="text-right">Estado</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                <TableRow><TableCell colSpan={6}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
                             ) : filteredMaterials.length > 0 ? (
                                 filteredMaterials.map(m => (
                                     <TableRow key={m.id} className="hover:bg-muted/50">
@@ -445,6 +454,7 @@ export default function MaterialsReportPage() {
                                         </TableCell>
                                         <TableCell className="text-xs">{m.medida || '-'}</TableCell>
                                         <TableCell className="text-xs">{m.acople || '-'}</TableCell>
+                                        <TableCell className="text-xs">{m.composicion || '-'}</TableCell>
                                         <TableCell className="text-right">
                                             <Badge className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : 'bg-red-600')}>
                                                 {m.estado}
@@ -454,7 +464,7 @@ export default function MaterialsReportPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic">
+                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground italic">
                                         No se encontraron materiales con los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
