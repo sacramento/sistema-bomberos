@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Material, Vehicle } from "@/lib/types";
+import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { addMaterial, getNextMaterialSequence } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Sparkles, Loader2 } from "lucide-react";
@@ -45,6 +46,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     const [loading, setLoading] = useState(false);
     const [generatingCode, setGeneratingCode] = useState(false);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
 
     const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
     const setOpen = setControlledOpen !== undefined ? setControlledOpen : setInternalOpen;
@@ -52,6 +54,19 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     const activeRole = getActiveRole(pathname);
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     
+    // Find logged in firefighter ID
+    const loggedInFirefighter = useMemo(() => {
+        if (!user || firefighters.length === 0) return null;
+        return firefighters.find(f => f.legajo === user.id);
+    }, [user, firefighters]);
+
+    // Filter vehicles the user is assigned to as encargado
+    const managedVehicles = useMemo(() => {
+        if (isPrivileged) return vehicles;
+        if (!loggedInFirefighter) return [];
+        return vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id));
+    }, [isPrivileged, vehicles, loggedInFirefighter]);
+
     // Form state
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
@@ -90,12 +105,18 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
 
     useEffect(() => {
         if (open) {
-            getVehicles().then(data => {
-                setVehicles(data);
+            Promise.all([getVehicles(), getFirefighters()]).then(([vData, fData]) => {
+                setVehicles(vData);
+                setFirefighters(fData);
+                
+                // If encargado, set initial vehicle if they only have one
                 if (!isPrivileged && user) {
-                    const managed = data.filter(v => v.materialEncargadoIds?.includes(user.id));
-                    if (managed.length === 1) {
-                        setVehiculoId(managed[0].id);
+                    const firefighter = fData.find(f => f.legajo === user.id);
+                    if (firefighter) {
+                        const managed = vData.filter(v => v.materialEncargadoIds?.includes(firefighter.id));
+                        if (managed.length === 1) {
+                            setVehiculoId(managed[0].id);
+                        }
                     }
                 }
             });
@@ -134,7 +155,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        // Validaciones básicas: Permitimos código y categorías vacías para migración
         if (!nombre || !estado || !condicion || !finalCuartel) {
             toast({ variant: "destructive", title: "Campos incompletos", description: "Nombre, Estado, Condición y Ubicación son obligatorios." });
             return;
@@ -262,7 +282,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                                     <Label>Móvil</Label>
                                     <Select value={vehiculoId} onValueChange={setVehiculoId}>
                                         <SelectTrigger><SelectValue placeholder="Móvil..." /></SelectTrigger>
-                                        <SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent>
+                                        <SelectContent>{managedVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
