@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -230,7 +229,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación (Solo lectura para encargados)</Label>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación (Sólo lectura para encargados)</Label>
                         <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)} disabled={!isPrivileged}>
                             {isPrivileged && <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>}
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>

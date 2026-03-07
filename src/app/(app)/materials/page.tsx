@@ -4,9 +4,10 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle } from "@/lib/types";
+import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -28,6 +29,7 @@ import { cn } from "@/lib/utils";
 export default function MaterialsPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
@@ -40,22 +42,30 @@ export default function MaterialsPage() {
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     const isEncargado = activeRole === 'Encargado';
     
+    // Mapeamos el usuario logueado a su registro de bombero para obtener su ID de Firestore
+    const loggedInFirefighter = useMemo(() => {
+        if (!user || firefighters.length === 0) return null;
+        return firefighters.find(f => f.legajo === user.id);
+    }, [user, firefighters]);
+
     const managedVehicleIds = useMemo(() => {
-        if (!user || !isEncargado) return new Set<string>();
-        return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(user.id)).map(v => v.id));
-    }, [user, vehicles, isEncargado]);
+        if (!loggedInFirefighter || !isEncargado) return new Set<string>();
+        return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id)).map(v => v.id));
+    }, [loggedInFirefighter, vehicles, isEncargado]);
 
     const canAdd = isPrivileged || (isEncargado && managedVehicleIds.size > 0);
 
     const fetchAllData = async () => {
         setLoading(true);
         try {
-            const [materialsData, vehiclesData] = await Promise.all([
+            const [materialsData, vehiclesData, firefightersData] = await Promise.all([
                 getMaterials(),
-                getVehicles()
+                getVehicles(),
+                getFirefighters()
             ]);
             setMaterials(materialsData);
             setVehicles(vehiclesData);
+            setFirefighters(firefightersData);
         } catch (error) {
              toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
         } finally {
