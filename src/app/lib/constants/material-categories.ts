@@ -229,7 +229,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 label: "05.2 Ventilación y Oxigenoterapia",
                 items: [
                     { id: "05.2.1", label: "05.2.1 Balones de oxígeno portátiles y fijos" },
-                    { id: "05.2.2", label: "05.2.2 Reguladores, mascarillas y cánulas" },
+                    { id: "05.2.2", label: "05.2.2 Reguladores, mascarillas y cargadores" },
                     { id: "05.2.3", label: "05.2.3 Reanimadores manuales (AMBU) adultos/pediátricos" },
                     { id: "05.2.4", label: "05.2.4 Aspiradores de secreciones portátiles" }
                 ]
@@ -476,7 +476,7 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "11.1.2", label: "11.1.2 McLeod" },
                     { id: "11.1.3", label: "11.1.3 Pulaski / Hacha-Azada" },
                     { id: "11.1.4", label: "11.1.4 Rozones / Herramientas de corte" },
-                    { id: "11.1.5", label: "11.1.5 Otras herramientas de zapa" }
+                    { id: "11.1.5", label: "11.1.5 Palas forestales y otras herramientas de zapa" }
                 ]
             },
             {
