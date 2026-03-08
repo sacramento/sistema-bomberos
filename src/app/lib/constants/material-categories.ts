@@ -64,6 +64,14 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "01.5.2", label: "01.5.2 Mochilas (Arneses)" },
                     { id: "01.5.3", label: "01.5.3 Tubos (Cilindros de Aire)" }
                 ]
+            },
+            {
+                id: "01.6",
+                label: "01.6 Dispositivos de Alerta y Localización",
+                items: [
+                    { id: "01.6.1", label: "01.6.1 Alarma de hombre caído (PASS)" },
+                    { id: "01.6.2", label: "01.6.2 Detectores de gases personales" }
+                ]
             }
         ]
     },
