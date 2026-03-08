@@ -339,12 +339,12 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
         subCategories: [
             {
                 id: "08.1",
-                label: "08.1 Corte Motorizado",
+                label: "08.1 Corte y Desbaste Motorizado",
                 items: [
-                    { id: "08.1.1", label: "08.1.1 Motosierras para madera (gasolina/eléctricas)" },
-                    { id: "08.1.2", label: "08.1.2 Radiales / moladoras para metal y concreto" },
+                    { id: "08.1.1", label: "08.1.1 Motosierras (gasolina/eléctricas)" },
+                    { id: "08.1.2", label: "08.1.2 Radiales / Amoladoras (batería/eléctricas)" },
                     { id: "08.1.3", label: "08.1.3 Sierras sable / recíprocas de rescate" },
-                    { id: "08.1.4", label: "08.1.4 Discos, cadenas, guías y accesorios de corte" }
+                    { id: "08.1.4", label: "08.1.4 Consumibles de corte: Discos, cadenas, hojas de sierra sable, etc." }
                 ]
             },
             {
@@ -367,11 +367,13 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
             },
             {
                 id: "08.4",
-                label: "08.4 Otros Equipos Motorizados",
+                label: "08.4 Otros Equipos Eléctricos y a Batería",
                 items: [
                     { id: "08.4.1", label: "08.4.1 Compresores de aire portátiles" },
                     { id: "08.4.2", label: "08.4.2 Hidrolavadoras de alta presión" },
-                    { id: "08.4.3", label: "08.4.3 Herramientas multifunción (oscilantes, etc.)" }
+                    { id: "08.4.3", label: "08.4.3 Herramientas multifunción (oscilantes, etc.)" },
+                    { id: "08.4.4", label: "08.4.4 Taladros y Atornilladores (batería / cable)" },
+                    { id: "08.4.5", label: "08.4.5 Consumibles de perforación: Mechas, puntas y accesorios" }
                 ]
             }
         ]
