@@ -1,12 +1,14 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle, Specialization } from "@/lib/types";
-import { getMaterials } from "@/services/materials.service";
+import { Material, Vehicle, Specialization, Firefighter } from "@/lib/types";
+import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -20,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import EditMaterialDialog from "../materials/_components/edit-material-dialog";
+import MaterialDetailDialog from "../materials/_components/material-detail-dialog";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format, parseISO } from 'date-fns';
@@ -93,8 +96,10 @@ const MultiSelectFilter = ({
 export default function MaterialsReportPage() {
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [detailItem, setDetailItem] = useState<Material | null>(null);
     
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
@@ -124,12 +129,16 @@ export default function MaterialsReportPage() {
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
 
+    const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
+    const isEncargado = activeRole === 'Encargado';
+
     const handleDataChange = async () => {
         setLoading(true);
         try {
-            const [m, v] = await Promise.all([getMaterials(), getVehicles()]);
+            const [m, v, f] = await Promise.all([getMaterials(), getVehicles(), getFirefighters()]);
             setMaterials(m);
             setVehicles(v);
+            setFirefighters(f);
         } catch (error) {
              toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
         } finally {
@@ -145,6 +154,28 @@ export default function MaterialsReportPage() {
             reader.readAsDataURL(b);
         });
     }, []);
+
+    const loggedInFirefighter = useMemo(() => {
+        if (!user || firefighters.length === 0) return null;
+        return firefighters.find(f => f.legajo === user.id);
+    }, [user, firefighters]);
+
+    const managedVehicleIds = useMemo(() => {
+        if (!loggedInFirefighter || !isEncargado) return new Set<string>();
+        return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id)).map(v => v.id));
+    }, [loggedInFirefighter, vehicles, isEncargado]);
+
+    const canEditMaterial = (m: Material) => {
+        if (isPrivileged) return true;
+        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
+            return true;
+        }
+        return false;
+    }
+
+    const canDeleteMaterial = (m: Material) => {
+        return isPrivileged;
+    }
 
     // Opciones dinámicas para los filtros jerárquicos
     const subCategoryOptions = useMemo(() => {
@@ -255,6 +286,17 @@ export default function MaterialsReportPage() {
         };
     }, [filteredMaterials]);
 
+    const handleDelete = async (materialId: string) => {
+        if (!user) return;
+        try {
+            await deleteMaterial(materialId, user);
+            toast({ title: "Material eliminado" });
+            handleDataChange();
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error", description: error.message });
+        }
+    }
+
     const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "Cargando logo..." });
@@ -333,7 +375,6 @@ export default function MaterialsReportPage() {
                 </Card>
             </div>
 
-            {/* Panel de Resumen Estadístico */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <Card className="border-l-4 border-l-blue-500">
                     <CardHeader className="pb-2">
@@ -490,14 +531,15 @@ export default function MaterialsReportPage() {
                                 <TableHead>Medida</TableHead>
                                 <TableHead>Acople</TableHead>
                                 <TableHead>Comp.</TableHead>
-                                <TableHead className="text-right cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
                                     <div className="flex items-center justify-end">Estado {getSortIcon('estado')}</div>
                                 </TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={8}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
                             ) : sortedFilteredMaterials.length > 0 ? (
                                 sortedFilteredMaterials.map(m => (
                                     <TableRow key={m.id} className="hover:bg-muted/50">
@@ -519,11 +561,53 @@ export default function MaterialsReportPage() {
                                                 {m.estado}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell className="text-right">
+                                            <AlertDialog>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                        <DropdownMenuItem onClick={() => setDetailItem(m)}>
+                                                            <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                                                        </DropdownMenuItem>
+                                                        {canEditMaterial(m) && (
+                                                            <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
+                                                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                                                    <Edit className="mr-2 h-4 w-4"/> Editar
+                                                                </DropdownMenuItem>
+                                                            </EditMaterialDialog>
+                                                        )}
+                                                        {canDeleteMaterial(m) && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <AlertDialogTrigger asChild>
+                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                        <Trash2 className="mr-2 h-4 w-4"/> Eliminar
+                                                                    </DropdownMenuItem>
+                                                                </AlertDialogTrigger>
+                                                            </>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                        <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente de la base de datos.</AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDelete(m.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center text-muted-foreground italic">
+                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground italic">
                                         No se encontraron materiales con los filtros aplicados.
                                     </TableCell>
                                 </TableRow>
@@ -532,6 +616,14 @@ export default function MaterialsReportPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            <MaterialDetailDialog
+                material={detailItem}
+                open={!!detailItem}
+                onOpenChange={(isOpen) => {
+                    if (!isOpen) setDetailItem(null);
+                }}
+            />
         </div>
     );
 }
