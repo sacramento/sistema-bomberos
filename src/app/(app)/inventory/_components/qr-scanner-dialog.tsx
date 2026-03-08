@@ -1,4 +1,3 @@
-
 'use client';
 
 import {
@@ -14,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useEffect, useRef, useState } from 'react';
-import jsQR from 'jsqr';
 
 export default function QrScannerDialog({
   children,
@@ -25,96 +23,73 @@ export default function QrScannerDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState(true);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
+  const scannerRef = useRef<any>(null);
+  const elementId = "barcode-reader-inventory";
 
   useEffect(() => {
+    let html5QrCode: any = null;
+
     if (open) {
-      const getCameraPermission = async () => {
+      const startScanner = async () => {
         try {
-          const mediaStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-          setStream(mediaStream);
+          const { Html5Qrcode } = await import('html5-qrcode');
+          html5QrCode = new Html5Qrcode(elementId);
+          scannerRef.current = html5QrCode;
+          
+          await html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 },
+            },
+            (decodedText: string) => {
+              onScan(decodedText);
+              setOpen(false);
+            },
+            () => {} 
+          );
           setHasCameraPermission(true);
-          if (videoRef.current) {
-            videoRef.current.srcObject = mediaStream;
-          }
-        } catch (error) {
-          console.error('Error accessing camera:', error);
+        } catch (err) {
+          console.error("Scanner error:", err);
           setHasCameraPermission(false);
           toast({
             variant: 'destructive',
-            title: 'Acceso a la Cámara Denegado',
-            description: 'Por favor, habilite el permiso de cámara en su navegador.',
+            title: 'Error de Cámara',
+            description: 'No se pudo acceder a la cámara. Verifique los permisos.',
           });
         }
       };
-      getCameraPermission();
-    } else {
-      // Cleanup when dialog closes
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        setStream(null);
-      }
+
+      startScanner();
     }
 
     return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            html5QrCode.clear();
+        }).catch((err: any) => console.error("Cleanup error", err));
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
-
-  useEffect(() => {
-    let animationFrameId: number;
-
-    const scan = () => {
-      if (videoRef.current && videoRef.current.readyState === videoRef.current.HAVE_ENOUGH_DATA && canvasRef.current) {
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-
-        if (context) {
-          canvas.height = video.videoHeight;
-          canvas.width = video.videoWidth;
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-
-          if (code) {
-            onScan(code.data);
-            setOpen(false); // Close dialog on successful scan
-          }
-        }
-      }
-      animationFrameId = requestAnimationFrame(scan);
-    };
-
-    if (open && hasCameraPermission) {
-      animationFrameId = requestAnimationFrame(scan);
-    }
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [open, hasCameraPermission, onScan]);
+  }, [open, onScan, toast]);
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        if (!isOpen && scannerRef.current && scannerRef.current.isScanning) {
+            scannerRef.current.stop().catch((e: any) => console.error(e));
+        }
+        setOpen(isOpen);
+    }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md p-0">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         <DialogHeader className="p-6 pb-0">
-          <DialogTitle className="font-headline">Escanear Código QR</DialogTitle>
-          <DialogDescription>Apunte la cámara al código QR del ítem.</DialogDescription>
+          <DialogTitle className="font-headline">Escanear Código</DialogTitle>
+          <DialogDescription>Apunte al código QR o de barras del ítem.</DialogDescription>
         </DialogHeader>
-        <div className="p-0 rounded-lg bg-black overflow-hidden">
-          <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+        <div className="p-0 bg-black min-h-[300px] flex items-center justify-center relative">
+          <div id={elementId} className="w-full h-full" />
           {!hasCameraPermission && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
               <Alert variant="destructive" className="m-4">
                 <AlertTitle>Cámara No Disponible</AlertTitle>
                 <AlertDescription>
@@ -123,7 +98,6 @@ export default function QrScannerDialog({
               </Alert>
             </div>
           )}
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
         <DialogFooter className="p-6 pt-4">
             <Button variant="outline" onClick={() => setOpen(false)} className="w-full">Cancelar</Button>
