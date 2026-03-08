@@ -197,6 +197,16 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "04.4.2", label: "04.4.2 Camillas de rescate vertical (Sked, Robertson)" },
                     { id: "04.4.3", label: "04.4.3 Kits de evacuación tipo \"descensor controlado\"" }
                 ]
+            },
+            {
+                id: "04.5",
+                label: "04.5 Escaleras de Acceso y Rescate",
+                items: [
+                    { id: "04.5.1", label: "04.5.1 Escaleras extensibles (Aluminio / Fibra / Madera)" },
+                    { id: "04.5.2", label: "04.5.2 Escaleras de gancho (Techo)" },
+                    { id: "04.5.3", label: "04.5.3 Escaleras simples de mano" },
+                    { id: "04.5.4", label: "04.5.4 Escaleras de tijera / multipropósito" }
+                ]
             }
         ]
     },
