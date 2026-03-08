@@ -1,9 +1,8 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization } from "@/lib/types";
 import { getMaterials } from "@/services/materials.service";
@@ -97,6 +96,9 @@ export default function MaterialsReportPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     
+    // Sorting state
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
+
     // Filtros Jerárquicos
     const [filterCategories, setFilterCategories] = useState<string[]>([]);
     const [filterSubCategories, setFilterSubCategories] = useState<string[]>([]);
@@ -185,6 +187,52 @@ export default function MaterialsReportPage() {
         });
     }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
 
+    // Sorting logic for filtered materials
+    const sortedFilteredMaterials = useMemo(() => {
+        let sortableItems = [...filteredMaterials];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                let aValue: any = a[sortConfig.key as keyof Material];
+                let bValue: any = b[sortConfig.key as keyof Material];
+
+                if (sortConfig.key === 'ubicacion') {
+                    const getLocString = (m: Material) => m.ubicacion.type === 'vehiculo' 
+                        ? `V-${m.vehiculo?.numeroMovil?.padStart(3, '0') || '999'}-${m.ubicacion.baulera}`
+                        : `D-${m.cuartel}`;
+                    aValue = getLocString(a);
+                    bValue = getLocString(b);
+                }
+
+                if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+                if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [filteredMaterials, sortConfig]);
+
+    const requestSort = (key: string) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: string) => {
+        if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' 
+            ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> 
+            : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+    };
+
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
         if (total === 0) return { total: 0, inService: 0, outOfService: 0, good: 0, regular: 0, bad: 0, servicePercent: '0%', goodPercent: '0%' };
@@ -236,11 +284,11 @@ export default function MaterialsReportPage() {
                 doc.text(`Condición Física: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 10;
             }
 
-            if (includeInventoryDetails && filteredMaterials.length > 0) {
+            if (includeInventoryDetails && sortedFilteredMaterials.length > 0) {
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Comp.', 'Estado']],
-                    body: filteredMaterials.map(m => [
+                    body: sortedFilteredMaterials.map(m => [
                         m.codigo || 'Pendiente', 
                         m.nombre,
                         `${m.marca || ''} ${m.modelo || ''}`.trim() || 'N/A',
@@ -414,11 +462,14 @@ export default function MaterialsReportPage() {
             <Card>
                 <CardHeader className="border-b">
                     <div className="flex justify-between items-center">
-                        <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
+                        <div>
+                            <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
+                            <CardDescription>Haga clic en los encabezados para ordenar el listado.</CardDescription>
+                        </div>
                         <div className="flex gap-2">
-                            <Button onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0}>
+                            <Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
                                 {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                Generar PDF Resumen
+                                Generar PDF con este orden
                             </Button>
                         </div>
                     </div>
@@ -427,20 +478,28 @@ export default function MaterialsReportPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[100px]">Código</TableHead>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Ubicación</TableHead>
+                                <TableHead className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('codigo')}>
+                                    <div className="flex items-center">Código {getSortIcon('codigo')}</div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('nombre')}>
+                                    <div className="flex items-center">Nombre {getSortIcon('nombre')}</div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('ubicacion')}>
+                                    <div className="flex items-center">Ubicación {getSortIcon('ubicacion')}</div>
+                                </TableHead>
                                 <TableHead>Medida</TableHead>
                                 <TableHead>Acople</TableHead>
                                 <TableHead>Comp.</TableHead>
-                                <TableHead className="text-right">Estado</TableHead>
+                                <TableHead className="text-right cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
+                                    <div className="flex items-center justify-end">Estado {getSortIcon('estado')}</div>
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
                                 <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
-                            ) : filteredMaterials.length > 0 ? (
-                                filteredMaterials.map(m => (
+                            ) : sortedFilteredMaterials.length > 0 ? (
+                                sortedFilteredMaterials.map(m => (
                                     <TableRow key={m.id} className="hover:bg-muted/50">
                                         <TableCell className="font-mono text-xs font-bold">
                                             {m.codigo || <span className="text-amber-600 italic">Pendiente</span>}

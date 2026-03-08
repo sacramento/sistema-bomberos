@@ -2,7 +2,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -34,6 +34,9 @@ export default function MaterialsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
     
+    // Sorting state
+    const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
+
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
@@ -42,7 +45,6 @@ export default function MaterialsPage() {
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     const isEncargado = activeRole === 'Encargado';
     
-    // Mapeamos el usuario logueado a su registro de bombero para obtener su ID de Firestore
     const loggedInFirefighter = useMemo(() => {
         if (!user || firefighters.length === 0) return null;
         return firefighters.find(f => f.legajo === user.id);
@@ -132,6 +134,54 @@ export default function MaterialsPage() {
     const canDeleteMaterial = (m: Material) => {
         return isPrivileged;
     }
+
+    // Sorting Logic
+    const sortedMaterials = useMemo(() => {
+        let sortableItems = [...materials];
+        if (sortConfig !== null) {
+            sortableItems.sort((a, b) => {
+                let aValue: any = a[sortConfig.key as keyof Material];
+                let bValue: any = b[sortConfig.key as keyof Material];
+
+                // Custom logic for Location
+                if (sortConfig.key === 'ubicacion') {
+                    const getLocString = (m: Material) => m.ubicacion.type === 'vehiculo' 
+                        ? `V-${m.vehiculo?.numeroMovil?.padStart(3, '0') || '999'}-${m.ubicacion.baulera}`
+                        : `D-${m.cuartel}`;
+                    aValue = getLocString(a);
+                    bValue = getLocString(b);
+                }
+
+                // Handle string sorting (case insensitive)
+                if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+                if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+
+                if (aValue < bValue) {
+                    return sortConfig.direction === 'ascending' ? -1 : 1;
+                }
+                if (aValue > bValue) {
+                    return sortConfig.direction === 'ascending' ? 1 : -1;
+                }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [materials, sortConfig]);
+
+    const requestSort = (key: string) => {
+        let direction: 'ascending' | 'descending' = 'ascending';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: string) => {
+        if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        return sortConfig.direction === 'ascending' 
+            ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> 
+            : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+    };
 
     if (activeRole === 'Bombero' || activeRole === 'Oficial') {
         return (
@@ -237,16 +287,24 @@ export default function MaterialsPage() {
             <Card className="mt-6">
                 <CardHeader>
                     <CardTitle className="text-lg font-headline">Equipamiento Reciente</CardTitle>
-                    <CardDescription>Listado de materiales. Los equipos sin clasificar aparecen resaltados.</CardDescription>
+                    <CardDescription>Listado de materiales. Haga clic en los encabezados para ordenar.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Código</TableHead>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Ubicación</TableHead>
-                                <TableHead>Estado</TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('codigo')}>
+                                    <div className="flex items-center">Código {getSortIcon('codigo')}</div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('nombre')}>
+                                    <div className="flex items-center">Nombre {getSortIcon('nombre')}</div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('ubicacion')}>
+                                    <div className="flex items-center">Ubicación {getSortIcon('ubicacion')}</div>
+                                </TableHead>
+                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
+                                    <div className="flex items-center">Estado {getSortIcon('estado')}</div>
+                                </TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -255,8 +313,8 @@ export default function MaterialsPage() {
                                 Array.from({ length: 5 }).map((_, i) => (
                                     <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                 ))
-                            ) : materials.length > 0 ? (
-                                materials.slice(0, 50).map(m => (
+                            ) : sortedMaterials.length > 0 ? (
+                                sortedMaterials.slice(0, 100).map(m => (
                                 <TableRow key={m.id}>
                                     <TableCell>
                                         {m.codigo ? (
