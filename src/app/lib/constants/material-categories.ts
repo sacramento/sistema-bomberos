@@ -419,6 +419,14 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                     { id: "09.3.2", label: "09.3.2 Cámaras térmicas y drones de reconocimiento" },
                     { id: "09.3.3", label: "09.3.3 Software de gestión de incidentes y mapas" }
                 ]
+            },
+            {
+                id: "09.4",
+                label: "09.4 Documentación y Material de Consulta",
+                items: [
+                    { id: "09.4.1", label: "09.4.1 Guías técnicas y manuales (HazMat, etc.)" },
+                    { id: "09.4.2", label: "09.4.2 Carpetas, portapapeles y planillas de registro" }
+                ]
             }
         ]
     },
