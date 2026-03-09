@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Material": {
@@ -11,8 +10,9 @@
         "subCategoryId": { "type": "string" },
         "itemTypeId": { "type": "string" },
         "cuartel": { "type": "string" },
-        "estado": { "type": "string", "enum": ["En Servicio", "Fuera de Servicio"] },
-        "condicion": { "type": "string", "enum": ["Bueno", "Regular", "Malo"] }
+        "estado": { "type": "string" },
+        "condicion": { "type": "string" },
+        "ubicacion": { "type": "object" }
       }
     },
     "MaterialRequest": {
@@ -21,7 +21,9 @@
       "properties": {
         "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
         "type": { "type": "string", "enum": ["UPDATE", "DELETE"] },
-        "requestedAt": { "type": "string", "format": "date-time" }
+        "requestedAt": { "type": "string", "format": "date-time" },
+        "materialId": { "type": "string" },
+        "requestedById": { "type": "string" }
       }
     },
     "Vehicle": {
@@ -31,7 +33,27 @@
         "numeroMovil": { "type": "string" },
         "marca": { "type": "string" },
         "modelo": { "type": "string" },
-        "cuartel": { "type": "string" }
+        "cuartel": { "type": "string" },
+        "kilometraje": { "type": "number" }
+      }
+    },
+    "Service": {
+      "title": "Service",
+      "type": "object",
+      "properties": {
+        "cuartel": { "type": "string" },
+        "manualId": { "type": "number" },
+        "serviceType": { "type": "string" },
+        "startDateTime": { "type": "string" }
+      }
+    },
+    "ClothingItem": {
+      "title": "ClothingItem",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "type": { "type": "string" },
+        "firefighterId": { "type": "string" }
       }
     }
   },
@@ -40,9 +62,20 @@
   },
   "firestore": {
     "/materials/{id}": { "schema": "Material", "description": "Inventario de equipos" },
-    "/material_requests/{id}": { "schema": "MaterialRequest", "description": "Solicitudes de cambio" },
+    "/material_requests/{id}": { "schema": "MaterialRequest", "description": "Solicitudes de cambio de materiales" },
     "/vehicles/{id}": { "schema": "Vehicle", "description": "Flota vehicular" },
+    "/services/{id}": { "schema": "Service", "description": "Planillas de intervención" },
+    "/clothing/{id}": { "schema": "ClothingItem", "description": "Inventario de ropa personal" },
     "/users/{id}": { "schema": "object", "description": "Perfiles de usuario" },
-    "/firefighters/{id}": { "schema": "object", "description": "Roster de bomberos" }
+    "/firefighters/{id}": { "schema": "object", "description": "Roster de bomberos" },
+    "/audit_logs/{id}": { "schema": "object", "description": "Bitácora de auditoría" },
+    "/tasks/{id}": { "schema": "object", "description": "Tareas semanales" },
+    "/weeks/{id}": { "schema": "object", "description": "Semanas de guardia" },
+    "/leaves/{id}": { "schema": "object", "description": "Licencias" },
+    "/sanctions/{id}": { "schema": "object", "description": "Sanciones" },
+    "/courses/{id}": { "schema": "object", "description": "Cursos externos" },
+    "/general_inventory/{id}": { "schema": "object", "description": "Inventario de muebles y útiles" },
+    "/cascade_charges/{id}": { "schema": "object", "description": "Cargas de tubos ERA" },
+    "/cascade_system_charges/{id}": { "schema": "object", "description": "Cargas sistema cascada" }
   }
 }

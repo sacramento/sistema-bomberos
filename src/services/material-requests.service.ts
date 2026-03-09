@@ -1,27 +1,31 @@
-
 'use client';
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
-import { initializeFirebase } from '@/firebase';
+import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
-const { firestore: db } = initializeFirebase();
-const requestsCollection = collection(db, 'material_requests');
+const getRequestsCollection = () => collection(db, 'material_requests');
 
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     const q = query(
-        requestsCollection, 
+        getRequestsCollection(), 
         where('status', '==', 'PENDING'), 
         orderBy('requestedAt', 'desc')
     );
-    const querySnapshot = await getDocs(q);
-    const requests: MaterialRequest[] = [];
-    querySnapshot.forEach((doc) => {
-        requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
-    });
-    return requests;
+    
+    try {
+        const querySnapshot = await getDocs(q);
+        const requests: MaterialRequest[] = [];
+        querySnapshot.forEach((doc) => {
+            requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
+        });
+        return requests;
+    } catch (error) {
+        console.error("Error fetching material requests:", error);
+        return [];
+    }
 };
 
 export const createMaterialRequest = async (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>): Promise<string> => {
@@ -30,7 +34,7 @@ export const createMaterialRequest = async (requestData: Omit<MaterialRequest, '
         status: 'PENDING' as const,
         requestedAt: new Date().toISOString(),
     };
-    const docRef = await addDoc(requestsCollection, dataToSave);
+    const docRef = await addDoc(getRequestsCollection(), dataToSave);
     return docRef.id;
 };
 

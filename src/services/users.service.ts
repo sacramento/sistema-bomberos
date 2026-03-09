@@ -1,4 +1,3 @@
-
 'use server';
 
 import { User, LoggedInUser } from '@/lib/types';
@@ -6,11 +5,7 @@ import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { logAction } from './audit.service';
 
-if (!db) {
-    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
-}
-
-const usersCollection = collection(db, 'users');
+const getUsersCollection = () => collection(db, 'users');
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
@@ -36,7 +31,7 @@ const docToUser = (docSnap: any): User => {
 }
 
 export const getUsers = async (): Promise<User[]> => {
-    const querySnapshot = await getDocs(usersCollection);
+    const querySnapshot = await getDocs(getUsersCollection());
     const users: User[] = [];
     querySnapshot.forEach((doc) => {
         users.push(docToUser(doc));
@@ -63,7 +58,6 @@ export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: Log
     }
 
     await setDoc(docRef, userData);
-    
     await logAction(actor, 'CREATE_USER', { entity: 'user', id }, userData);
 };
 
@@ -80,7 +74,6 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
     }
 
     await updateDoc(docRef, userData);
-
     await logAction(actor, 'UPDATE_USER', { entity: 'user', id }, userData);
 };
 

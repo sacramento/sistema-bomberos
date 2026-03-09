@@ -1,8 +1,9 @@
-// 'use client'; - Temporarily disabled to allow local data testing
-import { getFirestore } from 'firebase/firestore';
-import { app } from './firebase';
+import { initializeFirebase } from '@/firebase';
 
-// We will only initialize firestore if the app is available
-const db = app ? getFirestore(app) : null;
+/**
+ * Inicialización unificada de Firestore para toda la aplicación.
+ * Funciona tanto en entorno de servidor como de cliente.
+ */
+const sdks = initializeFirebase();
 
-export { db };
+export const db = sdks.firestore;

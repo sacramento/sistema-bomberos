@@ -1,7 +1,6 @@
-
 'use server';
 
-import { Vehicle, Firefighter, Specialization, MaintenanceItem, LoggedInUser } from '@/lib/types';
+import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
@@ -9,32 +8,24 @@ import { getMaintenanceItems } from './maintenance-items.service';
 import { cache } from 'react';
 import { logAction } from './audit.service';
 
-if (!db) {
-    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
-}
+const getVehiclesCollection = () => collection(db, 'vehicles');
 
-const vehiclesCollection = collection(db, 'vehicles');
-const maintenanceRecordsCollection = collection(db, 'maintenance_records');
-
-// Cache data for the duration of a single request
 const getAllFirefightersCached = cache(async () => {
     const firefighters = await getFirefighters();
     return new Map(firefighters.map(f => [f.id, f]));
 });
 
-// Helper to enrich vehicle data
 const docToVehicle = async (
     docSnap: any, 
     firefighterMap: Map<string, Firefighter>,
     maintenanceItemMap: Map<string, MaintenanceItem>
 ): Promise<Vehicle> => {
     const data = docSnap.data();
-    
     const encargados = (data.encargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     const materialEncargados = (data.materialEncargadoIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     const maintenanceItems = (data.maintenanceItemIds || []).map((id: string) => maintenanceItemMap.get(id)).filter(Boolean) as MaintenanceItem[];
 
-    const vehicle: Vehicle = {
+    return {
         id: docSnap.id,
         numeroMovil: data.numeroMovil,
         dominio: data.dominio || '',
@@ -55,34 +46,23 @@ const docToVehicle = async (
         materialEncargados,
         maintenanceItems,
     };
-    return vehicle;
 }
 
 export const getVehicles = async (): Promise<Vehicle[]> => {
-    const q = query(vehiclesCollection, orderBy('numeroMovil', 'asc'));
+    const q = query(getVehiclesCollection(), orderBy('numeroMovil', 'asc'));
     const querySnapshot = await getDocs(q);
-
-    const [firefighterMap, maintenanceItems] = await Promise.all([
-        getAllFirefightersCached(),
-        getMaintenanceItems()
-    ]);
+    const [firefighterMap, maintenanceItems] = await Promise.all([getAllFirefightersCached(), getMaintenanceItems()]);
     const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
     
     const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
-    const vehicles = await Promise.all(vehiclesPromises);
-
-    return vehicles;
+    return await Promise.all(vehiclesPromises);
 }
 
 export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     const docRef = doc(db, 'vehicles', id);
     const docSnap = await getDoc(docRef);
-
     if (docSnap.exists()) {
-        const [firefighterMap, maintenanceItems] = await Promise.all([
-            getAllFirefightersCached(),
-            getMaintenanceItems()
-        ]);
+        const [firefighterMap, maintenanceItems] = await Promise.all([getAllFirefightersCached(), getMaintenanceItems()]);
         const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
         return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
     }
@@ -90,53 +70,28 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
 }
 
 export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
-    const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
+    const q = query(getVehiclesCollection(), where("numeroMovil", "==", vehicleData.numeroMovil));
     const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        throw new Error(`El móvil con el número ${vehicleData.numeroMovil} ya existe.`);
-    }
+    if (!querySnapshot.empty) throw new Error(`El móvil con el número ${vehicleData.numeroMovil} ya existe.`);
 
-    const dataToSave = { 
-        ...vehicleData,
-        maintenanceItemIds: vehicleData.maintenanceItemIds || [],
-        materialEncargadoIds: vehicleData.materialEncargadoIds || [],
-     };
-    const docRef = await addDoc(vehiclesCollection, dataToSave);
+    const dataToSave = { ...vehicleData };
+    const docRef = await addDoc(getVehiclesCollection(), dataToSave);
     await logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, dataToSave);
     return docRef.id;
 };
 
 export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
     const docRef = doc(db, 'vehicles', id);
-
-    if (vehicleData.numeroMovil) {
-        const q = query(vehiclesCollection, where("numeroMovil", "==", vehicleData.numeroMovil));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty && querySnapshot.docs[0].id !== id) {
-            throw new Error(`El número de móvil ${vehicleData.numeroMovil} ya está en uso por otro vehículo.`);
-        }
-    }
-    
-    const dataToUpdate = { ...vehicleData };
-    await updateDoc(docRef, dataToUpdate);
-    await logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, dataToUpdate);
+    await updateDoc(docRef, vehicleData);
+    await logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
 };
 
 export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<void> => {
     const batch = writeBatch(db);
-    
     const vehicleDocRef = doc(db, 'vehicles', id);
     const vehicleSnap = await getDoc(vehicleDocRef);
     const details = vehicleSnap.exists() ? { numeroMovil: vehicleSnap.data().numeroMovil } : {};
-
     batch.delete(vehicleDocRef);
-
-    const maintQuery = query(maintenanceRecordsCollection, where('vehicleId', '==', id));
-    const maintSnapshot = await getDocs(maintQuery);
-    maintSnapshot.forEach(doc => {
-        batch.delete(doc.ref);
-    });
-
     await batch.commit();
     await logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id }, details);
 };
