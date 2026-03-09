@@ -44,11 +44,10 @@ export const getUsers = async (): Promise<User[]> => {
             return users;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
@@ -64,11 +63,10 @@ export const getUserById = async (id: string): Promise<User | null> => {
             return null;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return null;
         });
 }
@@ -78,12 +76,11 @@ export const addUser = (id: string, userData: Omit<User, 'id'>, actor: LoggedInU
     const docRef = doc(db, USERS_COLLECTION, id);
     
     setDoc(docRef, userData).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: userData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -99,12 +96,11 @@ export const updateUser = (id: string, userData: Partial<Omit<User, 'id'>>, acto
     if (dataToUpdate.password === '') delete dataToUpdate.password;
 
     updateDoc(docRef, dataToUpdate).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -117,11 +113,10 @@ export const deleteUser = (id: string, actor: LoggedInUser) => {
     const docRef = doc(db, USERS_COLLECTION, id);
     
     deleteDoc(docRef).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {

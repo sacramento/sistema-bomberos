@@ -2,7 +2,7 @@
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, updateDoc, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, writeBatch, setDoc, query, where } from 'firebase/firestore';
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -54,14 +54,42 @@ export const getMaterials = async (): Promise<Material[]> => {
             });
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 }
+
+/**
+ * Calculates the next sequence number for a material code prefix.
+ */
+export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
+    if (!db) return 1;
+    const colRef = collection(db, MATERIALS_COLLECTION);
+    
+    return getDocs(colRef).then(snapshot => {
+        const matchingCodes = snapshot.docs
+            .map(d => d.data().codigo as string)
+            .filter(code => code && code.startsWith(prefix));
+        
+        if (matchingCodes.length === 0) return 1;
+        
+        const sequences = matchingCodes.map(code => {
+            const seqStr = code.replace(prefix, '');
+            return parseInt(seqStr, 10) || 0;
+        });
+        
+        return Math.max(...sequences) + 1;
+    }).catch(err => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: colRef.path,
+            operation: 'list',
+        }));
+        return 1;
+    });
+};
 
 export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser) => {
     if (!db) return;
@@ -69,12 +97,11 @@ export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, act
     const docRef = doc(colRef);
     
     setDoc(docRef, materialData).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: materialData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -87,12 +114,11 @@ export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 
     const docRef = doc(db, MATERIALS_COLLECTION, id);
     
     updateDoc(docRef, materialData).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: materialData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -105,11 +131,10 @@ export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     const docRef = doc(db, MATERIALS_COLLECTION, id);
     
     deleteDoc(docRef).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -127,11 +152,10 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
     }
     
     batch.commit().catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: colRef.path,
             operation: 'write',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
     
     logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });

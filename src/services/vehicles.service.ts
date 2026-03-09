@@ -57,11 +57,10 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
             return results.sort((a, b) => a.numeroMovil.localeCompare(b.numeroMovil, undefined, { numeric: true }));
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 }
@@ -81,11 +80,10 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
             return null;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return null;
         });
 }
@@ -96,12 +94,11 @@ export const addVehicle = (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'mat
     const docRef = doc(colRef);
     
     setDoc(docRef, vehicleData).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: vehicleData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -111,15 +108,15 @@ export const addVehicle = (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'mat
 
 export const updateVehicle = (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null) => {
     if (!db) return;
-    const docRef = doc(db, 'vehicles', id);
+    const docRef = db ? doc(db, 'vehicles', id) : null;
+    if (!docRef) return;
     
     updateDoc(docRef, vehicleData).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: vehicleData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -132,11 +129,10 @@ export const deleteVehicle = (id: string, actor: LoggedInUser = null) => {
     const docRef = doc(db, 'vehicles', id);
     
     deleteDoc(docRef).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {

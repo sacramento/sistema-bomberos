@@ -38,11 +38,10 @@ export const getSessions = async (): Promise<Session[]> => {
             return results.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
@@ -72,11 +71,10 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
             return null;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return null;
         });
 }
@@ -99,12 +97,11 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
     };
     
     setDoc(docRef, sessionToStore).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: sessionToStore,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -130,12 +127,11 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
     updateDoc(docRef, dataToUpdate).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -148,12 +144,11 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
     const docRef = doc(db, SESSIONS_COLLECTION, id);
     
     updateDoc(docRef, { attendance }).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: { attendance },
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -166,11 +161,10 @@ export const deleteSession = (id: string, actor: LoggedInUser) => {
     const docRef = doc(db, SESSIONS_COLLECTION, id);
     
     deleteDoc(docRef).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
