@@ -25,6 +25,10 @@
         {
           "fieldPath": "requestedAt",
           "order": "DESCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "DESCENDING"
         }
       ]
     }
