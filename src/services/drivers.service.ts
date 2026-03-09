@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Driver, Firefighter, LoggedInUser } from '@/lib/types';
@@ -6,10 +7,10 @@ import { collection, addDoc, getDocs, query, doc, updateDoc, deleteDoc, setDoc }
 import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 /**
- * Obtiene todos los choferes. Sin orderBy en el servidor para evitar ocultar registros.
+ * Obtiene todos los choferes.
  */
 export const getDrivers = async (): Promise<Driver[]> => {
     if (!db) return [];
@@ -31,7 +32,6 @@ export const getDrivers = async (): Promise<Driver[]> => {
                 } as Driver;
             });
             
-            // Ordenamos por apellido en memoria
             return drivers.sort((a, b) => {
                 const nameA = a.firefighter?.lastName || '';
                 const nameB = b.firefighter?.lastName || '';
@@ -42,14 +42,14 @@ export const getDrivers = async (): Promise<Driver[]> => {
             const permissionError = new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
 };
 
-export const addDriver = async (driverData: Omit<Driver, 'id' | 'firefighter'>, actor: LoggedInUser): Promise<string> => {
-    if (!db) throw new Error("Database not initialized");
+export const addDriver = (driverData: Omit<Driver, 'id' | 'firefighter'>, actor: LoggedInUser) => {
+    if (!db) return;
     const colRef = collection(db, 'drivers');
     const docRef = doc(colRef);
 
@@ -64,14 +64,12 @@ export const addDriver = async (driverData: Omit<Driver, 'id' | 'firefighter'>, 
                 path: docRef.path,
                 operation: 'create',
                 requestResourceData: driverData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
-
-    return docRef.id;
 };
 
-export const updateDriver = async (id: string, driverData: Partial<Omit<Driver, 'id' | 'firefighter' | 'firefighterId'>>, actor: LoggedInUser): Promise<void> => {
+export const updateDriver = (id: string, driverData: Partial<Omit<Driver, 'id' | 'firefighter' | 'firefighterId'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'drivers', id);
     
@@ -86,12 +84,12 @@ export const updateDriver = async (id: string, driverData: Partial<Omit<Driver, 
                 path: docRef.path,
                 operation: 'update',
                 requestResourceData: driverData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };
 
-export const deleteDriver = async (id: string, actor: LoggedInUser): Promise<void> => {
+export const deleteDriver = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'drivers', id);
     
@@ -105,7 +103,7 @@ export const deleteDriver = async (id: string, actor: LoggedInUser): Promise<voi
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'delete',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };

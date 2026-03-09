@@ -7,11 +7,10 @@ import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, wher
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 /**
  * Obtiene todos los materiales.
- * Se eliminan las referencias a nivel de módulo para mayor estabilidad.
  */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
@@ -61,7 +60,7 @@ export const getMaterials = async (): Promise<Material[]> => {
             const permissionError = new FirestorePermissionError({
                 path: materialsCollection.path,
                 operation: 'list',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
@@ -88,8 +87,8 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
         });
 };
 
-export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
-    if (!db) throw new Error("Database not initialized");
+export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser) => {
+    if (!db) return;
     const materialsCollection = collection(db, 'materials');
     const docRef = doc(materialsCollection);
     
@@ -104,14 +103,12 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
                 path: docRef.path,
                 operation: 'create',
                 requestResourceData: materialData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
-
-    return docRef.id;
 };
 
-export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser): Promise<void> => {
+export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
@@ -126,12 +123,12 @@ export const updateMaterial = async (id: string, materialData: Partial<Omit<Mate
                 path: docRef.path,
                 operation: 'update',
                 requestResourceData: materialData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };
 
-export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<void> => {
+export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
@@ -145,7 +142,7 @@ export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<v
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'delete',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };
@@ -167,7 +164,7 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
             const permissionError = new FirestorePermissionError({
                 path: materialsCollection.path,
                 operation: 'write',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };

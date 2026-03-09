@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
@@ -7,7 +8,7 @@ import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 /**
  * Convierte un documento de Firestore a un objeto de tipo Vehicle con sus relaciones enriquecidas.
@@ -66,7 +67,7 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
             const permissionError = new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
@@ -90,14 +91,14 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
             return null;
         });
 }
 
-export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
-    if (!db) throw new Error("Base de datos no inicializada");
+export const addVehicle = (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>, actor: LoggedInUser) => {
+    if (!db) return;
     const colRef = collection(db, 'vehicles');
     const docRef = doc(colRef);
     
@@ -112,14 +113,12 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
                 path: docRef.path,
                 operation: 'create',
                 requestResourceData: vehicleData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
-
-    return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null): Promise<void> => {
+export const updateVehicle = (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     
@@ -134,12 +133,12 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
                 path: docRef.path,
                 operation: 'update',
                 requestResourceData: vehicleData,
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };
 
-export const deleteVehicle = async (id: string, actor: LoggedInUser = null): Promise<void> => {
+export const deleteVehicle = (id: string, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     
@@ -153,7 +152,7 @@ export const deleteVehicle = async (id: string, actor: LoggedInUser = null): Pro
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'delete',
-            });
+            } satisfies SecurityRuleContext);
             errorEmitter.emit('permission-error', permissionError);
         });
 };
