@@ -7,11 +7,15 @@ import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, get
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
-const getRequestsCollection = () => collection(db, 'material_requests');
-
+/**
+ * Obtiene las solicitudes pendientes.
+ * IMPORTANTE: La consulta ahora coincide exactamente con el índice compuesto: 
+ * status (==) y requestedAt (orderBy DESC).
+ */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
+    const requestsCollection = collection(db, 'material_requests');
     const q = query(
-        getRequestsCollection(), 
+        requestsCollection, 
         where('status', '==', 'PENDING'), 
         orderBy('requestedAt', 'desc')
     );
@@ -19,8 +23,8 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
     try {
         const querySnapshot = await getDocs(q);
         const requests: MaterialRequest[] = [];
-        querySnapshot.forEach((doc) => {
-            requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
+        querySnapshot.forEach((docSnap) => {
+            requests.push({ id: docSnap.id, ...docSnap.data() } as MaterialRequest);
         });
         return requests;
     } catch (error) {
@@ -30,12 +34,13 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
 };
 
 export const createMaterialRequest = async (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>): Promise<string> => {
+    const requestsCollection = collection(db, 'material_requests');
     const dataToSave = {
         ...requestData,
         status: 'PENDING' as const,
         requestedAt: new Date().toISOString(),
     };
-    const docRef = await addDoc(getRequestsCollection(), dataToSave);
+    const docRef = await addDoc(requestsCollection, dataToSave);
     return docRef.id;
 };
 

@@ -37,25 +37,6 @@
         "cuartel": { "type": "string" },
         "kilometraje": { "type": "number" }
       }
-    },
-    "Service": {
-      "title": "Service",
-      "type": "object",
-      "properties": {
-        "cuartel": { "type": "string" },
-        "manualId": { "type": "number" },
-        "serviceType": { "type": "string" },
-        "startDateTime": { "type": "string" }
-      }
-    },
-    "ClothingItem": {
-      "title": "ClothingItem",
-      "type": "object",
-      "properties": {
-        "code": { "type": "string" },
-        "type": { "type": "string" },
-        "firefighterId": { "type": "string" }
-      }
     }
   },
   "auth": {
@@ -65,16 +46,10 @@
     "/materials/{id}": { "schema": "Material", "description": "Inventario de equipos" },
     "/material_requests/{id}": { "schema": "MaterialRequest", "description": "Solicitudes de cambio de materiales" },
     "/vehicles/{id}": { "schema": "Vehicle", "description": "Flota vehicular" },
-    "/services/{id}": { "schema": "Service", "description": "Planillas de intervención" },
-    "/clothing/{id}": { "schema": "ClothingItem", "description": "Inventario de ropa personal" },
     "/users/{id}": { "schema": "object", "description": "Perfiles de usuario" },
     "/firefighters/{id}": { "schema": "object", "description": "Roster de bomberos" },
     "/audit_logs/{id}": { "schema": "object", "description": "Bitácora de auditoría" },
-    "/tasks/{id}": { "schema": "object", "description": "Tareas semanales" },
-    "/weeks/{id}": { "schema": "object", "description": "Semanas de guardia" },
-    "/leaves/{id}": { "schema": "object", "description": "Licencias" },
-    "/sanctions/{id}": { "schema": "object", "description": "Sanciones" },
-    "/courses/{id}": { "schema": "object", "description": "Cursos externos" },
+    "/clothing/{id}": { "schema": "object", "description": "Inventario de ropa personal" },
     "/general_inventory/{id}": { "schema": "object", "description": "Inventario de muebles y útiles" },
     "/cascade_charges/{id}": { "schema": "object", "description": "Cargas de tubos ERA" },
     "/cascade_system_charges/{id}": { "schema": "object", "description": "Cargas sistema cascada" }
