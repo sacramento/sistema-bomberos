@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import { Sparkles, Loader2, Send } from "lucide-react";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
 
 const firehouses: Material['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
@@ -272,7 +272,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         )}
 
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setTargetCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
