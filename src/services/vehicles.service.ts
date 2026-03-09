@@ -7,11 +7,8 @@ import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-/**
- * Convierte un documento de Firestore a un objeto de tipo Vehicle con sus relaciones enriquecidas.
- */
 const docToVehicle = async (
     docSnap: any, 
     firefighterMap: Map<string, Firefighter>,
@@ -44,9 +41,6 @@ const docToVehicle = async (
     };
 }
 
-/**
- * Obtiene todos los vehículos de la flota.
- */
 export const getVehicles = async (): Promise<Vehicle[]> => {
     if (!db) return [];
     const colRef = collection(db, 'vehicles');
@@ -66,7 +60,7 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
             const permissionError = new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            } satisfies SecurityRuleContext);
+            });
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
@@ -90,7 +84,7 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            } satisfies SecurityRuleContext);
+            });
             errorEmitter.emit('permission-error', permissionError);
             return null;
         });
@@ -101,57 +95,51 @@ export const addVehicle = (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'mat
     const colRef = collection(db, 'vehicles');
     const docRef = doc(colRef);
     
-    setDoc(docRef, vehicleData)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, vehicleData);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'create',
-                requestResourceData: vehicleData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    setDoc(docRef, vehicleData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: vehicleData,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, vehicleData);
+    }
 };
 
 export const updateVehicle = (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     
-    updateDoc(docRef, vehicleData)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'update',
-                requestResourceData: vehicleData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    updateDoc(docRef, vehicleData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: vehicleData,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
+    }
 };
 
 export const deleteVehicle = (id: string, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     
-    deleteDoc(docRef)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id });
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'delete',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id });
+    }
 };

@@ -6,11 +6,8 @@ import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, query, updateDoc }
 import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-/**
- * Retrieves all sessions.
- */
 export const getSessions = async (): Promise<Session[]> => {
     if (!db) return [];
     const sessionsCollection = collection(db, 'sessions');
@@ -42,15 +39,12 @@ export const getSessions = async (): Promise<Session[]> => {
             const permissionError = new FirestorePermissionError({
                 path: sessionsCollection.path,
                 operation: 'list',
-            } satisfies SecurityRuleContext);
+            });
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
 };
 
-/**
- * Retrieves a single session by its ID.
- */
 export const getSessionById = async(id: string): Promise<Session | null> => {
     if (!db) return null;
     const docRef = doc(db, 'sessions', id);
@@ -79,15 +73,12 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            } satisfies SecurityRuleContext);
+            });
             errorEmitter.emit('permission-error', permissionError);
             return null;
         });
 }
 
-/**
- * Adds a new training session.
- */
 export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
     const sessionsCollection = collection(db, 'sessions');
@@ -110,7 +101,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
             path: docRef.path,
             operation: 'create',
             requestResourceData: sessionToStore,
-        } satisfies SecurityRuleContext);
+        });
         errorEmitter.emit('permission-error', permissionError);
     });
 
@@ -119,9 +110,6 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
     }
 };
 
-/**
- * Updates an existing training session.
- */
 export const updateSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
@@ -144,7 +132,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        } satisfies SecurityRuleContext);
+        });
         errorEmitter.emit('permission-error', permissionError);
     });
 
@@ -153,9 +141,6 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
     }
 };
 
-/**
- * Updates attendance for a session.
- */
 export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
@@ -165,7 +150,7 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
             path: docRef.path,
             operation: 'update',
             requestResourceData: { attendance },
-        } satisfies SecurityRuleContext);
+        });
         errorEmitter.emit('permission-error', permissionError);
     });
 
@@ -174,9 +159,6 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
     }
 };
 
-/**
- * Deletes a session.
- */
 export const deleteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
@@ -185,7 +167,7 @@ export const deleteSession = (id: string, actor: LoggedInUser) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        } satisfies SecurityRuleContext);
+        });
         errorEmitter.emit('permission-error', permissionError);
     });
 

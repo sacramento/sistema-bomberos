@@ -1,11 +1,13 @@
-'use server';
+'use client';
 
 import { User, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { logAction } from './audit.service';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-const getUsersCollection = () => collection(db, 'users');
+const usersCollection = collection(db, 'users');
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
@@ -31,56 +33,97 @@ const docToUser = (docSnap: any): User => {
 }
 
 export const getUsers = async (): Promise<User[]> => {
-    const querySnapshot = await getDocs(getUsersCollection());
-    const users: User[] = [];
-    querySnapshot.forEach((doc) => {
-        users.push(docToUser(doc));
-    });
-    return users;
+    if (!db) return [];
+    return getDocs(usersCollection)
+        .then((querySnapshot) => {
+            const users: User[] = [];
+            querySnapshot.forEach((doc) => {
+                users.push(docToUser(doc));
+            });
+            return users;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: usersCollection.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
 };
 
 export const getUserById = async (id: string): Promise<User | null> => {
+    if (!db) return null;
     const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
-
-    if (docSnap.exists()) {
-        return docToUser(docSnap);
-    }
-    return null;
+    return getDoc(docRef)
+        .then((docSnap) => {
+            if (docSnap.exists()) {
+                return docToUser(docSnap);
+            }
+            return null;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return null;
+        });
 }
 
 export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
+    
+    setDoc(docRef, userData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: userData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
 
-    if (docSnap.exists()) {
-        throw new Error(`El usuario con el legajo ${id} ya existe.`);
+    if (actor) {
+        logAction(actor, 'CREATE_USER', { entity: 'user', id }, userData);
     }
-
-    await setDoc(docRef, userData);
-    await logAction(actor, 'CREATE_USER', { entity: 'user', id }, userData);
 };
 
 export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
 
-    if (!docSnap.exists()) {
-        throw new Error(`El usuario con el legajo ${id} no fue encontrado.`);
+    const dataToUpdate = { ...userData };
+    if (dataToUpdate.password === '') delete dataToUpdate.password;
+
+    updateDoc(docRef, dataToUpdate).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: dataToUpdate,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_USER', { entity: 'user', id }, dataToUpdate);
     }
-
-    if (userData.password === '') {
-        delete userData.password;
-    }
-
-    await updateDoc(docRef, userData);
-    await logAction(actor, 'UPDATE_USER', { entity: 'user', id }, userData);
 };
 
 export const deleteUser = async (id: string, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'users', id);
-    const docSnap = await getDoc(docRef);
-    const details = docSnap.exists() ? { legajo: id, name: docSnap.data().name } : { legajo: id };
-    await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_USER', { entity: 'user', id }, details);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_USER', { entity: 'user', id }, { legajo: id });
+    }
 };
