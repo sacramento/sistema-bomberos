@@ -2,7 +2,7 @@
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
 import { logAction } from './audit.service';
