@@ -1,19 +1,13 @@
-'use server';
+'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where, setDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getMaintenanceItems } from './maintenance-items.service';
-import { cache } from 'react';
 import { logAction } from './audit.service';
-
-const getVehiclesCollection = () => collection(db, 'vehicles');
-
-const getAllFirefightersCached = cache(async () => {
-    const firefighters = await getFirefighters();
-    return new Map(firefighters.map(f => [f.id, f]));
-});
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const docToVehicle = async (
     docSnap: any, 
@@ -49,49 +43,106 @@ const docToVehicle = async (
 }
 
 export const getVehicles = async (): Promise<Vehicle[]> => {
-    const q = query(getVehiclesCollection(), orderBy('numeroMovil', 'asc'));
-    const querySnapshot = await getDocs(q);
-    const [firefighterMap, maintenanceItems] = await Promise.all([getAllFirefightersCached(), getMaintenanceItems()]);
-    const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
+    if (!db) return [];
+    const colRef = collection(db, 'vehicles');
+    const q = query(colRef, orderBy('numeroMovil', 'asc'));
     
-    const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
-    return await Promise.all(vehiclesPromises);
+    return getDocs(q)
+        .then(async (querySnapshot) => {
+            const firefighters = await getFirefighters();
+            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+            const maintenanceItems = await getMaintenanceItems();
+            const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
+            
+            const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
+            return await Promise.all(vehiclesPromises);
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: colRef.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
 }
 
 export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
+    if (!db) return null;
     const docRef = doc(db, 'vehicles', id);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-        const [firefighterMap, maintenanceItems] = await Promise.all([getAllFirefightersCached(), getMaintenanceItems()]);
-        const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
-        return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
-    }
-    return null;
+    
+    return getDoc(docRef)
+        .then(async (docSnap) => {
+            if (docSnap.exists()) {
+                const firefighters = await getFirefighters();
+                const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+                const maintenanceItems = await getMaintenanceItems();
+                const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
+                return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
+            }
+            return null;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return null;
+        });
 }
 
 export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>, actor: LoggedInUser): Promise<string> => {
-    const q = query(getVehiclesCollection(), where("numeroMovil", "==", vehicleData.numeroMovil));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) throw new Error(`El móvil con el número ${vehicleData.numeroMovil} ya existe.`);
+    if (!db) throw new Error("Database not initialized");
+    const colRef = collection(db, 'vehicles');
+    
+    const docRef = doc(colRef);
+    setDoc(docRef, vehicleData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: vehicleData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
 
-    const dataToSave = { ...vehicleData };
-    const docRef = await addDoc(getVehiclesCollection(), dataToSave);
-    await logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, dataToSave);
+    if (actor) {
+        logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, vehicleData);
+    }
     return docRef.id;
 };
 
 export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'vehicles', id);
-    await updateDoc(docRef, vehicleData);
-    await logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
+    
+    updateDoc(docRef, vehicleData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: vehicleData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
+    }
 };
 
 export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<void> => {
-    const batch = writeBatch(db);
-    const vehicleDocRef = doc(db, 'vehicles', id);
-    const vehicleSnap = await getDoc(vehicleDocRef);
-    const details = vehicleSnap.exists() ? { numeroMovil: vehicleSnap.data().numeroMovil } : {};
-    batch.delete(vehicleDocRef);
-    await batch.commit();
-    await logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id }, details);
+    if (!db) return;
+    const docRef = doc(db, 'vehicles', id);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_VEHICLE', { entity: 'vehicle', id });
+    }
 };
