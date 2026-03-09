@@ -10,6 +10,8 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Obtiene todos los materiales.
+ * Se elimina el orderBy del servidor para evitar ocultar documentos sin código
+ * y para prevenir errores de permisos si el índice no está listo.
  */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
@@ -41,20 +43,22 @@ export const getMaterials = async (): Promise<Material[]> => {
                     caracteristicas: data.caracteristicas || '',
                     medida: data.medida || '',
                     ubicacion: data.ubicacion || { type: 'deposito' },
-                    estado: data.estado || 'Fuera de Servicio',
+                    estado: data.estado || 'En Servicio',
                     condicion: data.condicion || 'Bueno',
                     cuartel: data.cuartel || '',
                     vehiculo: vehiculo,
                 } as Material;
             });
             
+            // Ordenamiento en memoria para mayor fiabilidad
             return results.sort((a, b) => {
+                if (!a.codigo && !b.codigo) return a.nombre.localeCompare(b.nombre);
                 if (!a.codigo) return 1;
                 if (!b.codigo) return -1;
-                return a.codigo.localeCompare(b.codigo);
+                return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
             });
         })
-        .catch(async (error) => {
+        .catch(async (serverError) => {
             const permissionError = new FirestorePermissionError({
                 path: materialsCollection.path,
                 operation: 'list',
@@ -81,11 +85,6 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
             return maxNum + 1;
         })
         .catch(async () => {
-            const permissionError = new FirestorePermissionError({
-                path: materialsCollection.path,
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
             return 1;
         });
 };
@@ -93,54 +92,63 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
 export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
     if (!db) throw new Error("Database not initialized");
     const materialsCollection = collection(db, 'materials');
-    
     const docRef = doc(materialsCollection);
-    setDoc(docRef, materialData).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'create',
-            requestResourceData: materialData,
+    
+    return setDoc(docRef, materialData)
+        .then(() => {
+            if (actor) {
+                logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
+            }
+            return docRef.id;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'create',
+                requestResourceData: materialData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            throw permissionError;
         });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-
-    if (actor) {
-        logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
-    }
-    return docRef.id;
 };
 
 export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'materials', id);
-    updateDoc(docRef, materialData).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'update',
-            requestResourceData: materialData,
+    
+    return updateDoc(docRef, materialData)
+        .then(() => {
+            if (actor) {
+                logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
+            }
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'update',
+                requestResourceData: materialData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-
-    if (actor) {
-        logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
-    }
 };
 
 export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'materials', id);
-    deleteDoc(docRef).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: docRef.path,
-            operation: 'delete',
+    
+    return deleteDoc(docRef)
+        .then(() => {
+            if (actor) {
+                logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
+            }
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-
-    if (actor) {
-        logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
-    }
 };
 
 export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Promise<void> => {
@@ -151,13 +159,16 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
         const docRef = doc(materialsCollection);
         batch.set(docRef, item);
     }
-    batch.commit().catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: materialsCollection.path,
-            operation: 'write',
+    
+    return batch.commit()
+        .then(() => {
+            logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: materialsCollection.path,
+                operation: 'write',
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-        errorEmitter.emit('permission-error', permissionError);
-    });
-
-    await logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
 };

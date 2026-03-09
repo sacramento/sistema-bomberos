@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { login as loginFlow } from '@/ai/auth-flow';
@@ -13,6 +11,8 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { initializeFirebase } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
@@ -69,33 +69,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
+  // Sincronizar con Firebase Auth para que las reglas de seguridad funcionen
+  const syncWithFirebaseAuth = async () => {
     try {
-      const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
-      if (storedSession) {
-        const parsedUser = JSON.parse(storedSession);
-        // Ensure roles structure is complete to avoid crashes on old sessions
-        const userWithCompleteRoles = {
-          ...parsedUser,
-          roles: {
-            asistencia: parsedUser.roles?.asistencia || 'Ninguno',
-            semanas: parsedUser.roles?.semanas || 'Ninguno',
-            movilidad: parsedUser.roles?.movilidad || 'Ninguno',
-            materiales: parsedUser.roles?.materiales || 'Ninguno',
-            ayudantia: parsedUser.roles?.ayudantia || 'Ninguno',
-            roperia: parsedUser.roles?.roperia || 'Ninguno',
-            servicios: parsedUser.roles?.servicios || 'Ninguno',
-            cascada: parsedUser.roles?.cascada || 'Ninguno',
-            aspirantes: parsedUser.roles?.aspirantes || 'Ninguno',
-          }
-        };
-        setUser(userWithCompleteRoles);
+      const { auth } = initializeFirebase();
+      if (!auth.currentUser) {
+        await signInAnonymously(auth);
       }
     } catch (e) {
-      console.error('Error parsing stored session', e);
-      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      console.error("Error syncing with Firebase Auth:", e);
     }
-    setLoading(false);
+  };
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (storedSession) {
+          const parsedUser = JSON.parse(storedSession);
+          const userWithCompleteRoles = {
+            ...parsedUser,
+            roles: {
+              asistencia: parsedUser.roles?.asistencia || 'Ninguno',
+              semanas: parsedUser.roles?.semanas || 'Ninguno',
+              movilidad: parsedUser.roles?.movilidad || 'Ninguno',
+              materiales: parsedUser.roles?.materiales || 'Ninguno',
+              ayudantia: parsedUser.roles?.ayudantia || 'Ninguno',
+              roperia: parsedUser.roles?.roperia || 'Ninguno',
+              servicios: parsedUser.roles?.servicios || 'Ninguno',
+              cascada: parsedUser.roles?.cascada || 'Ninguno',
+              aspirantes: parsedUser.roles?.aspirantes || 'Ninguno',
+            }
+          };
+          setUser(userWithCompleteRoles);
+          await syncWithFirebaseAuth();
+        }
+      } catch (e) {
+        console.error('Error parsing stored session', e);
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      } finally {
+        setLoading(false);
+      }
+    };
+    initAuth();
   }, []);
 
   const handleLogin = async (credentials: LoginInput) => {
@@ -104,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const loggedInUser = await loginFlow(credentials);
       if (loggedInUser) {
-        // Ensure roles structure is complete
         const userWithCompleteRoles = {
           ...loggedInUser,
           roles: {
@@ -119,6 +134,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             aspirantes: loggedInUser.roles?.aspirantes || 'Ninguno',
           }
         };
+        
+        await syncWithFirebaseAuth();
         setUser(userWithCompleteRoles);
         sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userWithCompleteRoles));
         router.push('/dashboard');
@@ -148,29 +165,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const module = moduleKey ? pathToModule[moduleKey] : null;
       
       switch(module) {
-        case 'semanas':
-          return roles.semanas;
-        case 'asistencia':
-          return roles.asistencia;
-        case 'movilidad':
-            return roles.movilidad;
-        case 'materiales':
-            return roles.materiales;
-        case 'ayudantia':
-            return roles.ayudantia;
-        case 'roperia':
-            return roles.roperia;
-        case 'servicios':
-            return roles.servicios;
-        case 'cascada':
-            return roles.cascada;
-        case 'aspirantes':
-            return roles.aspirantes;
-        case 'general':
-        case 'dashboard':
-          return user.role;
-        default:
-          return user.role;
+        case 'semanas': return roles.semanas;
+        case 'asistencia': return roles.asistencia;
+        case 'movilidad': return roles.movilidad;
+        case 'materiales': return roles.materiales;
+        case 'ayudantia': return roles.ayudantia;
+        case 'roperia': return roles.roperia;
+        case 'servicios': return roles.servicios;
+        case 'cascada': return roles.cascada;
+        case 'aspirantes': return roles.aspirantes;
+        default: return user.role;
       }
   };
 

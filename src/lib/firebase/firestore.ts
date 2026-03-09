@@ -1,9 +1,8 @@
-'use client';
 import { initializeFirebase } from '@/firebase';
 
 /**
  * Inicialización unificada de Firestore para toda la aplicación.
- * Marcado como 'use client' para soportar el flujo de errores contextuales.
+ * Proporciona una instancia única y estable de la base de datos.
  */
 const services = initializeFirebase();
 export const db = services.firestore;
