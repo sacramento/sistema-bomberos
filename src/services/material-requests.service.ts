@@ -1,4 +1,3 @@
-
 'use server';
 
 import { MaterialRequest, LoggedInUser, Material } from '@/lib/types';
@@ -13,8 +12,16 @@ if (!db) {
 
 const requestsCollection = collection(db, 'material_requests');
 
+/**
+ * Obtiene las solicitudes de materiales pendientes de aprobación.
+ * Se requiere un índice compuesto: status (ASC), requestedAt (DESC), __name__ (DESC).
+ */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
-    const q = query(requestsCollection, where('status', '==', 'PENDING'), orderBy('requestedAt', 'desc'));
+    const q = query(
+        requestsCollection, 
+        where('status', '==', 'PENDING'), 
+        orderBy('requestedAt', 'desc')
+    );
     const querySnapshot = await getDocs(q);
     const requests: MaterialRequest[] = [];
     querySnapshot.forEach((doc) => {
