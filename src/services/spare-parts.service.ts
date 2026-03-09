@@ -1,45 +1,102 @@
-
-'use server';
+'use client';
 
 import { SparePart, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, addDoc, doc, deleteDoc, updateDoc, query, where, orderBy, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, updateDoc, query, where, setDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 if (!db) {
     throw new Error("Firestore is not initialized. Check your Firebase configuration.");
 }
 
-const sparePartsCollection = collection(db, 'spare_parts');
-
+/**
+ * Retrieves all spare parts for a specific vehicle.
+ */
 export const getSparePartsByVehicle = async (vehicleId: string): Promise<SparePart[]> => {
+    if (!db) return [];
+    const sparePartsCollection = collection(db, 'spare_parts');
     const q = query(sparePartsCollection, where('vehicleId', '==', vehicleId));
-    const querySnapshot = await getDocs(q);
-    const parts: SparePart[] = [];
-    querySnapshot.forEach((doc) => {
-        parts.push({ id: doc.id, ...doc.data() } as SparePart);
+    
+    return getDocs(q)
+        .then((querySnapshot) => {
+            const parts: SparePart[] = [];
+            querySnapshot.forEach((doc) => {
+                parts.push({ id: doc.id, ...doc.data() } as SparePart);
+            });
+            parts.sort((a, b) => a.name.localeCompare(b.name));
+            return parts;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: sparePartsCollection.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
+};
+
+/**
+ * Adds a new spare part.
+ */
+export const addSparePart = (partData: Omit<SparePart, 'id'>, actor: LoggedInUser) => {
+    if (!db) return;
+    const sparePartsCollection = collection(db, 'spare_parts');
+    const docRef = doc(sparePartsCollection);
+
+    setDoc(docRef, partData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: partData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
-    // Sort client-side to avoid complex composite indexes
-    parts.sort((a, b) => a.name.localeCompare(b.name));
-    return parts;
+
+    if (actor) {
+        logAction(actor, 'CREATE_SPARE_PART', { entity: 'sparePart', id: docRef.id }, partData);
+    }
 };
 
-export const addSparePart = async (partData: Omit<SparePart, 'id'>, actor: LoggedInUser): Promise<string> => {
-    const docRef = await addDoc(sparePartsCollection, partData);
-    await logAction(actor, 'CREATE_SPARE_PART', { entity: 'sparePart', id: docRef.id }, partData);
-    return docRef.id;
-};
-
-export const updateSparePart = async (id: string, partData: Partial<Omit<SparePart, 'id' | 'vehicleId'>>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates an existing spare part.
+ */
+export const updateSparePart = (id: string, partData: Partial<Omit<SparePart, 'id' | 'vehicleId'>>, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'spare_parts', id);
-    await updateDoc(docRef, partData);
-    await logAction(actor, 'UPDATE_SPARE_PART', { entity: 'sparePart', id }, partData);
+    
+    updateDoc(docRef, partData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: partData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_SPARE_PART', { entity: 'sparePart', id }, partData);
+    }
 };
 
-export const deleteSparePart = async (id: string, actor: LoggedInUser): Promise<void> => {
+/**
+ * Deletes a spare part.
+ */
+export const deleteSparePart = (id: string, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'spare_parts', id);
-    const docSnap = await getDoc(docRef);
-    const details = docSnap.exists() ? { name: docSnap.data().name } : {};
-    await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_SPARE_PART', { entity: 'sparePart', id }, details);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_SPARE_PART', { entity: 'sparePart', id });
+    }
 };

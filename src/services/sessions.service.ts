@@ -8,13 +8,12 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const sessionsCollection = collection(db, 'sessions');
-
 /**
- * Obtiene las sesiones. Se ordena en memoria para evitar ocultar documentos sin fecha.
+ * Retrieves all sessions.
  */
 export const getSessions = async (): Promise<Session[]> => {
     if (!db) return [];
+    const sessionsCollection = collection(db, 'sessions');
     
     return getDocs(sessionsCollection)
         .then(async (querySnapshot) => {
@@ -25,7 +24,7 @@ export const getSessions = async (): Promise<Session[]> => {
                 const data = docSnap.data();
                 const getFirefighterObjects = (ids: string[]): Firefighter[] => {
                     if (!ids) return [];
-                    return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
+                    return ids.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f);
                 };
                 
                 return {
@@ -37,7 +36,6 @@ export const getSessions = async (): Promise<Session[]> => {
                 } as Session;
             });
 
-            // Ordenamiento en memoria
             return results.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         })
         .catch(async (error) => {
@@ -50,6 +48,9 @@ export const getSessions = async (): Promise<Session[]> => {
         });
 };
 
+/**
+ * Retrieves a single session by its ID.
+ */
 export const getSessionById = async(id: string): Promise<Session | null> => {
     if (!db) return null;
     const docRef = doc(db, 'sessions', id);
@@ -62,7 +63,7 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
                 const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
                 const getFirefighterObjects = (ids: string[]): Firefighter[] => {
                     if (!ids) return [];
-                    return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
+                    return ids.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f);
                 };
                 return {
                     id: docSnap.id,
@@ -84,8 +85,14 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
         });
 }
 
-export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser): Promise<string> => {
+/**
+ * Adds a new training session.
+ */
+export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
+    if (!db) return;
+    const sessionsCollection = collection(db, 'sessions');
     const docRef = doc(sessionsCollection);
+    
     const sessionToStore = {
         title: sessionData.title,
         description: sessionData.description,
@@ -98,25 +105,24 @@ export const addSession = async (sessionData: Omit<Session, 'id' | 'attendance'>
         attendance: {}, 
     };
     
-    setDoc(docRef, sessionToStore)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'CREATE_SESSION', { entity: 'session', id: docRef.id }, sessionToStore);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'create',
-                requestResourceData: sessionToStore,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    setDoc(docRef, sessionToStore).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: sessionToStore,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
 
-    return docRef.id;
+    if (actor) {
+        logAction(actor, 'CREATE_SESSION', { entity: 'session', id: docRef.id }, sessionToStore);
+    }
 };
 
-export const updateSession = async (id: string, sessionData: Partial<Session>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates an existing training session.
+ */
+export const updateSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
     
@@ -131,60 +137,59 @@ export const updateSession = async (id: string, sessionData: Partial<Session>, a
         attendeeIds: sessionData.attendees?.map(f => f.id),
     };
 
-    // Limpiar undefined
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
-    updateDoc(docRef, dataToUpdate)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'UPDATE_SESSION', { entity: 'session', id }, dataToUpdate);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'update',
-                requestResourceData: dataToUpdate,
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    updateDoc(docRef, dataToUpdate).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: dataToUpdate,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_SESSION', { entity: 'session', id }, dataToUpdate);
+    }
 };
 
-export const updateSessionAttendance = async (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates attendance for a session.
+ */
+export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
     
-    updateDoc(docRef, { attendance })
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'UPDATE_ATTENDANCE', { entity: 'session', id }, { count: Object.keys(attendance).length });
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'update',
-                requestResourceData: { attendance },
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    updateDoc(docRef, { attendance }).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: { attendance },
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_ATTENDANCE', { entity: 'session', id }, { count: Object.keys(attendance).length });
+    }
 };
 
-export const deleteSession = async (id: string, actor: LoggedInUser): Promise<void> => {
+/**
+ * Deletes a session.
+ */
+export const deleteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
     
-    deleteDoc(docRef)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'DELETE_SESSION', { entity: 'session', id });
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_SESSION', { entity: 'session', id });
+    }
 };

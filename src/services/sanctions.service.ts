@@ -1,43 +1,97 @@
-
-'use server';
+'use client';
 
 import { Sanction, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, addDoc, updateDoc, deleteDoc, query, orderBy, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, query, updateDoc, setDoc } from 'firebase/firestore';
 import { parseISO } from 'date-fns';
 import { logAction } from './audit.service';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-if (!db) {
-    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
-}
-
-const sanctionsCollection = collection(db, 'sanctions');
-
+/**
+ * Retrieves all sanctions.
+ */
 export const getSanctions = async (): Promise<Sanction[]> => {
-    const querySnapshot = await getDocs(query(sanctionsCollection));
-    const sanctions: Sanction[] = [];
-    querySnapshot.forEach((doc) => {
-        sanctions.push({ id: doc.id, ...doc.data() } as Sanction);
+    if (!db) return [];
+    const sanctionsCollection = collection(db, 'sanctions');
+    
+    return getDocs(sanctionsCollection)
+        .then((querySnapshot) => {
+            const sanctions: Sanction[] = [];
+            querySnapshot.forEach((doc) => {
+                sanctions.push({ id: doc.id, ...doc.data() } as Sanction);
+            });
+            return sanctions.sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime());
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: sanctionsCollection.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
+};
+
+/**
+ * Adds a new sanction.
+ */
+export const addSanction = (sanctionData: Omit<Sanction, 'id'>, actor: LoggedInUser) => {
+    if (!db) return;
+    const sanctionsCollection = collection(db, 'sanctions');
+    const docRef = doc(sanctionsCollection);
+
+    setDoc(docRef, sanctionData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: sanctionData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
-    return sanctions.sort((a, b) => parseISO(b.startDate).getTime() - parseISO(a.startDate).getTime());
+
+    if (actor) {
+        logAction(actor, 'CREATE_SANCTION', { entity: 'sanction', id: docRef.id }, sanctionData);
+    }
 };
 
-export const addSanction = async (sanctionData: Omit<Sanction, 'id'>, actor: LoggedInUser): Promise<string> => {
-    const docRef = await addDoc(sanctionsCollection, sanctionData);
-    await logAction(actor, 'CREATE_SANCTION', { entity: 'sanction', id: docRef.id }, sanctionData);
-    return docRef.id;
-};
-
-export const updateSanction = async (id: string, sanctionData: Partial<Omit<Sanction, 'id' | 'firefighterId' | 'firefighterName'>>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates an existing sanction.
+ */
+export const updateSanction = (id: string, sanctionData: Partial<Omit<Sanction, 'id' | 'firefighterId' | 'firefighterName'>>, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'sanctions', id);
-    await updateDoc(docRef, sanctionData);
-    await logAction(actor, 'UPDATE_SANCTION', { entity: 'sanction', id }, sanctionData);
+    
+    updateDoc(docRef, sanctionData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: sanctionData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_SANCTION', { entity: 'sanction', id }, sanctionData);
+    }
 };
 
-export const deleteSanction = async (id: string, actor: LoggedInUser): Promise<void> => {
+/**
+ * Deletes a sanction.
+ */
+export const deleteSanction = (id: string, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'sanctions', id);
-    const docSnap = await getDoc(docRef);
-    const details = docSnap.exists() ? { firefighterName: docSnap.data().firefighterName } : {};
-    await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_SANCTION', { entity: 'sanction', id }, details);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_SANCTION', { entity: 'sanction', id });
+    }
 };

@@ -1,77 +1,57 @@
-
-
-'use server';
+'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, writeBatch, query, orderBy, updateDoc, addDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, query, orderBy, updateDoc, setDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
-import { cache } from 'react';
 import { logAction } from './audit.service';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-
-if (!db) {
-    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
-}
-
-const aspirantesWorkshopsCollection = collection(db, 'aspirantes-workshops');
-
-// Cache all firefighters for the duration of a single request
-const getAllFirefightersCached = cache(async () => {
-    const firefighters = await getFirefighters();
-    return new Map(firefighters.map(f => [f.id, f]));
-});
-
-// Helper to convert Firestore doc data to Session object
-const docToSession = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Session> => {
-    const data = docSnap.data();
-    
-    const getFirefighterObjects = (ids: string[]): Firefighter[] => {
-        if (!ids) return [];
-        return ids.map(id => firefighterMap.get(id)).filter(f => f !== undefined) as Firefighter[];
-    };
-    
-    const instructorIds = data.instructorIds || [];
-    const assistantIds = data.assistantIds || [];
-    const attendeeIds = data.attendeeIds || [];
-    
-    return {
-        id: docSnap.id,
-        ...data,
-        instructors: getFirefighterObjects(instructorIds),
-        assistants: getFirefighterObjects(assistantIds),
-        attendees: getFirefighterObjects(attendeeIds),
-        instructorIds,
-        assistantIds,
-        attendeeIds,
-    } as Session;
-}
-
-
+/**
+ * Retrieves all aspirante workshops.
+ */
 export const getAspiranteWorkshops = async (): Promise<Session[]> => {
-    const q = query(aspirantesWorkshopsCollection, orderBy('date', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    const firefighterMap = await getAllFirefightersCached();
+    if (!db) return [];
+    const workshopsCollection = collection(db, 'aspirantes-workshops');
+    const q = query(workshopsCollection, orderBy('date', 'desc'));
     
-    const sessionsPromises = querySnapshot.docs.map(doc => docToSession(doc, firefighterMap));
-    const sessions = await Promise.all(sessionsPromises);
-
-    return sessions;
+    return getDocs(q)
+        .then(async (querySnapshot) => {
+            const firefighters = await getFirefighters();
+            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+            
+            const results: Session[] = querySnapshot.docs.map(docSnap => {
+                const data = docSnap.data();
+                const getFirefighterObjects = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    instructors: getFirefighterObjects(data.instructorIds),
+                    assistants: getFirefighterObjects(data.assistantIds),
+                    attendees: getFirefighterObjects(data.attendeeIds),
+                } as Session;
+            });
+            return results;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: workshopsCollection.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
 };
 
-export const getAspiranteWorkshopById = async(id: string): Promise<Session | null> => {
-    const docRef = doc(db, 'aspirantes-workshops', id);
-    const docSnap = await getDoc(docRef);
+/**
+ * Adds a new workshop for aspirantes.
+ */
+export const addAspiranteWorkshop = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
+    if (!db) return;
+    const workshopsCollection = collection(db, 'aspirantes-workshops');
+    const docRef = doc(workshopsCollection);
     
-    if (docSnap.exists()) {
-        const firefighterMap = await getAllFirefightersCached();
-        return await docToSession(docSnap, firefighterMap);
-    }
-    return null;
-}
-
-export const addAspiranteWorkshop = async (sessionData: Omit<Session, 'id'>, actor: LoggedInUser): Promise<string> => {
     const sessionToStore = {
         title: sessionData.title,
         description: sessionData.description,
@@ -83,16 +63,29 @@ export const addAspiranteWorkshop = async (sessionData: Omit<Session, 'id'>, act
         attendeeIds: sessionData.attendees.map(f => f.id),
         attendance: {},
     };
-    
-    const docRef = await addDoc(aspirantesWorkshopsCollection, sessionToStore);
-    await logAction(actor, 'CREATE_WORKSHOP', { entity: 'aspiranteWorkshop', id: docRef.id }, sessionToStore);
-    return docRef.id;
+
+    setDoc(docRef, sessionToStore).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: sessionToStore,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'CREATE_WORKSHOP', { entity: 'aspiranteWorkshop', id: docRef.id }, sessionToStore);
+    }
 };
 
-export const updateAspiranteWorkshop = async (id: string, sessionData: Partial<Session>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates an existing workshop for aspirantes.
+ */
+export const updateAspiranteWorkshop = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'aspirantes-workshops', id);
     
-    const sessionToUpdate: any = {
+    const dataToUpdate: any = {
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -103,25 +96,59 @@ export const updateAspiranteWorkshop = async (id: string, sessionData: Partial<S
         attendeeIds: sessionData.attendees?.map(f => f.id),
     };
 
-    Object.keys(sessionToUpdate).forEach(key => sessionToUpdate[key] === undefined && delete sessionToUpdate[key]);
+    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
-    await updateDoc(docRef, sessionToUpdate);
-    await logAction(actor, 'UPDATE_WORKSHOP', { entity: 'aspiranteWorkshop', id }, sessionToUpdate);
-};
-
-
-export const deleteAspiranteWorkshop = async (id: string, actor: LoggedInUser): Promise<void> => {
-    const docRef = doc(db, 'aspirantes-workshops', id);
-    const docSnap = await getDoc(docRef);
-    const details = docSnap.exists() ? { title: docSnap.data().title } : {};
-    await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_WORKSHOP', { entity: 'aspiranteWorkshop', id }, details);
-};
-
-export const updateAspiranteWorkshopAttendance = async (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser): Promise<void> => {
-    const docRef = doc(db, 'aspirantes-workshops', id);
-    await updateDoc(docRef, {
-        attendance: attendance
+    updateDoc(docRef, dataToUpdate).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: dataToUpdate,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
-    await logAction(actor, 'UPDATE_ATTENDANCE', { entity: 'aspiranteWorkshop', id }, { count: Object.keys(attendance).length });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_WORKSHOP', { entity: 'aspiranteWorkshop', id }, dataToUpdate);
+    }
+};
+
+/**
+ * Deletes an aspirante workshop.
+ */
+export const deleteAspiranteWorkshop = (id: string, actor: LoggedInUser) => {
+    if (!db) return;
+    const docRef = doc(db, 'aspirantes-workshops', id);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_WORKSHOP', { entity: 'aspiranteWorkshop', id });
+    }
+};
+
+/**
+ * Updates attendance for an aspirante workshop.
+ */
+export const updateAspiranteWorkshopAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
+    if (!db) return;
+    const docRef = doc(db, 'aspirantes-workshops', id);
+    
+    updateDoc(docRef, { attendance }).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: { attendance },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_ATTENDANCE', { entity: 'aspiranteWorkshop', id }, { count: Object.keys(attendance).length });
+    }
 };

@@ -1,60 +1,97 @@
-
-'use server';
+'use client';
 
 import { GeneralInventoryItem, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-if (!db) {
-    throw new Error("Firestore is not initialized. Check your Firebase configuration.");
-}
-
-const inventoryCollection = collection(db, 'general_inventory');
-
+/**
+ * Retrieves all general inventory items.
+ */
 export const getGeneralInventory = async (): Promise<GeneralInventoryItem[]> => {
+    if (!db) return [];
+    const inventoryCollection = collection(db, 'general_inventory');
     const q = query(inventoryCollection, orderBy('nombre', 'asc'));
-    const querySnapshot = await getDocs(q);
     
-    const items: GeneralInventoryItem[] = [];
-    querySnapshot.forEach((doc) => {
-        items.push({ id: doc.id, ...doc.data() } as GeneralInventoryItem);
+    return getDocs(q)
+        .then((querySnapshot) => {
+            const items: GeneralInventoryItem[] = [];
+            querySnapshot.forEach((doc) => {
+                items.push({ id: doc.id, ...doc.data() } as GeneralInventoryItem);
+            });
+            return items;
+        })
+        .catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: inventoryCollection.path,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            return [];
+        });
+};
+
+/**
+ * Adds a new general inventory item.
+ */
+export const addGeneralInventoryItem = (itemData: Omit<GeneralInventoryItem, 'id'>, actor: LoggedInUser) => {
+    if (!db) return;
+    const inventoryCollection = collection(db, 'general_inventory');
+    const docRef = doc(inventoryCollection);
+
+    setDoc(docRef, itemData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: itemData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
     });
 
-    return items;
-}
-
-export const addGeneralInventoryItem = async (itemData: Omit<GeneralInventoryItem, 'id'>, actor: LoggedInUser): Promise<string> => {
-    const q = query(inventoryCollection, where("codigo", "==", itemData.codigo));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-        throw new Error(`El ítem con el código ${itemData.codigo} ya existe.`);
+    if (actor) {
+        logAction(actor, 'CREATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id: docRef.id }, itemData);
     }
-
-    const docRef = await addDoc(inventoryCollection, itemData);
-    await logAction(actor, 'CREATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id: docRef.id }, itemData);
-    return docRef.id;
 };
 
-export const updateGeneralInventoryItem = async (id: string, itemData: Partial<Omit<GeneralInventoryItem, 'id'>>, actor: LoggedInUser): Promise<void> => {
+/**
+ * Updates an existing general inventory item.
+ */
+export const updateGeneralInventoryItem = (id: string, itemData: Partial<Omit<GeneralInventoryItem, 'id'>>, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'general_inventory', id);
-
-    if (itemData.codigo) {
-        const q = query(inventoryCollection, where("codigo", "==", itemData.codigo));
-        const querySnapshot = await getDocs(q);
-        if (!querySnapshot.empty && querySnapshot.docs[0].id !== id) {
-            throw new Error(`El código de ítem ${itemData.codigo} ya está en uso.`);
-        }
-    }
     
-    await updateDoc(docRef, itemData);
-    await logAction(actor, 'UPDATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id }, itemData);
+    updateDoc(docRef, itemData).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: itemData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id }, itemData);
+    }
 };
 
-export const deleteGeneralInventoryItem = async (id: string, actor: LoggedInUser): Promise<void> => {
+/**
+ * Deletes a general inventory item.
+ */
+export const deleteGeneralInventoryItem = (id: string, actor: LoggedInUser) => {
+    if (!db) return;
     const docRef = doc(db, 'general_inventory', id);
-    const docSnap = await getDoc(docRef);
-    const details = docSnap.exists() ? { nombre: docSnap.data().nombre } : {};
-    await deleteDoc(docRef);
-    await logAction(actor, 'DELETE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id }, details);
+    
+    deleteDoc(docRef).catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_GENERAL_INVENTORY_ITEM', { entity: 'generalInventoryItem', id });
+    }
 };
