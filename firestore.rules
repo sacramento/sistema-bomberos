@@ -25,6 +25,9 @@ service cloud.firestore {
       if (module == 'movilidad') {
         return userRoles.movilidad in requiredRoles;
       }
+      if (module == 'materiales') {
+        return userRoles.materiales in requiredRoles;
+      }
       if (module == 'servicios') {
         return userRoles.servicios in requiredRoles;
       }
@@ -134,6 +137,17 @@ service cloud.firestore {
         allow write: if hasRole('movilidad', ['Administrador']);
       }
       
+      // MATERIALS & REQUESTS
+      match /materials/{materialId} {
+        allow read: if request.auth != null;
+        allow write: if hasRole('materiales', ['Administrador', 'Oficial', 'Encargado']);
+      }
+
+      match /material_requests/{requestId} {
+        allow read, update, delete: if hasRole('materiales', ['Administrador']);
+        allow create: if hasRole('materiales', ['Administrador', 'Oficial', 'Encargado']);
+      }
+
       // DRIVERS
       match /drivers/{driverId} {
         allow read: if request.auth != null;
