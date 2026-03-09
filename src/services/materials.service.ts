@@ -1,8 +1,9 @@
+
 'use client';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, where, setDoc, CollectionReference, DocumentReference } from 'firebase/firestore';
+import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, where, setDoc } from 'firebase/firestore';
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -10,6 +11,7 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Obtiene todos los materiales.
+ * Se eliminan las referencias a nivel de módulo para mayor estabilidad.
  */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
@@ -91,7 +93,6 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     const materialsCollection = collection(db, 'materials');
     const docRef = doc(materialsCollection);
     
-    // No await here
     setDoc(docRef, materialData)
         .then(() => {
             if (actor) {
@@ -114,7 +115,6 @@ export const updateMaterial = async (id: string, materialData: Partial<Omit<Mate
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
-    // No await here
     updateDoc(docRef, materialData)
         .then(() => {
             if (actor) {
@@ -135,7 +135,6 @@ export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<v
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
-    // No await here
     deleteDoc(docRef)
         .then(() => {
             if (actor) {
@@ -160,7 +159,6 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
         batch.set(docRef, item);
     }
     
-    // No await here
     batch.commit()
         .then(() => {
             logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
