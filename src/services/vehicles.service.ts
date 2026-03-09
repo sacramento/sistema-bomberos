@@ -18,8 +18,8 @@ const docToVehicle = async (
     maintenanceItemMap: Map<string, MaintenanceItem>
 ): Promise<Vehicle> => {
     const data = docSnap.data();
-    const getPersonnel = (ids: string[]) => ids.map(id => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
-    const getItems = (ids: string[]) => ids.map(id => maintenanceItemMap.get(id)).filter(Boolean) as MaintenanceItem[];
+    const getPersonnel = (ids: string[]) => ids.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f);
+    const getItems = (ids: string[]) => ids.map(id => maintenanceItemMap.get(id)).filter((i): i is MaintenanceItem => !!i);
 
     return {
         id: docSnap.id,
@@ -46,7 +46,6 @@ const docToVehicle = async (
 
 /**
  * Obtiene todos los vehículos de la flota.
- * Se eliminó el orderBy del servidor para asegurar que ningún móvil quede oculto por falta de datos.
  */
 export const getVehicles = async (): Promise<Vehicle[]> => {
     if (!db) return [];
@@ -54,15 +53,13 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
     
     return getDocs(colRef)
         .then(async (querySnapshot) => {
-            const firefighters = await getFirefighters();
+            const [firefighters, maintenanceItems] = await Promise.all([getFirefighters(), getMaintenanceItems()]);
             const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-            const maintenanceItems = await getMaintenanceItems();
             const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
             
-            const vehiclesPromises = querySnapshot.docs.map(doc => docToVehicle(doc, firefighterMap, maintenanceItemMap));
+            const vehiclesPromises = querySnapshot.docs.map(docSnap => docToVehicle(docSnap, firefighterMap, maintenanceItemMap));
             const results = await Promise.all(vehiclesPromises);
             
-            // Ordenamos en memoria para mayor seguridad
             return results.sort((a, b) => a.numeroMovil.localeCompare(b.numeroMovil, undefined, { numeric: true }));
         })
         .catch(async (error) => {
@@ -82,9 +79,8 @@ export const getVehicleById = async (id: string): Promise<Vehicle | null> => {
     return getDoc(docRef)
         .then(async (docSnap) => {
             if (docSnap.exists()) {
-                const firefighters = await getFirefighters();
+                const [firefighters, maintenanceItems] = await Promise.all([getFirefighters(), getMaintenanceItems()]);
                 const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-                const maintenanceItems = await getMaintenanceItems();
                 const maintenanceItemMap = new Map(maintenanceItems.map(i => [i.id, i]));
                 return await docToVehicle(docSnap, firefighterMap, maintenanceItemMap);
             }
@@ -123,7 +119,7 @@ export const addVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'encargados' 
     return docRef.id;
 };
 
-export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser): Promise<void> => {
+export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     
@@ -143,7 +139,7 @@ export const updateVehicle = async (id: string, vehicleData: Partial<Omit<Vehicl
         });
 };
 
-export const deleteVehicle = async (id: string, actor: LoggedInUser): Promise<void> => {
+export const deleteVehicle = async (id: string, actor: LoggedInUser = null): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'vehicles', id);
     

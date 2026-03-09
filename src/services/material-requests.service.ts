@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
@@ -11,7 +10,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Obtiene las solicitudes pendientes.
- * Se simplifica la consulta para evitar problemas de índices y se ordena en memoria.
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     if (!db) return [];
@@ -29,7 +27,6 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
                 ...docSnap.data()
             } as MaterialRequest));
             
-            // Ordenar por fecha de solicitud descendente en memoria
             return requests.sort((a, b) => (b.requestedAt || '').localeCompare(a.requestedAt || ''));
         })
         .catch(async (error) => {

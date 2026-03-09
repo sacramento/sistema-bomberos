@@ -156,7 +156,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
 /**
  * Updates attendance for a session.
  */
-export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
+export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, 'sessions', id);
     
