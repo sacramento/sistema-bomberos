@@ -1,31 +1,28 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // --- REGLAS DE EMERGENCIA PARA RESTAURAR VISIBILIDAD ---
-    // Se permite el acceso a las colecciones principales mientras se sincroniza 
-    // el sistema de autenticación con Firebase Auth.
+    // Helper para verificar roles modulares
+    function hasRole(module, role) {
+      return request.auth != null && 
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles[module] == role;
+    }
     
-    match /materials/{m} { allow read, write: if true; }
-    match /material_requests/{r} { allow read, write: if true; }
-    match /users/{u} { allow read, write: if true; }
-    match /firefighters/{f} { allow read, write: if true; }
-    match /vehicles/{v} { allow read, write: if true; }
-    match /cascade_charges/{c} { allow read, write: if true; }
-    match /cascade_system_charges/{cs} { allow read, write: if true; }
-    match /sessions/{s} { allow read, write: if true; }
-    match /workshops/{w} { allow read, write: if true; }
-    match /courses/{co} { allow read, write: if true; }
-    match /weeks/{wk} { allow read, write: if true; }
-    match /tasks/{t} { allow read, write: if true; }
-    match /maintenance_records/{mr} { allow read, write: if true; }
-    match /repair_records/{rr} { allow read, write: if true; }
-    match /clothing/{cl} { allow read, write: if true; }
-    match /general_inventory/{gi} { allow read, write: if true; }
-    match /audit_logs/{al} { allow read, write: if true; }
+    function isAdmin() {
+      return request.auth != null && 
+             (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'Master' || 
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.materiales == 'Administrador');
+    }
 
-    match /{path=**}/leaves/{leaveId} {
-      allow read, write: if true;
+    match /materials/{m} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || hasRole('materiales', 'Oficial') || hasRole('materiales', 'Encargado');
+    }
+
+    match /material_requests/{r} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {

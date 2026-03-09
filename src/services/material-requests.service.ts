@@ -1,38 +1,27 @@
-'use server';
 
-import { MaterialRequest, LoggedInUser, Material } from '@/lib/types';
-import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc, documentId } from 'firebase/firestore';
+'use client';
+
+import { MaterialRequest, LoggedInUser } from '@/lib/types';
+import { initializeFirebase } from '@/firebase';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
-if (!db) {
-    throw new Error("Firestore is not initialized.");
-}
-
+const { firestore: db } = initializeFirebase();
 const requestsCollection = collection(db, 'material_requests');
 
-/**
- * Obtiene las solicitudes de materiales pendientes de aprobación.
- * Se incluye el ordenamiento requerido por el índice compuesto.
- */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
-    try {
-        const q = query(
-            requestsCollection, 
-            where('status', '==', 'PENDING'), 
-            orderBy('requestedAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const requests: MaterialRequest[] = [];
-        querySnapshot.forEach((doc) => {
-            requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
-        });
-        return requests;
-    } catch (error) {
-        console.error("Error fetching pending requests:", error);
-        throw error; // Re-lanzar para que el componente pueda manejarlo
-    }
+    const q = query(
+        requestsCollection, 
+        where('status', '==', 'PENDING'), 
+        orderBy('requestedAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    const requests: MaterialRequest[] = [];
+    querySnapshot.forEach((doc) => {
+        requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
+    });
+    return requests;
 };
 
 export const createMaterialRequest = async (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>): Promise<string> => {
@@ -51,10 +40,8 @@ export const resolveMaterialRequest = async (
     actor: LoggedInUser
 ): Promise<void> => {
     if (!actor) throw new Error("Actor required");
-    
     const requestRef = doc(db, 'material_requests', requestId);
     const requestSnap = await getDoc(requestRef);
-    
     if (!requestSnap.exists()) throw new Error("Request not found");
     const request = requestSnap.data() as MaterialRequest;
 
@@ -65,13 +52,11 @@ export const resolveMaterialRequest = async (
             await deleteMaterial(request.materialId, actor);
         }
     }
-
     await updateDoc(requestRef, {
         status,
         resolvedAt: new Date().toISOString(),
         resolvedById: actor.id,
         resolvedByName: actor.name,
     });
-
     await logAction(actor, status === 'APPROVED' ? 'UPDATE_MATERIAL' : 'UPDATE_USER', { entity: 'materialRequest', id: requestId }, { result: status });
 };
