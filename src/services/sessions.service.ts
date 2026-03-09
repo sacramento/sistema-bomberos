@@ -2,17 +2,19 @@
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, query, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+const SESSIONS_COLLECTION = 'sessions';
+
 export const getSessions = async (): Promise<Session[]> => {
     if (!db) return [];
-    const sessionsCollection = collection(db, 'sessions');
+    const colRef = collection(db, SESSIONS_COLLECTION);
     
-    return getDocs(sessionsCollection)
+    return getDocs(colRef)
         .then(async (querySnapshot) => {
             const firefighters = await getFirefighters();
             const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
@@ -37,7 +39,7 @@ export const getSessions = async (): Promise<Session[]> => {
         })
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
-                path: sessionsCollection.path,
+                path: colRef.path,
                 operation: 'list',
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -47,7 +49,7 @@ export const getSessions = async (): Promise<Session[]> => {
 
 export const getSessionById = async(id: string): Promise<Session | null> => {
     if (!db) return null;
-    const docRef = doc(db, 'sessions', id);
+    const docRef = doc(db, SESSIONS_COLLECTION, id);
     
     return getDoc(docRef)
         .then(async (docSnap) => {
@@ -81,8 +83,8 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
 
 export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
-    const sessionsCollection = collection(db, 'sessions');
-    const docRef = doc(sessionsCollection);
+    const colRef = collection(db, SESSIONS_COLLECTION);
+    const docRef = doc(colRef);
     
     const sessionToStore = {
         title: sessionData.title,
@@ -96,7 +98,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
         attendance: {}, 
     };
     
-    setDoc(docRef, sessionToStore).catch(async (error) => {
+    setDoc(docRef, sessionToStore).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
@@ -112,7 +114,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
 
 export const updateSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'sessions', id);
+    const docRef = doc(db, SESSIONS_COLLECTION, id);
     
     const dataToUpdate: any = {
         title: sessionData.title,
@@ -127,7 +129,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
 
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
-    updateDoc(docRef, dataToUpdate).catch(async (error) => {
+    updateDoc(docRef, dataToUpdate).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -143,9 +145,9 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
 
 export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser = null) => {
     if (!db) return;
-    const docRef = doc(db, 'sessions', id);
+    const docRef = doc(db, SESSIONS_COLLECTION, id);
     
-    updateDoc(docRef, { attendance }).catch(async (error) => {
+    updateDoc(docRef, { attendance }).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -161,9 +163,9 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
 
 export const deleteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'sessions', id);
+    const docRef = doc(db, SESSIONS_COLLECTION, id);
     
-    deleteDoc(docRef).catch(async (error) => {
+    deleteDoc(docRef).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',

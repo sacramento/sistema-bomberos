@@ -2,21 +2,19 @@
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, where, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
 
-/**
- * Obtiene todos los materiales.
- */
+const MATERIALS_COLLECTION = 'materials';
+
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
+    const colRef = collection(db, MATERIALS_COLLECTION);
     
-    const materialsCollection = collection(db, 'materials');
-    
-    return getDocs(materialsCollection)
+    return getDocs(colRef)
         .then(async (querySnapshot) => {
             const vehiclesData = await getVehicles();
             const vehicleMap = new Map(vehiclesData.map(v => [v.id, v]));
@@ -57,113 +55,84 @@ export const getMaterials = async (): Promise<Material[]> => {
         })
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
-                path: materialsCollection.path,
+                path: colRef.path,
                 operation: 'list',
-            } satisfies SecurityRuleContext);
+            });
             errorEmitter.emit('permission-error', permissionError);
             return [];
         });
 }
 
-export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
-    if (!db) return 1;
-    const materialsCollection = collection(db, 'materials');
-    const q = query(materialsCollection, where("codigo", ">=", prefix), where("codigo", "<=", prefix + '\uf8ff'));
-    
-    return getDocs(q)
-        .then(querySnapshot => {
-            let maxNum = 0;
-            querySnapshot.forEach(docSnap => {
-                const code = docSnap.data().codigo as string;
-                const numPart = code.substring(prefix.length);
-                const num = parseInt(numPart);
-                if (!isNaN(num) && num > maxNum) maxNum = num;
-            });
-            return maxNum + 1;
-        })
-        .catch(async () => {
-            return 1;
-        });
-};
-
 export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser) => {
     if (!db) return;
-    const materialsCollection = collection(db, 'materials');
-    const docRef = doc(materialsCollection);
+    const colRef = collection(db, MATERIALS_COLLECTION);
+    const docRef = doc(colRef);
     
-    setDoc(docRef, materialData)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'create',
-                requestResourceData: materialData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    setDoc(docRef, materialData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'create',
+            requestResourceData: materialData,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
+    }
 };
 
 export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'materials', id);
+    const docRef = doc(db, MATERIALS_COLLECTION, id);
     
-    updateDoc(docRef, materialData)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'update',
-                requestResourceData: materialData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    updateDoc(docRef, materialData).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: materialData,
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
+    }
 };
 
 export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'materials', id);
+    const docRef = doc(db, MATERIALS_COLLECTION, id);
     
-    deleteDoc(docRef)
-        .then(() => {
-            if (actor) {
-                logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
-            }
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: docRef.path,
-                operation: 'delete',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    deleteDoc(docRef).catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'delete',
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+
+    if (actor) {
+        logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
+    }
 };
 
 export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Promise<void> => {
     if (!db || !items || !actor) return;
     const batch = writeBatch(db);
-    const materialsCollection = collection(db, 'materials');
+    const colRef = collection(db, MATERIALS_COLLECTION);
     for (const item of items) {
-        const docRef = doc(materialsCollection);
+        const docRef = doc(colRef);
         batch.set(docRef, item);
     }
     
-    batch.commit()
-        .then(() => {
-            logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: materialsCollection.path,
-                operation: 'write',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+    batch.commit().catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+            path: colRef.path,
+            operation: 'write',
         });
+        errorEmitter.emit('permission-error', permissionError);
+    });
+    
+    logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
 };

@@ -2,12 +2,12 @@
 
 import { User, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const usersCollection = collection(db, 'users');
+const USERS_COLLECTION = 'users';
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
@@ -34,7 +34,8 @@ const docToUser = (docSnap: any): User => {
 
 export const getUsers = async (): Promise<User[]> => {
     if (!db) return [];
-    return getDocs(usersCollection)
+    const colRef = collection(db, USERS_COLLECTION);
+    return getDocs(colRef)
         .then((querySnapshot) => {
             const users: User[] = [];
             querySnapshot.forEach((doc) => {
@@ -44,7 +45,7 @@ export const getUsers = async (): Promise<User[]> => {
         })
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
-                path: usersCollection.path,
+                path: colRef.path,
                 operation: 'list',
             });
             errorEmitter.emit('permission-error', permissionError);
@@ -54,7 +55,7 @@ export const getUsers = async (): Promise<User[]> => {
 
 export const getUserById = async (id: string): Promise<User | null> => {
     if (!db) return null;
-    const docRef = doc(db, 'users', id);
+    const docRef = doc(db, USERS_COLLECTION, id);
     return getDoc(docRef)
         .then((docSnap) => {
             if (docSnap.exists()) {
@@ -72,11 +73,11 @@ export const getUserById = async (id: string): Promise<User | null> => {
         });
 }
 
-export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser): Promise<void> => {
+export const addUser = (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'users', id);
+    const docRef = doc(db, USERS_COLLECTION, id);
     
-    setDoc(docRef, userData).catch(async (error) => {
+    setDoc(docRef, userData).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
@@ -90,14 +91,14 @@ export const addUser = async (id: string, userData: Omit<User, 'id'>, actor: Log
     }
 };
 
-export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>, actor: LoggedInUser): Promise<void> => {
+export const updateUser = (id: string, userData: Partial<Omit<User, 'id'>>, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'users', id);
+    const docRef = doc(db, USERS_COLLECTION, id);
 
     const dataToUpdate = { ...userData };
     if (dataToUpdate.password === '') delete dataToUpdate.password;
 
-    updateDoc(docRef, dataToUpdate).catch(async (error) => {
+    updateDoc(docRef, dataToUpdate).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -111,11 +112,11 @@ export const updateUser = async (id: string, userData: Partial<Omit<User, 'id'>>
     }
 };
 
-export const deleteUser = async (id: string, actor: LoggedInUser): Promise<void> => {
+export const deleteUser = (id: string, actor: LoggedInUser) => {
     if (!db) return;
-    const docRef = doc(db, 'users', id);
+    const docRef = doc(db, USERS_COLLECTION, id);
     
-    deleteDoc(docRef).catch(async (error) => {
+    deleteDoc(docRef).catch(async (serverError) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',

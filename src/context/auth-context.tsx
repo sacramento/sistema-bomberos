@@ -1,7 +1,5 @@
 'use client';
 
-import { login as loginFlow } from '@/ai/auth-flow';
-import type { LoginInput } from '@/lib/schemas/auth.schema';
 import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -13,6 +11,8 @@ import {
 } from 'react';
 import { initializeFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
+import { getUserById } from '@/services/users.service';
+import type { LoginInput } from '@/lib/schemas/auth.schema';
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
 
@@ -69,7 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  // Sincronizar con Firebase Auth para que las reglas de seguridad funcionen
   const syncWithFirebaseAuth = async () => {
     try {
       const { auth } = initializeFirebase();
@@ -87,25 +86,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const storedSession = sessionStorage.getItem(SESSION_STORAGE_KEY);
         if (storedSession) {
           const parsedUser = JSON.parse(storedSession);
-          const userWithCompleteRoles = {
-            ...parsedUser,
-            roles: {
-              asistencia: parsedUser.roles?.asistencia || 'Ninguno',
-              semanas: parsedUser.roles?.semanas || 'Ninguno',
-              movilidad: parsedUser.roles?.movilidad || 'Ninguno',
-              materiales: parsedUser.roles?.materiales || 'Ninguno',
-              ayudantia: parsedUser.roles?.ayudantia || 'Ninguno',
-              roperia: parsedUser.roles?.roperia || 'Ninguno',
-              servicios: parsedUser.roles?.servicios || 'Ninguno',
-              cascada: parsedUser.roles?.cascada || 'Ninguno',
-              aspirantes: parsedUser.roles?.aspirantes || 'Ninguno',
-            }
-          };
-          setUser(userWithCompleteRoles);
+          setUser(parsedUser);
           await syncWithFirebaseAuth();
         }
       } catch (e) {
-        console.error('Error parsing stored session', e);
         sessionStorage.removeItem(SESSION_STORAGE_KEY);
       } finally {
         setLoading(false);
@@ -118,26 +102,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      const loggedInUser = await loginFlow(credentials);
-      if (loggedInUser) {
-        const userWithCompleteRoles = {
-          ...loggedInUser,
-          roles: {
-            asistencia: loggedInUser.roles?.asistencia || 'Ninguno',
-            semanas: loggedInUser.roles?.semanas || 'Ninguno',
-            movilidad: loggedInUser.roles?.movilidad || 'Ninguno',
-            materiales: loggedInUser.roles?.materiales || 'Ninguno',
-            ayudantia: loggedInUser.roles?.ayudantia || 'Ninguno',
-            roperia: loggedInUser.roles?.roperia || 'Ninguno',
-            servicios: loggedInUser.roles?.servicios || 'Ninguno',
-            cascada: loggedInUser.roles?.cascada || 'Ninguno',
-            aspirantes: loggedInUser.roles?.aspirantes || 'Ninguno',
-          }
-        };
+      // Perform direct client-side lookup to satisfy production constraints
+      const userData = await getUserById(credentials.legajo);
+      
+      if (userData && userData.password === credentials.password) {
+        const { password, ...userWithoutPassword } = userData;
         
         await syncWithFirebaseAuth();
-        setUser(userWithCompleteRoles);
-        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userWithCompleteRoles));
+        setUser(userWithoutPassword);
+        sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(userWithoutPassword));
         router.push('/dashboard');
       } else {
         throw new Error('Credenciales inválidas. Por favor, intente de nuevo.');
