@@ -1,9 +1,8 @@
-
 'use server';
 
 import { MaterialRequest, LoggedInUser, Material } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc, documentId } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
@@ -15,6 +14,7 @@ const requestsCollection = collection(db, 'material_requests');
 
 /**
  * Obtiene las solicitudes de materiales pendientes de aprobación.
+ * Se incluye el ordenamiento requerido por el índice compuesto.
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     try {
@@ -31,7 +31,7 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
         return requests;
     } catch (error) {
         console.error("Error fetching pending requests:", error);
-        return [];
+        throw error; // Re-lanzar para que el componente pueda manejarlo
     }
 };
 

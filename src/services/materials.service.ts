@@ -1,4 +1,3 @@
-
 'use server';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -60,16 +59,17 @@ const docToMaterial = async (
 }
 
 export const getMaterials = async (): Promise<Material[]> => {
-    // Obtenemos los materiales ordenados por código, pero permitiendo nulos al final
-    const q = query(materialsCollection, orderBy('codigo', 'asc'));
-    const querySnapshot = await getDocs(q);
+    // Ya no usamos orderBy en la consulta para evitar que desaparezcan equipos sin código
+    // Firestore omite documentos que no tienen el campo por el cual se ordena.
+    const querySnapshot = await getDocs(materialsCollection);
 
     const vehicleMap = await getAllVehiclesCached();
     
     const materialsPromises = querySnapshot.docs.map(doc => docToMaterial(doc, vehicleMap));
     const materials = await Promise.all(materialsPromises);
 
-    return materials;
+    // Ordenamos en memoria para asegurar consistencia sin ocultar datos
+    return materials.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
 }
 
 /**
