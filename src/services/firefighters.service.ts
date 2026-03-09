@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Firefighter, LoggedInUser } from '@/lib/types';

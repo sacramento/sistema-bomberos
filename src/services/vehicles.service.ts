@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';

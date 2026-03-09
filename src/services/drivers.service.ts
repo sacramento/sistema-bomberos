@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Driver, Firefighter, LoggedInUser } from '@/lib/types';

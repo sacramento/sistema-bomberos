@@ -2,7 +2,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { AuditLog, AuditLogAction, LoggedInUser } from '@/lib/types';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, Timestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, query, orderBy, limit, getDocs, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
@@ -30,7 +30,6 @@ export const logAction = async (
 
     const docRef = doc(auditCollection);
     setDoc(docRef, logEntry).catch(async (error) => {
-        // En auditoría, los errores de permisos suelen ser por reglas de 'write'
         const permissionError = new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',

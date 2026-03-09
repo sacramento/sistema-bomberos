@@ -58,7 +58,7 @@ export const addMaintenanceItem = (itemData: Omit<MaintenanceItem, 'id'>, actor:
 /**
  * Updates an existing maintenance checklist item.
  */
-export const updateMaintenanceItem = (id: string, itemData: Partial<Omit<MaintenanceItem, 'id'>>, actor: LoggedInUser) => {
+export const updateMaintenanceItem = (id: string, itemData: Partial<MaintenanceItem>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'maintenance_items', id);
     
