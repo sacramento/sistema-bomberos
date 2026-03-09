@@ -1,4 +1,3 @@
-
 'use client';
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
@@ -9,11 +8,13 @@ import { updateMaterial, deleteMaterial } from './materials.service';
 
 /**
  * Obtiene las solicitudes pendientes.
- * IMPORTANTE: La consulta debe coincidir exactamente con el índice compuesto.
+ * Sincronizado exactamente con el índice compuesto solicitado por Firebase.
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
+    if (!db) return [];
+    
     const requestsCollection = collection(db, 'material_requests');
-    // Consulta sincronizada con el índice: status (ASC), requestedAt (DESC), __name__ (DESC)
+    // Consulta optimizada e indexada
     const q = query(
         requestsCollection, 
         where('status', '==', 'PENDING'), 
@@ -35,6 +36,7 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
 };
 
 export const createMaterialRequest = async (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>): Promise<string> => {
+    if (!db) throw new Error("DB not initialized");
     const requestsCollection = collection(db, 'material_requests');
     const dataToSave = {
         ...requestData,
@@ -50,7 +52,7 @@ export const resolveMaterialRequest = async (
     status: 'APPROVED' | 'REJECTED', 
     actor: LoggedInUser
 ): Promise<void> => {
-    if (!actor) throw new Error("Actor required");
+    if (!db || !actor) throw new Error("Actor or DB required");
     const requestRef = doc(db, 'material_requests', requestId);
     const requestSnap = await getDoc(requestRef);
     if (!requestSnap.exists()) throw new Error("Request not found");

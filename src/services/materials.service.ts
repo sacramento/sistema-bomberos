@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -9,14 +8,17 @@ import { logAction } from './audit.service';
 
 /**
  * Obtiene todos los materiales.
- * IMPORTANTE: No usamos orderBy('codigo') en la consulta de Firestore porque 
- * ocultaría los documentos que aún no tienen el campo 'codigo'.
+ * IMPORTANTE: Eliminamos el 'orderBy' del servidor. Firestore oculta los documentos
+ * que no tienen el campo por el cual se ordena. Al traerlos todos y ordenar en JS,
+ * garantizamos que los materiales sin código vuelvan a aparecer.
  */
 export const getMaterials = async (): Promise<Material[]> => {
+    if (!db) return [];
+    
     const materialsCollection = collection(db, 'materials');
+    // Traemos todos los documentos sin filtros de ordenamiento de Firestore
     const querySnapshot = await getDocs(materialsCollection);
     
-    // Obtenemos los vehículos para enriquecer la data en el cliente
     const vehiclesData = await getVehicles();
     const vehicleMap = new Map(vehiclesData.map(v => [v.id, v]));
     
@@ -47,7 +49,7 @@ export const getMaterials = async (): Promise<Material[]> => {
         } as Material;
     });
     
-    // Ordenamos en memoria para asegurar que aparezcan todos
+    // Ordenamos en memoria (JavaScript) para que los que no tienen código queden al final
     return results.sort((a, b) => {
         if (!a.codigo) return 1;
         if (!b.codigo) return -1;
@@ -56,6 +58,7 @@ export const getMaterials = async (): Promise<Material[]> => {
 }
 
 export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
+    if (!db) return 1;
     const materialsCollection = collection(db, 'materials');
     const q = query(materialsCollection, where("codigo", ">=", prefix), where("codigo", "<=", prefix + '\uf8ff'));
     const querySnapshot = await getDocs(q);
@@ -70,12 +73,15 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
 };
 
 export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser): Promise<string> => {
+    if (!db) throw new Error("Database not initialized");
     const materialsCollection = collection(db, 'materials');
+    
     if (materialData.codigo) {
         const q = query(materialsCollection, where("codigo", "==", materialData.codigo));
         const querySnapshot = await getDocs(q);
         if (!querySnapshot.empty) throw new Error(`El código ${materialData.codigo} ya existe.`);
     }
+    
     const docRef = await addDoc(materialsCollection, materialData);
     if (actor) {
         await logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
@@ -84,6 +90,7 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
 };
 
 export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'materials', id);
     await updateDoc(docRef, materialData);
     if (actor) {
@@ -92,6 +99,7 @@ export const updateMaterial = async (id: string, materialData: Partial<Omit<Mate
 };
 
 export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<void> => {
+    if (!db) return;
     const docRef = doc(db, 'materials', id);
     await deleteDoc(docRef);
     if (actor) {
@@ -100,7 +108,7 @@ export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<v
 };
 
 export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Promise<void> => {
-    if (!items || items.length === 0) return;
+    if (!db || !items || items.length === 0) return;
     const batch = writeBatch(db);
     const materialsCollection = collection(db, 'materials');
     for (const item of items) {
