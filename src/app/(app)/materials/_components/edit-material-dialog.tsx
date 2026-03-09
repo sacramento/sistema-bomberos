@@ -8,12 +8,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from "react";
-import { Material, Vehicle } from "@/lib/types";
+import { Material, Vehicle, MaterialRequest } from "@/lib/types";
 import { updateMaterial, getNextMaterialSequence } from "@/services/materials.service";
+import { createMaterialRequest } from "@/services/material-requests.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, Send } from "lucide-react";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -99,7 +100,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
     const handleAutoGenerateCode = async () => {
         if (!categoryId || !subCategoryId || !itemTypeId) {
-            toast({ title: "Faltan datos", description: "Seleccione la clasificación completa para generar un código." });
+            toast({ title: "Faltan datos", description: "Seleccione la clasificación completa." });
             return;
         }
         setGeneratingCode(true);
@@ -115,9 +116,22 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     };
 
+    const needsApproval = useMemo(() => {
+        if (isPrivileged) return false;
+        
+        // Si cambió la ubicación, cuartel o vehículo, requiere aprobación
+        if (material.ubicacion.type !== locationType) return true;
+        if (material.ubicacion.vehiculoId !== vehiculoId) return true;
+        if (material.cuartel !== cuartel && locationType === 'deposito') return true;
+        
+        return false;
+    }, [isPrivileged, material, locationType, vehiculoId, cuartel]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
+        if (!user) return;
+
         let finalCuartel = cuartel;
         if (locationType === 'vehiculo' && vehiculoId) {
             const v = vehicles.find(v => v.id === vehiculoId);
@@ -129,14 +143,14 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
         if (!nombre || !estado || !condicion || !finalCuartel) {
-            toast({ variant: "destructive", title: "Campos incompletos", description: "Nombre, Estado, Condición y Ubicación son obligatorios." });
+            toast({ variant: "destructive", title: "Campos incompletos" });
             return;
         }
 
         setLoading(true);
         try {
             const normalizedMedida = medida.trim().replace(',', '.');
-            await updateMaterial(material.id, { 
+            const dataToSave = { 
                 codigo, 
                 nombre, 
                 categoryId, 
@@ -152,8 +166,25 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 ubicacion, 
                 cuartel: finalCuartel as any, 
                 condicion 
-            }, user);
-            toast({ title: "¡Éxito!", description: "El material ha sido actualizado." });
+            };
+
+            if (needsApproval) {
+                await createMaterialRequest({
+                    type: 'UPDATE',
+                    materialId: material.id,
+                    materialNombre: material.nombre,
+                    materialCodigo: material.codigo,
+                    requestedById: user.id,
+                    requestedByName: user.name,
+                    data: dataToSave,
+                    originalData: material
+                });
+                toast({ title: "Solicitud enviada", description: "El cambio de ubicación requiere aprobación de un administrador." });
+            } else {
+                await updateMaterial(material.id, dataToSave, user);
+                toast({ title: "Material actualizado" });
+            }
+            
             onMaterialUpdated();
             setOpen(false);
         } catch (error: any) {
@@ -175,9 +206,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Editar Material</DialogTitle>
-                    <DialogDescription>Modifique las características técnicas o el estado operativo del equipo.</DialogDescription>
+                    <DialogDescription>Modifique los datos operativos. Si cambia la ubicación, se enviará una solicitud de aprobación.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
+                <form id="edit-material-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
                             <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica</Label>
@@ -245,23 +276,33 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     </div>
 
                     <div className="space-y-3 pt-4 border-t">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación (Sólo lectura para encargados)</Label>
-                        <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)} disabled={!isPrivileged}>
-                            {isPrivileged && <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>}
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación {needsApproval && <Badge variant="destructive" className="ml-2">Cambio requiere aprobación</Badge>}</Label>
+                        <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)}>
+                            <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>
                         </RadioGroup>
                         
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
                                 <Label>Cuartel</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)} disabled={!isPrivileged}>
+                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
                                     <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
                                 </Select>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div className="space-y-2"><Label>Móvil</Label><Select value={vehiculoId} onValueChange={setVehiculoId} disabled={!isPrivileged}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2">
+                                    <Label>Móvil</Label>
+                                    <Select value={vehiculoId} onValueChange={setVehiculoId}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {vehicles.map(v => (
+                                                <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div className="space-y-2"><Label>Baulera</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
                             </div>
                         )}
@@ -270,7 +311,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                     <div className="space-y-2"><Label htmlFor="caracteristicas">Notas Adicionales</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
                 <DialogFooter className="border-t pt-4">
-                    <Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : null} Guardar Cambios</Button>
+                    <Button type="submit" form="edit-material-form" disabled={loading}>
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : needsApproval ? <Send className="h-4 w-4 mr-2"/> : null} 
+                        {needsApproval ? "Solicitar Cambio" : "Guardar Cambios"}
+                    </Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>

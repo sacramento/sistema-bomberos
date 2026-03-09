@@ -1,13 +1,15 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle, Firefighter } from "@/lib/types";
+import { Material, Vehicle, Firefighter, MaterialRequest } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getFirefighters } from "@/services/firefighters.service";
+import { createMaterialRequest } from "@/services/material-requests.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -20,10 +22,12 @@ import EditMaterialDialog from "./_components/edit-material-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import MaterialDetailDialog from "./_components/material-detail-dialog";
 import ImportMaterialsDialog from "./_components/import-materials-dialog";
+import MaterialRequestsList from "./_components/material-requests-list";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 export default function MaterialsPage() {
@@ -33,6 +37,7 @@ export default function MaterialsPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
+    const [activeTab, setActiveTab] = useState('inventory');
     
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
@@ -84,14 +89,32 @@ export default function MaterialsPage() {
         fetchAllData();
     };
 
-    const handleDelete = async (materialId: string) => {
+    const handleDelete = async (m: Material) => {
         if (!user) return;
-        try {
-            await deleteMaterial(materialId, user);
-            toast({ title: "Material eliminado" });
-            fetchAllData();
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Error", description: error.message });
+        
+        if (isPrivileged) {
+            try {
+                await deleteMaterial(m.id, user);
+                toast({ title: "Material eliminado" });
+                fetchAllData();
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message });
+            }
+        } else if (isEncargado) {
+            try {
+                await createMaterialRequest({
+                    type: 'DELETE',
+                    materialId: m.id,
+                    materialNombre: m.nombre,
+                    materialCodigo: m.codigo,
+                    requestedById: user.id,
+                    requestedByName: user.name,
+                    data: {}
+                });
+                toast({ title: "Solicitud de baja enviada", description: "Un administrador debe autorizar la eliminación de este equipo." });
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message });
+            }
         }
     }
 
@@ -132,7 +155,11 @@ export default function MaterialsPage() {
     }
 
     const canDeleteMaterial = (m: Material) => {
-        return isPrivileged;
+        if (isPrivileged) return true;
+        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
+            return true;
+        }
+        return false;
     }
 
     // Sorting Logic
@@ -252,139 +279,166 @@ export default function MaterialsPage() {
                 </div>
             </PageHeader>
             
-             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
-                        <CardDescription>
-                        Ingrese un código para buscar, o use el escáner QR.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                        <form onSubmit={handleFormSubmit} className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="relative flex-grow">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    id="search-term"
-                                    placeholder="Buscar por código..." 
-                                    className="pl-9" 
-                                    value={searchTerm} 
-                                    onChange={(e) => setSearchTerm(e.target.value)} 
-                                />
-                            </div>
-                            <QrScannerDialog onScan={handleQrScan}>
-                                <Button variant="outline" type="button" className="w-full sm:w-auto">
-                                    <QrCode className="mr-2 h-4 w-4" />
-                                    Escanear QR
-                                </Button>
-                            </QrScannerDialog>
-                            <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
-                        </div>
-                    </form>
-                </CardContent>
-            </Card>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className={cn("grid w-full mb-6", isPrivileged ? "grid-cols-3 max-w-xl mx-auto" : "grid-cols-2 max-w-md mx-auto")}>
+                    <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
+                    <TabsTrigger value="inventory">Inventario Completo</TabsTrigger>
+                    {isPrivileged && <TabsTrigger value="requests" className="relative">
+                        Solicitudes
+                        <Badge className="absolute -top-2 -right-2 bg-red-600">!</Badge>
+                    </TabsTrigger>}
+                </TabsList>
 
-            <Card className="mt-6">
-                <CardHeader>
-                    <CardTitle className="text-lg font-headline">Equipamiento Reciente</CardTitle>
-                    <CardDescription>Listado de materiales. Haga clic en los encabezados para ordenar.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('codigo')}>
-                                    <div className="flex items-center">Código {getSortIcon('codigo')}</div>
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('nombre')}>
-                                    <div className="flex items-center">Nombre {getSortIcon('nombre')}</div>
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('ubicacion')}>
-                                    <div className="flex items-center">Ubicación {getSortIcon('ubicacion')}</div>
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
-                                    <div className="flex items-center">Estado {getSortIcon('estado')}</div>
-                                </TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
-                                ))
-                            ) : sortedMaterials.length > 0 ? (
-                                sortedMaterials.slice(0, 100).map(m => (
-                                <TableRow key={m.id}>
-                                    <TableCell>
-                                        {m.codigo ? (
-                                            <span className="font-mono font-bold text-xs">{m.codigo}</span>
-                                        ) : (
-                                            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] flex items-center gap-1 w-fit">
-                                                <AlertCircle className="h-3 w-3" /> Pendiente
-                                            </Badge>
-                                        )}
-                                    </TableCell>
-                                    <TableCell className="font-medium text-sm">
-                                        {m.nombre}
-                                        {m.marca && <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>}
-                                    </TableCell>
-                                    <TableCell className="text-xs">
-                                        {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito ${m.cuartel}`}
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : '')}>
-                                            {m.estado}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell className="text-right">
-                                        <AlertDialog>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                    <DropdownMenuItem onClick={() => setDetailItem(m)}>Ver Detalles</DropdownMenuItem>
-                                                    {canEditMaterial(m) && (
-                                                        <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
-                                                            <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                <Edit className="mr-2 h-4 w-4"/> Editar
-                                                            </DropdownMenuItem>
-                                                        </EditMaterialDialog>
-                                                    )}
-                                                    {canDeleteMaterial(m) && (
-                                                        <>
-                                                            <DropdownMenuSeparator />
-                                                            <AlertDialogTrigger asChild>
-                                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
-                                                                    <Trash2 className="mr-2 h-4 w-4"/> Eliminar
-                                                                </DropdownMenuItem>
-                                                            </AlertDialogTrigger>
-                                                        </>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                    <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente de la base de datos.</AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDelete(m.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                            ))) : (
-                                <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No se encontraron materiales.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
+                <TabsContent value="search" className="space-y-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Búsqueda de Material</CardTitle>
+                                <CardDescription>
+                                Ingrese un código para buscar, o use el escáner QR.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                                <form onSubmit={handleFormSubmit} className="space-y-4">
+                                <div className="flex flex-col sm:flex-row gap-4">
+                                    <div className="relative flex-grow">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            id="search-term"
+                                            placeholder="Buscar por código..." 
+                                            className="pl-9" 
+                                            value={searchTerm} 
+                                            onChange={(e) => setSearchTerm(e.target.value)} 
+                                        />
+                                    </div>
+                                    <QrScannerDialog onScan={handleQrScan}>
+                                        <Button variant="outline" type="button" className="w-full sm:w-auto">
+                                            <QrCode className="mr-2 h-4 w-4" />
+                                            Escanear QR
+                                        </Button>
+                                    </QrScannerDialog>
+                                    <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
+                                </div>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="inventory">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg font-headline">Equipamiento</CardTitle>
+                            <CardDescription>Listado de materiales. Haga clic en los encabezados para ordenar.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('codigo')}>
+                                            <div className="flex items-center">Código {getSortIcon('codigo')}</div>
+                                        </TableHead>
+                                        <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('nombre')}>
+                                            <div className="flex items-center">Nombre {getSortIcon('nombre')}</div>
+                                        </TableHead>
+                                        <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('ubicacion')}>
+                                            <div className="flex items-center">Ubicación {getSortIcon('ubicacion')}</div>
+                                        </TableHead>
+                                        <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
+                                            <div className="flex items-center">Estado {getSortIcon('estado')}</div>
+                                        </TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                        ))
+                                    ) : sortedMaterials.length > 0 ? (
+                                        sortedMaterials.map(m => (
+                                        <TableRow key={m.id}>
+                                            <TableCell>
+                                                {m.codigo ? (
+                                                    <span className="font-mono font-bold text-xs">{m.codigo}</span>
+                                                ) : (
+                                                    <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-200 text-[10px] flex items-center gap-1 w-fit">
+                                                        <AlertCircle className="h-3 w-3" /> Pendiente
+                                                    </Badge>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="font-medium text-sm">
+                                                {m.nombre}
+                                                {m.marca && <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>}
+                                            </TableCell>
+                                            <TableCell className="text-xs">
+                                                {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito ${m.cuartel}`}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : '')}>
+                                                    {m.estado}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                            <DropdownMenuItem onClick={() => setDetailItem(m)}>Ver Detalles</DropdownMenuItem>
+                                                            {canEditMaterial(m) && (
+                                                                <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
+                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()}>
+                                                                        <Edit className="mr-2 h-4 w-4"/> Editar
+                                                                    </DropdownMenuItem>
+                                                                </EditMaterialDialog>
+                                                            )}
+                                                            {canDeleteMaterial(m) && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
+                                                                            <Trash2 className="mr-2 h-4 w-4"/> Eliminar
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                            <AlertDialogDescription>
+                                                                {isPrivileged 
+                                                                    ? `Esta acción eliminará el material "${m.nombre}" permanentemente.` 
+                                                                    : `Como encargado, se enviará una solicitud de baja para el material "${m.nombre}" al administrador.`}
+                                                            </AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">
+                                                                {isPrivileged ? "Eliminar" : "Enviar Solicitud"}
+                                                            </AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))) : (
+                                        <TableRow><TableCell colSpan={5} className="h-24 text-center text-muted-foreground">No se encontraron materiales.</TableCell></TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                {isPrivileged && (
+                    <TabsContent value="requests">
+                        <MaterialRequestsList onDataChange={handleDataChange} actor={user}/>
+                    </TabsContent>
+                )}
+            </Tabs>
             
             <MaterialDetailDialog
                 material={detailItem}

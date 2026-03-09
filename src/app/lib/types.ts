@@ -173,6 +173,20 @@ export type Material = {
   vehiculo?: Vehicle;
 }
 
+export type MaterialRequest = {
+    id: string;
+    type: 'UPDATE' | 'DELETE';
+    materialId: string;
+    materialNombre: string;
+    materialCodigo: string;
+    requestedById: string;
+    requestedByName: string;
+    requestedAt: string; // ISO
+    status: 'PENDING' | 'APPROVED' | 'REJECTED';
+    data: any; // The new data for update, or empty for delete
+    originalData?: any; // For comparison
+}
+
 export type GeneralInventoryItem = {
   id: string;
   codigo: string;
