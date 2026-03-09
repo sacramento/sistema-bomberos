@@ -1,8 +1,9 @@
+
 'use server';
 
 import { MaterialRequest, LoggedInUser, Material } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc, documentId } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
@@ -20,7 +21,8 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
     const q = query(
         requestsCollection, 
         where('status', '==', 'PENDING'), 
-        orderBy('requestedAt', 'desc')
+        orderBy('requestedAt', 'desc'),
+        orderBy(documentId(), 'desc')
     );
     const querySnapshot = await getDocs(q);
     const requests: MaterialRequest[] = [];

@@ -6,8 +6,12 @@ service cloud.firestore {
   
     // Helper function to check if the user has a specific role in a module
     function hasRole(module, requiredRoles) {
-      let userRoles = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles;
-      let userGlobalRole = get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+      if (request.auth == null) return false;
+      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      if (!userDoc.exists) return false;
+      
+      let userRoles = userDoc.data.roles;
+      let userGlobalRole = userDoc.data.role;
       
       if (userGlobalRole == 'Master') {
         return true;
@@ -44,7 +48,6 @@ service cloud.firestore {
 
     // --- GENERAL RULES ---
     match /{document=**} {
-      // By default, deny all reads and writes
       allow read, write: if false;
     }
 
@@ -58,14 +61,13 @@ service cloud.firestore {
       
       // FIREFIGHTERS: Managed by Asistencia Admins/Oficiales
       match /firefighters/{docId} {
-        allow read: if request.auth != null; // All authenticated users can read
+        allow read: if request.auth != null;
         allow write: if hasRole('asistencia', ['Administrador', 'Oficial']);
       }
 
-      // SESSIONS & ATTENDANCE: Granular control
+      // SESSIONS & ATTENDANCE
       match /sessions/{sessionId} {
-        allow read: if request.auth != null; // All authenticated users can read sessions
-        // Admin, Oficial, Instructor can create/edit/delete sessions
+        allow read: if request.auth != null;
         allow create, update, delete: if hasRole('asistencia', ['Administrador', 'Oficial', 'Instructor']);
       }
       
@@ -84,23 +86,20 @@ service cloud.firestore {
         allow create, update, delete: if hasRole('aspirantes', ['Administrador', 'Oficial', 'Instructor']);
       }
       
-      // LEAVES: Managed by Asistencia Admins/Ayudantía
       match /leaves/{leaveId} {
          allow read: if hasRole('asistencia', ['Administrador', 'Oficial', 'Ayudantía']);
          allow write: if hasRole('asistencia', ['Administrador', 'Ayudantía']);
       }
       
-      // COURSES: Managed by Asistencia Admins/Ayudantía
       match /courses/{courseId} {
         allow read: if hasRole('asistencia', ['Administrador', 'Oficial', 'Ayudantía']);
         allow write: if hasRole('asistencia', ['Administrador', 'Ayudantía']);
       }
 
-      // WEEKS & TASKS: Granular control
       match /weeks/{weekId} {
         allow read: if request.auth != null;
         allow write: if hasRole('semanas', ['Administrador']);
-        allow update: if hasRole('semanas', ['Administrador', 'Encargado']); // Encargado can update observations
+        allow update: if hasRole('semanas', ['Administrador', 'Encargado']);
       }
 
       match /tasks/{taskId} {
@@ -108,11 +107,9 @@ service cloud.firestore {
         allow write: if hasRole('semanas', ['Administrador', 'Encargado']);
       }
 
-      // VEHICLES & MAINTENANCE: Granular control
       match /vehicles/{vehicleId} {
         allow read: if request.auth != null;
         allow create, delete: if hasRole('movilidad', ['Administrador']);
-        // Admin can update any vehicle, Encargado can only update their own.
         allow update: if hasRole('movilidad', ['Administrador']) || 
                        (hasRole('movilidad', ['Encargado Móvil']) && resource.data.encargadoIds.hasAny(request.auth.uid));
       }
@@ -148,26 +145,21 @@ service cloud.firestore {
         allow create: if hasRole('materiales', ['Administrador', 'Oficial', 'Encargado']);
       }
 
-      // DRIVERS
       match /drivers/{driverId} {
         allow read: if request.auth != null;
         allow write: if hasRole('movilidad', ['Administrador']);
       }
       
-      // SERVICES
       match /services/{serviceId} {
         allow read: if hasRole('servicios', ['Administrador', 'Oficial']);
         allow write: if hasRole('servicios', ['Administrador']);
       }
 
-      // AUDIT LOGS: Read-only for Master
       match /audit_logs/{logId} {
         allow read: if hasRole('general', ['Master']);
-        // Writes are handled by server-side logic (logAction function)
         allow write: if false; 
       }
 
-      // CASCADE CHARGES
       match /cascade_charges/{chargeId} {
         allow read: if request.auth != null;
         allow write: if hasRole('cascada', ['Administrador', 'Encargado', 'Bombero']);
