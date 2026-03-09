@@ -10,6 +10,9 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const MATERIALS_COLLECTION = 'materials';
 
+/**
+ * Retrieves all materials.
+ */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
     const colRef = collection(db, MATERIALS_COLLECTION);
@@ -27,21 +30,7 @@ export const getMaterials = async (): Promise<Material[]> => {
                 }
                 return {
                     id: docSnap.id,
-                    codigo: data.codigo || '',
-                    nombre: data.nombre || 'Sin nombre',
-                    categoryId: data.categoryId || '',
-                    subCategoryId: data.subCategoryId || '',
-                    itemTypeId: data.itemTypeId || '',
-                    marca: data.marca || '',
-                    modelo: data.modelo || '',
-                    acople: data.acople,
-                    composicion: data.composicion,
-                    caracteristicas: data.caracteristicas || '',
-                    medida: data.medida || '',
-                    ubicacion: data.ubicacion || { type: 'deposito' },
-                    estado: data.estado || 'En Servicio',
-                    condicion: data.condicion || 'Bueno',
-                    cuartel: data.cuartel || '',
+                    ...data,
                     vehiculo: vehiculo,
                 } as Material;
             });
@@ -91,12 +80,15 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
     });
 };
 
+/**
+ * Adds a new material.
+ */
 export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser) => {
     if (!db) return;
     const colRef = collection(db, MATERIALS_COLLECTION);
     const docRef = doc(colRef);
     
-    setDoc(docRef, materialData).catch(async (serverError) => {
+    setDoc(docRef, materialData).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
@@ -109,11 +101,14 @@ export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, act
     }
 };
 
+/**
+ * Updates an existing material.
+ */
 export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, MATERIALS_COLLECTION, id);
     
-    updateDoc(docRef, materialData).catch(async (serverError) => {
+    updateDoc(docRef, materialData).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -126,11 +121,14 @@ export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 
     }
 };
 
+/**
+ * Deletes a material.
+ */
 export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, MATERIALS_COLLECTION, id);
     
-    deleteDoc(docRef).catch(async (serverError) => {
+    deleteDoc(docRef).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
@@ -142,16 +140,20 @@ export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     }
 };
 
-export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Promise<void> => {
+/**
+ * Batch adds materials from CSV.
+ */
+export const batchAddMaterials = async (items: any[], actor: LoggedInUser) => {
     if (!db || !items || !actor) return;
     const batch = writeBatch(db);
     const colRef = collection(db, MATERIALS_COLLECTION);
-    for (const item of items) {
+    
+    items.forEach(item => {
         const docRef = doc(colRef);
         batch.set(docRef, item);
-    }
+    });
     
-    batch.commit().catch(async (serverError) => {
+    batch.commit().catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: colRef.path,
             operation: 'write',

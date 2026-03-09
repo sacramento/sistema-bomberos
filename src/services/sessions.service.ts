@@ -2,7 +2,7 @@
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, deleteDoc, getDoc, updateDoc, query } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -10,6 +10,9 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const SESSIONS_COLLECTION = 'sessions';
 
+/**
+ * Retrieves all training sessions.
+ */
 export const getSessions = async (): Promise<Session[]> => {
     if (!db) return [];
     const colRef = collection(db, SESSIONS_COLLECTION);
@@ -21,17 +24,16 @@ export const getSessions = async (): Promise<Session[]> => {
             
             const results: Session[] = querySnapshot.docs.map(docSnap => {
                 const data = docSnap.data();
-                const getFirefighterObjects = (ids: string[]): Firefighter[] => {
-                    if (!ids) return [];
-                    return ids.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f);
+                const getFirefighterObjects = (ids?: string[]): Firefighter[] => {
+                    return ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
                 };
                 
                 return {
                     id: docSnap.id,
                     ...data,
-                    instructors: getFirefighterObjects(data.instructorIds || []),
-                    assistants: getFirefighterObjects(data.assistantIds || []),
-                    attendees: getFirefighterObjects(data.attendeeIds || []),
+                    instructors: getFirefighterObjects(data.instructorIds),
+                    assistants: getFirefighterObjects(data.assistantIds),
+                    attendees: getFirefighterObjects(data.attendeeIds),
                 } as Session;
             });
 
@@ -46,6 +48,9 @@ export const getSessions = async (): Promise<Session[]> => {
         });
 };
 
+/**
+ * Retrieves a single session by ID.
+ */
 export const getSessionById = async(id: string): Promise<Session | null> => {
     if (!db) return null;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
@@ -56,16 +61,17 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
                 const data = docSnap.data();
                 const firefighters = await getFirefighters();
                 const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-                const getFirefighterObjects = (ids: string[]): Firefighter[] => {
-                    if (!ids) return [];
-                    return ids.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f);
+                
+                const getFirefighterObjects = (ids?: string[]): Firefighter[] => {
+                    return ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
                 };
+                
                 return {
                     id: docSnap.id,
                     ...data,
-                    instructors: getFirefighterObjects(data.instructorIds || []),
-                    assistants: getFirefighterObjects(data.assistantIds || []),
-                    attendees: getFirefighterObjects(data.attendeeIds || []),
+                    instructors: getFirefighterObjects(data.instructorIds),
+                    assistants: getFirefighterObjects(data.assistantIds),
+                    attendees: getFirefighterObjects(data.attendeeIds),
                 } as Session;
             }
             return null;
@@ -79,6 +85,9 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
         });
 }
 
+/**
+ * Adds a new training session.
+ */
 export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
     const colRef = collection(db, SESSIONS_COLLECTION);
@@ -96,7 +105,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
         attendance: {}, 
     };
     
-    setDoc(docRef, sessionToStore).catch(async (serverError) => {
+    setDoc(docRef, sessionToStore).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
@@ -109,6 +118,9 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
     }
 };
 
+/**
+ * Updates an existing training session.
+ */
 export const updateSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
@@ -126,7 +138,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
 
     Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
 
-    updateDoc(docRef, dataToUpdate).catch(async (serverError) => {
+    updateDoc(docRef, dataToUpdate).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -139,11 +151,14 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
     }
 };
 
+/**
+ * Updates attendance for a session.
+ */
 export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser = null) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
     
-    updateDoc(docRef, { attendance }).catch(async (serverError) => {
+    updateDoc(docRef, { attendance }).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
@@ -156,11 +171,14 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
     }
 };
 
+/**
+ * Deletes a session.
+ */
 export const deleteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
     
-    deleteDoc(docRef).catch(async (serverError) => {
+    deleteDoc(docRef).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
