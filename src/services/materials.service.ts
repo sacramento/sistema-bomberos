@@ -2,7 +2,7 @@
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, where, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, doc, updateDoc, deleteDoc, writeBatch, where, setDoc, CollectionReference, DocumentReference } from 'firebase/firestore';
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -10,8 +10,6 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Obtiene todos los materiales.
- * Se elimina el orderBy del servidor para evitar ocultar documentos sin código
- * y para prevenir errores de permisos si el índice no está listo.
  */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
@@ -50,7 +48,6 @@ export const getMaterials = async (): Promise<Material[]> => {
                 } as Material;
             });
             
-            // Ordenamiento en memoria para mayor fiabilidad
             return results.sort((a, b) => {
                 if (!a.codigo && !b.codigo) return a.nombre.localeCompare(b.nombre);
                 if (!a.codigo) return 1;
@@ -58,7 +55,7 @@ export const getMaterials = async (): Promise<Material[]> => {
                 return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
             });
         })
-        .catch(async (serverError) => {
+        .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
                 path: materialsCollection.path,
                 operation: 'list',
@@ -94,12 +91,12 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
     const materialsCollection = collection(db, 'materials');
     const docRef = doc(materialsCollection);
     
-    return setDoc(docRef, materialData)
+    // No await here
+    setDoc(docRef, materialData)
         .then(() => {
             if (actor) {
                 logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
             }
-            return docRef.id;
         })
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
@@ -108,15 +105,17 @@ export const addMaterial = async (materialData: Omit<Material, 'id' | 'vehiculo'
                 requestResourceData: materialData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
         });
+
+    return docRef.id;
 };
 
 export const updateMaterial = async (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
-    return updateDoc(docRef, materialData)
+    // No await here
+    updateDoc(docRef, materialData)
         .then(() => {
             if (actor) {
                 logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
@@ -136,7 +135,8 @@ export const deleteMaterial = async (id: string, actor: LoggedInUser): Promise<v
     if (!db) return;
     const docRef = doc(db, 'materials', id);
     
-    return deleteDoc(docRef)
+    // No await here
+    deleteDoc(docRef)
         .then(() => {
             if (actor) {
                 logAction(actor, 'DELETE_MATERIAL', { entity: 'material', id });
@@ -160,7 +160,8 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser): Prom
         batch.set(docRef, item);
     }
     
-    return batch.commit()
+    // No await here
+    batch.commit()
         .then(() => {
             logAction(actor, 'BATCH_IMPORT_MATERIALS', { entity: 'material', id: 'batch' }, { count: items.length });
         })

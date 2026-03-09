@@ -2,7 +2,7 @@
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, query, where, orderBy, doc, updateDoc, getDoc, documentId, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -10,13 +10,11 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 /**
  * Obtiene las solicitudes pendientes.
- * La consulta se sincroniza con el índice compuesto necesario.
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     if (!db) return [];
     
     const requestsCollection = collection(db, 'material_requests');
-    // Usamos una consulta que coincida exactamente con el índice compuesto solicitado por Firebase
     const q = query(
         requestsCollection, 
         where('status', '==', 'PENDING'), 
@@ -51,8 +49,8 @@ export const createMaterialRequest = async (requestData: Omit<MaterialRequest, '
     };
     
     const docRef = doc(requestsCollection);
-    return setDoc(docRef, dataToSave)
-        .then(() => docRef.id)
+    // No await here
+    setDoc(docRef, dataToSave)
         .catch(async (error) => {
             const permissionError = new FirestorePermissionError({
                 path: docRef.path,
@@ -60,8 +58,9 @@ export const createMaterialRequest = async (requestData: Omit<MaterialRequest, '
                 requestResourceData: dataToSave,
             });
             errorEmitter.emit('permission-error', permissionError);
-            throw permissionError;
         });
+    
+    return docRef.id;
 };
 
 export const resolveMaterialRequest = async (
@@ -92,21 +91,25 @@ export const resolveMaterialRequest = async (
         }
     }
     
-    return updateDoc(requestRef, {
+    const updateData = {
         status,
         resolvedAt: new Date().toISOString(),
         resolvedById: actor.id,
         resolvedByName: actor.name,
-    }).then(() => {
-        if (actor) {
-            logAction(actor, status === 'APPROVED' ? 'UPDATE_MATERIAL' : 'UPDATE_USER', { entity: 'materialRequest', id: requestId }, { result: status });
-        }
-    }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-            path: requestRef.path,
-            operation: 'update',
-            requestResourceData: { status },
+    };
+
+    // No await here
+    updateDoc(requestRef, updateData)
+        .then(() => {
+            if (actor) {
+                logAction(actor, status === 'APPROVED' ? 'UPDATE_MATERIAL' : 'UPDATE_USER', { entity: 'materialRequest', id: requestId }, { result: status });
+            }
+        }).catch(async (error) => {
+            const permissionError = new FirestorePermissionError({
+                path: requestRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
         });
-        errorEmitter.emit('permission-error', permissionError);
-    });
 };
