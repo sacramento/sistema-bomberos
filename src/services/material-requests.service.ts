@@ -3,7 +3,7 @@
 
 import { MaterialRequest, LoggedInUser, Material } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc, documentId } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
@@ -15,21 +15,24 @@ const requestsCollection = collection(db, 'material_requests');
 
 /**
  * Obtiene las solicitudes de materiales pendientes de aprobación.
- * Se requiere un índice compuesto: status (ASC), requestedAt (DESC), __name__ (DESC).
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
-    const q = query(
-        requestsCollection, 
-        where('status', '==', 'PENDING'), 
-        orderBy('requestedAt', 'desc'),
-        orderBy(documentId(), 'desc')
-    );
-    const querySnapshot = await getDocs(q);
-    const requests: MaterialRequest[] = [];
-    querySnapshot.forEach((doc) => {
-        requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
-    });
-    return requests;
+    try {
+        const q = query(
+            requestsCollection, 
+            where('status', '==', 'PENDING'), 
+            orderBy('requestedAt', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+        const requests: MaterialRequest[] = [];
+        querySnapshot.forEach((doc) => {
+            requests.push({ id: doc.id, ...doc.data() } as MaterialRequest);
+        });
+        return requests;
+    } catch (error) {
+        console.error("Error fetching pending requests:", error);
+        return [];
+    }
 };
 
 export const createMaterialRequest = async (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>): Promise<string> => {
