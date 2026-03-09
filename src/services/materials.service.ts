@@ -8,16 +8,15 @@ import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
 
 /**
- * Traemos todos los materiales. 
- * IMPORTANTE: Hemos quitado el orderBy('codigo') del servidor. 
- * Firestore oculta automáticamente cualquier documento que no contenga el campo por el cual se ordena.
- * Al quitarlo, nos aseguramos de que los materiales recién migrados (sin código aún) aparezcan en la lista.
+ * Obtiene todos los materiales.
+ * IMPORTANTE: No usamos orderBy('codigo') en la consulta de Firestore porque 
+ * ocultaría los documentos que aún no tienen el campo 'codigo'.
  */
 export const getMaterials = async (): Promise<Material[]> => {
     const materialsCollection = collection(db, 'materials');
     const querySnapshot = await getDocs(materialsCollection);
     
-    // Obtenemos los vehículos para enriquecer la data (en cliente)
+    // Obtenemos los vehículos para enriquecer la data en el cliente
     const vehiclesData = await getVehicles();
     const vehicleMap = new Map(vehiclesData.map(v => [v.id, v]));
     
@@ -48,7 +47,7 @@ export const getMaterials = async (): Promise<Material[]> => {
         } as Material;
     });
     
-    // Ordenamos en memoria para no perder documentos sin código
+    // Ordenamos en memoria para asegurar que aparezcan todos
     return results.sort((a, b) => {
         if (!a.codigo) return 1;
         if (!b.codigo) return -1;

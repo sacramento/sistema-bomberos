@@ -2,9 +2,9 @@
 import { initializeFirebase } from '@/firebase';
 
 /**
- * Inicialización unificada de Firestore para toda la aplicación.
- * Utiliza el singleton de la plataforma para asegurar consistencia entre cliente y servidor.
+ * Inicialización unificada de Firestore.
+ * Obtenemos la instancia de forma segura para evitar errores de referencia nula.
  */
-const { firestore } = initializeFirebase();
+const services = initializeFirebase();
 
-export const db = firestore;
+export const db = services.firestore;

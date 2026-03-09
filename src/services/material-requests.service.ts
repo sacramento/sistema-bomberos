@@ -3,21 +3,22 @@
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, where, orderBy, doc, updateDoc, getDoc, documentId } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { updateMaterial, deleteMaterial } from './materials.service';
 
 /**
  * Obtiene las solicitudes pendientes.
- * IMPORTANTE: La consulta ahora coincide exactamente con el índice compuesto: 
- * status (==) y requestedAt (orderBy DESC).
+ * IMPORTANTE: La consulta debe coincidir exactamente con el índice compuesto.
  */
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     const requestsCollection = collection(db, 'material_requests');
+    // Consulta sincronizada con el índice: status (ASC), requestedAt (DESC), __name__ (DESC)
     const q = query(
         requestsCollection, 
         where('status', '==', 'PENDING'), 
-        orderBy('requestedAt', 'desc')
+        orderBy('requestedAt', 'desc'),
+        orderBy(documentId(), 'desc')
     );
     
     try {
