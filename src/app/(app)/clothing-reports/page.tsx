@@ -198,7 +198,7 @@ export default function ClothingReportsPage() {
                     item.code,
                     item.type,
                     item.size,
-                    item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito',
+                    item.firefighter ? `${item.firefighter.legajo} - ${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito',
                     item.state,
                 ]),
                 theme: 'striped',
@@ -337,14 +337,17 @@ export default function ClothingReportsPage() {
                         <Label>Bombero Específico</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isBomberoRole}>
-                                <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                    {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}, ${allFirefighters.find(f => f.id === filterFirefighter)?.firstName}` : "Todos los bomberos"}
+                                <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between h-auto min-h-10">
+                                    {filterFirefighter !== 'all' ? (() => {
+                                        const f = allFirefighters.find(f => f.id === filterFirefighter);
+                                        return f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : "Todos los bomberos";
+                                    })() : "Todos los bomberos"}
                                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                                 <Command>
-                                    <CommandInput placeholder="Buscar por nombre o legajo..." />
+                                    <CommandInput placeholder="Buscar por legajo o nombre..." />
                                     <CommandList>
                                         <CommandEmpty>No se encontró el bombero.</CommandEmpty>
                                         <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
@@ -460,7 +463,7 @@ export default function ClothingReportsPage() {
                                         <TableCell className="font-mono">{item.code}</TableCell>
                                         <TableCell className="font-medium">{item.type}</TableCell>
                                         <TableCell>{item.size}</TableCell>
-                                        <TableCell>{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito'}</TableCell>
+                                        <TableCell>{item.firefighter ? `${item.firefighter.legajo} - ${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito'}</TableCell>
                                         <TableCell>{getStateBadge(item.state)}</TableCell>
                                     </TableRow>
                                 ))
@@ -492,4 +495,3 @@ export default function ClothingReportsPage() {
         </div>
     );
 }
-

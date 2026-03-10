@@ -144,17 +144,17 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                         variant="outline"
                         role="combobox"
                         aria-expanded={openCombobox}
-                        className="w-full justify-between"
+                        className="w-full justify-between h-auto min-h-10"
                         >
                         {selectedFirefighter
-                            ? `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`
-                            : "Seleccionar integrante..."}
+                            ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}`
+                            : "Seleccionar por legajo o nombre..."}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[300px] p-0">
                         <Command>
-                        <CommandInput placeholder="Buscar integrante..." />
+                        <CommandInput placeholder="Buscar por legajo o nombre..." />
                         <CommandList>
                             <CommandEmpty>No se encontró el integrante.</CommandEmpty>
                             {activeFirefighters.map((firefighter) => (
@@ -172,7 +172,7 @@ export default function AddLeaveDialog({ children, onLeaveAdded }: { children: R
                                     selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0"
                                 )}
                                 />
-                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                             </CommandItem>
                             ))}
                         </CommandList>

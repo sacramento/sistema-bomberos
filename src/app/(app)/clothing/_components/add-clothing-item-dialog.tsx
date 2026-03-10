@@ -157,14 +157,14 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
                             <Label>Asignar a Bombero (Opcional)</Label>
                              <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between">
-                                        {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar bombero (o dejar en Depósito)..."}
+                                    <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10">
+                                        {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar por legajo o nombre..."}
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0">
                                     <Command>
-                                        <CommandInput placeholder="Buscar por nombre o legajo..." />
+                                        <CommandInput placeholder="Buscar por legajo o nombre..." />
                                         <CommandList><CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                                         <CommandItem onSelect={() => { setSelectedFirefighter(null); setFirefighterComboboxOpen(false); }}>
                                             <Check className={cn("mr-2 h-4 w-4", !selectedFirefighter ? "opacity-100" : "opacity-0")} />

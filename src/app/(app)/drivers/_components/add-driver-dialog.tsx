@@ -180,19 +180,19 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-                <Label htmlFor="firefighter-select">Bombero</Label>
+                <Label htmlFor="firefighter-select">Integrante</Label>
                 <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between" disabled={dataLoading}>
-                            {dataLoading ? 'Cargando...' : selectedFirefighter ? `${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar bombero...'}
+                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
+                            {dataLoading ? 'Cargando...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o nombre...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[300px] p-0">
                             <Command>
-                            <CommandInput placeholder="Buscar por nombre o legajo..." />
+                            <CommandInput placeholder="Buscar por legajo o nombre..." />
                             <CommandList>
-                                <CommandEmpty>No se encontraron bomberos sin rol de chofer.</CommandEmpty>
+                                <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
                                 <CommandGroup>
                                     {availableFirefighters.map((firefighter) => (
                                         <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>

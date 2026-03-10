@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -181,16 +182,16 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             <div className="space-y-4">
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="firefighter-select" className="text-right">Bombero</Label>
-                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <Popover open={comboboxOpen} onOpenChange={setOpenCombobox}>
                         <PopoverTrigger asChild className="col-span-3">
                             <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between" disabled={dataLoading}>
-                                {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}` : 'Seleccionar bombero...'}
+                                {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar bombero...'}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-[300px] p-0">
                              <Command>
-                                <CommandInput placeholder="Buscar bombero..." />
+                                <CommandInput placeholder="Buscar por legajo o nombre..." />
                                 <CommandList>
                                 <CommandEmpty>No se encontraron bomberos sin usuario.</CommandEmpty>
                                 <CommandGroup>
@@ -241,7 +242,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="aspirantesRole" className="text-right">Aspirantes</Label>
-              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : aspirantesRole} disabled={globalRole === 'Master'}>
+              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : asistenciaRole} disabled={globalRole === 'Master'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}

@@ -436,13 +436,13 @@ export default function AyudantiaReportsPage() {
                     <div className="space-y-2">
                         <Label>Integrante Específico</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">{filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">{filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.legajo} - ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}, ${allFirefighters.find(f => f.id === filterFirefighter)?.firstName}` : "Todos los integrantes"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                                 <Command>
-                                    <CommandInput placeholder="Buscar integrante..." /><CommandList>
+                                    <CommandInput placeholder="Buscar por legajo o nombre..." /><CommandList>
                                     <CommandEmpty>No se encontró el integrante.</CommandEmpty>
                                     <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}><Check className={cn("mr-2 h-4 w-4", filterFirefighter === 'all' ? "opacity-100" : "opacity-0")} />Todos los integrantes</CommandItem>
-                                    {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (<CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}><Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />{`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}</CommandItem>))}
+                                    {allFirefighters.filter(f => f.status === 'Active').map((firefighter) => (<CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}><Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</CommandItem>))}
                                 </CommandList></Command>
                             </PopoverContent>
                         </Popover>
@@ -460,7 +460,7 @@ export default function AyudantiaReportsPage() {
 
             {filtersApplied ? (
                  <Tabs defaultValue="leaves" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6">
+                    <TabsList className="grid w-full grid-cols-2 max-md:grid-cols-1 gap-2 max-w-md mx-auto mb-6">
                         <TabsTrigger value="leaves"><ClipboardMinus className="mr-2 h-4 w-4"/>Licencias</TabsTrigger>
                         <TabsTrigger value="sanctions"><Gavel className="mr-2 h-4 w-4"/>Sanciones</TabsTrigger>
                     </TabsList>

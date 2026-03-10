@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateWeek } from "@/services/weeks.service";
@@ -52,14 +52,14 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
-                    {selected ? `${selected.legajo} - ${selected.firstName} ${selected.lastName}` : `Seleccionar ${title.toLowerCase()}...`}
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                    {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -67,7 +67,7 @@ const SingleFirefighterSelect = ({
                                 <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}>
                                     <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -107,14 +107,14 @@ const MultiFirefighterSelect = ({
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -123,7 +123,7 @@ const MultiFirefighterSelect = ({
                                     onSelect={() => handleSelect(firefighter)}
                                     disabled={disabledIds.includes(firefighter.id)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -293,13 +293,13 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                    <p><strong>Semana:</strong> {name}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
                    <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
-                   <p><strong>Encargado:</strong> {lead?.lastName || 'No asignado'}</p>
-                   <p><strong>Chofer:</strong> {driver?.lastName || 'No asignado'}</p>
+                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'No asignado'}</p>
+                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'No asignado'}</p>
                    <div className="pt-2">
                        <p className="font-semibold">Total de Integrantes: {allTeam.length}</p>
                        {allTeam.length > 0 && (
                            <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                               {allTeam.map(f => f.lastName).join(', ')}
+                               {allTeam.map(f => `${f.legajo} - ${f.lastName}`).join(', ')}
                            </div>
                        )}
                    </div>
