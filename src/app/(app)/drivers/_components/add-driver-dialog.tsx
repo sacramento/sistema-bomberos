@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Firefighter, Driver, Habilitacion } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addDriver, getDrivers } from "@/services/drivers.service";

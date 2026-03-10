@@ -92,7 +92,7 @@ const MultiFirefighterSelect = ({
     disabledIds?: string[];
 }) => {
     const [open, setOpen] = useState(false);
-    const handleSelect = (firefighter: Firefighter) => {
+    handleSelect = (firefighter: Firefighter) => {
         if (disabledIds.includes(firefighter.id)) return;
         const isSelected = selected.some(s => s.id === firefighter.id);
         if (isSelected) {

@@ -49,14 +49,14 @@ const MultiFirefighterSelect = ({
             <PopoverTrigger asChild>
                 <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -64,7 +64,7 @@ const MultiFirefighterSelect = ({
                                 <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => handleSelect(firefighter)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.lastName}, ${firefighter.firstName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

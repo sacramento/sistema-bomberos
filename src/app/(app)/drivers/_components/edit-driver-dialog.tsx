@@ -142,7 +142,7 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
           <DialogHeader>
             <DialogTitle className="font-headline">Editar Habilitaciones de Chofer</DialogTitle>
             <DialogDescription>
-                {driver.firefighter ? `${driver.firefighter.lastName}, ${driver.firefighter.firstName}` : 'Chofer desconocido'}
+                {driver.firefighter ? `${driver.firefighter.legajo} - ${driver.firefighter.lastName}, ${driver.firefighter.firstName}` : 'Chofer desconocido'}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

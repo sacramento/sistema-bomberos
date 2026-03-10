@@ -101,26 +101,26 @@ export default function VehiclesPage() {
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <span className="cursor-pointer">
-                            {`${firstEncargado.lastName}, +${remainingCount}`}
+                            {`${firstEncargado.legajo} - ${firstEncargado.lastName}, +${remainingCount}`}
                         </span>
                     </TooltipTrigger>
                     <TooltipContent>
                         <ul className="list-disc pl-4">
-                            {vehicle.encargados.map(e => <li key={e.id}>{`${e.firstName} ${e.lastName}`}</li>)}
+                            {vehicle.encargados.map(e => <li key={e.id}>{`${e.legajo} - ${e.firstName} ${e.lastName}`}</li>)}
                         </ul>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
     }
-    return firstEncargado.lastName;
+    return `${firstEncargado.legajo} - ${firstEncargado.lastName}`;
   }
 
   return (
     <>
       <PageHeader title="Gestión de Flota Vehicular" description="Registre y administre todos los móviles del departamento.">
         {canManage && (
-            <AddVehicleDialog onVehicleAdded={handleDataChange}>
+            <AddVehicleDialog onVehicleAdded={fetchVehicles}>
                 <Button>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Agregar Móvil
@@ -212,10 +212,10 @@ export default function VehiclesPage() {
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(vehicle.id)} variant="destructive">
-                                    Eliminar
-                                </AlertDialogAction>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(vehicle.id)} variant="destructive">
+                                        Eliminar
+                                    </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>

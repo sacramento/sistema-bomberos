@@ -53,7 +53,7 @@ const MultiFirefighterSelect = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.lastName}, ${f.firstName}`;
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -66,7 +66,7 @@ const MultiFirefighterSelect = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.lastName}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -76,7 +76,7 @@ const MultiFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
