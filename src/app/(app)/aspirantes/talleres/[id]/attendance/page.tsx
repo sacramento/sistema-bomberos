@@ -210,7 +210,7 @@ export default function AspiranteWorkshopAttendancePage() {
 
         return (
             <div className="flex items-center gap-2">
-                <span>{`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}</span>
+                <span>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</span>
                 {isInstructor && <Badge variant="destructive">I</Badge>}
                 {isAssistant && <Badge variant="secondary">A</Badge>}
             </div>

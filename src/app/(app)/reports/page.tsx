@@ -328,7 +328,6 @@ export function ClassesReportTab({ context = 'asistencia' }: ReportTabProps) {
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
-                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
              }
         }
         fetchData();
@@ -456,7 +455,7 @@ const generatePdf = async () => {
                         styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' }
                     }]);
                     groupItems.sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true })).forEach(item => {
-                        let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                        let name = `${item.firefighter.lastName}, ${item.firefighter.firstName}`;
                         if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
                         else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
                         detailBody.push([
@@ -544,7 +543,7 @@ const generatePdf = async () => {
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
             if (firefighter.status === 'Inactive') return false;
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
-            if (filterStation.length > 0 && !filterStation.includes(firehouse => filterStation.includes(firehouse))) return false;
+            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
             if (filterHierarchy.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
@@ -623,7 +622,7 @@ const generatePdf = async () => {
 
             return {
                 firefighterId: firefighter.id,
-                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                firefighter: `${firefighter.lastName}, ${firefighter.firstName}`,
                 firefighterLegajo: firefighter.legajo,
                 firefighterFirehouse: firefighter.firehouse,
                 totalClasses: totalRequiredClasses,
@@ -724,13 +723,16 @@ const generatePdf = async () => {
                                 <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                        {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                        {filterFirefighter !== 'all' ? (() => {
+                                            const f = allFirefighters.find(f => f.id === filterFirefighter);
+                                            return f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : "Todos los integrantes";
+                                        })() : "Todos los integrantes"}
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[300px] p-0">
                                         <Command>
-                                        <CommandInput placeholder="Buscar integrante..." />
+                                        <CommandInput placeholder="Buscar por legajo o nombre..." />
                                         <CommandList>
                                             <CommandEmpty>No se encontró el integrante.</CommandEmpty>
                                             <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
@@ -738,9 +740,9 @@ const generatePdf = async () => {
                                                 Todos los integrantes
                                             </CommandItem>
                                             {allFirefighters.map((firefighter) => (
-                                            <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                            <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                                {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                             </CommandItem>
                                             ))}
                                         </CommandList>
@@ -877,7 +879,7 @@ const generatePdf = async () => {
                                                 <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
+                                                        <span>{`${item.firefighter.lastName}, ${item.firefighter.firstName}`}</span>
                                                         {isInstructor && <Badge variant="destructive">I</Badge>}
                                                         {isAssistant && <Badge variant="secondary">A</Badge>}
                                                     </div>
@@ -1003,7 +1005,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: ReportTabProps) {
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
-                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
              }
         }
         fetchData();
@@ -1131,7 +1132,7 @@ const generatePdf = async () => {
                         styles: { halign: 'center', fontStyle: 'bold', fillColor: '#e9ecef', textColor: '#495057' }
                     }]);
                     groupItems.sort((a,b) => (a.firefighter.legajo || '').localeCompare(b.firefighter.legajo || '', undefined, { numeric: true })).forEach(item => {
-                        let name = `${item.firefighter.firstName} ${item.firefighter.lastName}`;
+                        let name = `${item.firefighter.lastName}, ${item.firefighter.firstName}`;
                         if (item.session.instructorIds?.includes(item.firefighter.id)) name += ' (I)';
                         else if (item.session.assistantIds?.includes(item.firefighter.id)) name += ' (A)';
                         detailBody.push([
@@ -1219,7 +1220,7 @@ const generatePdf = async () => {
         const finalData = preliminaryRecords.filter(({ firefighter }) => {
             if (firefighter.status === 'Inactive') return false;
             if (filterFirefighter !== 'all' && firefighter.id !== filterFirefighter) return false;
-            if (filterStation.length > 0 && !filterStation.includes(firehouse => filterStation.includes(firehouse))) return false;
+            if (filterStation.length > 0 && !filterStation.includes(firefighter.firehouse)) return false;
             if (filterHierarchy.length > 0) {
                 const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
                 const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
@@ -1298,7 +1299,7 @@ const generatePdf = async () => {
 
             return {
                 firefighterId: firefighter.id,
-                firefighter: `${firefighter.firstName} ${firefighter.lastName}`,
+                firefighter: `${firefighter.lastName}, ${firefighter.firstName}`,
                 firefighterLegajo: firefighter.legajo,
                 firefighterFirehouse: firefighter.firehouse,
                 totalClasses: totalRequiredClasses,
@@ -1399,13 +1400,16 @@ const generatePdf = async () => {
                                 <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                        {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                        {filterFirefighter !== 'all' ? (() => {
+                                            const f = allFirefighters.find(f => f.id === filterFirefighter);
+                                            return f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : "Todos los integrantes";
+                                        })() : "Todos los integrantes"}
                                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[300px] p-0">
                                         <Command>
-                                        <CommandInput placeholder="Buscar integrante..." />
+                                        <CommandInput placeholder="Buscar por legajo o nombre..." />
                                         <CommandList>
                                             <CommandEmpty>No se encontró el integrante.</CommandEmpty>
                                             <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
@@ -1413,9 +1417,9 @@ const generatePdf = async () => {
                                                 Todos los integrantes
                                             </CommandItem>
                                             {allFirefighters.map((firefighter) => (
-                                            <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                            <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
                                                 <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                                {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                                {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                             </CommandItem>
                                             ))}
                                         </CommandList>
@@ -1552,7 +1556,7 @@ const generatePdf = async () => {
                                                 <TableCell className="font-medium">{item.firefighter.legajo}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <span>{`${item.firefighter.firstName} ${item.firefighter.lastName}`}</span>
+                                                        <span>{`${item.firefighter.lastName}, ${item.firefighter.firstName}`}</span>
                                                         {isInstructor && <Badge variant="destructive">I</Badge>}
                                                         {isAssistant && <Badge variant="secondary">A</Badge>}
                                                     </div>
@@ -1676,7 +1680,6 @@ export function CoursesReportTab({ context = 'asistencia' }: ReportTabProps) {
                 reader.readAsDataURL(blob);
              } catch (error) {
                  console.error("Failed to load logo for PDF", error);
-                 toast({ title: "Advertencia", description: "No se pudo cargar el logo para el PDF.", variant: "default" });
              }
         }
         fetchData();
@@ -1816,13 +1819,16 @@ export function CoursesReportTab({ context = 'asistencia' }: ReportTabProps) {
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild>
                                 <Button variant="outline" role="combobox" aria-expanded={openCombobox} className="w-full justify-between">
-                                {filterFirefighter !== 'all' ? `${allFirefighters.find(f => f.id === filterFirefighter)?.firstName} ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Todos los integrantes"}
+                                {filterFirefighter !== 'all' ? (() => {
+                                    const f = allFirefighters.find(f => f.id === filterFirefighter);
+                                    return f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : "Todos los integrantes";
+                                })() : "Todos los integrantes"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0">
                                 <Command>
-                                <CommandInput placeholder="Buscar integrante..." />
+                                <CommandInput placeholder="Buscar por legajo o nombre..." />
                                 <CommandList>
                                     <CommandEmpty>No se encontró el integrante.</CommandEmpty>
                                     <CommandItem value='all' onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>
@@ -1830,9 +1836,9 @@ export function CoursesReportTab({ context = 'asistencia' }: ReportTabProps) {
                                         Todos los integrantes
                                     </CommandItem>
                                     {allFirefighters.map((firefighter) => (
-                                    <CommandItem key={firefighter.id} value={`${firefighter.firstName} ${firefighter.lastName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
+                                    <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setFilterFirefighter(firefighter.id); setOpenCombobox(false);}}>
                                         <Check className={cn("mr-2 h-4 w-4", filterFirefighter === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                        {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                        {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                     </CommandItem>
                                     ))}
                                 </CommandList>

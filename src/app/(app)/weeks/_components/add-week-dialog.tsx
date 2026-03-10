@@ -92,7 +92,7 @@ const MultiFirefighterSelect = ({
     disabledIds?: string[];
 }) => {
     const [open, setOpen] = useState(false);
-    handleSelect = (firefighter: Firefighter) => {
+    const handleSelect = (firefighter: Firefighter) => {
         if (disabledIds.includes(firefighter.id)) return;
         const isSelected = selected.some(s => s.id === firefighter.id);
         if (isSelected) {
@@ -311,7 +311,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                        <p className="font-semibold">Total de Integrantes: {allTeam.length}</p>
                        {allTeam.length > 0 && (
                            <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                               {allTeam.map(f => `${f.legajo} - ${f.lastName}`).join(', ')}
+                               {allTeam.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
                            </div>
                        )}
                    </div>
@@ -343,7 +343,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
              <DialogHeader>
                 <DialogTitle className="font-headline">{initialData ? 'Clonar Semana' : 'Crear Nueva Semana'}</DialogTitle>
                 <DialogDescription>
-                  {initialData ? 'Ajuste los detalles para la nueva semana clonada.' : `Paso ${step} de ${totalSteps} - Complete los detalles de la nueva semana.`}
+                  {initialData ? 'Ajuste los detalles para la nueva semana clonada.' : `Paso ${step} de {totalSteps} - Complete los detalles de la nueva semana.`}
                 </DialogDescription>
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
