@@ -1,3 +1,4 @@
+
 'use client';
 
 import { User, LoggedInUser } from '@/lib/types';
@@ -8,6 +9,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const USERS_COLLECTION = 'users';
+
+// Helper to clean undefined values for Firestore
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+};
 
 const docToUser = (docSnap: any): User => {
     const data = docSnap.data();
@@ -74,17 +82,18 @@ export const getUserById = async (id: string): Promise<User | null> => {
 export const addUser = (id: string, userData: Omit<User, 'id'>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, USERS_COLLECTION, id);
+    const cleaned = cleanData(userData);
     
-    setDoc(docRef, userData).catch(async (serverError) => {
+    setDoc(docRef, cleaned).catch(async (serverError) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
-            requestResourceData: userData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'CREATE_USER', { entity: 'user', id }, userData);
+        logAction(actor, 'CREATE_USER', { entity: 'user', id }, cleaned);
     }
 };
 
@@ -92,7 +101,7 @@ export const updateUser = (id: string, userData: Partial<Omit<User, 'id'>>, acto
     if (!db) return;
     const docRef = doc(db, USERS_COLLECTION, id);
 
-    const dataToUpdate = { ...userData };
+    const dataToUpdate = cleanData(userData);
     if (dataToUpdate.password === '') delete dataToUpdate.password;
 
     updateDoc(docRef, dataToUpdate).catch(async (serverError) => {

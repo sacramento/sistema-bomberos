@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Week, Firefighter, LoggedInUser } from '@/lib/types';
@@ -6,9 +7,17 @@ import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, de
 import { getFirefighters } from './firefighters.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { logAction } from './audit.service';
 
 const weeksCollection = collection(db, 'weeks');
 const tasksCollection = collection(db, 'tasks');
+
+// Helper to clean undefined values for Firestore
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+};
 
 const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Week> => {
     const data = docSnap.data();
@@ -72,7 +81,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
 export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>, actor: LoggedInUser): Promise<string | void> => {
     if (!db) return;
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
-    const dataToSave = {
+    const dataToSave = cleanData({
         name: weekData.name,
         firehouse: weekData.firehouse,
         periodStartDate: weekData.periodStartDate,
@@ -82,7 +91,7 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
         memberIds: weekData.memberIds,
         allMemberIds: allMemberIds,
         observations: weekData.observations
-    };
+    });
     const docRef = doc(weeksCollection);
     setDoc(docRef, dataToSave).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -99,7 +108,8 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
 export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>, actor: LoggedInUser): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'weeks', id);
-    const dataToUpdate: any = { ...weekData };
+    let dataToUpdate: any = cleanData(weekData);
+    
     if (weekData.leadId || weekData.driverId || weekData.memberIds) {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -110,7 +120,7 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
             dataToUpdate.allMemberIds = Array.from(new Set([newLeadId, newDriverId, ...newMemberIds]));
         }
     }
-    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+    
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
             path: docRef.path,

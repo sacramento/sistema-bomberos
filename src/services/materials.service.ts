@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -9,6 +10,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const MATERIALS_COLLECTION = 'materials';
+
+// Helper to clean undefined values for Firestore
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+};
 
 /**
  * Retrieves all materials.
@@ -36,10 +44,12 @@ export const getMaterials = async (): Promise<Material[]> => {
             });
             
             return results.sort((a, b) => {
-                if (!a.codigo && !b.codigo) return a.nombre.localeCompare(b.nombre);
-                if (!a.codigo) return 1;
-                if (!b.codigo) return -1;
-                return a.codigo.localeCompare(b.codigo, undefined, { numeric: true });
+                const codeA = a.codigo || '';
+                const codeB = b.codigo || '';
+                if (!codeA && !codeB) return (a.nombre || '').localeCompare(b.nombre || '');
+                if (!codeA) return 1;
+                if (!codeB) return -1;
+                return codeA.localeCompare(codeB, undefined, { numeric: true });
             });
         })
         .catch(async (error) => {
@@ -87,17 +97,18 @@ export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, act
     if (!db) return;
     const colRef = collection(db, MATERIALS_COLLECTION);
     const docRef = doc(colRef);
+    const cleaned = cleanData(materialData);
     
-    setDoc(docRef, materialData).catch(async (error) => {
+    setDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
-            requestResourceData: materialData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, materialData);
+        logAction(actor, 'CREATE_MATERIAL', { entity: 'material', id: docRef.id }, cleaned);
     }
 };
 
@@ -107,17 +118,18 @@ export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, act
 export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, MATERIALS_COLLECTION, id);
+    const cleaned = cleanData(materialData);
     
-    updateDoc(docRef, materialData).catch(async (error) => {
+    updateDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
-            requestResourceData: materialData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, materialData);
+        logAction(actor, 'UPDATE_MATERIAL', { entity: 'material', id }, cleaned);
     }
 };
 
@@ -150,7 +162,7 @@ export const batchAddMaterials = async (items: any[], actor: LoggedInUser) => {
     
     items.forEach(item => {
         const docRef = doc(colRef);
-        batch.set(docRef, item);
+        batch.set(docRef, cleanData(item));
     });
     
     batch.commit().catch(async (error) => {

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
@@ -8,6 +9,13 @@ import { getMaintenanceItems } from './maintenance-items.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+
+// Helper to clean undefined values for Firestore
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+};
 
 const docToVehicle = async (
     docSnap: any, 
@@ -54,7 +62,11 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
             const vehiclesPromises = querySnapshot.docs.map(docSnap => docToVehicle(docSnap, firefighterMap, maintenanceItemMap));
             const results = await Promise.all(vehiclesPromises);
             
-            return results.sort((a, b) => a.numeroMovil.localeCompare(b.numeroMovil, undefined, { numeric: true }));
+            return results.sort((a, b) => {
+                const numA = a.numeroMovil || '';
+                const numB = b.numeroMovil || '';
+                return numA.localeCompare(numB, undefined, { numeric: true });
+            });
         })
         .catch(async (error) => {
             errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -92,35 +104,36 @@ export const addVehicle = (vehicleData: Omit<Vehicle, 'id' | 'encargados' | 'mat
     if (!db) return;
     const colRef = collection(db, 'vehicles');
     const docRef = doc(colRef);
+    const cleaned = cleanData(vehicleData);
     
-    setDoc(docRef, vehicleData).catch(async (error) => {
+    setDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
-            requestResourceData: vehicleData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, vehicleData);
+        logAction(actor, 'CREATE_VEHICLE', { entity: 'vehicle', id: docRef.id }, cleaned);
     }
 };
 
 export const updateVehicle = (id: string, vehicleData: Partial<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>, actor: LoggedInUser = null) => {
     if (!db) return;
-    const docRef = db ? doc(db, 'vehicles', id) : null;
-    if (!docRef) return;
+    const docRef = doc(db, 'vehicles', id);
+    const cleaned = cleanData(vehicleData);
     
-    updateDoc(docRef, vehicleData).catch(async (error) => {
+    updateDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
-            requestResourceData: vehicleData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, vehicleData);
+        logAction(actor, 'UPDATE_VEHICLE', { entity: 'vehicle', id }, cleaned);
     }
 };
 

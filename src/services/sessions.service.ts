@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
@@ -9,6 +10,13 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const SESSIONS_COLLECTION = 'sessions';
+
+// Helper to clean undefined values for Firestore
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined)
+    );
+};
 
 /**
  * Retrieves all training sessions.
@@ -93,7 +101,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
     const colRef = collection(db, SESSIONS_COLLECTION);
     const docRef = doc(colRef);
     
-    const sessionToStore = {
+    const sessionToStore = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -103,7 +111,7 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
         assistantIds: sessionData.assistants.map(f => f.id),
         attendeeIds: sessionData.attendees.map(f => f.id),
         attendance: {}, 
-    };
+    });
     
     setDoc(docRef, sessionToStore).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -125,7 +133,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
     
-    const dataToUpdate: any = {
+    const dataToUpdate: any = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -134,9 +142,7 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
         instructorIds: sessionData.instructors?.map(f => f.id),
         assistantIds: sessionData.assistants?.map(f => f.id),
         attendeeIds: sessionData.attendees?.map(f => f.id),
-    };
-
-    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+    });
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
