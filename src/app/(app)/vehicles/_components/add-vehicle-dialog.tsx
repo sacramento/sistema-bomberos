@@ -21,10 +21,11 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addVehicle } from "@/services/vehicles.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
@@ -53,8 +54,6 @@ const MultiFirefighterSelect = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
-
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -66,7 +65,7 @@ const MultiFirefighterSelect = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}, {f.firstName}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -94,7 +93,7 @@ const MultiFirefighterSelect = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {getDisplayText(firefighter)}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -109,6 +108,7 @@ const MultiFirefighterSelect = ({
 export default function AddVehicleDialog({ children, onVehicleAdded }: { children: React.ReactNode; onVehicleAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   
@@ -200,10 +200,15 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         return;
     }
     
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
+
     setLoading(true);
 
     try {
-      await addVehicle(formData, null);
+      await addVehicle(formData, actor);
       toast({ title: "¡Éxito!", description: "El nuevo móvil ha sido agregado." });
       onVehicleAdded();
       resetForm();
@@ -301,7 +306,10 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
           </div>
         </form>
          <DialogFooter className="pt-4 border-t">
-            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>Guardar Móvil</Button>
+            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                Guardar Móvil
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

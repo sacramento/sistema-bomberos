@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useEffect, useState } from "react";
 import { addFirefighter, getFirefighters } from "@/services/firefighters.service";
 import { Firefighter } from "@/lib/types";
+import { useAuth } from "@/context/auth-context";
+import { Loader2 } from "lucide-react";
 
 const ranks = [
     'ASPIRANTE', 'ADAPTACION', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
@@ -30,6 +32,7 @@ const statuses: Firefighter['status'][] = ['Active', 'Inactive', 'Auxiliar'];
 export default function AddFirefighterDialog({ children, onFirefighterAdded }: { children: React.ReactNode; onFirefighterAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
 
   const [legajo, setLegajo] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -49,7 +52,6 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             setExistingFirehouses(uniqueFirehouses);
           } catch (error) {
             console.error("Failed to fetch existing firehouses", error);
-            // Optionally set a default or show an error
           }
         }
     };
@@ -76,6 +78,11 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
         return;
     }
     
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -88,14 +95,14 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             status,
         };
         
-        await addFirefighter(newFirefighterData);
+        await addFirefighter(newFirefighterData, actor);
 
         toast({
             title: "¡Éxito!",
             description: "El nuevo integrante ha sido agregado a la lista.",
         });
         
-        onFirefighterAdded(); // Callback to refresh the list
+        onFirefighterAdded();
         resetForm();
         setOpen(false);
 
@@ -191,7 +198,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Integrante'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} {loading ? 'Guardando...' : 'Guardar Integrante'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

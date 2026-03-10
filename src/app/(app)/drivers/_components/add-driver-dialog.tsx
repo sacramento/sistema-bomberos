@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
 
 const habilitaciones: Habilitacion[] = ['Practica', 'Liviana', 'Pesada', 'Timonel'];
 
@@ -84,6 +85,7 @@ const MultiSelect = ({
 export default function AddDriverDialog({ children, onDriverAdded }: { children: React.ReactNode; onDriverAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
   const [dataLoading, setDataLoading] = useState(false);
   
@@ -133,6 +135,11 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
         return;
     }
     
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -141,11 +148,11 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
             habilitaciones: selectedHabilitaciones
         };
         
-        await addDriver(newDriverData, {});
+        await addDriver(newDriverData, actor);
 
         toast({
             title: "¡Éxito!",
-            description: `El chofer ${selectedFirefighter.lastName} ha sido agregado.`,
+            description: `El chofer ${selectedFirefighter.legajo} - ${selectedFirefighter.lastName} ha sido agregado.`,
         });
         
         onDriverAdded();
@@ -217,7 +224,7 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || dataLoading}>{loading ? <Loader2 className="animate-spin"/> : null} {loading ? 'Guardando...' : 'Guardar Chofer'}</Button>
+            <Button type="submit" disabled={loading || dataLoading}>{loading ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} {loading ? 'Guardando...' : 'Guardar Chofer'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

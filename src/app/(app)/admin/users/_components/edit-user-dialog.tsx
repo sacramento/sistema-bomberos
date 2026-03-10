@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { updateUser } from "@/services/users.service";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/context/auth-context";
+import { Loader2 } from "lucide-react";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
@@ -140,7 +142,6 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
               <Avatar className="h-24 w-24"><AvatarImage src={imagePreview} alt={user.name} className="object-cover"/><AvatarFallback>{user.name.charAt(0)}</AvatarFallback></Avatar>
             </div>
 
-            {/* General Fields */}
             <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="id" className="text-right">Legajo</Label>
@@ -167,7 +168,6 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
 
             <Separator />
 
-            {/* Module Roles */}
             <div className="space-y-2">
                 <h4 className="font-medium text-center">Roles por Módulo</h4>
             </div>
@@ -255,7 +255,10 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             </div>
           </div>
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
+            <Button type="submit" disabled={loading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {loading ? 'Guardando...' : 'Guardar Cambios'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

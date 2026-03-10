@@ -19,7 +19,8 @@ import { useState, useEffect } from "react";
 import { getFirefighters, updateFirefighter } from "@/services/firefighters.service";
 import { Firefighter } from "@/lib/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 
 const ranks = [
     'ASPIRANTE', 'ADAPTACION', 'BOMBERO', 'CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO',
@@ -32,6 +33,7 @@ const statuses: Firefighter['status'][] = ['Active', 'Inactive', 'Auxiliar'];
 export default function EditFirefighterDialog({ children, firefighter, onFirefighterUpdated }: { children: React.ReactNode; firefighter: Firefighter; onFirefighterUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   
   const [legajo, setLegajo] = useState(firefighter.legajo || '');
   const [firstName, setFirstName] = useState(firefighter.firstName);
@@ -44,7 +46,6 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // This effect ensures the form resets if the dialog is closed and reopened with a different firefighter
     if (open) {
         setLegajo(firefighter.legajo || '');
         setFirstName(firefighter.firstName);
@@ -81,6 +82,11 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
         return;
     }
     
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -93,7 +99,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
             status,
         };
         
-        await updateFirefighter(firefighter.id, updatedData);
+        await updateFirefighter(firefighter.id, updatedData, actor);
         
         toast({
             title: "¡Éxito!",
@@ -211,7 +217,7 @@ export default function EditFirefighterDialog({ children, firefighter, onFirefig
             </Alert>
            )}
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} {loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

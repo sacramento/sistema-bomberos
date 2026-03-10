@@ -22,7 +22,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
 
@@ -178,13 +178,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </DialogDescription>
           </DialogHeader>
           <div className="flex-grow overflow-y-auto py-4 pr-4 grid gap-6">
-            {/* General Fields */}
             <div className="space-y-4">
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="firefighter-select" className="text-right">Bombero</Label>
                     <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                         <PopoverTrigger asChild className="col-span-3">
-                            <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between" disabled={dataLoading}>
+                            <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
                                 {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar bombero...'}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
@@ -225,7 +224,6 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
 
             <Separator />
 
-            {/* Module Roles */}
             <div className="space-y-2">
                 <h4 className="font-medium text-center">Roles por Módulo</h4>
                  <p className="text-sm text-muted-foreground text-center">El rol "Master" hereda permisos de Administrador en todos los módulos.</p>
@@ -314,7 +312,10 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
           </div>
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="submit" disabled={loading || dataLoading}>{loading ? 'Guardando...' : 'Guardar Usuario'}</Button>
+            <Button type="submit" disabled={loading || dataLoading}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {loading ? 'Guardando...' : 'Guardar Usuario'}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

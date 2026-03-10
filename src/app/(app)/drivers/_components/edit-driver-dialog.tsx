@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/auth-context";
 
 const habilitaciones: Habilitacion[] = ['Practica', 'Liviana', 'Pesada', 'Timonel'];
 
@@ -83,6 +84,7 @@ const MultiSelect = ({
 export default function EditDriverDialog({ children, driver, onDriverUpdated }: { children: React.ReactNode; driver: Driver; onDriverUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
   
   const [selectedHabilitaciones, setSelectedHabilitaciones] = useState<Habilitacion[]>([]);
@@ -105,6 +107,11 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
         return;
     }
     
+    if (!actor) {
+        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+        return;
+    }
+
     setLoading(true);
 
     try {
@@ -112,7 +119,7 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
             habilitaciones: selectedHabilitaciones
         };
         
-        await updateDriver(driver.id, updatedDriverData, {});
+        await updateDriver(driver.id, updatedDriverData, actor);
 
         toast({
             title: "¡Éxito!",
@@ -157,7 +164,7 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading}>{loading ? <Loader2 className="animate-spin"/> : null} {loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
+            <Button type="submit" disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} {loading ? 'Guardando...' : 'Guardar Cambios'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
