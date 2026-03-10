@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
@@ -77,6 +78,8 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setRoperiaRole('Ninguno'); setServiciosRole('Ninguno'); setCascadaRole('Ninguno');
   };
 
+  const isMaster = globalRole === 'Master';
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedFirefighter || !password || !globalRole || !actor) {
@@ -85,7 +88,6 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     }
     setLoading(true);
     try {
-        const isMaster = globalRole === 'Master';
         const newUser = {
             name: `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`,
             password,
@@ -124,14 +126,14 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <Label>Bombero</Label>
                 <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                     <PopoverTrigger asChild className="col-span-3">
-                        <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
+                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
                             {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                         <Command>
-                            <CommandInput placeholder="Legajo o nombre..." />
+                            <CommandInput placeholder="Buscar por legajo o nombre..." />
                             <CommandList>
                                 <CommandEmpty>Sin resultados.</CommandEmpty>
                                 <CommandGroup>
@@ -205,5 +207,3 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     </Dialog>
   );
 }
-
-const isMaster = globalRole === 'Master';

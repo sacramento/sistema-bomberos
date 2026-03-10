@@ -65,7 +65,7 @@ const MultiFirefighterSelect = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}, {f.firstName}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -141,7 +141,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
             } catch (error) {
                 toast({
                     title: "Error",
-                    description: "No se pudieron cargar los bomberos para la selección.",
+                    description: "No se pudieron cargar los bomberos.",
                     variant: "destructive"
                 });
             }
@@ -208,7 +208,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     setLoading(true);
 
     try {
-      await addVehicle(formData, actor);
+      addVehicle(formData, actor);
       toast({ title: "¡Éxito!", description: "El nuevo móvil ha sido agregado." });
       onVehicleAdded();
       resetForm();
@@ -224,11 +224,11 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="font-headline">Agregar Nuevo Móvil</DialogTitle>
-          <DialogDescription>Complete la ficha técnica del nuevo vehículo de la flota.</DialogDescription>
-        </DialogHeader>
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4">
+          <DialogHeader>
+            <DialogTitle className="font-headline">Agregar Nuevo Móvil</DialogTitle>
+            <DialogDescription>Complete la ficha técnica del nuevo vehículo de la flota.</DialogDescription>
+          </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
             <div className="space-y-4">
                 <div className="space-y-2">
