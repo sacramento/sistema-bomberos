@@ -1,4 +1,3 @@
-
 'use client';
 
 import { User, LoggedInUser } from '@/lib/types';
@@ -10,10 +9,9 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const USERS_COLLECTION = 'users';
 
-// Helper to clean undefined values for Firestore
 const cleanData = (obj: any) => {
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
     );
 };
 

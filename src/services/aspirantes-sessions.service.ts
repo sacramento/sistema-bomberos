@@ -8,9 +8,12 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-/**
- * Retrieves all aspirante training sessions.
- */
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+    );
+};
+
 export const getAspiranteSessions = async (): Promise<Session[]> => {
     if (!db) return [];
     const sessionsCollection = collection(db, 'aspirantes-sessions');
@@ -35,24 +38,20 @@ export const getAspiranteSessions = async (): Promise<Session[]> => {
             return results;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: sessionsCollection.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
 
-/**
- * Adds a new training session for aspirantes.
- */
 export const addAspiranteSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
     const sessionsCollection = collection(db, 'aspirantes-sessions');
     const docRef = doc(sessionsCollection);
     
-    const sessionToStore = {
+    const sessionToStore = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -62,15 +61,14 @@ export const addAspiranteSession = (sessionData: Omit<Session, 'id' | 'attendanc
         assistantIds: sessionData.assistants.map(f => f.id),
         attendeeIds: sessionData.attendees.map(f => f.id),
         attendance: {},
-    };
+    });
 
     setDoc(docRef, sessionToStore).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: sessionToStore,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -78,14 +76,11 @@ export const addAspiranteSession = (sessionData: Omit<Session, 'id' | 'attendanc
     }
 };
 
-/**
- * Updates an existing training session for aspirantes.
- */
 export const updateAspiranteSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'aspirantes-sessions', id);
     
-    const dataToUpdate: any = {
+    const dataToUpdate: any = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -94,17 +89,14 @@ export const updateAspiranteSession = (id: string, sessionData: Partial<Session>
         instructorIds: sessionData.instructors?.map(f => f.id),
         assistantIds: sessionData.assistants?.map(f => f.id),
         attendeeIds: sessionData.attendees?.map(f => f.id),
-    };
-
-    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+    });
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -112,19 +104,15 @@ export const updateAspiranteSession = (id: string, sessionData: Partial<Session>
     }
 };
 
-/**
- * Deletes an aspirante training session.
- */
 export const deleteAspiranteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'aspirantes-sessions', id);
     
     deleteDoc(docRef).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -132,20 +120,42 @@ export const deleteAspiranteSession = (id: string, actor: LoggedInUser) => {
     }
 };
 
-/**
- * Updates attendance for an aspirante training session.
- */
+export const getAspiranteSessionById = async (id: string): Promise<Session | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'aspirantes-sessions', id);
+    
+    return getDoc(docRef).then(async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const firefighters = await getFirefighters();
+            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+            const getFirefighterObjects = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
+            
+            return {
+                id: docSnap.id,
+                ...data,
+                instructors: getFirefighterObjects(data.instructorIds),
+                assistants: getFirefighterObjects(data.assistantIds),
+                attendees: getFirefighterObjects(data.attendeeIds),
+            } as Session;
+        }
+        return null;
+    }).catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'get' }));
+        return null;
+    });
+};
+
 export const updateAspiranteSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'aspirantes-sessions', id);
     
     updateDoc(docRef, { attendance }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: { attendance },
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {

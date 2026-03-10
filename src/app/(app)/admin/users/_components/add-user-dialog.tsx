@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +20,7 @@ import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/command";
 import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/auth-context";
@@ -37,14 +36,12 @@ const roperiaRoles: RoperiaModuleRole[] = ['Administrador', 'Encargado', 'Oficia
 const serviciosRoles: ServiciosModuleRole[] = ['Administrador', 'Oficial', 'Bombero', 'Ninguno'];
 const cascadaRoles: CascadaModuleRole[] = ['Administrador', 'Encargado', 'Bombero', 'Ninguno'];
 
-
 export default function AddUserDialog({ children, onUserAdded }: { children: React.ReactNode; onUserAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const { user: actor } = useAuth();
   
-  // Form State
   const [password, setPassword] = useState('');
   const [globalRole, setGlobalRole] = useState<GlobalRole | ''>('');
   const [asistenciaRole, setAsistenciaRole] = useState<AttendanceModuleRole>('Ninguno');
@@ -57,73 +54,39 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [serviciosRole, setServiciosRole] = useState<ServiciosModuleRole>('Ninguno');
   const [cascadaRole, setCascadaRole] = useState<CascadaModuleRole>('Ninguno');
 
-  // Data for selection
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
   const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
   const [comboboxOpen, setComboboxOpen] = useState(false);
 
-
   useEffect(() => {
-    const fetchAvailableFirefighters = async () => {
-        if (open) {
-            setDataLoading(true);
-            try {
-                const [allUsers, allFirefighters] = await Promise.all([getUsers(), getFirefighters()]);
-                const existingUserIds = new Set(allUsers.map(u => u.id));
-                const available = allFirefighters.filter(f => !existingUserIds.has(f.legajo));
-                setAvailableFirefighters(available);
-            } catch (error) {
-                 toast({
-                    title: "Error",
-                    description: "No se pudieron cargar los bomberos disponibles para crear usuarios.",
-                    variant: "destructive",
-                });
-            } finally {
-                setDataLoading(false);
-            }
-        }
-    };
-    fetchAvailableFirefighters();
+    if (open) {
+        setDataLoading(true);
+        Promise.all([getUsers(), getFirefighters()]).then(([allUsers, allFirefighters]) => {
+            const existingUserIds = new Set(allUsers.map(u => u.id));
+            const available = allFirefighters.filter(f => !existingUserIds.has(f.legajo));
+            setAvailableFirefighters(available);
+        }).catch(() => toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" }))
+        .finally(() => setDataLoading(false));
+    }
   }, [open, toast]);
 
-
   const resetForm = () => {
-    setSelectedFirefighter(null);
-    setPassword('');
-    setGlobalRole('');
-    setAsistenciaRole('Ninguno');
-    setAspirantesRole('Ninguno');
-    setSemanasRole('Ninguno');
-    setMovilidadRole('Ninguno');
-    setMaterialesRole('Ninguno');
-    setAyudantiaRole('Ninguno');
-    setRoperiaRole('Ninguno');
-    setServiciosRole('Ninguno');
-    setCascadaRole('Ninguno');
-  }
+    setSelectedFirefighter(null); setPassword(''); setGlobalRole(''); setAsistenciaRole('Ninguno'); setAspirantesRole('Ninguno');
+    setSemanasRole('Ninguno'); setMovilidadRole('Ninguno'); setMaterialesRole('Ninguno'); setAyudantiaRole('Ninguno');
+    setRoperiaRole('Ninguno'); setServiciosRole('Ninguno'); setCascadaRole('Ninguno');
+  };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (!selectedFirefighter || !password || !globalRole) {
-        toast({
-            title: "Error",
-            description: "Debe seleccionar un bombero y completar la contraseña y el rol global.",
-            variant: "destructive",
-        });
+    if (!selectedFirefighter || !password || !globalRole || !actor) {
+        toast({ variant: "destructive", title: "Error", description: "Complete todos los campos." });
         return;
     }
-    if (!actor) {
-        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
-        return;
-    }
-    
     setLoading(true);
-
     try {
         const isMaster = globalRole === 'Master';
-
-        const newUser: Omit<User, 'id'> = {
+        const newUser = {
             name: `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`,
             password,
             role: globalRole,
@@ -139,186 +102,108 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 cascada: isMaster ? 'Administrador' : cascadaRole,
             }
         };
-        
-        await addUser(selectedFirefighter.legajo, newUser, actor);
-
-        toast({
-            title: "¡Éxito!",
-            description: `El usuario para ${selectedFirefighter.lastName} ha sido agregado.`,
-        });
-        
-        onUserAdded();
-        resetForm();
-        setOpen(false);
-
+        addUser(selectedFirefighter.legajo, newUser, actor);
+        toast({ title: "¡Éxito!", description: "Usuario creado." });
+        onUserAdded(); setOpen(false);
     } catch (error: any) {
-        console.error(error);
-        toast({
-            title: "Error",
-            description: error.message || "No se pudo agregar el usuario. Intente de nuevo.",
-            variant: "destructive",
-        });
-    } finally {
-        setLoading(false);
-    }
-  }
+        toast({ variant: "destructive", title: "Error", description: error.message });
+    } finally { setLoading(false); }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] flex flex-col">
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Usuario</DialogTitle>
-            <DialogDescription>
-              Seleccione un bombero para crear su cuenta de usuario y asigne roles.
-            </DialogDescription>
+            <DialogDescription>Asigne legajo, contraseña y roles.</DialogDescription>
           </DialogHeader>
-          <div className="flex-grow overflow-y-auto py-4 pr-4 grid gap-6">
-            <div className="space-y-4">
-                 <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="firefighter-select" className="text-right">Bombero</Label>
-                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                        <PopoverTrigger asChild className="col-span-3">
-                            <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
-                                {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar bombero...'}
-                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0">
-                             <Command>
-                                <CommandInput placeholder="Buscar por legajo o nombre..." />
-                                <CommandList>
-                                <CommandEmpty>No se encontraron bomberos sin usuario.</CommandEmpty>
+          <div className="flex-grow overflow-y-auto py-4 pr-2 space-y-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label>Bombero</Label>
+                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                    <PopoverTrigger asChild className="col-span-3">
+                        <Button variant="outline" role="combobox" className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
+                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo...'}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[300px] p-0">
+                        <Command>
+                            <CommandInput placeholder="Legajo o nombre..." />
+                            <CommandList>
+                                <CommandEmpty>Sin resultados.</CommandEmpty>
                                 <CommandGroup>
-                                    {availableFirefighters.map((firefighter) => (
-                                    <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                        onSelect={() => { setSelectedFirefighter(firefighter); setComboboxOpen(false); }}>
-                                        <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                        {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
-                                    </CommandItem>
+                                    {availableFirefighters.map(f => (
+                                        <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setComboboxOpen(false); }}>
+                                            <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
+                                            {f.legajo} - {f.lastName}, {f.firstName}
+                                        </CommandItem>
                                     ))}
                                 </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
-                 </div>
-                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password">Contraseña</Label>
-                  <Input id="password" type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label>Contraseña</Label>
+                <Input type="password" placeholder="••••••••" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label>Rol Global</Label>
+                <Select onValueChange={(v) => setGlobalRole(v as GlobalRole)} value={globalRole} required>
+                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                    <SelectContent>{globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
+                </Select>
+            </div>
+            <Separator />
+            <div className="space-y-4 pt-2">
+                <h4 className="text-xs font-bold uppercase text-center text-muted-foreground">Permisos por Módulo</h4>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Asistencia</Label>
+                    <Select value={isMaster ? 'Administrador' : asistenciaRole} onValueChange={(v) => setAsistenciaRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="globalRole">Rol Global</Label>
-                  <Select onValueChange={(value) => setGlobalRole(value as GlobalRole)} value={globalRole} required>
-                    <SelectTrigger className="col-span-3"><SelectValue placeholder="Seleccione un rol global" /></SelectTrigger>
-                    <SelectContent>
-                      {globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                    <Label className="text-right">Aspirantes</Label>
+                    <Select value={isMaster ? 'Administrador' : aspirantesRole} onValueChange={(v) => setAspirantesRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Semanas</Label>
+                    <Select value={isMaster ? 'Administrador' : semanasRole} onValueChange={(v) => setSemanasRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Movilidad</Label>
+                    <Select value={isMaster ? 'Administrador' : movilidadRole} onValueChange={(v) => setMovilidadRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Materiales</Label>
+                    <Select value={isMaster ? 'Administrador' : materialesRole} onValueChange={(v) => setMaterialesRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Ayudantía</Label>
+                    <Select value={isMaster ? 'Administrador' : ayudantiaRole} onValueChange={(v) => setAyudantiaRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{ayudantiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Ropería</Label>
+                    <Select value={isMaster ? 'Administrador' : roperiaRole} onValueChange={(v) => setRoperiaRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{roperiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Servicios</Label>
+                    <Select value={isMaster ? 'Administrador' : serviciosRole} onValueChange={(v) => setServiciosRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label className="text-right">Cascada</Label>
+                    <Select value={isMaster ? 'Administrador' : cascadaRole} onValueChange={(v) => setCascadaRole(v as any)} disabled={isMaster}><SelectTrigger className="col-span-3"><SelectValue/></SelectTrigger><SelectContent>{cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent></Select>
                 </div>
             </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-                <h4 className="font-medium text-center">Roles por Módulo</h4>
-                 <p className="text-sm text-muted-foreground text-center">El rol "Master" hereda permisos de Administrador en todos los módulos.</p>
-            </div>
-            
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="asistenciaRole" className="text-right">Asistencia</Label>
-              <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={globalRole === 'Master' ? 'Administrador' : asistenciaRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="aspirantesRole" className="text-right">Aspirantes</Label>
-              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : aspirantesRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="semanasRole" className="text-right">Semanas</Label>
-              <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={globalRole === 'Master' ? 'Administrador' : semanasRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="movilidadRole" className="text-right">Movilidad</Label>
-              <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={globalRole === 'Master' ? 'Administrador' : movilidadRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="materialesRole" className="text-right">Materiales</Label>
-              <Select onValueChange={(value) => setMaterialesRole(value as MaterialesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : materialesRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ayudantiaRole" className="text-right">Ayudantía</Label>
-              <Select onValueChange={(value) => setAyudantiaRole(value as AyudantiaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : ayudantiaRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ayudantiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="roperiaRole" className="text-right">Ropería</Label>
-              <Select onValueChange={(value) => setRoperiaRole(value as RoperiaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : roperiaRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {roperiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="serviciosRole" className="text-right">Servicios</Label>
-              <Select onValueChange={(value) => setServiciosRole(value as ServiciosModuleRole)} value={globalRole === 'Master' ? 'Administrador' : serviciosRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="cascadaRole" className="text-right">Cascada</Label>
-              <Select onValueChange={(value) => setCascadaRole(value as CascadaModuleRole)} value={globalRole === 'Master' ? 'Administrador' : cascadaRole} disabled={globalRole === 'Master'}>
-                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-          <DialogFooter className="flex-shrink-0 pt-4 border-t">
-            <Button type="submit" disabled={loading || dataLoading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {loading ? 'Guardando...' : 'Guardar Usuario'}
-            </Button>
-          </DialogFooter>
+          <DialogFooter className="pt-4 border-t"><Button type="submit" disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2"/> : null} Guardar Usuario</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   );
 }
+
+const isMaster = globalRole === 'Master';

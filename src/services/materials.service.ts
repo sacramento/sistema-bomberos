@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -11,16 +10,12 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const MATERIALS_COLLECTION = 'materials';
 
-// Helper to clean undefined values for Firestore
 const cleanData = (obj: any) => {
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
     );
 };
 
-/**
- * Retrieves all materials.
- */
 export const getMaterials = async (): Promise<Material[]> => {
     if (!db) return [];
     const colRef = collection(db, MATERIALS_COLLECTION);
@@ -61,9 +56,6 @@ export const getMaterials = async (): Promise<Material[]> => {
         });
 }
 
-/**
- * Calculates the next sequence number for a material code prefix.
- */
 export const getNextMaterialSequence = async (prefix: string): Promise<number> => {
     if (!db) return 1;
     const colRef = collection(db, MATERIALS_COLLECTION);
@@ -90,9 +82,6 @@ export const getNextMaterialSequence = async (prefix: string): Promise<number> =
     });
 };
 
-/**
- * Adds a new material.
- */
 export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, actor: LoggedInUser) => {
     if (!db) return;
     const colRef = collection(db, MATERIALS_COLLECTION);
@@ -112,9 +101,6 @@ export const addMaterial = (materialData: Omit<Material, 'id' | 'vehiculo'>, act
     }
 };
 
-/**
- * Updates an existing material.
- */
 export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 'id' | 'vehiculo'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, MATERIALS_COLLECTION, id);
@@ -133,9 +119,6 @@ export const updateMaterial = (id: string, materialData: Partial<Omit<Material, 
     }
 };
 
-/**
- * Deletes a material.
- */
 export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, MATERIALS_COLLECTION, id);
@@ -152,9 +135,6 @@ export const deleteMaterial = (id: string, actor: LoggedInUser) => {
     }
 };
 
-/**
- * Batch adds materials from CSV.
- */
 export const batchAddMaterials = async (items: any[], actor: LoggedInUser) => {
     if (!db || !items || !actor) return;
     const batch = writeBatch(db);

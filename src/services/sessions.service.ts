@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
@@ -11,16 +10,12 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const SESSIONS_COLLECTION = 'sessions';
 
-// Helper to clean undefined values for Firestore
 const cleanData = (obj: any) => {
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
     );
 };
 
-/**
- * Retrieves all training sessions.
- */
 export const getSessions = async (): Promise<Session[]> => {
     if (!db) return [];
     const colRef = collection(db, SESSIONS_COLLECTION);
@@ -56,9 +51,6 @@ export const getSessions = async (): Promise<Session[]> => {
         });
 };
 
-/**
- * Retrieves a single session by ID.
- */
 export const getSessionById = async(id: string): Promise<Session | null> => {
     if (!db) return null;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
@@ -93,9 +85,6 @@ export const getSessionById = async(id: string): Promise<Session | null> => {
         });
 }
 
-/**
- * Adds a new training session.
- */
 export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
     const colRef = collection(db, SESSIONS_COLLECTION);
@@ -126,9 +115,6 @@ export const addSession = (sessionData: Omit<Session, 'id' | 'attendance'>, acto
     }
 };
 
-/**
- * Updates an existing training session.
- */
 export const updateSession = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
@@ -157,9 +143,6 @@ export const updateSession = (id: string, sessionData: Partial<Session>, actor: 
     }
 };
 
-/**
- * Updates attendance for a session.
- */
 export const updateSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);
@@ -177,9 +160,6 @@ export const updateSessionAttendance = (id: string, attendance: Record<string, A
     }
 };
 
-/**
- * Deletes a session.
- */
 export const deleteSession = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, SESSIONS_COLLECTION, id);

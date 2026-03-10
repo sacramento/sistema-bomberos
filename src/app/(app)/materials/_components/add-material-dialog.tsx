@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -55,20 +54,17 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     const activeRole = getActiveRole(pathname);
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
     
-    // Find logged in firefighter ID
     const loggedInFirefighter = useMemo(() => {
         if (!user || firefighters.length === 0) return null;
         return firefighters.find(f => f.legajo === user.id);
     }, [user, firefighters]);
 
-    // Filter vehicles the user is assigned to as encargado
     const managedVehicles = useMemo(() => {
         if (isPrivileged) return vehicles;
         if (!loggedInFirefighter) return [];
         return vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id));
     }, [isPrivileged, vehicles, loggedInFirefighter]);
 
-    // Form state
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
     const [categoryId, setCategoryId] = useState('');
@@ -110,15 +106,11 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
             Promise.all([getVehicles(), getFirefighters()]).then(([vData, fData]) => {
                 setVehicles(vData);
                 setFirefighters(fData);
-                
-                // If encargado, set initial vehicle if they only have one
                 if (!isPrivileged && user) {
                     const firefighter = fData.find(f => f.legajo === user.id);
                     if (firefighter) {
                         const managed = vData.filter(v => v.materialEncargadoIds?.includes(firefighter.id));
-                        if (managed.length === 1) {
-                            setVehiculoId(managed[0].id);
-                        }
+                        if (managed.length === 1) setVehiculoId(managed[0].id);
                     }
                 }
             });
@@ -146,13 +138,11 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
         let finalCuartel = cuartel;
         if (locationType === 'vehiculo' && vehiculoId) {
             const v = vehicles.find(v => v.id === vehiculoId);
             if (v) finalCuartel = v.cuartel;
         }
-
         const ubicacion = locationType === 'deposito' 
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
@@ -164,8 +154,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
 
         setLoading(true);
         try {
-            const normalizedMedida = medida.trim().replace(',', '.');
-            await addMaterial({ 
+            addMaterial({ 
                 codigo, 
                 nombre, 
                 categoryId, 
@@ -176,7 +165,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                 acople: acople === '' ? undefined : acople as any,
                 composicion: composicion === '' ? undefined : composicion as any,
                 caracteristicas, 
-                medida: normalizedMedida, 
+                medida: medida.trim().replace(',', '.'), 
                 estado, 
                 ubicacion, 
                 cuartel: finalCuartel as any, 
@@ -193,10 +182,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
     };
 
     const isHose = itemTypeId === '02.2.1' || itemTypeId === '02.2.2' || itemTypeId === '11.2.1';
-    
-    const needsTechnicalDetails = 
-        (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) ||
-        (categoryId === '11' && subCategoryId === '11.2');
+    const needsTechnicalDetails = (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) || (categoryId === '11' && subCategoryId === '11.2');
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
@@ -204,14 +190,12 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Agregar Nuevo Material</DialogTitle>
-                    <DialogDescription>
-                        {isPrivileged ? 'Complete los datos del equipo.' : `Agregando materiales para sus móviles asignados.`}
-                    </DialogDescription>
+                    <DialogDescription>{isPrivileged ? 'Complete los datos del equipo.' : `Agregando materiales para sus móviles asignados.`}</DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica (Opcional en carga básica)</Label>
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica</Label>
                             <div className="grid grid-cols-1 gap-2">
                                 <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
@@ -227,7 +211,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                                 </Select>
                             </div>
                         </div>
-
                         <div className="space-y-2">
                             <Label htmlFor="codigo">Código</Label>
                             <div className="flex gap-2">
@@ -238,83 +221,60 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                             </div>
                         </div>
                         <div className="space-y-2"><Label htmlFor="nombre">Nombre</Label><Input id="nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
-                        
                         <div className="space-y-2"><Label htmlFor="marca">Marca</Label><Input id="marca" value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
                         <div className="space-y-2"><Label htmlFor="modelo">Modelo</Label><Input id="modelo" value={modelo} onChange={(e) => setModelo(e.target.value)} /></div>
-
                         {needsTechnicalDetails && (
                             <>
                                 <div className="space-y-2">
-                                    <Label>Tipo de Acople</Label>
-                                    <Select value={acople} onValueChange={(v) => setAcople(v)}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
-                                        <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-                                    </Select>
+                                    <Label>Acople</Label>
+                                    <Select value={acople} onValueChange={setAcople}><SelectTrigger><SelectValue placeholder="Tipo..."/></SelectTrigger><SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Diámetro / Medida</Label>
+                                    <Label>Medida</Label>
                                     <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Diámetro..."/></SelectTrigger>
                                         <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
                                     </Select>
-                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
+                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar..." />}
                                 </div>
                                 {isHose && (
                                     <div className="space-y-2">
                                         <Label>Composición</Label>
-                                        <Select value={composicion} onValueChange={setComposicion}>
-                                            <SelectTrigger><SelectValue placeholder="Tela/Goma..."/></SelectTrigger>
-                                            <SelectContent>{composicionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                                        </Select>
+                                        <Select value={composicion} onValueChange={setComposicion}><SelectTrigger><SelectValue placeholder="Tela/Goma..."/></SelectTrigger><SelectContent>{composicionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                                     </div>
                                 )}
                             </>
                         )}
-
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     </div>
-
                     <div className="space-y-3 pt-4 border-t">
                         <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación</Label>
                         <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)} disabled={!isPrivileged}>
                             {isPrivileged && <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-deposito" /><Label htmlFor="r-deposito">En Depósito</Label></div>}
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-vehiculo" /><Label htmlFor="r-vehiculo">En Vehículo</Label></div>
                         </RadioGroup>
-                        
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
-                                <Label>Seleccionar Cuartel del Depósito</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)}>
-                                    <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                    <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
-                                </Select>
+                                <Label>Cuartel</Label>
+                                <Select value={cuartel} onValueChange={setCuartel}><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger><SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent></Select>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2">
                                     <Label>Móvil</Label>
-                                    <Select value={vehiculoId} onValueChange={setVehiculoId}>
-                                        <SelectTrigger><SelectValue placeholder="Móvil..." /></SelectTrigger>
-                                        <SelectContent>{managedVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent>
-                                    </Select>
+                                    <Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue placeholder="Unidad..." /></SelectTrigger><SelectContent>{managedVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}</SelectContent></Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Lugar / Baulera</Label>
-                                    <Select value={baulera} onValueChange={setBaulera}>
-                                        <SelectTrigger><SelectValue placeholder="Lugar..." /></SelectTrigger>
-                                        <SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                                    </Select>
+                                    <Label>Lugar</Label>
+                                    <Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue placeholder="Baulera..." /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
                                 </div>
                             </div>
                         )}
                     </div>
-
-                    <div className="space-y-2"><Label htmlFor="caracteristicas">Notas Técnicas</Label><Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
+                    <div className="space-y-2"><Label htmlFor="caracteristicas">Notas</Label><Textarea id="caracteristicas" value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
-                <DialogFooter className="border-t pt-4">
-                    <Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Material"}</Button>
-                </DialogFooter>
+                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? "Guardando..." : "Guardar Material"}</Button></DialogFooter>
             </DialogContent>
         </Dialog>
     );
