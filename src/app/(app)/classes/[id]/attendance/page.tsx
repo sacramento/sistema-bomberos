@@ -50,7 +50,7 @@ export default function AttendancePage() {
     const pathname = usePathname();
     const sessionId = params.id as string;
     const { toast } = useToast();
-    const { getActiveRole } = useAuth();
+    const { user, getActiveRole } = useAuth();
     
     const [session, setSession] = useState<Session | null>(null);
     const [allParticipants, setAllParticipants] = useState<Firefighter[]>([]);
@@ -58,8 +58,8 @@ export default function AttendancePage() {
     const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
     
-    const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
-    const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
+    const instructorIds = useMemo(() => new Set(session?.instructorIds), [session]);
+    const assistantIds = useMemo(() => new Set(session?.assistantIds), [session]);
     
     const activeRole = getActiveRole(pathname);
     const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Instructor', [activeRole]);
@@ -74,7 +74,7 @@ export default function AttendancePage() {
                     if (data) {
                         const uniqueParticipants = new Map<string, Firefighter>();
                         [...data.instructors, ...data.assistants, ...data.attendees].forEach(p => {
-                            if (p.status === 'Active') {
+                            if (p.status === 'Active' || p.status === 'Auxiliar') {
                                 uniqueParticipants.set(p.id, p);
                             }
                         });
@@ -84,10 +84,8 @@ export default function AttendancePage() {
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
                             setAttendance(data.attendance);
                         } else {
-                            // If no attendance is saved, create a default one
                             const initialAttendance: Record<string, AttendanceStatus> = {};
                             participants.forEach(p => {
-                                // Default instructors and assistants to 'present'
                                 initialAttendance[p.id] = 'present';
                             });
                             setAttendance(initialAttendance);
@@ -113,11 +111,11 @@ export default function AttendancePage() {
         const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
         const oficialRanks = ['OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'];
 
-        const officials = allParticipants.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c1Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 1').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c2Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 2').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const c3Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 3').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
+        const officials = allParticipants.filter(a => [...suboficialRanks, ...oficialRanks].includes(a.rank)).sort((a,b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
+        const c1Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 1').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
+        const c2Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 2').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
+        const c3Bombers = allParticipants.filter(a => (a.rank === 'BOMBERO' || a.rank === 'ADAPTACION') && a.firehouse === 'Cuartel 3').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
+        const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
 
         const groups = [];
         if (officials.length > 0) groups.push({ title: 'OFICIALES Y SUBOFICIALES', firefighters: officials });
@@ -188,9 +186,10 @@ export default function AttendancePage() {
     }
 
     const handleSaveChanges = async () => {
+        if (!user) return;
         setSaving(true);
         try {
-            await updateSessionAttendance(sessionId, attendance);
+            await updateSessionAttendance(sessionId, attendance, user);
             toast({
                 title: "¡Éxito!",
                 description: "La asistencia ha sido guardada correctamente."
@@ -206,22 +205,15 @@ export default function AttendancePage() {
         }
     };
 
-    const summaryCards = [
-        { title: "Presentes", value: summary.present + summary.recupero, icon: UserCheck, color: "text-green-500" },
-        { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
-        { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
-        { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
-    ];
-    
     const renderFirefighterName = (firefighter: Firefighter) => {
         const isInstructor = instructorIds.has(firefighter.id);
         const isAssistant = assistantIds.has(firefighter.id);
 
         return (
             <div className="flex items-center gap-2">
-                <span>{`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}</span>
-                {isInstructor && <Badge variant="destructive">I</Badge>}
-                {isAssistant && <Badge variant="secondary">A</Badge>}
+                <span>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</span>
+                {isInstructor && <Badge variant="destructive" className="text-[10px] h-4 px-1">I</Badge>}
+                {isAssistant && <Badge variant="secondary" className="text-[10px] h-4 px-1">A</Badge>}
             </div>
         );
     }
@@ -231,7 +223,7 @@ export default function AttendancePage() {
             {groupedAttendees.map(group => (
                 <React.Fragment key={group.title}>
                     <TableRow className="bg-muted hover:bg-muted">
-                        <TableCell colSpan={isSummaryView ? 3 : 2} className="font-bold text-muted-foreground text-center tracking-wider">
+                        <TableCell colSpan={isSummaryView ? 3 : 2} className="font-bold text-muted-foreground text-center tracking-wider py-2">
                            --- {group.title} ---
                         </TableCell>
                     </TableRow>
@@ -239,13 +231,13 @@ export default function AttendancePage() {
                         <TableRow key={firefighter.id}>
                             <TableCell className="font-medium">
                                 <div>{renderFirefighterName(firefighter)}</div>
-                                {isSummaryView && <div className="text-muted-foreground text-sm sm:hidden">{firefighter.firehouse}</div>}
+                                {isSummaryView && <div className="text-muted-foreground text-[10px] sm:hidden">{firefighter.firehouse}</div>}
                             </TableCell>
                             {isSummaryView && (
                                 <>
-                                    <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
+                                    <TableCell className="hidden sm:table-cell text-xs">{firefighter.firehouse}</TableCell>
                                     <TableCell>
-                                        <Badge className={cn("whitespace-nowrap", getStatusClass(attendance[firefighter.id]))}>
+                                        <Badge className={cn("whitespace-nowrap text-[10px]", getStatusClass(attendance[firefighter.id]))}>
                                             {getStatusLabel(attendance[firefighter.id])}
                                         </Badge>
                                     </TableCell>
@@ -258,7 +250,7 @@ export default function AttendancePage() {
                                         onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
                                         disabled={!canEdit}
                                     >
-                                        <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
+                                        <SelectTrigger className={cn("w-[130px] ml-auto h-8 text-xs", getStatusClass(attendance[firefighter.id]))}>
                                             <SelectValue placeholder="Seleccionar..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -289,16 +281,21 @@ export default function AttendancePage() {
                 </Button>
             </PageHeader>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                 {summaryCards.map((card, index) => (
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-8">
+                 {[
+                    { title: "Presentes", value: summary.present + summary.recupero, icon: UserCheck, color: "text-green-500" },
+                    { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
+                    { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
+                    { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
+                 ].map((card, index) => (
                     <Card key={index}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 p-4">
+                            <CardTitle className="text-xs font-medium">{card.title}</CardTitle>
                              <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
                         </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{card.value}</div>
-                            <p className="text-xs text-muted-foreground">de {summary.total} participantes</p>
+                        <CardContent className="p-4 pt-0">
+                            <div className="text-xl font-bold">{card.value}</div>
+                            <p className="text-[10px] text-muted-foreground">de {summary.total}</p>
                         </CardContent>
                     </Card>
                  ))}
@@ -306,7 +303,7 @@ export default function AttendancePage() {
 
             <Tabs defaultValue={canEdit ? "register" : "view"} className="w-full">
                 <TabsList className={cn("grid w-full mb-4", canEdit ? "grid-cols-2 max-w-md mx-auto" : "grid-cols-1 max-w-[200px] mx-auto")}>
-                    {canEdit && <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>}
+                    {canEdit && <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar</TabsTrigger>}
                     <TabsTrigger value="view"><Eye className="mr-2 h-4 w-4"/>Ver Resumen</TabsTrigger>
                 </TabsList>
                 
@@ -314,23 +311,23 @@ export default function AttendancePage() {
                     <TabsContent value="register">
                         <Card>
                             <CardHeader>
-                                <CardTitle className="font-headline">Lista de Participantes</CardTitle>
-                                <CardDescription>Seleccione el estado de cada bombero, instructor y ayudante asignado a esta clase.</CardDescription>
+                                <CardTitle className="font-headline text-lg">Lista de Participantes</CardTitle>
+                                <CardDescription className="text-xs">Registre el estado de cada integrante asignado.</CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-0 sm:p-6">
                                 <div className="overflow-x-auto">
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Legajo y Nombre</TableHead>
-                                                <TableHead className="text-right">Estado</TableHead>
+                                                <TableHead className="text-xs">Legajo y Nombre</TableHead>
+                                                <TableHead className="text-right text-xs">Estado</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         {renderTableBody(false)}
                                     </Table>
                                 </div>
                             </CardContent>
-                            <CardFooter className="justify-end">
+                            <CardFooter className="justify-end border-t pt-4">
                                 <Button onClick={handleSaveChanges} disabled={saving}>
                                     <Save className="mr-2 h-4 w-4" />
                                     {saving ? 'Guardando...' : 'Guardar Cambios'}
@@ -343,17 +340,16 @@ export default function AttendancePage() {
                 <TabsContent value="view">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
-                            <CardDescription>Resumen de la asistencia registrada para esta clase.</CardDescription>
+                            <CardTitle className="font-headline text-lg">Resumen de Asistencia</CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="p-0 sm:p-6">
                                 <div className="overflow-x-auto">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Legajo y Nombre</TableHead>
-                                            <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
-                                            <TableHead>Estado</TableHead>
+                                            <TableHead className="text-xs">Legajo y Nombre</TableHead>
+                                            <TableHead className="hidden sm:table-cell text-xs">Cuartel</TableHead>
+                                            <TableHead className="text-xs">Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     {renderTableBody(true)}
@@ -366,5 +362,3 @@ export default function AttendancePage() {
         </>
     );
 }
-
-    

@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addSession } from "@/services/sessions.service";
 import { Progress } from "@/components/ui/progress";
+import { useAuth } from "@/context/auth-context";
 
 const specializations: Session['specialization'][] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
@@ -82,7 +83,7 @@ const MultiSelectFirefighter = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{getDisplayText(f)}</Badge>)
+                            selected.map(f => <Badge variant="secondary" key={f.id} className="text-[10px]">{getDisplayText(f)}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -92,7 +93,7 @@ const MultiSelectFirefighter = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar ${title.toLowerCase()}...`} />
+                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -110,7 +111,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -156,7 +157,7 @@ const MultiSelectFilter = ({
                 >
                     <div className="flex gap-1 flex-wrap">
                          {selected.length > 0 ? (
-                            selectedLabels.map(label => <Badge variant="secondary" key={label}>{label}</Badge>)
+                            selectedLabels.map(label => <Badge variant="secondary" key={label} className="text-[10px]">{label}</Badge>)
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -199,10 +200,10 @@ const MultiSelectFilter = ({
 export default function AddClassDialog({ children, onClassAdded }: { children: React.ReactNode; onClassAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   
-  // All firefighters from DB
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   
   // Form state
@@ -228,14 +229,14 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
-        if (open) { // Fetch only when dialog is open
+        if (open) {
             try {
                 const data = await getFirefighters();
                 setAllFirefighters(data);
             } catch (error) {
                 toast({
                     title: "Error",
-                    description: "No se pudieron cargar los bomberos para la selección.",
+                    description: "No se pudieron cargar los bomberos.",
                     variant: "destructive"
                 });
             }
@@ -309,9 +310,8 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   }, [resetForm]);
 
   const handleNext = () => {
-    // Validations before going to the next step
     if (step === 1 && (!title || !specialization || !date || !time)) {
-      toast({ title: "Campos incompletos", description: "Por favor, complete todos los detalles de la clase.", variant: "destructive" });
+      toast({ title: "Campos incompletos", description: "Por favor, complete todos los detalles.", variant: "destructive" });
       return;
     }
     if (step === 2 && instructors.length === 0) {
@@ -324,12 +324,13 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
 
 
   const handleSubmit = async () => {
+    if (!user) return;
     setLoading(true);
     
     if (attendees.length === 0) {
          toast({
             title: "Sin asistentes",
-            description: "No se encontraron bomberos para asignar a esta clase. La clase no fue creada.",
+            description: "Debe asignar al menos un asistente.",
             variant: "destructive",
         });
         setLoading(false);
@@ -348,11 +349,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
             attendees,
         };
         
-        await addSession(newClassData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
+        await addSession(newClassData, user);
 
         toast({
             title: "¡Éxito!",
-            description: `La nueva clase ha sido creada con ${attendees.length} asistentes.`,
+            description: `La clase ha sido creada.`,
         });
         
         onClassAdded();
@@ -383,7 +384,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
             <div className="space-y-2">
               <Label htmlFor="specialization">Especialidad</Label>
               <Select onValueChange={(value) => setSpecialization(value as Session['specialization'])} value={specialization} required>
-                <SelectTrigger><SelectValue placeholder="Seleccione una especialidad" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                 <SelectContent>
                   {specializations.map(spec => <SelectItem key={spec} value={spec}>{spec}</SelectItem>)}
                 </SelectContent>
@@ -407,55 +408,48 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="instructor">Instructores</Label>
+              <Label>Instructores</Label>
               <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
+              <Label>Ayudantes (Opcional)</Label>
               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
             </div>
           </div>
         );
       case 3:
         return (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Asigne asistentes de forma masiva utilizando filtros o agregue integrantes específicos manualmente.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+          <div className="space-y-4 text-xs">
+            <p className="text-muted-foreground mb-4">Asigne asistentes por grupos o individualmente.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Seleccionar por Jerarquía</Label>
+                <Label>Por Jerarquía</Label>
                 <MultiSelectFilter title="Jerarquías" options={hierarchyOptions} selected={selectedHierarchies} onSelectedChange={setSelectedHierarchies} />
               </div>
               <div className="space-y-2">
-                <Label>Seleccionar por Cuartel</Label>
+                <Label>Por Cuartel</Label>
                 <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={selectedStations} onSelectedChange={setSelectedStations} />
               </div>
               <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label>Agregar Integrantes Adicionales (Opcional)</Label>
+                <Label>Individual</Label>
                 <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeFirefighters} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground pt-2">
-                Si no se selecciona ninguna jerarquía o cuartel, no se incluirá a nadie automáticamente. Use los filtros para asignaciones masivas.
-            </p>
           </div>
         );
        case 4:
             return (
-                <div className="space-y-4 text-sm">
-                    <h4 className="font-bold text-base">Por favor, revise y confirme los detalles de la clase:</h4>
+                <div className="space-y-4 text-xs">
+                    <h4 className="font-bold text-sm">Resumen de la Clase:</h4>
                     <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                        <p><strong>Título:</strong> {title}</p>
-                       <p><strong>Especialidad:</strong> {specialization}</p>
-                       <p><strong>Fecha y Hora:</strong> {date} a las {time}hs</p>
+                       <p><strong>Fecha:</strong> {date} a las {time}hs</p>
                        <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
-                       <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
-                           <p className="font-semibold">Total de Asistentes Asignados: {attendees.length}</p>
-                           {attendees.length > 0 && (
-                               <div className="text-xs text-muted-foreground h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                                   {attendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
-                               </div>
-                           )}
+                           <p className="font-semibold">Total Asistentes: {attendees.length}</p>
+                           <div className="max-h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
+                               {attendees.map(f => `${f.legajo} - ${f.lastName}`).join('; ')}
+                           </div>
                        </div>
                     </div>
                 </div>
@@ -468,29 +462,21 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
              <DialogHeader>
                 <DialogTitle className="font-headline">Crear Nueva Clase</DialogTitle>
-                <DialogDescription>
-                Paso {step} de {totalSteps} - Complete los detalles de la nueva clase de capacitación.
-                </DialogDescription>
+                <DialogDescription>Paso {step} de {totalSteps}</DialogDescription>
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
-
-            <div className="flex-grow py-4 overflow-y-auto">
-                {renderStepContent()}
-            </div>
-            
-            <DialogFooter className="flex-shrink-0 pt-4 border-t">
+            <div className="flex-grow py-4 overflow-y-auto">{renderStepContent()}</div>
+            <DialogFooter className="pt-4 border-t">
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Anterior
+                        <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                     </Button>
                      {step < totalSteps ? (
                         <Button onClick={handleNext} disabled={loading}>
-                            Siguiente
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                            Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     ) : (
                         <Button onClick={handleSubmit} disabled={loading}>

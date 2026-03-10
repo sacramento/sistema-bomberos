@@ -134,12 +134,12 @@ export default function VehicleDetailPage() {
 
     if (!vehicle || !user) return null;
     
-    const maintenanceEncargadosDisplay = vehicle.materialEncargados?.length 
-        ? vehicle.materialEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+    const maintenanceEncargadosDisplay = vehicle.encargados?.length 
+        ? vehicle.encargados.map(e => `${e.legajo} - ${e.lastName}, ${e.firstName}`).join('; ')
         : 'Sin Asignar';
 
     const materialEncargadosDisplay = vehicle.materialEncargados?.length 
-        ? vehicle.materialEncargados.map(e => `${e.firstName} ${e.lastName}`).join(', ')
+        ? vehicle.materialEncargados.map(e => `${e.legajo} - ${e.lastName}, ${e.firstName}`).join('; ')
         : 'Sin Asignar';
 
     return (
@@ -192,15 +192,19 @@ export default function VehicleDetailPage() {
                             <CardTitle className="font-headline">Detalles del Vehículo</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 text-sm">
                                 <DetailItem icon={Gauge} label="Kilometraje" value={`${vehicle.kilometraje.toLocaleString('es-AR')} km`} />
                                 <DetailItem icon={FileText} label="Dominio" value={vehicle.dominio} />
                                 <DetailItem icon={MapPin} label="Cuartel" value={<Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>} />
                                 <DetailItem icon={Shield} label="Especialidad" value={vehicle.especialidad} />
                                 <DetailItem icon={Truck} label="Tipo de Vehículo" value={vehicle.tipoVehiculo} />
                                 <DetailItem icon={Droplets} label="Capacidad de Agua" value={vehicle.capacidadAgua > 0 ? `${vehicle.capacidadAgua.toLocaleString('es-AR')} L` : 'No aplica'} />
-                                <DetailItem icon={UserCircle} label="Encargado Mecánica" value={maintenanceEncargadosDisplay} />
-                                <DetailItem icon={Package} label="Encargado Materiales" value={materialEncargadosDisplay} />
+                                <div className="col-span-full md:col-span-2">
+                                    <DetailItem icon={UserCircle} label="Encargado Mecánica" value={<span className="text-xs">{maintenanceEncargadosDisplay}</span>} />
+                                </div>
+                                <div className="col-span-full md:col-span-2">
+                                    <DetailItem icon={Package} label="Encargado Materiales" value={<span className="text-xs">{materialEncargadosDisplay}</span>} />
+                                </div>
                             </div>
                             <Separator className="my-6" />
                             <div>

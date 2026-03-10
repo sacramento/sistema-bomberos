@@ -56,8 +56,9 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     };
 
     const handleDeleteWeek = async (weekId: string) => {
+        if (!user) return;
         try {
-            await deleteWeek(weekId);
+            await deleteWeek(weekId, user);
             toast({ title: "Éxito", description: "La semana y sus tareas asociadas han sido eliminadas." });
             onDataChange();
         } catch (error: any) {
@@ -159,7 +160,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                                 <li className="flex items-center gap-3">
                                                     <User className="h-4 w-4 text-muted-foreground"/>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{`${week.lead.firstName} ${week.lead.lastName}`}</span>
+                                                        <span className="font-semibold">{`${week.lead.legajo} - ${week.lead.lastName}, ${week.lead.firstName}`}</span>
                                                         <Badge variant="outline">Encargado</Badge>
                                                     </div>
                                                 </li>
@@ -168,7 +169,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                                  <li className="flex items-center gap-3">
                                                     <Truck className="h-4 w-4 text-muted-foreground"/>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{`${week.driver.firstName} ${week.driver.lastName}`}</span>
+                                                        <span className="font-semibold">{`${week.driver.legajo} - ${week.driver.lastName}, ${week.driver.firstName}`}</span>
                                                         <Badge variant="outline">Chofer</Badge>
                                                     </div>
                                                 </li>
@@ -176,7 +177,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                             {week.members?.map(member => (
                                                 <li key={member.id} className="flex items-center gap-3">
                                                     <div className="w-4 h-4 shrink-0" />
-                                                    <p className="text-muted-foreground">{`${member.firstName} ${member.lastName}`}</p>
+                                                    <p className="text-muted-foreground">{`${member.legajo} - ${member.lastName}, ${member.firstName}`}</p>
                                                 </li>
                                             ))}
                                         </ul>
