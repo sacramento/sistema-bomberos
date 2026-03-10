@@ -42,7 +42,7 @@ export default function DriversPage() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { getActiveRole } = useAuth();
+  const { getActiveRole, user: actor } = useAuth();
   const pathname = usePathname();
 
   const activeRole = getActiveRole(pathname);
@@ -72,7 +72,8 @@ export default function DriversPage() {
     fetchDrivers();
   };
 
-  const handleDelete = async (driverId: string, actor: any) => {
+  const handleDelete = async (driverId: string) => {
+    if (!actor) return;
     try {
         await deleteDriver(driverId, actor);
         toast({
@@ -187,7 +188,7 @@ export default function DriversPage() {
                 drivers.map((driver) => (
                   <TableRow key={driver.id}>
                     <TableCell className="font-medium">{driver.firefighter?.legajo}</TableCell>
-                    <TableCell>{driver.firefighter ? `${driver.firefighter.firstName} ${driver.firefighter.lastName}` : 'N/A'}</TableCell>
+                    <TableCell>{driver.firefighter ? `${driver.firefighter.legajo} - ${driver.firefighter.lastName}, ${driver.firefighter.firstName}` : 'N/A'}</TableCell>
                     <TableCell>{driver.firefighter?.rank}</TableCell>
                     <TableCell>
                         <Badge className={cn(getCuartelBadgeClass(driver.firefighter?.firehouse))}>{driver.firefighter?.firehouse}</Badge>
@@ -233,7 +234,7 @@ export default function DriversPage() {
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(driver.id, {})} variant="destructive">
+                                <AlertDialogAction onClick={() => handleDelete(driver.id)} variant="destructive">
                                     Eliminar
                                 </AlertDialogAction>
                                 </AlertDialogFooter>

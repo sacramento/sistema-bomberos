@@ -182,7 +182,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             <div className="space-y-4">
                  <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="firefighter-select" className="text-right">Bombero</Label>
-                    <Popover open={comboboxOpen} onOpenChange={setOpenCombobox}>
+                    <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                         <PopoverTrigger asChild className="col-span-3">
                             <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between" disabled={dataLoading}>
                                 {dataLoading ? 'Cargando bomberos...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar bombero...'}
@@ -242,7 +242,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="aspirantesRole" className="text-right">Aspirantes</Label>
-              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : asistenciaRole} disabled={globalRole === 'Master'}>
+              <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={globalRole === 'Master' ? 'Administrador' : aspirantesRole} disabled={globalRole === 'Master'}>
                 <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}

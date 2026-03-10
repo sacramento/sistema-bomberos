@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -99,7 +100,7 @@ export default function UsersPage() {
                     <TableHeader>
                     <TableRow>
                         <TableHead className="hidden sm:table-cell">Legajo</TableHead>
-                        <TableHead>Nombre</TableHead>
+                        <TableHead>Nombre y Legajo</TableHead>
                         <TableHead>Rol Global</TableHead>
                         <TableHead className="hidden md:table-cell">Roles Modulares</TableHead>
                         <TableHead>
@@ -122,7 +123,7 @@ export default function UsersPage() {
                         users.map((user: User) => (
                         <TableRow key={user.id}>
                             <TableCell className="hidden sm:table-cell font-medium">{user.id}</TableCell>
-                            <TableCell>{user.name}</TableCell>
+                            <TableCell>{`${user.id} - ${user.name}`}</TableCell>
                             <TableCell>
                                 <Badge variant={user.role === 'Master' ? 'destructive' : 'secondary'}>{user.role}</Badge>
                             </TableCell>

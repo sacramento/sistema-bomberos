@@ -25,7 +25,7 @@ export default function FirefightersPage() {
   const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { getActiveRole } = useAuth();
+  const { getActiveRole, user: actor } = useAuth();
   const pathname = usePathname();
 
   const activeRole = getActiveRole(pathname);
@@ -52,17 +52,17 @@ export default function FirefightersPage() {
   }, []);
   
   const sortedFirefighters = useMemo(() => {
-    return [...firefighters].sort((a, b) => (a.legajo || '').localeCompare(b.legajo || ''));
+    return [...firefighters].sort((a, b) => (a.legajo || '').localeCompare(b.legajo || '', undefined, { numeric: true }));
   }, [firefighters]);
 
   const handleDataChange = () => {
-    // Re-fetch firefighters after one is added, imported, edited, or deleted
     fetchFirefighters();
   };
 
   const handleDelete = async (firefighterId: string) => {
+    if (!actor) return;
     try {
-        await deleteFirefighter(firefighterId);
+        await deleteFirefighter(firefighterId, actor);
         toast({
             title: "Éxito",
             description: "El bombero ha sido eliminado."
@@ -147,7 +147,7 @@ export default function FirefightersPage() {
                 sortedFirefighters.map((firefighter: Firefighter) => (
                   <TableRow key={firefighter.id || firefighter.legajo}>
                     <TableCell className="font-medium">{firefighter.legajo}</TableCell>
-                    <TableCell>{`${firefighter.firstName} ${firefighter.lastName}`}</TableCell>
+                    <TableCell>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</TableCell>
                     <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
                     <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
                     <TableCell>
@@ -187,10 +187,10 @@ export default function FirefightersPage() {
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(firefighter.id)} variant="destructive">
-                                    Eliminar
-                                </AlertDialogAction>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(firefighter.id)} variant="destructive">
+                                        Eliminar
+                                    </AlertDialogAction>
                                 </AlertDialogFooter>
                             </AlertDialogContent>
                         </AlertDialog>
