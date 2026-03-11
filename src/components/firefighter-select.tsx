@@ -57,7 +57,7 @@ export function SingleFirefighterSelect({
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Buscar por legajo o apellido..." />
+          <CommandInput placeholder={`Buscar por legajo o apellido...`} />
           <CommandList>
             <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
             <CommandGroup>
@@ -144,14 +144,14 @@ export function MultiFirefighterSelect({
       </PopoverTrigger>
       <PopoverContent className="w-[300px] p-0" align="start">
         <Command>
-          <CommandInput placeholder="Buscar por legajo o apellido..." />
+          <CommandInput placeholder={`Buscar por legajo o apellido...`} />
           <CommandList>
             <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
             <CommandGroup>
               {firefighters.map((firefighter) => (
                 <CommandItem
                   key={firefighter.id}
-                  value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
+                  value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                   onSelect={() => handleSelect(firefighter)}
                   disabled={disabledIds.includes(firefighter.id)}
                 >

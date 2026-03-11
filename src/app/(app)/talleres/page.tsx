@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -90,8 +89,9 @@ export default function TalleresPage() {
   };
 
   const handleDeleteWorkshop = async (sessionId: string) => {
+    if (!user) return;
     try {
-        await deleteWorkshop(sessionId, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador' } });
+        await deleteWorkshop(sessionId, user);
         toast({
             title: "Éxito",
             description: "El taller ha sido eliminado."

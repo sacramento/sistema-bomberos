@@ -97,7 +97,6 @@ export default function MyWeekPage() {
     }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged]);
 
     useEffect(() => {
-        // Redirection logic must be in useEffect, never in useMemo or the render body
         if (!loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             router.replace(`/weeks/${activeWeek.id}`);
         }
