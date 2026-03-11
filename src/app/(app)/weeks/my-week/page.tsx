@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -73,7 +72,7 @@ export default function MyWeekPage() {
             visibleWeeks = allWeeks.filter(week => week.firehouse === firefighterData.firehouse);
         } else {
             visibleWeeks = allWeeks.filter(week => 
-                week.allMembers?.some(member => member.legajo === user.id)
+                week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id
             );
         }
 
@@ -81,7 +80,7 @@ export default function MyWeekPage() {
         
         const today = new Date();
         const foundActiveWeek = allWeeks.find(week => {
-            const isMember = week.allMembers?.some(member => member.legajo === user.id);
+            const isMember = week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id;
             if (!isMember) return false;
             const startDate = startOfDay(parseISO(week.periodStartDate));
             const endDate = endOfDay(parseISO(week.periodEndDate));
@@ -97,8 +96,8 @@ export default function MyWeekPage() {
 
     }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged]);
 
-    // Handle redirection in a proper side-effect
     useEffect(() => {
+        // Redirection logic must be in useEffect, never in useMemo or the render body
         if (!loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             router.replace(`/weeks/${activeWeek.id}`);
         }

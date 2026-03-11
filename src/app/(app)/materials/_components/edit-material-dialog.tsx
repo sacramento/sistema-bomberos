@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -144,14 +143,14 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             };
 
             if (needsApproval) {
-                await createMaterialRequest({
+                createMaterialRequest({
                     type: 'UPDATE', materialId: material.id, materialNombre: material.nombre,
                     materialCodigo: material.codigo, requestedById: user.id,
                     requestedByName: user.name, data: dataToSave, originalData: material
                 });
                 toast({ title: "Solicitud enviada" });
             } else {
-                await updateMaterial(material.id, dataToSave, user);
+                updateMaterial(material.id, dataToSave, user);
                 toast({ title: "Material actualizado" });
             }
             onMaterialUpdated();

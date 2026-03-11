@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -113,7 +112,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     
     setLoading(true);
     try {
-      await addVehicle(formData, actor);
+      addVehicle(formData, actor);
       toast({ title: "¡Éxito!", description: "Móvil registrado correctamente." });
       onVehicleAdded();
       setOpen(false);
