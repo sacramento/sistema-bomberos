@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -61,11 +60,15 @@ const MultiFirefighterSelect = ({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between h-auto min-h-10"
+                    className="w-full justify-between h-auto min-h-10 text-left"
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>)
+                            selected.map(f => (
+                                <Badge variant="secondary" key={f.id} className="text-[10px]">
+                                    {`${f.legajo} - ${f.lastName}`}
+                                </Badge>
+                            ))
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -75,17 +78,15 @@ const MultiFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder="Buscar por legajo o apellido..." />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
                             {firefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => {
-                                        handleSelect(firefighter);
-                                    }}
+                                    value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
+                                    onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
                                         className={cn(
@@ -112,7 +113,6 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   const [loading, setLoading] = useState(false);
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   
-  // Form State
   const [formData, setFormData] = useState<Omit<Vehicle, 'id' | 'encargados' | 'materialEncargados' | 'maintenanceItems'>>({
     numeroMovil: '',
     dominio: '',
@@ -130,7 +130,9 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     observaciones: ''
   });
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => 
+    allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), 
+  [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -139,11 +141,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                 const data = await getFirefighters();
                 setAllFirefighters(data);
             } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "No se pudieron cargar los bomberos.",
-                    variant: "destructive"
-                });
+                toast({ title: "Error", description: "No se pudieron cargar los bomberos.", variant: "destructive" });
             }
         }
     };
@@ -158,14 +156,6 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
   const handleSelectChange = (id: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [id]: value }));
   };
-
-  const handleEncargadosChange = (encargados: Firefighter[]) => {
-    setFormData(prev => ({ ...prev, encargadoIds: encargados.map(f => f.id) }));
-  }
-
-  const handleMaterialEncargadosChange = (encargados: Firefighter[]) => {
-    setFormData(prev => ({ ...prev, materialEncargadoIds: encargados.map(f => f.id) }));
-  }
 
   const resetForm = useCallback(() => {
     setFormData({
@@ -188,33 +178,26 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
 
   const handleOpenChange = useCallback((isOpen: boolean) => {
     setOpen(isOpen);
-    if (!isOpen) {
-      resetForm();
-    }
+    if (!isOpen) resetForm();
   }, [resetForm]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo) {
-        toast({ title: "Error", description: "Móvil, dominio, marca y modelo son campos obligatorios.", variant: "destructive" });
+        toast({ title: "Error", description: "Móvil, dominio, marca y modelo son obligatorios.", variant: "destructive" });
         return;
     }
     
-    if (!actor) {
-        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
-        return;
-    }
+    if (!actor) return;
 
     setLoading(true);
-
     try {
       addVehicle(formData, actor);
-      toast({ title: "¡Éxito!", description: "El nuevo móvil ha sido agregado." });
+      toast({ title: "¡Éxito!", description: "Móvil registrado." });
       onVehicleAdded();
-      resetForm();
       setOpen(false);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "No se pudo agregar el móvil.", variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -227,7 +210,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4">
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Móvil</DialogTitle>
-            <DialogDescription>Complete la ficha técnica del nuevo vehículo de la flota.</DialogDescription>
+            <DialogDescription>Complete la ficha técnica del vehículo.</DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
             <div className="space-y-4">
@@ -265,16 +248,16 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={activeFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
-                        onSelectedChange={handleEncargadosChange}
+                        onSelectedChange={(fs) => setFormData(p => ({...p, encargadoIds: fs.map(f => f.id)}))}
                         firefighters={activeFirefighters}
                     />
                 </div>
                  <div className="space-y-2">
                     <Label>Encargado de Materiales</Label>
                     <MultiFirefighterSelect
-                        title="encargados de inventario"
+                        title="encargados"
                         selected={activeFirefighters.filter(f => formData.materialEncargadoIds.includes(f.id))}
-                        onSelectedChange={handleMaterialEncargadosChange}
+                        onSelectedChange={(fs) => setFormData(p => ({...p, materialEncargadoIds: fs.map(f => f.id)}))}
                         firefighters={activeFirefighters}
                     />
                 </div>
@@ -307,7 +290,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         </form>
          <DialogFooter className="pt-4 border-t">
             <Button onClick={e => handleSubmit(e as any)} disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Móvil
             </Button>
         </DialogFooter>

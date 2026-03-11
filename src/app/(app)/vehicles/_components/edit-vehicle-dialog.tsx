@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -64,12 +63,16 @@ const MultiFirefighterSelect = ({
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="w-full justify-between h-auto min-h-10"
+                    className="w-full justify-between h-auto min-h-10 text-left"
                     disabled={disabled}
                 >
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? (
-                            selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}, {f.firstName}</Badge>)
+                            selected.map(f => (
+                                <Badge variant="secondary" key={f.id} className="text-[10px]">
+                                    {`${f.legajo} - ${f.lastName}`}
+                                </Badge>
+                            ))
                         ) : (
                             `Seleccionar ${title.toLowerCase()}...`
                         )}
@@ -79,7 +82,7 @@ const MultiFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder="Buscar por legajo o apellido..." />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -87,9 +90,7 @@ const MultiFirefighterSelect = ({
                                 <CommandItem
                                     key={firefighter.id}
                                     value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => {
-                                        handleSelect(firefighter);
-                                    }}
+                                    onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
                                         className={cn(
@@ -121,7 +122,9 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
 
   const canEditAllFields = activeRole === 'Master' || activeRole === 'Administrador';
   
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => 
+    allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), 
+  [allFirefighters]);
 
   const [formData, setFormData] = useState<Partial<Vehicle>>({});
   const [selectedEncargados, setSelectedEncargados] = useState<Firefighter[]>([]);
@@ -158,30 +161,14 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     setFormData(prev => ({ ...prev, [id]: value }));
   };
 
-  const resetForm = useCallback(() => {
-    setFormData(vehicle);
-    setSelectedEncargados(vehicle.encargados || []);
-    setSelectedMaterialEncargados(vehicle.materialEncargados || []);
-  }, [vehicle]);
-
-  const handleOpenChange = useCallback((isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      resetForm();
-    }
-  }, [resetForm]);
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo) {
-        toast({ title: "Error", description: "Móvil, dominio, marca y modelo son campos obligatorios.", variant: "destructive" });
+        toast({ title: "Error", description: "Campos obligatorios incompletos.", variant: "destructive" });
         return;
     }
     
-    if (!actor) {
-        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
-        return;
-    }
+    if (!actor) return;
 
     setLoading(true);
     try {
@@ -192,19 +179,18 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
       };
       
       await updateVehicle(vehicle.id, finalData, actor);
-
-      toast({ title: "¡Éxito!", description: "La ficha del móvil ha sido actualizada." });
+      toast({ title: "¡Éxito!", description: "Móvil actualizado." });
       onVehicleUpdated();
       setOpen(false);
     } catch (error: any) {
-      toast({ title: "Error", description: error.message || "No se pudo actualizar el móvil.", variant: "destructive" });
+      toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -256,7 +242,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                  <div className="space-y-2">
                     <Label>Encargado de Materiales</Label>
                     <MultiFirefighterSelect
-                        title="encargados de inventario"
+                        title="encargados"
                         selected={selectedMaterialEncargados}
                         onSelectedChange={setSelectedMaterialEncargados}
                         firefighters={activeFirefighters}
@@ -292,7 +278,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
         </form>
          <DialogFooter className="pt-4 border-t">
             <Button onClick={e => handleSubmit(e as any)} disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Cambios
             </Button>
         </DialogFooter>

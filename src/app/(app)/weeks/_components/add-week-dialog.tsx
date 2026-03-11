@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -52,14 +51,14 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
                     {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -105,16 +104,20 @@ const MultiFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(f => (
+                            <Badge variant="secondary" key={f.id} className="text-[10px]">
+                                {`${f.legajo} - ${f.lastName}`}
+                            </Badge>
+                        )) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -154,7 +157,9 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   
   const progress = (step / totalSteps) * 100;
   
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeFirefighters = useMemo(() => 
+    allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), 
+  [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -196,11 +201,11 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
 
   const handleNext = () => {
     if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
-      toast({ title: "Campos incompletos", description: "Por favor, complete nombre, cuartel y fecha de inicio.", variant: "destructive" });
+      toast({ title: "Campos incompletos", description: "Faltan datos básicos.", variant: "destructive" });
       return;
     }
     if (step === 2 && (!lead || !driver)) {
-      toast({ title: "Roles incompletos", description: "Debe seleccionar un encargado y un chofer.", variant: "destructive" });
+      toast({ title: "Roles incompletos", description: "Seleccione encargado y chofer.", variant: "destructive" });
       return;
     }
     setStep(s => Math.min(s + 1, totalSteps));
@@ -211,7 +216,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   const handleSubmit = async () => {
     setLoading(true);
     if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver) {
-        toast({ title: "Error", description: "Faltan datos para crear la semana.", variant: "destructive" });
+        toast({ title: "Error", description: "Faltan datos requeridos.", variant: "destructive" });
         setLoading(false);
         return;
     }
@@ -229,16 +234,11 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
         };
         
         await addWeek(weekData);
-
-        toast({ title: "¡Éxito!", description: "La nueva semana ha sido creada." });
-        
+        toast({ title: "¡Éxito!", description: "Semana creada." });
         onWeekAdded();
-        resetForm();
         setOpen(false);
-
     } catch (error: any) {
-        console.error(error);
-        toast({ title: "Error", description: error.message || "No se pudo crear la semana.", variant: "destructive" });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
         setLoading(false);
     }
@@ -251,7 +251,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nombre de la Semana</Label>
-              <Input id="name" placeholder="Ej: Semana 1, Guardia Roja" value={name} onChange={(e) => setName(e.target.value)} required />
+              <Input id="name" placeholder="Ej: Semana 1" value={name} onChange={(e) => setName(e.target.value)} required />
             </div>
              <div className="space-y-2">
                 <Label>Cuartel</Label>
@@ -266,9 +266,9 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                 <Label>Período de la Semana</Label>
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button id="date" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
+                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y", { locale: es })} - {format(dateRange.to, "LLL dd, y", { locale: es })}</>) : (format(dateRange.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango de fechas</span>)}
+                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y", { locale: es })} - {format(dateRange.to, "LLL dd, y", { locale: es })}</>) : (format(dateRange.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -292,32 +292,28 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
              <div className="space-y-2">
               <Label>Integrantes</Label>
               <MultiFirefighterSelect title="integrantes" selected={members} onSelectedChange={setMembers} firefighters={activeFirefighters} disabledIds={[lead?.id || '', driver?.id || '']} />
-              <p className="text-xs text-muted-foreground">El encargado y el chofer ya están incluidos. Agregue aquí al resto del personal.</p>
             </div>
           </div>
         );
       case 3:
-         const allTeam = [lead, driver, ...members].filter(Boolean) as Firefighter[];
+        const allTeam = [lead, driver, ...members].filter(Boolean) as Firefighter[];
         return (
             <div className="space-y-4 text-sm">
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
-                   <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
-                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'No asignado'}</p>
-                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'No asignado'}</p>
+                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'N/A'}</p>
+                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'N/A'}</p>
                    <div className="pt-2">
-                       <p className="font-semibold">Total de Integrantes: {allTeam.length}</p>
-                       {allTeam.length > 0 && (
-                           <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                               {allTeam.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
-                           </div>
-                       )}
+                       <p className="font-semibold">Integrantes: {allTeam.length}</p>
+                       <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
+                           {allTeam.map(f => `${f.legajo} - ${f.lastName}`).join('; ')}
+                       </div>
                    </div>
                    <div className="space-y-2">
-                      <Label htmlFor="observations">Pizarra de Novedades (Observaciones)</Label>
-                      <Textarea id="observations" placeholder="Deje notas o novedades para la semana..." value={observations} onChange={(e) => setObservations(e.target.value)} />
+                      <Label htmlFor="observations">Pizarra de Novedades</Label>
+                      <Textarea id="observations" value={observations} onChange={(e) => setObservations(e.target.value)} />
                     </div>
                 </div>
             </div>
@@ -328,30 +324,15 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => { 
-        if (isOpen) {
-            if (!initialData) {
-                resetForm();
-            }
-        } else {
-            resetForm();
-        }
-        setOpen(isOpen); 
-    }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="sm:max-w-lg flex flex-col">
              <DialogHeader>
                 <DialogTitle className="font-headline">{initialData ? 'Clonar Semana' : 'Crear Nueva Semana'}</DialogTitle>
-                <DialogDescription>
-                  {initialData ? 'Ajuste los detalles para la nueva semana clonada.' : `Paso ${step} de {totalSteps} - Complete los detalles de la nueva semana.`}
-                </DialogDescription>
+                <DialogDescription>Paso {step} de {totalSteps}</DialogDescription>
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>
-
-            <div className="flex-grow py-4 overflow-y-auto">
-                {renderStepContent()}
-            </div>
-            
+            <div className="flex-grow py-4 overflow-y-auto">{renderStepContent()}</div>
             <DialogFooter className="flex-shrink-0 pt-4 border-t">
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
@@ -363,7 +344,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                         </Button>
                     ) : (
                         <Button onClick={handleSubmit} disabled={loading}>
-                            {loading ? 'Guardando...' : 'Guardar Semana'}
+                            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Guardar
                         </Button>
                     )}
                  </div>

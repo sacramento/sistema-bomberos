@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from "react";
-import { Material, Vehicle, MaterialRequest } from "@/lib/types";
+import { Material, Vehicle } from "@/lib/types";
 import { updateMaterial, getNextMaterialSequence } from "@/services/materials.service";
 import { createMaterialRequest } from "@/services/material-requests.service";
 import { getVehicles } from "@/services/vehicles.service";
@@ -100,18 +99,12 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     }, [open, material]);
 
     const handleAutoGenerateCode = async () => {
-        if (!categoryId || !subCategoryId || !itemTypeId) {
-            toast({ title: "Faltan datos", description: "Seleccione la clasificación completa." });
-            return;
-        }
+        if (!categoryId || !subCategoryId || !itemTypeId) return;
         setGeneratingCode(true);
         try {
             const prefix = `${categoryId}${subCategoryId.split('.').pop()}${itemTypeId.split('.').pop()}`;
             const sequence = await getNextMaterialSequence(prefix);
-            const formattedCode = `${prefix}${sequence.toString().padStart(3, '0')}`;
-            setCodigo(formattedCode);
-        } catch (error) {
-            toast({ variant: "destructive", title: "Error", description: "No se pudo generar el código." });
+            setCodigo(`${prefix}${sequence.toString().padStart(3, '0')}`);
         } finally {
             setGeneratingCode(false);
         }
@@ -119,18 +112,14 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
 
     const needsApproval = useMemo(() => {
         if (isPrivileged) return false;
-        
-        // Si cambió la ubicación, cuartel o vehículo, requiere aprobación
         if (material.ubicacion.type !== locationType) return true;
         if (material.ubicacion.vehiculoId !== vehiculoId) return true;
         if (material.cuartel !== cuartel && locationType === 'deposito') return true;
-        
         return false;
     }, [isPrivileged, material, locationType, vehiculoId, cuartel]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
         if (!user) return;
 
         let finalCuartel = cuartel;
@@ -143,49 +132,27 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             ? { type: 'deposito' as const, deposito: finalCuartel as any } 
             : { type: 'vehiculo' as const, vehiculoId, baulera };
 
-        if (!nombre || !estado || !condicion || !finalCuartel) {
-            toast({ variant: "destructive", title: "Campos incompletos" });
-            return;
-        }
-
         setLoading(true);
         try {
-            const normalizedMedida = medida.trim().replace(',', '.');
             const dataToSave = { 
-                codigo, 
-                nombre, 
-                categoryId, 
-                subCategoryId, 
-                itemTypeId, 
-                marca,
-                modelo,
-                acople: acople === '' ? undefined : acople as any,
-                composicion: composicion === '' ? undefined : composicion as any,
-                caracteristicas, 
-                medida: normalizedMedida, 
-                estado, 
-                ubicacion, 
-                cuartel: finalCuartel as any, 
-                condicion 
+                codigo, nombre, categoryId, subCategoryId, itemTypeId, 
+                marca, modelo, acople: acople || undefined, 
+                composicion: composicion || undefined,
+                caracteristicas, medida: medida.trim().replace(',', '.'), 
+                estado, ubicacion, cuartel: finalCuartel as any, condicion 
             };
 
             if (needsApproval) {
                 await createMaterialRequest({
-                    type: 'UPDATE',
-                    materialId: material.id,
-                    materialNombre: material.nombre,
-                    materialCodigo: material.codigo,
-                    requestedById: user.id,
-                    requestedByName: user.name,
-                    data: dataToSave,
-                    originalData: material
+                    type: 'UPDATE', materialId: material.id, materialNombre: material.nombre,
+                    materialCodigo: material.codigo, requestedById: user.id,
+                    requestedByName: user.name, data: dataToSave, originalData: material
                 });
-                toast({ title: "Solicitud enviada", description: "El cambio de ubicación requiere aprobación de un administrador." });
+                toast({ title: "Solicitud enviada" });
             } else {
                 await updateMaterial(material.id, dataToSave, user);
                 toast({ title: "Material actualizado" });
             }
-            
             onMaterialUpdated();
             setOpen(false);
         } catch (error: any) {
@@ -195,24 +162,18 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     };
 
-    const isHose = itemTypeId === '02.2.1' || itemTypeId === '02.2.2' || itemTypeId === '11.2.1';
-
-    const needsTechnicalDetails = 
-        (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) ||
-        (categoryId === '11' && subCategoryId === '11.2');
-
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Editar Material</DialogTitle>
-                    <DialogDescription>Modifique los datos operativos. Si cambia la ubicación, se enviará una solicitud de aprobación.</DialogDescription>
+                    <DialogDescription>Modifique los datos operativos.</DialogDescription>
                 </DialogHeader>
                 <form id="edit-material-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 col-span-full border p-3 rounded-md bg-muted/20">
-                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Técnica</Label>
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación</Label>
                             <div className="grid grid-cols-1 gap-2">
                                 <Select value={categoryId} onValueChange={(v) => { setCategoryId(v); setSubCategoryId(''); setItemTypeId(''); }}>
                                     <SelectTrigger><SelectValue placeholder="1. Categoría" /></SelectTrigger>
@@ -228,88 +189,55 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                                 </Select>
                             </div>
                         </div>
-
                         <div className="space-y-2">
-                            <Label htmlFor="codigo-edit">Código</Label>
+                            <Label>Código</Label>
                             <div className="flex gap-2">
-                                <Input id="codigo-edit" value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="0000000" className="font-mono" />
+                                <Input value={codigo} onChange={(e) => setCodigo(e.target.value)} className="font-mono" />
                                 <Button type="button" variant="outline" size="icon" onClick={handleAutoGenerateCode} disabled={generatingCode || !itemTypeId}>
                                     {generatingCode ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4 text-primary" />}
                                 </Button>
                             </div>
                         </div>
-                        <div className="space-y-2"><Label htmlFor="nombre-edit">Nombre</Label><Input id="nombre-edit" value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
-                        
-                        <div className="space-y-2"><Label htmlFor="marca-edit">Marca</Label><Input id="marca-edit" value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
-                        <div className="space-y-2"><Label htmlFor="modelo-edit">Modelo</Label><Input id="modelo-edit" value={modelo} onChange={(e) => setModelo(e.target.value)} /></div>
-
-                        {needsTechnicalDetails && (
-                            <>
-                                <div className="space-y-2">
-                                    <Label>Acople</Label>
-                                    <Select value={acople} onValueChange={(v) => setAcople(v)}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Medida</Label>
-                                    <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
-                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
-                                    </Select>
-                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar medida..." />}
-                                </div>
-                                {isHose && (
-                                    <div className="space-y-2">
-                                        <Label>Composición</Label>
-                                        <Select value={composicion} onValueChange={setComposicion}>
-                                            <SelectTrigger><SelectValue placeholder="Tela/Goma..."/></SelectTrigger>
-                                            <SelectContent>{composicionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            </>
-                        )}
-
-                        <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-                        <div className="space-y-2"><Label>Condición</Label><Select value={condicion} onValueChange={(v) => setCondicion(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                        <div className="space-y-2"><Label>Nombre</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
+                        <div className="space-y-2"><Label>Marca</Label><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
+                        <div className="space-y-2"><Label>Modelo</Label><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></div>
+                        <div className="space-y-2">
+                            <Label>Estado</Label>
+                            <Select value={estado} onValueChange={(v) => setEstado(v as any)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Condición</Label>
+                            <Select value={condicion} onValueChange={(v) => setCondicion(v as any)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{condiciones.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
                     </div>
-
                     <div className="space-y-3 pt-4 border-t">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación {needsApproval && <Badge variant="destructive" className="ml-2">Cambio requiere aprobación</Badge>}</Label>
+                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación {needsApproval && <Badge variant="destructive" className="ml-2">Requiere aprobación</Badge>}</Label>
                         <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)}>
                             <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>
                         </RadioGroup>
-                        
                         {locationType === 'deposito' ? (
                             <div className="space-y-2 pt-2">
                                 <Label>Cuartel</Label>
-                                <Select value={cuartel} onValueChange={(v) => setCuartel(v)}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent>
-                                </Select>
+                                <Select value={cuartel} onValueChange={setCuartel}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}</SelectContent></Select>
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2">
                                     <Label>Móvil</Label>
-                                    <Select value={vehiculoId} onValueChange={setVehiculoId}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {vehicles.map(v => (
-                                                <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select>
                                 </div>
-                                <div className="space-y-2"><Label>Baulera</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+                                <div className="space-y-2"><Label>Baulera</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
                             </div>
                         )}
                     </div>
-
-                    <div className="space-y-2"><Label htmlFor="caracteristicas">Notas Adicionales</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
+                    <div className="space-y-2"><Label>Notas</Label><Textarea value={caracteristicas} onChange={(e) => setCaracteristicas(e.target.value)} /></div>
                 </form>
                 <DialogFooter className="border-t pt-4">
                     <Button type="submit" form="edit-material-form" disabled={loading}>

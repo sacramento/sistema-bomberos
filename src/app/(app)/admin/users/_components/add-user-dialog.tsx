@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -67,7 +66,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             const existingUserIds = new Set(allUsers.map(u => u.id));
             const available = allFirefighters.filter(f => !existingUserIds.has(f.legajo));
             setAvailableFirefighters(available);
-        }).catch(() => toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" }))
+        }).catch(() => toast({ title: "Error", description: "Fallo al cargar datos.", variant: "destructive" }))
         .finally(() => setDataLoading(false));
     }
   }, [open, toast]);
@@ -91,7 +90,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
         const newUser = {
             name: `${selectedFirefighter.firstName} ${selectedFirefighter.lastName}`,
             password,
-            role: globalRole,
+            role: globalRole as GlobalRole,
             roles: {
                 asistencia: isMaster ? 'Administrador' : asistenciaRole,
                 aspirantes: isMaster ? 'Administrador' : aspirantesRole,
@@ -126,14 +125,14 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <Label>Bombero</Label>
                 <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                     <PopoverTrigger asChild className="col-span-3">
-                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
-                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo...'}
+                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10 text-left" disabled={dataLoading}>
+                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o apellido...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[300px] p-0" align="start">
                         <Command>
-                            <CommandInput placeholder="Buscar por legajo o nombre..." />
+                            <CommandInput placeholder="Buscar por legajo o apellido..." />
                             <CommandList>
                                 <CommandEmpty>Sin resultados.</CommandEmpty>
                                 <CommandGroup>

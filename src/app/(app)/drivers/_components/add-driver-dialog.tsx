@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -50,7 +49,7 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
                     <div className="flex gap-1 flex-wrap">
                          {selected.length > 0 ? (
                             selected.map(value => <Badge variant="secondary" key={value}>{value}</Badge>)
@@ -105,11 +104,7 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
                 const available = allFirefighters.filter(f => !existingDriverIds.has(f.id) && (f.status === 'Active' || f.status === 'Auxiliar'));
                 setAvailableFirefighters(available);
             } catch (error) {
-                 toast({
-                    title: "Error",
-                    description: "No se pudieron cargar los bomberos disponibles.",
-                    variant: "destructive",
-                });
+                 toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
             } finally {
                 setDataLoading(false);
             }
@@ -127,84 +122,58 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!selectedFirefighter || selectedHabilitaciones.length === 0) {
-        toast({
-            title: "Error",
-            description: "Debe seleccionar un bombero y al menos una habilitación.",
-            variant: "destructive",
-        });
+        toast({ title: "Error", description: "Complete todos los campos.", variant: "destructive" });
         return;
     }
     
-    if (!actor) {
-        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
-        return;
-    }
+    if (!actor) return;
 
     setLoading(true);
-
     try {
         const newDriverData: Omit<Driver, 'id' | 'firefighter'> = {
             firefighterId: selectedFirefighter.id,
             habilitaciones: selectedHabilitaciones
         };
-        
         await addDriver(newDriverData, actor);
-
-        toast({
-            title: "¡Éxito!",
-            description: `El chofer ${selectedFirefighter.legajo} - ${selectedFirefighter.lastName} ha sido agregado.`,
-        });
-        
+        toast({ title: "¡Éxito!", description: "Chofer agregado." });
         onDriverAdded();
-        resetForm();
         setOpen(false);
-
     } catch (error: any) {
-        console.error(error);
-        toast({
-            title: "Error",
-            description: error.message || "No se pudo agregar el chofer.",
-            variant: "destructive",
-        });
+        toast({ title: "Error", description: error.message, variant: "destructive" });
     } finally {
         setLoading(false);
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        setOpen(isOpen);
-        if (!isOpen) resetForm();
-    }}>
+    <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle className="font-headline">Agregar Nuevo Chofer</DialogTitle>
-            <DialogDescription>
-              Seleccione un integrante y asigne sus habilitaciones de conducción.
-            </DialogDescription>
+            <DialogDescription>Asigne habilitaciones de conducción a un integrante.</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-                <Label htmlFor="firefighter-select">Integrante</Label>
+                <Label>Integrante</Label>
                 <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10" disabled={dataLoading}>
-                            {dataLoading ? 'Cargando...' : selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o nombre...'}
+                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10 text-left" disabled={dataLoading}>
+                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o apellido...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0">
+                    <PopoverContent className="w-[300px] p-0" align="start">
                             <Command>
-                            <CommandInput placeholder="Buscar por legajo o nombre..." />
+                            <CommandInput placeholder="Buscar por legajo o apellido..." />
                             <CommandList>
                                 <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
                                 <CommandGroup>
-                                    {availableFirefighters.map((firefighter) => (
-                                        <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                            {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
+                                    {availableFirefighters.map((f) => (
+                                        <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setFirefighterComboboxOpen(false); }}>
+                                            <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
+                                            {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
                                         </CommandItem>
                                     ))}
                                 </CommandGroup>
@@ -224,7 +193,7 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || dataLoading}>{loading ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} {loading ? 'Guardando...' : 'Guardar Chofer'}</Button>
+            <Button type="submit" disabled={loading || dataLoading}>{loading && <Loader2 className="animate-spin mr-2 h-4 w-4"/>} Guardar Chofer</Button>
           </DialogFooter>
         </form>
       </DialogContent>
