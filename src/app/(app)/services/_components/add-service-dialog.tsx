@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from "@/context/auth-context";
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
@@ -63,8 +65,8 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between" disabled={disabled}>
-                    {selected ? `${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={disabled}>
+                    {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
@@ -121,9 +123,9 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10" disabled={disabled}>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left" disabled={disabled}>
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]} className="text-[10px]">{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -137,7 +139,7 @@ const MultiSelect = ({
                             {options.map((option) => (
                                 <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
-                                    {option.legajo ? `${option.legajo} - ${option[displayKey]}` : option[displayKey]}
+                                    {option.legajo ? `${option.legajo} - ${option[displayKey]}, ${option.firstName}` : option[displayKey]}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -151,6 +153,7 @@ const MultiSelect = ({
 export default function AddServiceDialog({ children, onServiceAdded }: { children: React.ReactNode; onServiceAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 4;
@@ -271,7 +274,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
             zone: Number(zone),
         };
         
-        await addService(serviceData);
+        await addService(serviceData, actor);
         toast({ title: "¡Éxito!", description: "El servicio ha sido registrado correctamente." });
         onServiceAdded();
         setOpen(false);
@@ -395,7 +398,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
           </div>
         );
        case 2:
-        const firefighterOptions = activeFirefighters.map(f => ({ ...f, label: `${f.lastName}, ${f.firstName}`, value: f.id }));
+        const firefighterOptions = activeFirefighters.map(f => ({ ...f, label: f.lastName, value: f.id }));
         return (
             <div className="space-y-4">
                 <div className="space-y-2">
@@ -494,11 +497,11 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                        <p><strong>Convocatoria:</strong> {selectedSummonMethods.join(', ')}</p>
                        <p><strong>En conjunto:</strong> {inConjunction ? 'Sí' : 'No'}</p>
                        <Separator className="my-2"/>
-                       <p><strong>Comando:</strong> {command ? `${command.lastName}, ${command.firstName}` : 'N/A'}</p>
-                       <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
-                       <p><strong>Cuartelero:</strong> {stationOfficer ? `${stationOfficer.lastName}, ${stationOfficer.firstName}` : 'N/A'}</p>
-                       <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
-                       <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => f.lastName).join(', ') || 'N/A'}</p>
+                       <p><strong>Comando:</strong> {command ? `${command.legajo} - ${command.lastName}, ${command.firstName}` : 'N/A'}</p>
+                       <p><strong>Jefe de Servicio:</strong> {serviceChief ? `${serviceChief.legajo} - ${serviceChief.lastName}, ${serviceChief.firstName}` : 'N/A'}</p>
+                       <p><strong>Cuartelero:</strong> {stationOfficer ? `${stationOfficer.legajo} - ${stationOfficer.lastName}, ${stationOfficer.firstName}` : 'N/A'}</p>
+                       <p><strong>Dotación de Servicio:</strong> {onDuty.map(f => `${f.legajo} - ${f.lastName}`).join(', ') || 'N/A'}</p>
+                       <p><strong>Dotación de Pasiva:</strong> {offDuty.map(f => `${f.legajo} - ${f.lastName}`).join(', ') || 'N/A'}</p>
                        <p><strong>Total de Personal:</strong> {allPersonnel.length} integrantes</p>
                        <Separator className="my-2"/>
                        <div>

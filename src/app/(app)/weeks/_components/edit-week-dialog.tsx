@@ -52,14 +52,14 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left text-xs">
                     {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -105,16 +105,20 @@ const MultiFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => <Badge variant="secondary" key={f.id}>{f.legajo} - {f.lastName}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(f => (
+                            <Badge variant="secondary" key={f.id} className="text-[10px]">
+                                {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
+                            </Badge>
+                        )) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -156,7 +160,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   
   const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
-  // Effect to reset form state when dialog is re-opened with a different week
   useEffect(() => {
     if (open) {
       setName(week.name);
@@ -199,8 +202,9 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
 
 
   const handleSubmit = async () => {
+    const { user: actor } = useAuth();
     setLoading(true);
-    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver) {
+    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver || !actor) {
         toast({ title: "Error", description: "Faltan datos para actualizar la semana.", variant: "destructive" });
         setLoading(false);
         return;
@@ -218,7 +222,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
             observations
         };
         
-        await updateWeek(week.id, weekData);
+        await updateWeek(week.id, weekData, actor);
 
         toast({ title: "¡Éxito!", description: "La semana ha sido actualizada." });
         
@@ -293,13 +297,13 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                    <p><strong>Semana:</strong> {name}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
                    <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
-                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'No asignado'}</p>
-                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'No asignado'}</p>
+                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}, ${lead.firstName}` : 'No asignado'}</p>
+                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}, ${driver.firstName}` : 'No asignado'}</p>
                    <div className="pt-2">
                        <p className="font-semibold">Total de Integrantes: {allTeam.length}</p>
                        {allTeam.length > 0 && (
                            <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                               {allTeam.map(f => `${f.legajo} - ${f.lastName}`).join(', ')}
+                               {allTeam.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
                            </div>
                        )}
                    </div>

@@ -1,6 +1,7 @@
+
 'use client';
 
-import { LoggedInUser, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from '@/lib/types';
+import { LoggedInUser, ActiveRole } from '@/lib/types';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   createContext,
@@ -13,10 +14,9 @@ import { initializeFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { getUserById } from '@/services/users.service';
 import type { LoginInput } from '@/lib/schemas/auth.schema';
+import { navItems } from '@/app/lib/constants/nav-items';
 
 const SESSION_STORAGE_KEY = 'fuego-registro-session';
-
-export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | AyudantiaModuleRole | RoperiaModuleRole | ServiciosModuleRole | CascadaModuleRole | AspirantesModuleRole | 'Ninguno';
 
 interface AuthContextType {
   user: LoggedInUser;
@@ -102,7 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
-      // Perform direct client-side lookup to satisfy production constraints
       const userData = await getUserById(credentials.legajo);
       
       if (userData && userData.password === credentials.password) {

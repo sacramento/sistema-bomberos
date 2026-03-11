@@ -232,6 +232,8 @@ export type AspirantesModuleRole = 'Administrador' | 'Oficial' | 'Instructor' | 
 
 export type GlobalRole = 'Master' | 'Usuario';
 
+export type ActiveRole = GlobalRole | AttendanceModuleRole | WeekModuleRole | MobilityModuleRole | MaterialesModuleRole | AyudantiaModuleRole | RoperiaModuleRole | ServiciosModuleRole | CascadaModuleRole | AspirantesModuleRole | 'Ninguno';
+
 export type User = {
   id: string; // This is the user's legajo
   name: string;

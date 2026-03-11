@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -53,7 +54,7 @@ const MultiFirefighterSelect = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>

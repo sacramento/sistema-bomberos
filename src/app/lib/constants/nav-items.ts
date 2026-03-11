@@ -23,7 +23,7 @@ import {
   BookCopy,
   Droplets,
 } from 'lucide-react';
-import type { ActiveRole } from '@/context/auth-context';
+import type { ActiveRole } from '@/lib/types';
 
 export type NavItem = {
   href: string;

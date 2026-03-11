@@ -70,7 +70,7 @@ const MultiSelectFirefighter = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -93,7 +93,7 @@ const MultiSelectFirefighter = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder={`Buscar por legajo o nombre...`} />
+                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -444,11 +444,11 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                     <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                        <p><strong>Título:</strong> {title}</p>
                        <p><strong>Fecha:</strong> {date} a las {time}hs</p>
-                       <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
+                       <p><strong>Instructores:</strong> {instructors.map(f => `${f.legajo} - ${f.lastName}`).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
                            <p className="font-semibold">Total Asistentes: {attendees.length}</p>
                            <div className="max-h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                               {attendees.map(f => `${f.legajo} - ${f.lastName}`).join('; ')}
+                               {attendees.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
                            </div>
                        </div>
                     </div>

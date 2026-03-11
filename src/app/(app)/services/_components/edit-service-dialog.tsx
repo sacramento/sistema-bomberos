@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { updateService } from "@/services/services.service";
+import { useAuth } from "@/context/auth-context";
 
 const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat', 'Forestal', 'Especial', 'G.O.R.A', 'Buceo', 'Otros'];
 const summonMethods: SummonMethod[] = ['Alarma', 'VHF', 'Teléfono', 'En el Cuartel'];
@@ -61,8 +62,8 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between" disabled={disabled}>
-                    {selected ? `${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={disabled}>
+                    {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
             </PopoverTrigger>
@@ -73,7 +74,7 @@ const SingleFirefighterSelect = ({
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
                             {firefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
+                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}
                                 >
                                     <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
@@ -119,9 +120,9 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10" disabled={disabled}>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left" disabled={disabled}>
                     <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]}>{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
+                        {selected.length > 0 ? selected.map(s => <Badge variant="secondary" key={s[valueKey]} className="text-[10px]">{s.legajo ? `${s.legajo} - ${s[displayKey]}` : s[displayKey]}</Badge>) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -135,7 +136,7 @@ const MultiSelect = ({
                             {options.map((option) => (
                                 <CommandItem key={option[valueKey]} value={`${option.legajo} ${option[displayKey]}`} onSelect={() => handleSelect(option)}>
                                     <Check className={cn("mr-2 h-4 w-4", selected.some(s => s[valueKey] === option[valueKey]) ? "opacity-100" : "opacity-0")} />
-                                    {option.legajo ? `${option.legajo} - ${option[displayKey]}` : option[displayKey]}
+                                    {option.legajo ? `${option.legajo} - ${option[displayKey]}, ${option.firstName}` : option[displayKey]}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -149,6 +150,7 @@ const MultiSelect = ({
 export default function EditServiceDialog({ children, service, onServiceUpdated }: { children: React.ReactNode; service: Service; onServiceUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
 
   // Data sources
@@ -219,7 +221,7 @@ export default function EditServiceDialog({ children, service, onServiceUpdated 
             zone: Number(formData.zone),
         };
         
-        await updateService(service.id, serviceData);
+        await updateService(service.id, serviceData, actor);
         toast({ title: "¡Éxito!", description: "El servicio ha sido actualizado." });
         onServiceUpdated();
         setOpen(false);

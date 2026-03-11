@@ -57,6 +57,8 @@ const MultiFirefighterSelect = ({
         }
     };
     
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -71,7 +73,7 @@ const MultiFirefighterSelect = ({
                         {selected.length > 0 ? (
                             selected.map(f => (
                                 <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
+                                    {getDisplayText(f)}
                                 </Badge>
                             ))
                         ) : (

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';

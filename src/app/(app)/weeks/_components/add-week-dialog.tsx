@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -108,7 +109,7 @@ const MultiFirefighterSelect = ({
                     <div className="flex gap-1 flex-wrap">
                         {selected.length > 0 ? selected.map(f => (
                             <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                {`${f.legajo} - ${f.lastName}`}
+                                {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
                             </Badge>
                         )) : `Seleccionar ${title.toLowerCase()}...`}
                     </div>
@@ -304,12 +305,12 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
-                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'N/A'}</p>
-                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'N/A'}</p>
+                   <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}, ${lead.firstName}` : 'N/A'}</p>
+                   <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}, ${driver.firstName}` : 'N/A'}</p>
                    <div className="pt-2">
                        <p className="font-semibold">Integrantes: {allTeam.length}</p>
                        <div className="text-xs text-muted-foreground h-20 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                           {allTeam.map(f => `${f.legajo} - ${f.lastName}`).join('; ')}
+                           {allTeam.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
                        </div>
                    </div>
                    <div className="space-y-2">
