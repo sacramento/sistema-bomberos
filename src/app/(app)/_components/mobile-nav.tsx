@@ -9,10 +9,9 @@ import { LogOut, Flame, Menu, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import type { NavItem } from "../layout";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { navItems } from "../layout";
+import { navItems, type NavItem } from "@/app/lib/constants/nav-items";
 
 interface MobileNavProps {
     navItems: NavItem[];
@@ -23,7 +22,6 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
     const { user, logout, getActiveRole } = useAuth();
     
     const currentModule = React.useMemo(() => {
-        // Find the navItem that is the best match for the current path
         const bestMatch = [...navItems]
           .sort((a, b) => b.href.length - a.href.length)
           .find(item => pathname.startsWith(item.href));
@@ -49,7 +47,6 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
   
     const moduleNavItems = accessibleNavItems.filter(item => {
         const userRoleForItem = getActiveRole(item.href);
-        // We use the passed `navItems` prop which is already filtered for accessibility
         return item.module === currentModule && item.roles.includes(userRoleForItem);
     });
 
@@ -63,13 +60,18 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
     
     const userImage = `https://picsum.photos/seed/${user.id}/200`;
     const moduleTitles = {
-      asistencia: 'Módulo Asistencia',
-      semanas: 'Módulo Semanas',
-      movilidad: 'Módulo Movilidad',
-      materiales: 'Módulo Materiales',
-      general: 'Administración'
+      asistencia: 'Asistencia',
+      semanas: 'Semanas',
+      movilidad: 'Movilidad',
+      materiales: 'Materiales',
+      general: 'Administración',
+      aspirantes: 'Aspirantes',
+      ayudantia: 'Ayudantía',
+      roperia: 'Ropería',
+      servicios: 'Servicios',
+      cascada: 'Cascada'
     };
-    const currentModuleTitle = currentModule ? moduleTitles[currentModule] : "Menú";
+    const currentModuleTitle = currentModule ? moduleTitles[currentModule as keyof typeof moduleTitles] : "Menú";
 
     return (
         <header className="fixed top-0 left-0 right-0 z-50 border-b bg-background/95 backdrop-blur-sm md:hidden">

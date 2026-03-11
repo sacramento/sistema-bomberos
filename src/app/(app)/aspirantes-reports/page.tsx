@@ -1,10 +1,11 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ClassesReportTab, WorkshopsReportTab, CoursesReportTab } from '../reports/page'; // Re-using components from main reports
+import { ClassesReportTab, WorkshopsReportTab, CoursesReportTab } from "@/components/report-tabs";
 
 export default function AspiranteReportsPage() {
     const { getActiveRole } = useAuth();

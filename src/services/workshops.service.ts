@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
@@ -17,9 +18,6 @@ const cleanData = (obj: any): any => {
     );
 };
 
-/**
- * Retrieves all workshops.
- */
 export const getWorkshops = async (): Promise<Session[]> => {
     if (!db) return [];
     const workshopsCollection = collection(db, 'workshops');
@@ -44,18 +42,14 @@ export const getWorkshops = async (): Promise<Session[]> => {
             return results;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: workshopsCollection.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
 
-/**
- * Retrieves a workshop by its ID.
- */
 export const getWorkshopById = async (id: string): Promise<Session | null> => {
     if (!db) return null;
     const docRef = doc(db, 'workshops', id);
@@ -82,9 +76,6 @@ export const getWorkshopById = async (id: string): Promise<Session | null> => {
     });
 };
 
-/**
- * Adds a new workshop.
- */
 export const addWorkshop = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
     if (!db) return;
     const workshopsCollection = collection(db, 'workshops');
@@ -103,12 +94,11 @@ export const addWorkshop = (sessionData: Omit<Session, 'id' | 'attendance'>, act
     });
 
     setDoc(docRef, sessionToStore).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: sessionToStore,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -116,9 +106,6 @@ export const addWorkshop = (sessionData: Omit<Session, 'id' | 'attendance'>, act
     }
 };
 
-/**
- * Updates an existing workshop.
- */
 export const updateWorkshop = (id: string, sessionData: Partial<Session>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'workshops', id);
@@ -135,12 +122,11 @@ export const updateWorkshop = (id: string, sessionData: Partial<Session>, actor:
     });
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -148,19 +134,15 @@ export const updateWorkshop = (id: string, sessionData: Partial<Session>, actor:
     }
 };
 
-/**
- * Deletes a workshop.
- */
 export const deleteWorkshop = (id: string, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'workshops', id);
     
     deleteDoc(docRef).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -168,20 +150,16 @@ export const deleteWorkshop = (id: string, actor: LoggedInUser) => {
     }
 };
 
-/**
- * Updates attendance for a workshop.
- */
 export const updateWorkshopAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'workshops', id);
     
     updateDoc(docRef, { attendance }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: { attendance },
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {

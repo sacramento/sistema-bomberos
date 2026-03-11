@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ const MultiFirefighterSelect = ({
                         {selected.length > 0 ? (
                             selected.map(f => (
                                 <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {`${f.legajo} - ${f.lastName}, ${f.firstName.charAt(0)}.`}
+                                    {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
                                 </Badge>
                             ))
                         ) : (
@@ -272,7 +273,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
             </div>
             <div className="space-y-2 md:col-span-2 lg:col-span-3">
                 <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea id="observations" value={formData.observaciones || ''} onChange={handleInputChange} />
+                <Textarea id="observations" value={formData.observations || ''} onChange={handleInputChange} />
             </div>
           </div>
         </form>

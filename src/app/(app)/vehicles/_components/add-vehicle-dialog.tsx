@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,7 @@ const MultiFirefighterSelect = ({
                         {selected.length > 0 ? (
                             selected.map(f => (
                                 <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {`${f.legajo} - ${f.lastName}, ${f.firstName.charAt(0)}.`}
+                                    {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
                                 </Badge>
                             ))
                         ) : (
@@ -78,7 +79,7 @@ const MultiFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder="Buscar por legajo o apellido..." />
+                    <CommandInput placeholder="Buscar por legajo o nombre..." />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
