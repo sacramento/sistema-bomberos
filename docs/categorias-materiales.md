@@ -69,6 +69,7 @@ Este documento contiene la jerarquía completa de clasificación utilizada en el
     *   03.3.1 Calzos de rueda y bloques de madera
     *   03.3.2 Puntales telescópicos y sistemas de apuntalamiento
     *   03.3.3 Cintas de anclaje y trinquete
+    *   03.3.4 Protectores de paciente (Acrílicos / Mantas)
 
 ---
 
@@ -214,6 +215,7 @@ Este documento contiene la jerarquía completa de clasificación utilizada en el
     *   10.1.1 Conos, vallas y cintas de delimitación
     *   10.1.2 Señales reflectivas y paneles informativos
     *   10.1.3 Chalecos de identificación por función
+    *   10.1.4 Biombos y elementos de protección de escena
 *   **10.2 Contención y Limpieza**
     *   10.2.1 Kits para derrames (absorbentes, contenedores)
     *   10.2.2 Palas, escobas y equipos de barrido

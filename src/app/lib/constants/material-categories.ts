@@ -151,7 +151,8 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 items: [
                     { id: "03.3.1", label: "03.3.1 Calzos de rueda y bloques de madera" },
                     { id: "03.3.2", label: "03.3.2 Puntales telescópicos y sistemas de apuntalamiento" },
-                    { id: "03.3.3", label: "03.3.3 Cintas de anclaje y trinquete" }
+                    { id: "03.3.3", label: "03.3.3 Cintas de anclaje y trinquete" },
+                    { id: "03.3.4", label: "03.3.4 Protectores de paciente (Acrílicos / Mantas)" }
                 ]
             }
         ]
@@ -440,7 +441,8 @@ export const MATERIAL_CATEGORIES: MaterialCategory[] = [
                 items: [
                     { id: "10.1.1", label: "10.1.1 Conos, vallas y cintas de delimitación" },
                     { id: "10.1.2", label: "10.1.2 Señales reflectivas y paneles informativos" },
-                    { id: "10.1.3", label: "10.1.3 Chalecos de identificación por función" }
+                    { id: "10.1.3", label: "10.1.3 Chalecos de identificación por función" },
+                    { id: "10.1.4", label: "10.1.4 Biombos y elementos de protección de escena" }
                 ]
             },
             {
