@@ -14,8 +14,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
-import { User, GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from "@/lib/types";
+import { useState, useEffect, useMemo } from "react";
+import { GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, Firefighter, MaterialesModuleRole, AyudantiaModuleRole, RoperiaModuleRole, ServiciosModuleRole, CascadaModuleRole, AspirantesModuleRole } from "@/lib/types";
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
@@ -125,7 +125,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <Label>Bombero</Label>
                 <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                     <PopoverTrigger asChild className="col-span-3">
-                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10 text-left" disabled={dataLoading}>
+                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={dataLoading}>
                             {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o apellido...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -200,7 +200,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 </div>
             </div>
           </div>
-          <DialogFooter className="pt-4 border-t"><Button type="submit" disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2"/> : null} Guardar Usuario</Button></DialogFooter>
+          <DialogFooter className="pt-4 border-t">
+            <Button type="submit" disabled={loading}>
+                {loading && <Loader2 className="animate-spin mr-2 h-4 w-4"/>} 
+                Guardar Usuario
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

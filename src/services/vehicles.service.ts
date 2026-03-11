@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
@@ -10,9 +9,12 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const cleanData = (obj: any) => {
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
     );
 };
 
@@ -62,8 +64,8 @@ export const getVehicles = async (): Promise<Vehicle[]> => {
             const results = await Promise.all(vehiclesPromises);
             
             return results.sort((a, b) => {
-                const numA = a.numeroMovil || '';
-                const numB = b.numeroMovil || '';
+                const numA = a.numeroMovil || '999';
+                const numB = b.numeroMovil || '999';
                 return numA.localeCompare(numB, undefined, { numeric: true });
             });
         })

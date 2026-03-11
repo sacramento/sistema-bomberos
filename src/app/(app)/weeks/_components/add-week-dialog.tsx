@@ -20,7 +20,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addWeek } from "@/services/weeks.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Calendar as CalendarIcon, ArrowRight, ArrowLeft } from "lucide-react";
+import { Check, ChevronsUpDown, Calendar as CalendarIcon, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
@@ -51,7 +51,7 @@ const SingleFirefighterSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left text-xs">
                     {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
@@ -140,6 +140,7 @@ const MultiFirefighterSelect = ({
 export default function AddWeekDialog({ children, onWeekAdded, initialData }: { children: React.ReactNode; onWeekAdded: () => void; initialData?: Partial<Week> }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+  const { user: actor } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 3;
@@ -215,8 +216,8 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
 
   const handleSubmit = async () => {
     setLoading(true);
-    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver) {
-        toast({ title: "Error", description: "Faltan datos requeridos.", variant: "destructive" });
+    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver || !actor) {
+        toast({ title: "Error", description: "Faltan datos requeridos o sesión expirada.", variant: "destructive" });
         setLoading(false);
         return;
     }
@@ -233,7 +234,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
             observations
         };
         
-        await addWeek(weekData);
+        await addWeek(weekData, actor);
         toast({ title: "¡Éxito!", description: "Semana creada." });
         onWeekAdded();
         setOpen(false);
@@ -337,7 +338,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                  <div className="flex justify-between w-full">
                      <Button variant="outline" onClick={handleBack} disabled={step === 1 || loading}>
                         <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
-                    </Button>
+                     </Button>
                      {step < totalSteps ? (
                         <Button onClick={handleNext} disabled={loading}>
                             Siguiente <ArrowRight className="ml-2 h-4 w-4" />

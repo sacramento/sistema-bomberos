@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Material, Vehicle, LoggedInUser } from '@/lib/types';
@@ -11,9 +10,12 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const MATERIALS_COLLECTION = 'materials';
 
-const cleanData = (obj: any) => {
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
     );
 };
 

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -86,7 +85,7 @@ const MultiFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
                                     onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
@@ -290,7 +289,11 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
           </div>
         </form>
          <DialogFooter className="pt-4 border-t">
-            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>
+            <Button onClick={e => {
+                e.preventDefault();
+                const form = e.currentTarget.closest('div')?.querySelector('form');
+                form?.requestSubmit();
+            }} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Móvil
             </Button>

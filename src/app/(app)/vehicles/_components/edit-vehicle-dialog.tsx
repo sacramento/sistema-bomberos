@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Firefighter, Vehicle, Specialization } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateVehicle } from "@/services/vehicles.service";
@@ -278,7 +277,11 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
           </div>
         </form>
          <DialogFooter className="pt-4 border-t">
-            <Button onClick={e => handleSubmit(e as any)} disabled={loading}>
+            <Button onClick={e => {
+                e.preventDefault();
+                const form = e.currentTarget.closest('div')?.querySelector('form');
+                form?.requestSubmit();
+            }} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Cambios
             </Button>

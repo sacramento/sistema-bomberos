@@ -9,6 +9,15 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    return Object.fromEntries(
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
+    );
+};
+
 /**
  * Retrieves all services.
  */
@@ -59,14 +68,14 @@ export const addService = (serviceData: any, actor: LoggedInUser) => {
     const servicesCollection = collection(db, 'services');
     const docRef = doc(servicesCollection);
     
-    const dataToSave = { 
+    const dataToSave = cleanData({ 
         ...serviceData,
         year: new Date(serviceData.startDateTime).getFullYear(),
         manualId: Number(serviceData.manualId),
         zone: Number(serviceData.zone),
         status: serviceData.status || 'Activo',
         endDateTime: serviceData.endDateTime || serviceData.startDateTime
-    };
+    });
 
     setDoc(docRef, dataToSave).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -89,12 +98,10 @@ export const updateService = (id: string, serviceData: Partial<Service>, actor: 
     if (!db) return;
     const docRef = doc(db, 'services', id);
     
-    const dataToUpdate: any = { ...serviceData };
+    const dataToUpdate: any = cleanData({ ...serviceData });
     if (dataToUpdate.startDateTime) dataToUpdate.year = new Date(dataToUpdate.startDateTime).getFullYear();
     if (dataToUpdate.manualId) dataToUpdate.manualId = Number(dataToUpdate.manualId);
     if (dataToUpdate.zone) dataToUpdate.zone = Number(dataToUpdate.zone);
-    if (dataToUpdate.latitude === '') dataToUpdate.latitude = null;
-    if (dataToUpdate.longitude === '') dataToUpdate.longitude = null;
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
