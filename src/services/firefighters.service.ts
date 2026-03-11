@@ -6,7 +6,13 @@ import { db } from '@/lib/firebase/firestore';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
+import { FirestorePermissionError } from '@/firebase/errors';
+
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+    );
+};
 
 export const getFirefighters = async (): Promise<Firefighter[]> => {
     if (!db) return [];
@@ -20,11 +26,10 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
             return firefighters;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
@@ -33,20 +38,20 @@ export const addFirefighter = (firefighterData: Omit<Firefighter, 'id'>, actor: 
     if (!db) return;
     const firefightersCollection = collection(db, 'firefighters');
     const docRef = doc(firefightersCollection);
+    const cleaned = cleanData(firefighterData);
 
-    setDoc(docRef, { ...firefighterData, status: firefighterData.status || 'Active' })
+    setDoc(docRef, { ...cleaned, status: cleaned.status || 'Active' })
         .then(() => {
             if (actor) {
-                logAction(actor, 'CREATE_FIREFIGHTER', { entity: 'firefighter', id: docRef.id }, firefighterData);
+                logAction(actor, 'CREATE_FIREFIGHTER', { entity: 'firefighter', id: docRef.id }, cleaned);
             }
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'create',
-                requestResourceData: firefighterData,
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
+                requestResourceData: cleaned,
+            }));
         });
 };
 
@@ -56,17 +61,16 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
     const firefightersCollection = collection(db, 'firefighters');
     for (const firefighter of firefighters) {
         const docRef = doc(firefightersCollection); 
-        batch.set(docRef, {
+        batch.set(docRef, cleanData({
             ...firefighter,
             status: firefighter.status === 'Active' || firefighter.status === 'Inactive' ? firefighter.status : 'Active'
-        });
+        }));
     }
     batch.commit().catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: firefightersCollection.path,
             operation: 'write',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
     
     await logAction(actor, 'BATCH_IMPORT_FIREFIGHTERS', { entity: 'firefighter', id: 'batch' }, { count: firefighters.length });
@@ -75,16 +79,16 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
 export const updateFirefighter = (id: string, firefighterData: Partial<Omit<Firefighter, 'id'>>, actor: LoggedInUser) => {
     if (!db || !actor) return;
     const docRef = doc(db, 'firefighters', id);
+    const cleaned = cleanData(firefighterData);
     
-    updateDoc(docRef, firefighterData).then(() => {
-        logAction(actor, 'UPDATE_FIREFIGHTER', { entity: 'firefighter', id }, firefighterData);
+    updateDoc(docRef, cleaned).then(() => {
+        logAction(actor, 'UPDATE_FIREFIGHTER', { entity: 'firefighter', id }, cleaned);
     }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
-            requestResourceData: firefighterData,
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+            requestResourceData: cleaned,
+        }));
     });
 };
 
@@ -95,10 +99,9 @@ export const deleteFirefighter = (id: string, actor: LoggedInUser) => {
     deleteDoc(docRef).then(() => {
         logAction(actor, 'DELETE_FIREFIGHTER', { entity: 'firefighter', id });
     }).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        } satisfies SecurityRuleContext);
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 };

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { MaterialRequest, LoggedInUser } from '@/lib/types';
@@ -9,6 +10,12 @@ import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
 const REQUESTS_COLLECTION = 'material_requests';
+
+const cleanData = (obj: any) => {
+    return Object.fromEntries(
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+    );
+};
 
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
     if (!db) return [];
@@ -25,11 +32,10 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
             return requests.sort((a, b) => (a.requestedAt || '').localeCompare(b.requestedAt || ''));
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
@@ -37,20 +43,19 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
 export const createMaterialRequest = (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>) => {
     if (!db) return;
     const colRef = collection(db, REQUESTS_COLLECTION);
-    const dataToSave = {
+    const dataToSave = cleanData({
         ...requestData,
         status: 'PENDING' as const,
         requestedAt: new Date().toISOString(),
-    };
+    });
     
     const docRef = doc(colRef);
     setDoc(docRef, dataToSave).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: dataToSave,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 };
 
@@ -74,20 +79,19 @@ export const resolveMaterialRequest = async (requestId: string, status: 'APPROVE
         }
     }
     
-    const updateData = {
+    const updateData = cleanData({
         status,
         resolvedAt: new Date().toISOString(),
         resolvedById: actor.id,
         resolvedByName: actor.name,
-    };
+    });
 
     updateDoc(docRef, updateData).catch(async (serverError) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: updateData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     logAction(actor, status === 'APPROVED' ? 'UPDATE_MATERIAL' : 'UPDATE_USER', { entity: 'materialRequest', id: requestId }, { result: status });

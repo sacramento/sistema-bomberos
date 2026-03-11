@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,7 @@ const MultiFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
+                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
@@ -176,10 +177,10 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     });
   }, []);
 
-  const handleOpenChange = useCallback((isOpen: boolean) => {
+  const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
     if (!isOpen) resetForm();
-  }, [resetForm]);
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -244,7 +245,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label>Encargado de Mantenimiento</Label>
+                    <Label>Encargados de Mantenimiento</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={activeFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
@@ -253,7 +254,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     />
                 </div>
                  <div className="space-y-2">
-                    <Label>Encargado de Materiales</Label>
+                    <Label>Encargados de Materiales</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={activeFirefighters.filter(f => formData.materialEncargadoIds.includes(f.id))}

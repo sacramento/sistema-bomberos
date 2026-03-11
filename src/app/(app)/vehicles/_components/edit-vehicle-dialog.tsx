@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -230,7 +231,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label>Encargado de Mantenimiento</Label>
+                    <Label>Encargados de Mantenimiento</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={selectedEncargados}
@@ -240,7 +241,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     />
                 </div>
                  <div className="space-y-2">
-                    <Label>Encargado de Materiales</Label>
+                    <Label>Encargados de Materiales</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={selectedMaterialEncargados}

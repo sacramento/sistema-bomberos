@@ -10,10 +10,9 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-// Helper to clean undefined values for Firestore
 const cleanData = (obj: any) => {
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
+        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
     );
 };
 
