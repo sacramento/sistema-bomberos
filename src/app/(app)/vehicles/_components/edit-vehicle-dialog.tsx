@@ -21,96 +21,14 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { updateVehicle } from "@/services/vehicles.service";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Loader2 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
+import { MultiFirefighterSelect } from "@/components/firefighter-select";
 
 const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
-
-const MultiFirefighterSelect = ({ 
-    title, 
-    selected, 
-    onSelectedChange,
-    firefighters,
-    disabled,
-}: { 
-    title: string;
-    selected: Firefighter[]; 
-    onSelectedChange: (selected: Firefighter[]) => void;
-    firefighters: Firefighter[];
-    disabled?: boolean;
-}) => {
-    const [open, setOpen] = useState(false);
-    
-    const handleSelect = (firefighter: Firefighter) => {
-        const isSelected = selected.some(s => s.id === firefighter.id);
-        if (isSelected) {
-            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
-        } else {
-            onSelectedChange([...selected, firefighter]);
-        }
-    };
-    
-    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
-
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between h-auto min-h-10 text-left"
-                    disabled={disabled}
-                >
-                    <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? (
-                            selected.map(f => (
-                                <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {getDisplayText(f)}
-                                </Badge>
-                            ))
-                        ) : (
-                            `Seleccionar ${title.toLowerCase()}...`
-                        )}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder="Buscar por legajo o apellido..." />
-                    <CommandList>
-                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
-                        <CommandGroup>
-                            {firefighters.map((firefighter) => (
-                                <CommandItem
-                                    key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => handleSelect(firefighter)}
-                                >
-                                    <Check
-                                        className={cn(
-                                            "mr-2 h-4 w-4",
-                                            selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
-                                        )}
-                                    />
-                                    {getDisplayText(firefighter)}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated }: { children: React.ReactNode; vehicle: Vehicle; onVehicleUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -138,22 +56,9 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
       setFormData(vehicle);
       setSelectedEncargados(vehicle.encargados || []);
       setSelectedMaterialEncargados(vehicle.materialEncargados || []);
+      getFirefighters().then(setAllFirefighters);
     }
   }, [open, vehicle]);
-
-  useEffect(() => {
-    const fetchAllFirefighters = async () => {
-        if (open) {
-            try {
-                const data = await getFirefighters();
-                setAllFirefighters(data);
-            } catch (error) {
-                toast({ title: "Error", description: "No se pudieron cargar los bomberos.", variant: "destructive" });
-            }
-        }
-    };
-    fetchAllFirefighters();
-  }, [open, toast]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -166,13 +71,11 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo) {
+    if (!formData.numeroMovil || !formData.dominio || !formData.marca || !formData.modelo || !actor) {
         toast({ title: "Error", description: "Campos obligatorios incompletos.", variant: "destructive" });
         return;
     }
     
-    if (!actor) return;
-
     setLoading(true);
     try {
       const finalData = { 
@@ -182,7 +85,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
       };
       
       await updateVehicle(vehicle.id, finalData, actor);
-      toast({ title: "¡Éxito!", description: "Móvil actualizado." });
+      toast({ title: "¡Éxito!", description: "Móvil actualizado correctamente." });
       onVehicleUpdated();
       setOpen(false);
     } catch (error: any) {
@@ -233,7 +136,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     </Select>
                 </div>
                 <div className="space-y-2">
-                    <Label>Encargados de Mantenimiento</Label>
+                    <Label>Encargados Mecánica</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={selectedEncargados}
@@ -243,7 +146,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     />
                 </div>
                  <div className="space-y-2">
-                    <Label>Encargados de Materiales</Label>
+                    <Label>Encargados Materiales</Label>
                     <MultiFirefighterSelect
                         title="encargados"
                         selected={selectedMaterialEncargados}
@@ -282,7 +185,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
          <DialogFooter className="pt-4 border-t">
             <Button onClick={e => {
                 e.preventDefault();
-                const form = e.currentTarget.closest('div')?.querySelector('form');
+                const form = e.currentTarget.closest('div.flex-col')?.querySelector('form');
                 form?.requestSubmit();
             }} disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}

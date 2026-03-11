@@ -78,17 +78,12 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!name || !globalRole) {
-        toast({ title: "Error", description: "El nombre y el rol global son obligatorios.", variant: "destructive" });
-        return;
-    }
-     if (!actor) {
-        toast({ title: "Error", description: "No se pudo identificar al usuario actual.", variant: "destructive" });
+    if (!name || !globalRole || !actor) {
+        toast({ title: "Error", description: "Faltan datos requeridos.", variant: "destructive" });
         return;
     }
     
     setLoading(true);
-
     try {
         const updatedData: Partial<Omit<User, 'id'>> = {
             name,
@@ -106,19 +101,13 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
             }
         };
 
-        if (password) {
-            updatedData.password = password;
-        }
+        if (password) updatedData.password = password;
         
         await updateUser(user.id, updatedData, actor);
-
         toast({ title: "¡Éxito!", description: "El usuario ha sido actualizado." });
-        
         onUserUpdated();
         setOpen(false);
-
     } catch (error: any) {
-        console.error("Error updating user:", error);
         toast({ title: "Error", description: error.message || "No se pudo actualizar el usuario.", variant: "destructive" });
     } finally {
         setLoading(false);
@@ -132,9 +121,7 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
         <form onSubmit={handleSubmit} className="flex-1 flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="font-headline">Editar Usuario</DialogTitle>
-            <DialogDescription>
-              Modifique los detalles del usuario y sus roles por módulo.
-            </DialogDescription>
+            <DialogDescription>Modifique los detalles y roles por módulo.</DialogDescription>
           </DialogHeader>
 
           <div className="flex-grow overflow-y-auto py-4 pr-4 grid gap-6">
@@ -144,120 +131,96 @@ export default function EditUserDialog({ children, user, onUserUpdated }: { chil
 
             <div className="space-y-4">
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="id" className="text-right">Legajo</Label>
-                  <Input id="id" className="col-span-3" value={user.id} disabled />
+                  <Label className="text-right">Legajo</Label>
+                  <Input className="col-span-3" value={user.id} disabled />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name-edit" className="text-right">Nombre</Label>
-                  <Input id="name-edit" className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
+                  <Label className="text-right">Nombre</Label>
+                  <Input className="col-span-3" value={name} onChange={e => setName(e.target.value)} required />
                 </div>
                  <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="password-edit" className="text-right">Contraseña</Label>
-                  <Input id="password-edit" type="password" placeholder="Dejar en blanco para no cambiar" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} />
+                  <Label className="text-right text-xs">Contraseña</Label>
+                  <Input type="password" placeholder="Dejar vacío para no cambiar" className="col-span-3" value={password} onChange={e => setPassword(e.target.value)} />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="globalRole-edit" className="text-right">Rol Global</Label>
+                  <Label className="text-right">Rol Global</Label>
                   <Select onValueChange={(value) => setGlobalRole(value as GlobalRole)} value={globalRole} required>
-                    <SelectTrigger id="globalRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                    <SelectContent>{globalRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
             </div>
 
             <Separator />
-
-            <div className="space-y-2">
-                <h4 className="font-medium text-center">Roles por Módulo</h4>
-            </div>
+            <div className="space-y-2"><h4 className="font-medium text-center text-xs uppercase text-muted-foreground">Roles por Módulo</h4></div>
             
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="asistenciaRole-edit" className="text-right">Asistencia</Label>
+              <Label className="text-right text-xs">Asistencia</Label>
               <Select onValueChange={(value) => setAsistenciaRole(value as AttendanceModuleRole)} value={isMaster ? 'Administrador' : asistenciaRole} disabled={isMaster}>
-                <SelectTrigger id="asistenciaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{attendanceRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="aspirantesRole-edit" className="text-right">Aspirantes</Label>
+              <Label className="text-right text-xs">Aspirantes</Label>
               <Select onValueChange={(value) => setAspirantesRole(value as AspirantesModuleRole)} value={isMaster ? 'Administrador' : aspirantesRole} disabled={isMaster}>
-                <SelectTrigger id="aspirantesRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{aspirantesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="semanasRole-edit" className="text-right">Semanas</Label>
+              <Label className="text-right text-xs">Semanas</Label>
               <Select onValueChange={(value) => setSemanasRole(value as WeekModuleRole)} value={isMaster ? 'Administrador' : semanasRole} disabled={isMaster}>
-                <SelectTrigger id="semanasRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{weekRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="movilidadRole-edit" className="text-right">Movilidad</Label>
+              <Label className="text-right text-xs">Movilidad</Label>
               <Select onValueChange={(value) => setMovilidadRole(value as MobilityModuleRole)} value={isMaster ? 'Administrador' : movilidadRole} disabled={isMaster}>
-                <SelectTrigger id="movilidadRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{mobilityRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="materialesRole-edit" className="text-right">Materiales</Label>
+              <Label className="text-right text-xs">Materiales</Label>
               <Select onValueChange={(value) => setMaterialesRole(value as MaterialesModuleRole)} value={isMaster ? 'Administrador' : materialesRole} disabled={isMaster}>
-                <SelectTrigger id="materialesRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{materialesRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="ayudantiaRole-edit" className="text-right">Ayudantía</Label>
+              <Label className="text-right text-xs">Ayudantía</Label>
               <Select onValueChange={(value) => setAyudantiaRole(value as AyudantiaModuleRole)} value={isMaster ? 'Administrador' : ayudantiaRole} disabled={isMaster}>
-                <SelectTrigger id="ayudantiaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {ayudantiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{ayudantiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="roperiaRole-edit" className="text-right">Ropería</Label>
+              <Label className="text-right text-xs">Ropería</Label>
               <Select onValueChange={(value) => setRoperiaRole(value as RoperiaModuleRole)} value={isMaster ? 'Administrador' : roperiaRole} disabled={isMaster}>
-                <SelectTrigger id="roperiaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {roperiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{roperiaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
              <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="serviciosRole-edit" className="text-right">Servicios</Label>
+              <Label className="text-right text-xs">Servicios</Label>
               <Select onValueChange={(value) => setServiciosRole(value as ServiciosModuleRole)} value={isMaster ? 'Administrador' : serviciosRole} disabled={isMaster}>
-                <SelectTrigger id="serviciosRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{serviciosRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="cascadaRole-edit" className="text-right">Cascada</Label>
+              <Label className="text-right text-xs">Cascada</Label>
               <Select onValueChange={(value) => setCascadaRole(value as CascadaModuleRole)} value={isMaster ? 'Administrador' : cascadaRole} disabled={isMaster}>
-                <SelectTrigger id="cascadaRole-edit" className="col-span-3"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger className="col-span-3"><SelectValue /></SelectTrigger>
+                <SelectContent>{cascadaRoles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button type="submit" disabled={loading}>
-                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                {loading ? 'Guardando...' : 'Guardar Cambios'}
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null} Guardar Cambios
             </Button>
           </DialogFooter>
         </form>

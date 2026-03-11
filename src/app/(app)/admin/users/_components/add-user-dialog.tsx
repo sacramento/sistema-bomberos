@@ -20,11 +20,9 @@ import { GlobalRole, AttendanceModuleRole, WeekModuleRole, MobilityModuleRole, F
 import { addUser, getUsers } from "@/services/users.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { Separator } from "@/components/ui/separator";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { SingleFirefighterSelect } from "@/components/firefighter-select";
 
 const globalRoles: GlobalRole[] = ['Master', 'Usuario'];
 const attendanceRoles: AttendanceModuleRole[] = ['Administrador', 'Oficial', 'Instructor', 'Bombero', 'Ninguno'];
@@ -58,7 +56,6 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
   const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
   const [dataLoading, setDataLoading] = useState(false);
-  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -83,7 +80,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!selectedFirefighter || !password || !globalRole || !actor) {
-        toast({ variant: "destructive", title: "Error", description: "Complete todos los campos." });
+        toast({ variant: "destructive", title: "Error", description: "Complete todos los campos requeridos." });
         return;
     }
     setLoading(true);
@@ -105,14 +102,12 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
             }
         };
         addUser(selectedFirefighter.legajo, newUser, actor);
-        toast({ title: "¡Éxito!", description: "Usuario creado." });
+        toast({ title: "¡Éxito!", description: "Usuario creado correctamente." });
         onUserAdded(); setOpen(false);
     } catch (error: any) {
         toast({ variant: "destructive", title: "Error", description: error.message });
     } finally { setLoading(false); }
   };
-
-  const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
@@ -126,30 +121,15 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
           <div className="flex-grow overflow-y-auto py-4 pr-2 space-y-4">
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label>Bombero</Label>
-                <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-                    <PopoverTrigger asChild className="col-span-3">
-                        <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={dataLoading}>
-                            {selectedFirefighter ? getDisplayText(selectedFirefighter) : 'Seleccionar por legajo o apellido...'}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0" align="start">
-                        <Command>
-                            <CommandInput placeholder="Buscar por legajo o apellido..." />
-                            <CommandList>
-                                <CommandEmpty>Sin resultados.</CommandEmpty>
-                                <CommandGroup>
-                                    {availableFirefighters.map(f => (
-                                        <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setComboboxOpen(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
-                                            {getDisplayText(f)}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                <div className="col-span-3">
+                    <SingleFirefighterSelect 
+                        title="Bombero" 
+                        selected={selectedFirefighter} 
+                        onSelectedChange={setSelectedFirefighter} 
+                        firefighters={availableFirefighters}
+                        disabled={dataLoading}
+                    />
+                </div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label>Contraseña</Label>

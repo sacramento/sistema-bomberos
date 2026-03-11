@@ -17,16 +17,19 @@ import { useState, useEffect } from "react";
 import { Firefighter, Driver, Habilitacion } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addDriver, getDrivers } from "@/services/drivers.service";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Loader2 } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
+import { SingleFirefighterSelect, MultiFirefighterSelect } from "@/components/firefighter-select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const habilitaciones: Habilitacion[] = ['Practica', 'Liviana', 'Pesada', 'Timonel'];
 
-const MultiSelect = ({
+const MultiStringSelect = ({
     title,
     options,
     selected,
@@ -81,7 +84,6 @@ const MultiSelect = ({
     );
 };
 
-
 export default function AddDriverDialog({ children, onDriverAdded }: { children: React.ReactNode; onDriverAdded: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
@@ -92,8 +94,6 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
   const [availableFirefighters, setAvailableFirefighters] = useState<Firefighter[]>([]);
   const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
   const [selectedHabilitaciones, setSelectedHabilitaciones] = useState<Habilitacion[]>([]);
-  
-  const [firefighterComboboxOpen, setFirefighterComboboxOpen] = useState(false);
 
   useEffect(() => {
     const fetchAvailableFirefighters = async () => {
@@ -122,13 +122,11 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!selectedFirefighter || selectedHabilitaciones.length === 0) {
-        toast({ title: "Error", description: "Complete todos los campos.", variant: "destructive" });
+    if (!selectedFirefighter || selectedHabilitaciones.length === 0 || !actor) {
+        toast({ title: "Error", description: "Complete todos los campos requeridos.", variant: "destructive" });
         return;
     }
     
-    if (!actor) return;
-
     setLoading(true);
     try {
         const newDriverData: Omit<Driver, 'id' | 'firefighter'> = {
@@ -136,7 +134,7 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
             habilitaciones: selectedHabilitaciones
         };
         await addDriver(newDriverData, actor);
-        toast({ title: "¡Éxito!", description: "Chofer agregado." });
+        toast({ title: "¡Éxito!", description: "Chofer agregado correctamente." });
         onDriverAdded();
         setOpen(false);
     } catch (error: any) {
@@ -145,8 +143,6 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
         setLoading(false);
     }
   }
-
-  const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
@@ -160,34 +156,17 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
                 <Label>Integrante</Label>
-                <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={dataLoading}>
-                            {selectedFirefighter ? getDisplayText(selectedFirefighter) : 'Seleccionar por legajo o apellido...'}
-                            <Check className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[300px] p-0" align="start">
-                            <Command>
-                            <CommandInput placeholder="Buscar por legajo o apellido..." />
-                            <CommandList>
-                                <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
-                                <CommandGroup>
-                                    {availableFirefighters.map((f) => (
-                                        <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setFirefighterComboboxOpen(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
-                                            {getDisplayText(f)}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                <SingleFirefighterSelect 
+                    title="Integrante" 
+                    selected={selectedFirefighter} 
+                    onSelectedChange={setSelectedFirefighter} 
+                    firefighters={availableFirefighters}
+                    disabled={dataLoading}
+                />
             </div>
             <div className="space-y-2">
                 <Label>Habilitaciones</Label>
-                <MultiSelect 
+                <MultiStringSelect 
                     title="Habilitaciones"
                     options={habilitaciones.map(h => ({ value: h, label: h }))}
                     selected={selectedHabilitaciones}
@@ -196,7 +175,10 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
             </div>
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={loading || dataLoading}>{loading && <Loader2 className="animate-spin mr-2 h-4 w-4"/>} Guardar Chofer</Button>
+            <Button type="submit" disabled={loading || dataLoading}>
+                {loading && <Loader2 className="animate-spin mr-2 h-4 w-4"/>} 
+                Guardar Chofer
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

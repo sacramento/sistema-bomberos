@@ -55,16 +55,11 @@ export default function MyWeekPage() {
     
     useEffect(() => {
         fetchAllData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
-    const handleDataChange = () => {
-        fetchAllData();
-    };
-
-    const { weeksToShow, isRedirecting, canManage, loggedInFirefighter } = useMemo(() => {
+    const { weeksToShow, activeWeek, canManage, loggedInFirefighter } = useMemo(() => {
         if (loading || !user) {
-            return { weeksToShow: [], isRedirecting: false, canManage: false, loggedInFirefighter: null };
+            return { weeksToShow: [], activeWeek: null, canManage: false, loggedInFirefighter: null };
         }
 
         const firefighterData = allFirefighters.find(f => f.legajo === user.id);
@@ -75,10 +70,8 @@ export default function MyWeekPage() {
         if (isPrivileged || activeRole === 'Oficial') {
             visibleWeeks = [...allWeeks];
         } else if (activeRole === 'Encargado' && firefighterData) {
-            // Encargado sees all weeks from their firehouse
             visibleWeeks = allWeeks.filter(week => week.firehouse === firefighterData.firehouse);
         } else {
-            // Bombero role sees only weeks they are a member of
             visibleWeeks = allWeeks.filter(week => 
                 week.allMembers?.some(member => member.legajo === user.id)
             );
@@ -86,34 +79,33 @@ export default function MyWeekPage() {
 
         const sortedWeeks = visibleWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
         
-        let shouldRedirect = false;
-        if (!isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
-            const today = new Date();
-            const assignedWeeks = allWeeks.filter(week => 
-                week.allMembers?.some(member => member.legajo === user.id)
-            );
-            const activeWeek = assignedWeeks.find(week => {
-                const startDate = startOfDay(parseISO(week.periodStartDate));
-                const endDate = endOfDay(parseISO(week.periodEndDate));
-                return isWithinInterval(today, { start: startDate, end: endDate });
-            });
-            if (activeWeek) {
-                shouldRedirect = true;
-                router.replace(`/weeks/${activeWeek.id}`);
-            }
-        }
+        const today = new Date();
+        const foundActiveWeek = allWeeks.find(week => {
+            const isMember = week.allMembers?.some(member => member.legajo === user.id);
+            if (!isMember) return false;
+            const startDate = startOfDay(parseISO(week.periodStartDate));
+            const endDate = endOfDay(parseISO(week.periodEndDate));
+            return isWithinInterval(today, { start: startDate, end: endDate });
+        });
         
         return {
             weeksToShow: sortedWeeks, 
-            isRedirecting: shouldRedirect,
+            activeWeek: foundActiveWeek || null,
             canManage: canManageWeeks,
             loggedInFirefighter: firefighterData || null
         };
 
-    }, [allWeeks, allFirefighters, user, activeRole, loading, router, isPrivileged]);
+    }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged]);
+
+    // Handle redirection in a proper side-effect
+    useEffect(() => {
+        if (!loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
+            router.replace(`/weeks/${activeWeek.id}`);
+        }
+    }, [loading, activeWeek, isPrivileged, activeRole, router]);
 
 
-    if (loading || isRedirecting) {
+    if (loading) {
         return (
              <>
                 <PageHeader title={isPrivileged ? "Gestión de Semanas" : "Mis Semanas"} description="Gestiona y visualiza las semanas de guardia." />
@@ -129,10 +121,10 @@ export default function MyWeekPage() {
         <>
             <PageHeader 
                 title={isPrivileged ? "Gestión de Semanas" : "Mis Semanas"}
-                description={isPrivileged ? "Cree, edite o clone semanas de guardia." : "Aquí puedes ver todas tus semanas asignadas y gestionar las que te correspondan."}
+                description={isPrivileged ? "Cree, edite o clone semanas de guardia." : "Aquí puedes ver todas tus semanas asignadas."}
             >
                 {(activeRole === 'Master' || activeRole === 'Administrador') && (
-                    <AddWeekDialog onWeekAdded={handleDataChange}>
+                    <AddWeekDialog onWeekAdded={fetchAllData}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Crear Semana
@@ -144,7 +136,7 @@ export default function MyWeekPage() {
             <WeekList 
                 weeks={weeksToShow} 
                 isLoading={loading} 
-                onDataChange={handleDataChange} 
+                onDataChange={fetchAllData} 
                 canManageGenerally={canManage} 
                 loggedInFirefighter={loggedInFirefighter}
             />
