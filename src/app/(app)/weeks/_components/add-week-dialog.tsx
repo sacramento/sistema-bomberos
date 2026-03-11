@@ -21,122 +21,21 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { addWeek } from "@/services/weeks.service";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Check, ChevronsUpDown, Calendar as CalendarIcon, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Badge } from "@/components/ui/badge";
+import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/auth-context";
+import { SingleFirefighterSelect, MultiFirefighterSelect } from "@/components/firefighter-select";
 
 const stationOptions = [
     { value: 'Cuartel 1', label: 'Cuartel 1' },
     { value: 'Cuartel 2', label: 'Cuartel 2' },
     { value: 'Cuartel 3', label: 'Cuartel 3' },
 ];
-
-const SingleFirefighterSelect = ({
-    title,
-    selected,
-    onSelectedChange,
-    firefighters
-}: {
-    title: string;
-    selected: Firefighter | null;
-    onSelectedChange: (firefighter: Firefighter | null) => void;
-    firefighters: Firefighter[];
-}) => {
-    const [open, setOpen] = useState(false);
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left text-xs">
-                    {selected ? `${selected.legajo} - ${selected.lastName}, ${selected.firstName}` : `Seleccionar ${title.toLowerCase()}...`}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
-                    <CommandList>
-                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
-                        <CommandGroup>
-                            {firefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => { onSelectedChange(firefighter); setOpen(false); }}>
-                                    <Check className={cn("mr-2 h-4 w-4", selected?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
-
-const MultiFirefighterSelect = ({ 
-    title, 
-    selected, 
-    onSelectedChange,
-    firefighters,
-    disabledIds = []
-}: { 
-    title: string;
-    selected: Firefighter[]; 
-    onSelectedChange: (selected: Firefighter[]) => void;
-    firefighters: Firefighter[];
-    disabledIds?: string[];
-}) => {
-    const [open, setOpen] = useState(false);
-    const handleSelect = (firefighter: Firefighter) => {
-        if (disabledIds.includes(firefighter.id)) return;
-        const isSelected = selected.some(s => s.id === firefighter.id);
-        if (isSelected) {
-            onSelectedChange(selected.filter(s => s.id !== firefighter.id));
-        } else {
-            onSelectedChange([...selected, firefighter]);
-        }
-    };
-    
-    return (
-        <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
-                    <div className="flex gap-1 flex-wrap">
-                        {selected.length > 0 ? selected.map(f => (
-                            <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
-                            </Badge>
-                        )) : `Seleccionar ${title.toLowerCase()}...`}
-                    </div>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[300px] p-0" align="start">
-                <Command>
-                    <CommandInput placeholder={`Buscar por legajo o apellido...`} />
-                    <CommandList>
-                        <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
-                        <CommandGroup>
-                            {firefighters.map((firefighter) => (
-                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
-                                    onSelect={() => handleSelect(firefighter)}
-                                    disabled={disabledIds.includes(firefighter.id)}>
-                                    <Check className={cn("mr-2 h-4 w-4", selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0")} />
-                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
-                                </CommandItem>
-                            ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
-        </Popover>
-    );
-};
 
 export default function AddWeekDialog({ children, onWeekAdded, initialData }: { children: React.ReactNode; onWeekAdded: () => void; initialData?: Partial<Week> }) {
   const [open, setOpen] = useState(false);

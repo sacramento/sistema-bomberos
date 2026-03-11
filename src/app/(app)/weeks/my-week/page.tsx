@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -96,6 +97,7 @@ export default function MyWeekPage() {
 
     }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged]);
 
+    // Redirección manejada correctamente en useEffect para evitar errores de Build
     useEffect(() => {
         if (!loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             router.replace(`/weeks/${activeWeek.id}`);
