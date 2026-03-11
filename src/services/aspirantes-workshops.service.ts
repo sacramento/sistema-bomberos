@@ -2,11 +2,20 @@
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, deleteDoc, query, orderBy, updateDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, deleteDoc, query, orderBy, updateDoc, setDoc, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    return Object.fromEntries(
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
+    );
+};
 
 /**
  * Retrieves all aspirante workshops.
@@ -45,6 +54,35 @@ export const getAspiranteWorkshops = async (): Promise<Session[]> => {
 };
 
 /**
+ * Retrieves an aspirante workshop by its ID.
+ */
+export const getAspiranteWorkshopById = async (id: string): Promise<Session | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'aspirantes-workshops', id);
+    
+    return getDoc(docRef).then(async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const firefighters = await getFirefighters();
+            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+            const getFirefighterObjects = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
+            
+            return {
+                id: docSnap.id,
+                ...data,
+                instructors: getFirefighterObjects(data.instructorIds),
+                assistants: getFirefighterObjects(data.assistantIds),
+                attendees: getFirefighterObjects(data.attendeeIds),
+            } as Session;
+        }
+        return null;
+    }).catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'get' }));
+        return null;
+    });
+};
+
+/**
  * Adds a new workshop for aspirantes.
  */
 export const addAspiranteWorkshop = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
@@ -52,7 +90,7 @@ export const addAspiranteWorkshop = (sessionData: Omit<Session, 'id' | 'attendan
     const workshopsCollection = collection(db, 'aspirantes-workshops');
     const docRef = doc(workshopsCollection);
     
-    const sessionToStore = {
+    const sessionToStore = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -62,7 +100,7 @@ export const addAspiranteWorkshop = (sessionData: Omit<Session, 'id' | 'attendan
         assistantIds: sessionData.assistants.map(f => f.id),
         attendeeIds: sessionData.attendees.map(f => f.id),
         attendance: {},
-    };
+    });
 
     setDoc(docRef, sessionToStore).catch(async (error) => {
         const permissionError = new FirestorePermissionError({
@@ -85,7 +123,7 @@ export const updateAspiranteWorkshop = (id: string, sessionData: Partial<Session
     if (!db) return;
     const docRef = doc(db, 'aspirantes-workshops', id);
     
-    const dataToUpdate: any = {
+    const dataToUpdate: any = cleanData({
         title: sessionData.title,
         description: sessionData.description,
         specialization: sessionData.specialization,
@@ -94,9 +132,7 @@ export const updateAspiranteWorkshop = (id: string, sessionData: Partial<Session
         instructorIds: sessionData.instructors?.map(f => f.id),
         assistantIds: sessionData.assistants?.map(f => f.id),
         attendeeIds: sessionData.attendees?.map(f => f.id),
-    };
-
-    Object.keys(dataToUpdate).forEach(key => dataToUpdate[key] === undefined && delete dataToUpdate[key]);
+    });
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
         const permissionError = new FirestorePermissionError({

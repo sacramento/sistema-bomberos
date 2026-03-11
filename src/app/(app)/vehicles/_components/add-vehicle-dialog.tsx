@@ -66,7 +66,7 @@ const MultiFirefighterSelect = ({
                         {selected.length > 0 ? (
                             selected.map(f => (
                                 <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {`${f.legajo} - ${f.lastName}`}
+                                    {`${f.legajo} - ${f.lastName}, ${f.firstName.charAt(0)}.`}
                                 </Badge>
                             ))
                         ) : (
@@ -85,7 +85,7 @@ const MultiFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
+                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
                                     onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check

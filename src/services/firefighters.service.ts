@@ -1,16 +1,18 @@
-
 'use client';
 
 import { Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const cleanData = (obj: any) => {
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
     );
 };
 
@@ -31,6 +33,25 @@ export const getFirefighters = async (): Promise<Firefighter[]> => {
                 operation: 'list',
             }));
             return [];
+        });
+};
+
+export const getFirefighterById = async (id: string): Promise<Firefighter | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'firefighters', id);
+    return getDoc(docRef)
+        .then((docSnap) => {
+            if (docSnap.exists()) {
+                return { id: docSnap.id, ...docSnap.data() } as Firefighter;
+            }
+            return null;
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            }));
+            return null;
         });
 };
 
