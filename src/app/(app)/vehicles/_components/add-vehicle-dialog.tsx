@@ -88,7 +88,7 @@ const MultiFirefighterSelect = ({
                             {firefighters.map((firefighter) => (
                                 <CommandItem
                                     key={firefighter.id}
-                                    value={`${firefighter.legajo} ${firefighter.firstName} ${firefighter.lastName}`}
+                                    value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`}
                                     onSelect={() => handleSelect(firefighter)}
                                 >
                                     <Check
@@ -97,7 +97,7 @@ const MultiFirefighterSelect = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
+                                    {getDisplayText(firefighter)}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

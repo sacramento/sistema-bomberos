@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -77,7 +78,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     setRoperiaRole('Ninguno'); setServiciosRole('Ninguno'); setCascadaRole('Ninguno');
   };
 
-  const isMaster = globalRole === 'Master';
+  const isMaster = useMemo(() => globalRole === 'Master', [globalRole]);
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -111,6 +112,8 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
     } finally { setLoading(false); }
   };
 
+  const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -126,7 +129,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                 <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
                     <PopoverTrigger asChild className="col-span-3">
                         <Button variant="outline" role="combobox" aria-expanded={comboboxOpen} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={dataLoading}>
-                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o apellido...'}
+                            {selectedFirefighter ? getDisplayText(selectedFirefighter) : 'Seleccionar por legajo o apellido...'}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
@@ -139,7 +142,7 @@ export default function AddUserDialog({ children, onUserAdded }: { children: Rea
                                     {availableFirefighters.map(f => (
                                         <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setComboboxOpen(false); }}>
                                             <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
-                                            {f.legajo} - {f.lastName}, {f.firstName}
+                                            {getDisplayText(f)}
                                         </CommandItem>
                                     ))}
                                 </CommandGroup>

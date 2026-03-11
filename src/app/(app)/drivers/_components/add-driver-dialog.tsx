@@ -146,6 +146,8 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
     }
   }
 
+  const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if (!isOpen) resetForm(); }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -160,9 +162,9 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
                 <Label>Integrante</Label>
                 <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10 text-left" disabled={dataLoading}>
-                            {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : 'Seleccionar por legajo o apellido...'}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10 text-left text-xs" disabled={dataLoading}>
+                            {selectedFirefighter ? getDisplayText(selectedFirefighter) : 'Seleccionar por legajo o apellido...'}
+                            <Check className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[300px] p-0" align="start">
@@ -174,7 +176,7 @@ export default function AddDriverDialog({ children, onDriverAdded }: { children:
                                     {availableFirefighters.map((f) => (
                                         <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setSelectedFirefighter(f); setFirefighterComboboxOpen(false); }}>
                                             <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === f.id ? "opacity-100" : "opacity-0")} />
-                                            {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
+                                            {getDisplayText(f)}
                                         </CommandItem>
                                     ))}
                                 </CommandGroup>

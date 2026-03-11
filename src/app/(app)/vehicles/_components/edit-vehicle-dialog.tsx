@@ -101,7 +101,7 @@ const MultiFirefighterSelect = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
+                                    {getDisplayText(firefighter)}
                                 </CommandItem>
                             ))}
                         </CommandGroup>

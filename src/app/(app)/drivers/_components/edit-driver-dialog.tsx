@@ -49,7 +49,7 @@ const MultiSelect = ({
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10">
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-left">
                     <div className="flex gap-1 flex-wrap">
                          {selected.length > 0 ? (
                             selected.map(value => <Badge variant="secondary" key={value}>{value}</Badge>)
@@ -123,7 +123,7 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
 
         toast({
             title: "¡Éxito!",
-            description: `Las habilitaciones del chofer ${driver.firefighter?.lastName} han sido actualizadas.`,
+            description: `Las habilitaciones del chofer han sido actualizadas.`,
         });
         
         onDriverUpdated();
@@ -141,6 +141,8 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
     }
   }
 
+  const getDisplayText = (f?: Firefighter) => f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : 'Chofer desconocido';
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
@@ -149,7 +151,7 @@ export default function EditDriverDialog({ children, driver, onDriverUpdated }: 
           <DialogHeader>
             <DialogTitle className="font-headline">Editar Habilitaciones de Chofer</DialogTitle>
             <DialogDescription>
-                {driver.firefighter ? `${driver.firefighter.legajo} - ${driver.firefighter.lastName}, ${driver.firefighter.firstName}` : 'Chofer desconocido'}
+                {getDisplayText(driver.firefighter)}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

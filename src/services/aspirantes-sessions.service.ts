@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Session, Firefighter, AttendanceStatus, LoggedInUser } from '@/lib/types';
@@ -47,6 +48,32 @@ export const getAspiranteSessions = async (): Promise<Session[]> => {
             }));
             return [];
         });
+};
+
+export const getAspiranteSessionById = async (id: string): Promise<Session | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'aspirantes-sessions', id);
+    
+    return getDoc(docRef).then(async (docSnap) => {
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            const firefighters = await getFirefighters();
+            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+            const getFirefighterObjects = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
+            
+            return {
+                id: docSnap.id,
+                ...data,
+                instructors: getFirefighterObjects(data.instructorIds),
+                assistants: getFirefighterObjects(data.assistantIds),
+                attendees: getFirefighterObjects(data.attendeeIds),
+            } as Session;
+        }
+        return null;
+    }).catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'get' }));
+        return null;
+    });
 };
 
 export const addAspiranteSession = (sessionData: Omit<Session, 'id' | 'attendance'>, actor: LoggedInUser) => {
@@ -121,32 +148,6 @@ export const deleteAspiranteSession = (id: string, actor: LoggedInUser) => {
     if (actor) {
         logAction(actor, 'DELETE_SESSION', { entity: 'aspiranteSession', id });
     }
-};
-
-export const getAspiranteSessionById = async (id: string): Promise<Session | null> => {
-    if (!db) return null;
-    const docRef = doc(db, 'aspirantes-sessions', id);
-    
-    return getDoc(docRef).then(async (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const firefighters = await getFirefighters();
-            const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-            const getFirefighterObjects = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
-            
-            return {
-                id: docSnap.id,
-                ...data,
-                instructors: getFirefighterObjects(data.instructorIds),
-                assistants: getFirefighterObjects(data.assistantIds),
-                attendees: getFirefighterObjects(data.attendeeIds),
-            } as Session;
-        }
-        return null;
-    }).catch(async () => {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'get' }));
-        return null;
-    });
 };
 
 export const updateAspiranteSessionAttendance = (id: string, attendance: Record<string, AttendanceStatus>, actor: LoggedInUser) => {
