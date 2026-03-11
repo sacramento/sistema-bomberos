@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -54,6 +53,8 @@ const MultiFirefighterSelect = ({
         }
     };
     
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
+
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
@@ -67,7 +68,7 @@ const MultiFirefighterSelect = ({
                         {selected.length > 0 ? (
                             selected.map(f => (
                                 <Badge variant="secondary" key={f.id} className="text-[10px]">
-                                    {`${f.legajo} - ${f.lastName}, ${f.firstName}`}
+                                    {getDisplayText(f)}
                                 </Badge>
                             ))
                         ) : (
@@ -79,7 +80,7 @@ const MultiFirefighterSelect = ({
             </PopoverTrigger>
             <PopoverContent className="w-[300px] p-0" align="start">
                 <Command>
-                    <CommandInput placeholder="Buscar por legajo o nombre..." />
+                    <CommandInput placeholder="Buscar por legajo o apellido..." />
                     <CommandList>
                         <CommandEmpty>No se encontraron bomberos.</CommandEmpty>
                         <CommandGroup>
@@ -122,7 +123,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     ano: new Date().getFullYear(),
     kilometraje: 0,
     cuartel: 'Cuartel 1',
-    especialidad: 'FUEGO',
+    especialidad: 'GENERAL',
     capacidadAgua: 0,
     tipoVehiculo: 'Liviana',
     traccion: '4x4',
@@ -167,7 +168,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         ano: new Date().getFullYear(),
         kilometraje: 0,
         cuartel: 'Cuartel 1',
-        especialidad: 'FUEGO',
+        especialidad: 'GENERAL',
         capacidadAgua: 0,
         tipoVehiculo: 'Liviana',
         traccion: '4x4',
@@ -193,8 +194,8 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
 
     setLoading(true);
     try {
-      addVehicle(formData, actor);
-      toast({ title: "¡Éxito!", description: "Móvil registrado." });
+      await addVehicle(formData, actor);
+      toast({ title: "¡Éxito!", description: "Móvil registrado correctamente." });
       onVehicleAdded();
       setOpen(false);
     } catch (error: any) {
