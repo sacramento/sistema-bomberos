@@ -12,9 +12,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddSanctionDialog from "./_components/add-sanction-dialog";
 import EditSanctionDialog from "./_components/edit-sanction-dialog";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -22,7 +23,6 @@ import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
@@ -36,7 +36,7 @@ export default function SanctionsPage() {
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const { toast } = useToast();
-    const { getActiveRole } = useAuth();
+    const { getActiveRole, user: actor } = useAuth();
     const pathname = usePathname();
 
     // Filters
@@ -74,13 +74,14 @@ export default function SanctionsPage() {
         });
     }, [sanctions, filterDate, filterFirefighter]);
 
-    const handleDelete = async (sanction: Sanction) => {
+    const handleDelete = async (sanctionId: string) => {
+        if (!actor) return;
         try {
-            await deleteSanction(sanction.id);
+            await deleteSanction(sanctionId, actor);
             toast({ title: "Éxito", description: "La sanción ha sido eliminada." });
             fetchData();
         } catch (error: any) {
-             toast({ title: "Error", description: "No se pudo eliminar la sanción.", variant: "destructive" });
+             toast({ title: "Error", description: error.message || "No se pudo eliminar la sanción.", variant: "destructive" });
         }
     };
 
@@ -187,11 +188,11 @@ export default function SanctionsPage() {
                                                             <AlertDialogContent>
                                                                 <AlertDialogHeader>
                                                                     <AlertDialogTitle>¿Eliminar sanción?</AlertDialogTitle>
-                                                                    <AlertDialogDescription>Esta acción es permanente.</AlertDialogDescription>
+                                                                    <AlertDialogDescription>Esta acción es permanente y eliminará el registro de {sanction.firefighterName}.</AlertDialogDescription>
                                                                 </AlertDialogHeader>
                                                                 <AlertDialogFooter>
                                                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                    <AlertDialogAction onClick={() => handleDelete(sanction)} variant="destructive">Eliminar</AlertDialogAction>
+                                                                    <AlertDialogAction onClick={() => handleDelete(sanction.id)} variant="destructive">Eliminar</AlertDialogAction>
                                                                 </AlertDialogFooter>
                                                             </AlertDialogContent>
                                                         </AlertDialog>
@@ -214,26 +215,26 @@ export default function SanctionsPage() {
                             <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5"/> Filtros</CardTitle></CardHeader>
                             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Mes de Inicio</Label>
+                                    <Label>Período de Tiempo</Label>
                                     <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}>
                                                 <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {filterDate?.from ? format(filterDate.from, "MMMM yyyy", { locale: es }) : "Cualquier mes"}
+                                                {filterDate?.from ? (filterDate.to ? (<>{format(filterDate.from, "P", { locale: es })} - {format(filterDate.to, "P", { locale: es })}</>) : (format(filterDate.from, "P", { locale: es }))) : (<span>Todos los registros</span>)}
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-auto p-0" align="start">
-                                            <Calendar mode="single" selected={filterDate?.from} onSelect={(d) => setFilterDate(d ? { from: d, to: d } : undefined)} locale={es} />
+                                            <Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2} />
                                         </PopoverContent>
                                     </Popover>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Bombero</Label>
                                     <Select value={filterFirefighter} onValueChange={setFilterFirefighter}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {firefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.legajo} - {f.lastName}</SelectItem>)}
+                                            <SelectItem value="all">Todos los bomberos</SelectItem>
+                                            {firefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.legajo} - {f.lastName}, {f.firstName}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>

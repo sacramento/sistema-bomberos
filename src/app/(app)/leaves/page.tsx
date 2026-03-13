@@ -3,17 +3,18 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Download, Loader2, Calendar as CalendarIcon, Check, ChevronsUpDown, Filter } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Download, Loader2, Calendar as CalendarIcon, Filter } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Leave, Firefighter } from "@/lib/types";
 import { getLeaves, deleteLeave } from "@/services/leaves.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import AddLeaveDialog from "./_components/add-leave-dialog";
-import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, startOfDay, endOfDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -28,7 +29,6 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LeavesPage() {
     const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -36,7 +36,7 @@ export default function LeavesPage() {
     const [loading, setLoading] = useState(true);
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const { toast } = useToast();
-    const { getActiveRole, user } = useAuth();
+    const { getActiveRole, user: actor } = useAuth();
     const pathname = usePathname();
 
     // Filters state
@@ -85,8 +85,9 @@ export default function LeavesPage() {
     };
 
     const handleDelete = async (leaveId: string) => {
+        if (!actor) return;
         try {
-            await deleteLeave(leaveId);
+            await deleteLeave(leaveId, actor);
             toast({ title: "Éxito", description: "La licencia ha sido eliminada." });
             fetchData();
         } catch (error: any) {
@@ -245,10 +246,10 @@ export default function LeavesPage() {
                                 <div className="space-y-2">
                                     <Label>Bombero</Label>
                                     <Select value={filterFirefighter} onValueChange={setFilterFirefighter}>
-                                        <SelectTrigger><SelectValue/></SelectTrigger>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar bombero"/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los bomberos</SelectItem>
-                                            {firefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.legajo} - {f.lastName}</SelectItem>)}
+                                            {firefighters.map(f => <SelectItem key={f.id} value={f.id}>{f.legajo} - {f.lastName}, {f.firstName}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
