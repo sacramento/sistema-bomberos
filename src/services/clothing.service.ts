@@ -1,3 +1,4 @@
+
 'use client';
 
 import { ClothingItem, Firefighter, LoggedInUser } from '@/lib/types';
@@ -7,6 +8,15 @@ import { getFirefighters } from './firefighters.service';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    return Object.fromEntries(
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
+    );
+};
 
 /**
  * Retrieves all clothing items, ordered by code.
@@ -41,23 +51,47 @@ export const getClothingItems = async (): Promise<ClothingItem[]> => {
 };
 
 /**
+ * Gets next sequence for auto code generation in clothing.
+ */
+export const getNextClothingSequence = async (prefix: string): Promise<number> => {
+    if (!db) return 1;
+    const colRef = collection(db, 'clothing');
+    
+    return getDocs(colRef).then(snapshot => {
+        const matchingCodes = snapshot.docs
+            .map(d => d.data().code as string)
+            .filter(code => code && code.startsWith(prefix));
+        
+        if (matchingCodes.length === 0) return 1;
+        
+        const sequences = matchingCodes.map(code => {
+            const seqStr = code.replace(prefix, '');
+            return parseInt(seqStr, 10) || 0;
+        });
+        
+        return Math.max(...sequences) + 1;
+    }).catch(() => 1);
+};
+
+/**
  * Adds a new clothing item.
  */
 export const addClothingItem = (itemData: Omit<ClothingItem, 'id' | 'firefighter'>, actor: LoggedInUser) => {
     if (!db) return;
     const clothingCollection = collection(db, 'clothing');
     const docRef = doc(clothingCollection);
+    const cleaned = cleanData(itemData);
 
-    setDoc(docRef, itemData).catch(async (error) => {
+    setDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
-            requestResourceData: itemData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'CREATE_CLOTHING_ITEM', { entity: 'clothingItem', id: docRef.id }, itemData);
+        logAction(actor, 'CREATE_CLOTHING_ITEM', { entity: 'clothingItem', id: docRef.id }, cleaned);
     }
 };
 
@@ -67,17 +101,18 @@ export const addClothingItem = (itemData: Omit<ClothingItem, 'id' | 'firefighter
 export const updateClothingItem = (id: string, itemData: Partial<Omit<ClothingItem, 'id' | 'firefighter'>>, actor: LoggedInUser) => {
     if (!db) return;
     const docRef = doc(db, 'clothing', id);
+    const cleaned = cleanData(itemData);
     
-    updateDoc(docRef, itemData).catch(async (error) => {
+    updateDoc(docRef, cleaned).catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
-            requestResourceData: itemData,
+            requestResourceData: cleaned,
         }));
     });
 
     if (actor) {
-        logAction(actor, 'UPDATE_CLOTHING_ITEM', { entity: 'clothingItem', id }, itemData);
+        logAction(actor, 'UPDATE_CLOTHING_ITEM', { entity: 'clothingItem', id }, cleaned);
     }
 };
 
@@ -110,7 +145,7 @@ export const batchAddClothingItems = async (items: any[], actor: LoggedInUser) =
 
     items.forEach(item => {
         const docRef = doc(clothingCollection);
-        batch.set(docRef, item);
+        batch.set(docRef, cleanData(item));
     });
 
     batch.commit().catch(async (error) => {
