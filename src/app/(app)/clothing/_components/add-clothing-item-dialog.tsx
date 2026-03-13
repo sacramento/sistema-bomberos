@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,10 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { addClothingItem, getNextClothingSequence } from "@/services/clothing.service";
 import { CLOTHING_CATEGORIES } from "@/app/lib/constants/clothing-categories";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Loader2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { SingleFirefighterSelect } from "@/components/firefighter-select";
 
 const clothingStates: ClothingItem['state'][] = ['Nuevo', 'Bueno', 'Regular', 'Malo', 'Baja'];
 
@@ -44,14 +42,15 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
     const [categoryId, setCategoryId] = useState('');
     const [subCategoryId, setSubCategoryId] = useState('');
     const [itemTypeId, setItemTypeId] = useState('');
-    const [type, setType] = useState('');
     const [size, setSize] = useState('');
     const [brand, setBrand] = useState('');
-    const [model, setModel] = useState('');
-    const [state, setState] = useState<ClothingItem['state']>('Bueno');
+    const [model, setModelo] = useState('');
+    const [state, setState] = useState<ClothingItem['state']>('Nuevo');
     const [observations, setObservations] = useState('');
+    
+    // Assignment state
+    const [assignmentType, setAssignmentType] = useState<'deposito' | 'firefighter'>('deposito');
     const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
-    const [firefighterComboboxOpen, setFirefighterComboboxOpen] = useState(false);
 
     const activeFirefighters = useMemo(() => firefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [firefighters]);
 
@@ -65,24 +64,25 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
 
     const resetForm = useCallback(() => {
         setCode(''); setCategoryId(''); setSubCategoryId(''); setItemTypeId('');
-        setType(''); setSize(''); setBrand(''); setModel('');
-        setState('Bueno'); setObservations(''); setSelectedFirefighter(null);
+        setSize(''); setBrand(''); setModelo('');
+        setState('Nuevo'); setObservations(''); 
+        setAssignmentType('deposito');
+        setSelectedFirefighter(null);
     }, []);
     
      useEffect(() => {
         if (open) {
             if (initialData) {
-                // Pre-fill form for cloning
-                setCode(''); // Code must be unique
+                setCode(''); // Unique code required
                 setCategoryId(initialData.categoryId || '');
                 setSubCategoryId(initialData.subCategoryId || '');
                 setItemTypeId(initialData.itemTypeId || '');
-                setType(initialData.type || '');
                 setSize(initialData.size || '');
                 setBrand(initialData.brand || '');
-                setModel(initialData.model || '');
-                setState(initialData.state || 'Bueno');
+                setModelo(initialData.model || '');
+                setState(initialData.state || 'Nuevo');
                 setObservations(initialData.observations || '');
+                setAssignmentType(initialData.firefighterId ? 'firefighter' : 'deposito');
                 setSelectedFirefighter(initialData.firefighter || null);
             } else {
                 resetForm();
@@ -112,14 +112,18 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
         e.preventDefault();
         
         if (!code || !categoryId || !subCategoryId || !itemTypeId || !size || !state) {
-            toast({ variant: "destructive", title: "Campos incompletos", description: "Por favor, complete todos los campos requeridos." });
+            toast({ variant: "destructive", title: "Campos incompletos", description: "Por favor, complete todos los campos técnicos." });
+            return;
+        }
+
+        if (assignmentType === 'firefighter' && !selectedFirefighter) {
+            toast({ variant: "destructive", title: "Asignación requerida", description: "Debe seleccionar un bombero para realizar la asignación." });
             return;
         }
 
         setLoading(true);
         try {
             const selectedItemTypeLabel = itemTypes.find(i => i.id === itemTypeId)?.label || 'Prenda';
-            // Extract the label part from "01.1.1 Label"
             const finalTypeLabel = selectedItemTypeLabel.split(' ').slice(1).join(' ');
 
             const dataToSave: Omit<ClothingItem, 'id' | 'firefighter'> = {
@@ -133,12 +137,12 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
                 model,
                 observations,
                 state,
-                firefighterId: selectedFirefighter?.id,
-                deliveredAt: selectedFirefighter ? new Date().toISOString() : undefined,
+                firefighterId: assignmentType === 'firefighter' ? selectedFirefighter?.id : undefined,
+                deliveredAt: assignmentType === 'firefighter' ? new Date().toISOString() : undefined,
             };
 
             await addClothingItem(dataToSave, actor);
-            toast({ title: "¡Éxito!", description: "La prenda ha sido agregada al inventario." });
+            toast({ title: "¡Éxito!", description: "La prenda ha sido registrada correctamente." });
             onSave();
             resetForm();
             setOpen(false);
@@ -148,20 +152,18 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
             setLoading(false);
         }
     };
-    
-    const isCloning = !!initialData;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             {children && <DialogTrigger asChild>{children}</DialogTrigger>}
             <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
-                    <DialogTitle className="font-headline">{isCloning ? `Clonar Prenda "${initialData.type}"` : 'Agregar Prenda al Inventario'}</DialogTitle>
+                    <DialogTitle className="font-headline">{initialData ? `Clonar Prenda "${initialData.type}"` : 'Agregar Prenda al Inventario'}</DialogTitle>
                     <DialogDescription>
-                        {isCloning ? 'Complete un nuevo código único. El resto de los datos han sido copiados.' : 'Complete los detalles de la nueva prenda.'}
+                        {initialData ? 'Complete un nuevo código único. El resto de los datos han sido copiados.' : 'Complete los detalles de la nueva prenda.'}
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-6 py-4">
                     
                     <div className="space-y-4 border p-4 rounded-lg bg-muted/20">
                         <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación Operativa</Label>
@@ -194,44 +196,41 @@ export default function AddClothingItemDialog({ children, onSave, firefighters, 
                         <div className="space-y-2"><Label htmlFor="size">Talle</Label><Input id="size" value={size} onChange={(e) => setSize(e.target.value)} required placeholder="Ej: L, 42, XL" /></div>
                         <div className="space-y-2"><Label>Estado</Label><Select value={state} onValueChange={(v) => setState(v as any)} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label htmlFor="brand">Marca</Label><Input id="brand" value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="Opcional" /></div>
-                        <div className="space-y-2"><Label htmlFor="model">Modelo</Label><Input id="model" value={model} onChange={(e) => setModel(e.target.value)} placeholder="Opcional" /></div>
+                        <div className="space-y-2"><Label htmlFor="model">Modelo</Label><Input id="model" value={model} onChange={(e) => setModelo(e.target.value)} placeholder="Opcional" /></div>
+                    </div>
 
-                        <div className="space-y-2 md:col-span-3">
-                            <Label>Asignar a Integrante (Opcional)</Label>
-                             <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10">
-                                        {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar por legajo o nombre..."}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Buscar por legajo o nombre..." />
-                                        <CommandList><CommandEmpty>No se encontraron integrantes.</CommandEmpty>
-                                        <CommandItem onSelect={() => { setSelectedFirefighter(null); setFirefighterComboboxOpen(false); }}>
-                                            <Check className={cn("mr-2 h-4 w-4", !selectedFirefighter ? "opacity-100" : "opacity-0")} />
-                                            Dejar en Depósito
-                                        </CommandItem>
-                                        <CommandGroup>
-                                            {activeFirefighters.map((firefighter) => (
-                                                <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
-                                                    <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup></CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                         <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="observations">Observaciones</Label>
-                            <Textarea id="observations" value={observations} onChange={(e) => setObservations(e.target.value)} placeholder="Detalles de la entrega, estado, etc."/>
-                        </div>
+                    <div className="space-y-4 border p-4 rounded-lg bg-primary/5 border-primary/10">
+                        <Label className="text-xs font-bold uppercase text-primary">Ubicación y Asignación (Obligatorio)</Label>
+                        <RadioGroup value={assignmentType} onValueChange={(v) => setAssignmentType(v as any)} className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="deposito" id="type-deposito" />
+                                <Label htmlFor="type-deposito" className="font-semibold cursor-pointer">En Depósito</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="firefighter" id="type-firefighter" />
+                                <Label htmlFor="type-firefighter" className="font-semibold cursor-pointer">Asignar a Bombero</Label>
+                            </div>
+                        </RadioGroup>
+
+                        {assignmentType === 'firefighter' && (
+                            <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+                                <Label className="mb-2 block">Seleccionar Bombero</Label>
+                                <SingleFirefighterSelect
+                                    title="Bombero"
+                                    selected={selectedFirefighter}
+                                    onSelectedChange={setSelectedFirefighter}
+                                    firefighters={activeFirefighters}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="observations">Observaciones</Label>
+                        <Textarea id="observations" value={observations} onChange={(e) => setObservations(e.target.value)} placeholder="Detalles de la entrega, estado, etc."/>
                     </div>
                 </form>
-                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2"/> : null} {loading ? "Guardando..." : "Guardar Prenda"}</Button></DialogFooter>
+                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} {loading ? "Guardando..." : "Guardar Prenda"}</Button></DialogFooter>
             </DialogContent>
         </Dialog>
     );

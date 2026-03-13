@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,10 @@ import { useState, useMemo, useEffect } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { updateClothingItem, getNextClothingSequence } from "@/services/clothing.service";
 import { CLOTHING_CATEGORIES } from "@/app/lib/constants/clothing-categories";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Check, ChevronsUpDown, Loader2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Sparkles } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
+import { SingleFirefighterSelect } from "@/components/firefighter-select";
 
 const clothingStates: ClothingItem['state'][] = ['Nuevo', 'Bueno', 'Regular', 'Malo', 'Baja'];
 
@@ -44,8 +42,10 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
     const [model, setModel] = useState('');
     const [state, setState] = useState<ClothingItem['state']>('Bueno');
     const [observations, setObservations] = useState('');
+    
+    // Assignment state
+    const [assignmentType, setAssignmentType] = useState<'deposito' | 'firefighter'>('deposito');
     const [selectedFirefighter, setSelectedFirefighter] = useState<Firefighter | null>(null);
-    const [firefighterComboboxOpen, setFirefighterComboboxOpen] = useState(false);
 
     const activeFirefighters = useMemo(() => firefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [firefighters]);
 
@@ -60,6 +60,7 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
             setModel(item.model || '');
             setState(item.state || 'Bueno');
             setObservations(item.observations || '');
+            setAssignmentType(item.firefighterId ? 'firefighter' : 'deposito');
             setSelectedFirefighter(item.firefighter || null);
         }
     }, [open, item]);
@@ -92,6 +93,11 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
             return;
         }
 
+        if (assignmentType === 'firefighter' && !selectedFirefighter) {
+            toast({ variant: "destructive", title: "Asignación requerida", description: "Debe seleccionar un bombero para realizar la asignación." });
+            return;
+        }
+
         setLoading(true);
         try {
             const selectedItemTypeLabel = itemTypes.find(i => i.id === itemTypeId)?.label || 'Prenda';
@@ -108,11 +114,13 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
                 model,
                 observations,
                 state,
-                firefighterId: selectedFirefighter?.id,
-                deliveredAt: selectedFirefighter?.id !== item.firefighterId ? new Date().toISOString() : item.deliveredAt,
+                firefighterId: assignmentType === 'firefighter' ? selectedFirefighter?.id : undefined,
+                deliveredAt: (assignmentType === 'firefighter' && selectedFirefighter?.id !== item.firefighterId) 
+                    ? new Date().toISOString() 
+                    : (assignmentType === 'firefighter' ? item.deliveredAt : undefined),
             };
 
-            await updateClothingItem(item.id, dataToSave, actor);
+            await updateClothingItem(item.id, dataToUpdate, actor);
             toast({ title: "¡Éxito!", description: "La prenda ha sido actualizada." });
             onSave();
             setOpen(false);
@@ -131,7 +139,7 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
                     <DialogTitle className="font-headline">Editar Prenda</DialogTitle>
                     <DialogDescription>Modifique los detalles de la prenda.</DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4 space-y-6 py-4">
                     
                     <div className="space-y-4 border p-4 rounded-lg bg-muted/20">
                         <Label className="text-xs font-bold uppercase text-muted-foreground">Clasificación</Label>
@@ -165,45 +173,40 @@ export default function EditClothingItemDialog({ children, onSave, firefighters,
                         <div className="space-y-2"><Label>Estado</Label><Select value={state} onValueChange={(v) => setState(v as any)} required><SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger><SelectContent>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                         <div className="space-y-2"><Label htmlFor="brand-edit">Marca</Label><Input id="brand-edit" value={brand} onChange={(e) => setBrand(e.target.value)} /></div>
                         <div className="space-y-2"><Label htmlFor="model-edit">Modelo</Label><Input id="model-edit" value={model} onChange={(e) => setModel(e.target.value)} /></div>
+                    </div>
 
-                        <div className="space-y-2 md:col-span-3">
-                            <Label>Asignar a Integrante</Label>
-                            <Popover open={firefighterComboboxOpen} onOpenChange={setFirefighterComboboxOpen}>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" aria-expanded={firefighterComboboxOpen} className="w-full justify-between h-auto min-h-10">
-                                        {selectedFirefighter ? `${selectedFirefighter.legajo} - ${selectedFirefighter.lastName}, ${selectedFirefighter.firstName}` : "Seleccionar por legajo o nombre..."}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Buscar por legajo o nombre..." />
-                                        <CommandList>
-                                            <CommandEmpty>No se encontraron integrantes.</CommandEmpty>
-                                            <CommandItem onSelect={() => { setSelectedFirefighter(null); setFirefighterComboboxOpen(false); }}>
-                                                <Check className={cn("mr-2 h-4 w-4", !selectedFirefighter ? "opacity-100" : "opacity-0")} />
-                                                Dejar en Depósito
-                                            </CommandItem>
-                                            <CommandGroup>
-                                                {activeFirefighters.map((firefighter) => (
-                                                    <CommandItem key={firefighter.id} value={`${firefighter.legajo} ${firefighter.lastName} ${firefighter.firstName}`} onSelect={() => { setSelectedFirefighter(firefighter); setFirefighterComboboxOpen(false); }}>
-                                                        <Check className={cn("mr-2 h-4 w-4", selectedFirefighter?.id === firefighter.id ? "opacity-100" : "opacity-0")} />
-                                                        {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-2 md:col-span-3">
-                            <Label htmlFor="observations-edit">Observaciones</Label>
-                            <Textarea id="observations-edit" value={observations} onChange={(e) => setObservations(e.target.value)} />
-                        </div>
+                    <div className="space-y-4 border p-4 rounded-lg bg-primary/5 border-primary/10">
+                        <Label className="text-xs font-bold uppercase text-primary">Ubicación y Asignación (Obligatorio)</Label>
+                        <RadioGroup value={assignmentType} onValueChange={(v) => setAssignmentType(v as any)} className="flex flex-col sm:flex-row gap-4">
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="deposito" id="edit-deposito" />
+                                <Label htmlFor="edit-deposito" className="font-semibold cursor-pointer">En Depósito</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="firefighter" id="edit-firefighter" />
+                                <Label htmlFor="edit-firefighter" className="font-semibold cursor-pointer">Asignado a Bombero</Label>
+                            </div>
+                        </RadioGroup>
+
+                        {assignmentType === 'firefighter' && (
+                            <div className="pt-2 animate-in fade-in slide-in-from-top-1">
+                                <Label className="mb-2 block">Cambiar Asignación</Label>
+                                <SingleFirefighterSelect
+                                    title="Bombero"
+                                    selected={selectedFirefighter}
+                                    onSelectedChange={setSelectedFirefighter}
+                                    firefighters={activeFirefighters}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="observations-edit">Observaciones</Label>
+                        <Textarea id="observations-edit" value={observations} onChange={(e) => setObservations(e.target.value)} />
                     </div>
                 </form>
-                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2"/> : null} {loading ? "Guardando..." : "Guardar Cambios"}</Button></DialogFooter>
+                <DialogFooter className="border-t pt-4"><Button onClick={handleSubmit} disabled={loading}>{loading ? <Loader2 className="animate-spin mr-2 h-4 w-4"/> : null} {loading ? "Guardando..." : "Guardar Cambios"}</Button></DialogFooter>
             </DialogContent>
         </Dialog>
     );
