@@ -28,6 +28,7 @@ import { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LeavesPage() {
     const [leaves, setLeaves] = useState<Leave[]>([]);
@@ -87,7 +88,7 @@ export default function LeavesPage() {
         try {
             await deleteLeave(leaveId);
             toast({ title: "Éxito", description: "La licencia ha sido eliminada." });
-            fetchLeaves();
+            fetchData();
         } catch (error: any) {
              toast({ title: "Error", description: error.message || "No se pudo eliminar la licencia.", variant: "destructive" });
         }
@@ -192,7 +193,7 @@ export default function LeavesPage() {
                                                                     </EditLeaveDialog>
                                                                     <DropdownMenuSeparator />
                                                                     <AlertDialogTrigger asChild>
-                                                                        <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={e => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
+                                                                        <DropdownMenuItem className='text-destructive focus:text-destructive' onSelect={(e) => e.preventDefault()}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                                                                     </AlertDialogTrigger>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
