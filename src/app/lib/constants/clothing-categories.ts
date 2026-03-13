@@ -35,10 +35,12 @@ export const CLOTHING_CATEGORIES: ClothingCategory[] = [
                 id: "01.2",
                 label: "01.2 Multirol (Forestal / Rescate)",
                 items: [
-                    { id: "01.2.1", label: "01.2.1 Cascos Multirol" },
-                    { id: "01.2.2", label: "01.2.2 Trajes Forestales / Rescate" },
-                    { id: "01.2.3", label: "01.2.3 Guantes de Rescate" },
-                    { id: "01.2.4", label: "01.2.4 Calzado Forestal Específico" }
+                    { id: "01.2.1", label: "01.2.1 Cascos Multirol / Forestales" },
+                    { id: "01.2.2", label: "01.2.2 Antiparras y Protección Ocular" },
+                    { id: "01.2.3", label: "01.2.3 Chaquetas Forestal / Rescate" },
+                    { id: "01.2.4", label: "01.2.4 Pantalones Forestal / Rescate" },
+                    { id: "01.2.5", label: "01.2.5 Guantes de Rescate / Forestal" },
+                    { id: "01.2.6", label: "01.2.6 Calzado Forestal Específico" }
                 ]
             }
         ]

@@ -1,7 +1,7 @@
 
 # Estructura de Categorías - Ropería (Inventario de Indumentaria)
 
-Este documento contiene la jerarquía de clasificación técnica para el inventario de EPP y uniformes.
+Este documento contiene la jerarquía de clasificación técnica para el inventario de EPP y uniformes del personal.
 
 ---
 
@@ -12,10 +12,12 @@ Este documento contiene la jerarquía de clasificación técnica para el inventa
     *   01.1.3 Equipos de Protección (Chaquetón/Pantalón)
     *   01.1.4 Accesorios (Guantes/Esclavinas)
 *   **01.2 Multirol (Forestal / Rescate)**
-    *   01.2.1 Cascos Multirol
-    *   01.2.2 Trajes Forestales / Rescate
-    *   01.2.3 Guantes de Rescate
-    *   01.2.4 Calzado Forestal Específico
+    *   01.2.1 Cascos Multirol / Forestales
+    *   01.2.2 Antiparras y Protección Ocular
+    *   01.2.3 Chaquetas Forestal / Rescate
+    *   01.2.4 Pantalones Forestal / Rescate
+    *   01.2.5 Guantes de Rescate / Forestal
+    *   01.2.6 Calzado Forestal Específico
 
 ---
 
