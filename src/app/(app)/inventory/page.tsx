@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,8 +23,8 @@ import AddInventoryItemDialog from "./_components/add-inventory-item-dialog";
 import EditInventoryItemDialog from "./_components/edit-inventory-item-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { INVENTORY_CATEGORIES } from "@/app/lib/constants/inventory-categories";
 
-const itemTypes: GeneralInventoryItem['tipo'][] = ['Moviliario', 'electronica', 'herramientas'];
 const cuarteles: GeneralInventoryItem['cuartel'][] = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Comision'];
 const ubicaciones: GeneralInventoryItem['ubicacion'][] = ['Baño', 'Matera', 'Cocina', 'Roperia', 'Cadetes', 'Deposito', 'Jefatura', 'Cambiaderos', 'Patio', 'Playón', 'Guardia', 'Ayudantia'];
 
@@ -32,14 +32,14 @@ export default function InventoryPage() {
     const [items, setItems] = useState<GeneralInventoryItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [filterType, setFilterType] = useState('all');
+    const [filterCategory, setFilterCategory] = useState('all');
     const [filterCuartel, setFilterCuartel] = useState('all');
     const [filterUbicacion, setFilterUbicacion] = useState('all');
-    const [activeTab, setActiveTab] = useState('search');
+    const [activeTab, setActiveTab] = useState('inventory');
 
 
     const { toast } = useToast();
-    const { getActiveRole } = useAuth();
+    const { getActiveRole, user } = useAuth();
     const pathname = usePathname();
 
     const activeRole = getActiveRole(pathname);
@@ -67,8 +67,9 @@ export default function InventoryPage() {
     };
 
     const handleDelete = async (itemId: string) => {
+        if (!user) return;
         try {
-            await deleteGeneralInventoryItem(itemId);
+            await deleteGeneralInventoryItem(itemId, user);
             toast({ title: "¡Éxito!", description: "El ítem ha sido eliminado." });
             fetchItems();
         } catch (error: any) {
@@ -94,18 +95,19 @@ export default function InventoryPage() {
     
     const generalFilteredItems = useMemo(() => {
         return items.filter(item => {
-            if (filterType !== 'all' && item.tipo !== filterType) return false;
+            if (filterCategory !== 'all' && item.categoryId !== filterCategory) return false;
             if (filterCuartel !== 'all' && item.cuartel !== filterCuartel) return false;
             if (filterUbicacion !== 'all' && item.ubicacion !== filterUbicacion) return false;
             return true;
         });
-    }, [items, filterType, filterCuartel, filterUbicacion]);
+    }, [items, filterCategory, filterCuartel, filterUbicacion]);
 
     const searchFilteredItems = useMemo(() => {
         if (!searchTerm) return [];
         return items.filter(item => 
             item.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            item.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+            item.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.marca?.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [items, searchTerm]);
 
@@ -115,10 +117,9 @@ export default function InventoryPage() {
                 <TableHeader>
                     <TableRow>
                         <TableHead>Código</TableHead>
-                        <TableHead>Nombre</TableHead>
+                        <TableHead>Nombre / Marca</TableHead>
                         <TableHead>Cuartel</TableHead>
                         <TableHead>Ubicación</TableHead>
-                        <TableHead>Tipo</TableHead>
                         <TableHead>Estado</TableHead>
                         <TableHead>Condición</TableHead>
                         {canManage && <TableHead><span className="sr-only">Acciones</span></TableHead>}
@@ -127,26 +128,34 @@ export default function InventoryPage() {
                 <TableBody>
                     {loading ? (
                         Array.from({ length: 5 }).map((_, i) => (
-                            <TableRow key={i}><TableCell colSpan={canManage ? 8 : 7}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                            <TableRow key={i}><TableCell colSpan={canManage ? 7 : 6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                         ))
                     ) : itemsToList.length > 0 ? (
                         itemsToList.map(item => (
                             <TableRow key={item.id}>
-                                <TableCell className="font-mono">{item.codigo}</TableCell>
-                                <TableCell className="font-medium">{item.nombre}</TableCell>
-                                <TableCell>{item.cuartel}</TableCell>
-                                <TableCell>{item.ubicacion}</TableCell>
-                                <TableCell><Badge variant="outline">{item.tipo}</Badge></TableCell>
-                                <TableCell><Badge variant={item.estado === 'En Servicio' ? 'default' : 'destructive'} className={item.estado === 'En Servicio' ? 'bg-green-600' : ''}>{item.estado}</Badge></TableCell>
-                                <TableCell>{item.condicion}</TableCell>
-                                {canManage && (
+                                <TableCell className="font-mono text-xs font-bold">{item.codigo}</TableCell>
                                 <TableCell>
+                                    <div className="flex flex-col">
+                                        <span className="font-medium text-sm">{item.nombre}</span>
+                                        {item.marca && <span className="text-[10px] text-muted-foreground">{item.marca} {item.modelo}</span>}
+                                    </div>
+                                </TableCell>
+                                <TableCell className="text-xs">{item.cuartel}</TableCell>
+                                <TableCell className="text-xs">{item.ubicacion}</TableCell>
+                                <TableCell>
+                                    <Badge variant={item.estado === 'En Servicio' ? 'default' : 'destructive'} className={cn("text-[10px]", item.estado === 'En Servicio' ? 'bg-green-600' : '')}>
+                                        {item.estado}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs">{item.condicion}</TableCell>
+                                {canManage && (
+                                <TableCell className="text-right">
                                     <AlertDialog>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon"><MoreHorizontal /></Button>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
+                                            <DropdownMenuContent align="end">
                                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                                 <EditInventoryItemDialog item={item} onItemUpdated={handleDataChange}>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
@@ -173,7 +182,7 @@ export default function InventoryPage() {
                             </TableRow>
                         ))
                     ) : (
-                        <TableRow><TableCell colSpan={canManage ? 8 : 7} className="h-24 text-center">{emptyMessage}</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={canManage ? 7 : 6} className="h-24 text-center text-muted-foreground italic">{emptyMessage}</TableCell></TableRow>
                     )}
                 </TableBody>
             </Table>
@@ -182,7 +191,7 @@ export default function InventoryPage() {
 
     return (
         <>
-            <PageHeader title="Inventario" description="Gestione el inventario de los cuarteles y la comisión.">
+            <PageHeader title="Inventario General" description="Gestione los muebles y útiles de las dependencias.">
                 {canManage && (
                     <AddInventoryItemDialog onItemAdded={handleDataChange}>
                         <Button>
@@ -202,25 +211,22 @@ export default function InventoryPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline">Búsqueda de Ítem</CardTitle>
-                            <CardDescription>
-                                Ingrese un código o nombre para buscar, o use el escáner QR.
-                            </CardDescription>
+                            <CardDescription>Ingrese un código, nombre o marca para buscar.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="search-term">Buscar por Nombre o Código</Label>
+                                    <Label htmlFor="search-term">Buscar</Label>
                                     <div className="relative">
                                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                        <Input id="search-term" placeholder="Buscar..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                                        <Input id="search-term" placeholder="Código, nombre o marca..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                     </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Acción Rápida</Label>
                                     <QrScannerDialog onScan={handleQrScan}>
-                                        <Button size="lg" variant="outline" className="w-full">
-                                            <QrCode className="mr-2 h-6 w-6"/>
-                                            Escanear Código QR
+                                        <Button size="lg" variant="outline" className="w-full h-12">
+                                            <QrCode className="mr-2 h-5 w-5"/> Escanear QR
                                         </Button>
                                     </QrScannerDialog>
                                 </div>
@@ -230,10 +236,7 @@ export default function InventoryPage() {
                     {searchTerm && (
                          <Card className="mt-6">
                             <CardHeader>
-                                <CardTitle className="font-headline">Resultados de la Búsqueda</CardTitle>
-                                <CardDescription>
-                                    Mostrando {searchFilteredItems.length} resultados para "{searchTerm}".
-                                </CardDescription>
+                                <CardTitle className="font-headline text-lg">Resultados de la Búsqueda</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 {renderItemsTable(searchFilteredItems, "No se encontraron ítems con ese criterio.")}
@@ -249,12 +252,12 @@ export default function InventoryPage() {
                         <CardContent>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                 <div className="space-y-2">
-                                    <Label>Tipo</Label>
-                                    <Select value={filterType} onValueChange={setFilterType}>
+                                    <Label>Categoría</Label>
+                                    <Select value={filterCategory} onValueChange={setFilterCategory}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="all">Todos</SelectItem>
-                                            {itemTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
+                                            <SelectItem value="all">Todas</SelectItem>
+                                            {INVENTORY_CATEGORIES.map(cat => <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -284,8 +287,8 @@ export default function InventoryPage() {
 
                     <Card>
                         <CardHeader>
-                            <CardTitle className="font-headline">Listado de Ítems</CardTitle>
-                            <CardDescription>Mostrando {generalFilteredItems.length} ítems según los filtros aplicados.</CardDescription>
+                            <CardTitle className="font-headline">Listado de Bienes</CardTitle>
+                            <CardDescription>Mostrando {generalFilteredItems.length} ítems registrados.</CardDescription>
                         </CardHeader>
                         <CardContent>
                             {renderItemsTable(generalFilteredItems, "No se encontraron ítems con los filtros aplicados.")}

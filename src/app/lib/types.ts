@@ -191,7 +191,11 @@ export type GeneralInventoryItem = {
   id: string;
   codigo: string;
   nombre: string;
-  tipo: 'Moviliario' | 'electronica' | 'herramientas';
+  categoryId: string;
+  subCategoryId: string;
+  itemTypeId: string;
+  marca?: string;
+  modelo?: string;
   cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3' | 'Comision';
   ubicacion: 'Baño' | 'Matera' | 'Cocina' | 'Roperia' | 'Cadetes' | 'Deposito' | 'Jefatura' | 'Cambiaderos' | 'Patio' | 'Playón' | 'Guardia' | 'Ayudantia';
   estado: 'En Servicio' | 'Fuera de Servicio';
