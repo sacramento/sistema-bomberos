@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, Filter, LayoutList, ArrowRight } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, Filter, LayoutList, ArrowRight, Copy } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { getClothingItems, deleteClothingItem } from "@/services/clothing.service";
