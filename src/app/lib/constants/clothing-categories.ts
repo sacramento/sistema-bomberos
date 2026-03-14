@@ -35,14 +35,25 @@ export const CLOTHING_CATEGORIES: ClothingCategory[] = [
             },
             {
                 id: "01.2",
-                label: "01.2 Multirol (Forestal / Rescate)",
+                label: "01.2 Forestal",
                 items: [
-                    { id: "01.2.1", label: "01.2.1 Cascos Multirol / Forestales" },
-                    { id: "01.2.2", label: "01.2.2 Chaquetas Forestal / Rescate" },
-                    { id: "01.2.3", label: "01.2.3 Pantalones Forestal / Rescate" },
-                    { id: "01.2.4", label: "01.2.4 Guantes de Rescate / Forestal" },
-                    { id: "01.2.5", label: "01.2.5 Calzado Forestal Específico" },
-                    { id: "01.2.6", label: "01.2.6 Antiparras" }
+                    { id: "01.2.1", label: "01.2.1 Cascos Forestales" },
+                    { id: "01.2.2", label: "01.2.2 Chaquetas Forestales" },
+                    { id: "01.2.3", label: "01.2.3 Pantalones Forestales" },
+                    { id: "01.2.4", label: "01.2.4 Guantes Forestales" },
+                    { id: "01.2.5", label: "01.2.5 Calzado Forestal" },
+                    { id: "01.2.6", label: "01.2.6 Antiparras / Protección Ocular" }
+                ]
+            },
+            {
+                id: "01.3",
+                label: "01.3 Rescate",
+                items: [
+                    { id: "01.3.1", label: "01.3.1 Cascos de Rescate" },
+                    { id: "01.3.2", label: "01.3.2 Chaquetas de Rescate" },
+                    { id: "01.3.3", label: "01.3.3 Pantalones de Rescate" },
+                    { id: "01.3.4", label: "01.3.4 Guantes de Rescate" },
+                    { id: "01.3.5", label: "01.3.5 Calzado de Rescate" }
                 ]
             }
         ]

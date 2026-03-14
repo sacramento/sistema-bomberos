@@ -8,18 +8,24 @@ Este documento contiene la jerarquía de clasificación técnica para el inventa
 ### **01 - EPP / SERVICIOS (PROTECCIÓN)**
 *   **01.1 Estructural (Incendio)**
     *   01.1.1 Cascos Estructurales
-    *   01.1.2 Botas de Incendio (Goma/Cuero)
+    *   01.1.2 Botas de Incendio
     *   01.1.3 Chaquetones Estructurales
     *   01.1.4 Pantalones Estructurales
     *   01.1.5 Guantes Estructurales
     *   01.1.6 Esclavinas (Nomex)
-*   **01.2 Multirol (Forestal / Rescate)**
-    *   01.2.1 Cascos Multirol / Forestales
-    *   01.2.2 Chaquetas Forestal / Rescate
-    *   01.2.3 Pantalones Forestal / Rescate
-    *   01.2.4 Guantes de Rescate / Forestal
-    *   01.2.5 Calzado Forestal Específico
-    *   01.2.6 Antiparras y Protección Ocular
+*   **01.2 Forestal**
+    *   01.2.1 Cascos Forestales
+    *   01.2.2 Chaquetas Forestales
+    *   01.2.3 Pantalones Forestales
+    *   01.2.4 Guantes Forestales
+    *   01.2.5 Calzado Forestal
+    *   01.2.6 Antiparras / Protección Ocular
+*   **01.3 Rescate**
+    *   01.3.1 Cascos de Rescate
+    *   01.3.2 Chaquetas de Rescate
+    *   01.3.3 Pantalones de Rescate
+    *   01.3.4 Guantes de Rescate
+    *   01.3.5 Calzado de Rescate
 
 ---
 
