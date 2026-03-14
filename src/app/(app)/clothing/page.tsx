@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Copy, Upload } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, Filter, LayoutList, ArrowRight } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { getClothingItems, deleteClothingItem } from "@/services/clothing.service";
@@ -13,16 +13,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import AddClothingItemDialog from "./_components/add-clothing-item-dialog";
 import EditClothingItemDialog from "./_components/edit-clothing-item-dialog";
 import QrScannerDialog from "./_components/qr-scanner-dialog";
 import { useAuth } from "@/context/auth-context";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ImportClothingDialog from "./_components/import-clothing-dialog";
 import ClothingDetailDialog from "./_components/clothing-detail-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 export default function ClothingPage() {
@@ -33,8 +34,10 @@ export default function ClothingPage() {
     const [detailItem, setDetailItem] = useState<ClothingItem | null>(null);
     const [cloningItem, setCloningItem] = useState<ClothingItem | null>(null);
     const [isCloneDialogOpen, setIsCloneDialogOpen] = useState(false);
+    const [activeTab, setActiveTab] = useState('inventory');
     
     const { toast } = useToast();
+    const router = useRouter();
     const { getActiveRole } = useAuth();
     const pathname = usePathname();
 
@@ -77,7 +80,6 @@ export default function ClothingPage() {
     };
 
     const handleSearch = (code: string) => {
-        setSearchTerm(code);
         if (!code) {
             setDetailItem(null);
             return;
@@ -88,36 +90,23 @@ export default function ClothingPage() {
             setDetailItem(exactCodeMatch);
         } else {
             setDetailItem(null);
-        }
-    };
-
-    // This function will be triggered when the search form is submitted
-    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        handleSearch(searchTerm);
-        if (!items.some(item => item.code.toLowerCase() === searchTerm.toLowerCase())) {
-            toast({
-                variant: "destructive",
-                title: "Prenda no encontrada",
-                description: `No se encontró la prenda con el código: ${searchTerm}.`,
-            });
-        }
-    }
-
-
-    const handleQrScan = (code: string) => {
-        setSearchTerm(code); // Update search term to show context
-        const foundItem = items.find(item => item.code.toLowerCase() === code.toLowerCase());
-        if (foundItem) {
-            setDetailItem(foundItem); // Open modal with details
-        } else {
-            setDetailItem(null); // Ensure modal is closed
             toast({
                 variant: "destructive",
                 title: "Prenda no encontrada",
                 description: `No se encontró la prenda con el código: ${code}.`,
             });
         }
+    };
+
+    const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        handleSearch(searchTerm);
+    }
+
+
+    const handleQrScan = (code: string) => {
+        setSearchTerm(code);
+        handleSearch(code);
     };
     
      const handleCloneClick = (item: ClothingItem) => {
@@ -133,6 +122,14 @@ export default function ClothingPage() {
             </>
         )
     }
+
+    const filteredItems = useMemo(() => {
+        if (!searchTerm) return items;
+        return items.filter(i => 
+            i.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            i.type.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [items, searchTerm]);
 
     return (
         <>
@@ -154,36 +151,126 @@ export default function ClothingPage() {
                     </div>
                 )}
             </PageHeader>
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
-                    <form onSubmit={handleFormSubmit}>
-                        <div className="flex flex-col sm:flex-row gap-4 mt-2">
-                            <div className="relative flex-grow">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input 
-                                    placeholder="Buscar por código..." 
-                                    className="pl-9" 
-                                    value={searchTerm} 
-                                    onChange={(e) => setSearchTerm(e.target.value)} 
-                                />
+
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 max-w-xl mx-auto mb-6">
+                    <TabsTrigger value="search">Búsqueda</TabsTrigger>
+                    <TabsTrigger value="inventory">Inventario</TabsTrigger>
+                    <TabsTrigger value="reports">Informes</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="search">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="font-headline">Búsqueda Rápida</CardTitle>
+                            <form onSubmit={handleFormSubmit}>
+                                <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                                    <div className="relative flex-grow">
+                                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                        <Input 
+                                            placeholder="Buscar por código..." 
+                                            className="pl-9" 
+                                            value={searchTerm} 
+                                            onChange={(e) => setSearchTerm(e.target.value)} 
+                                        />
+                                    </div>
+                                    <QrScannerDialog onScan={handleQrScan}>
+                                        <Button variant="outline" type="button" className="w-full sm:w-auto">
+                                            <QrCode className="mr-2 h-4 w-4" />
+                                            Escanear QR
+                                        </Button>
+                                    </QrScannerDialog>
+                                    <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
+                                </div>
+                            </form>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-center text-muted-foreground py-16 border-2 border-dashed rounded-lg">
+                                <p>Realice una búsqueda o escanee un código QR para ver los detalles de una prenda.</p>
                             </div>
-                            <QrScannerDialog onScan={handleQrScan}>
-                                <Button variant="outline" type="button" className="w-full sm:w-auto">
-                                    <QrCode className="mr-2 h-4 w-4" />
-                                    Escanear QR
-                                </Button>
-                            </QrScannerDialog>
-                             <Button type="submit" className="w-full sm:w-auto">Buscar</Button>
-                        </div>
-                    </form>
-                </CardHeader>
-                <CardContent>
-                     <div className="text-center text-muted-foreground py-16 border-2 border-dashed rounded-lg">
-                        <p>Realice una búsqueda o escanee un código QR para ver los detalles de una prenda.</p>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="inventory">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-lg">Listado de Prendas</CardTitle>
+                            <CardDescription>Total de elementos registrados: {items.length}</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Código</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>Talle</TableHead>
+                                        <TableHead>Asignado a</TableHead>
+                                        <TableHead>Estado</TableHead>
+                                        <TableHead className="text-right">Acciones</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {loading ? (
+                                        Array.from({ length: 5 }).map((_, i) => (
+                                            <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
+                                        ))
+                                    ) : items.map(item => (
+                                        <TableRow key={item.id}>
+                                            <TableCell className="font-mono text-xs font-bold">{item.code}</TableCell>
+                                            <TableCell className="text-sm font-medium">{item.type}</TableCell>
+                                            <TableCell className="text-xs">{item.size}</TableCell>
+                                            <TableCell className="text-xs">{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'En Depósito'}</TableCell>
+                                            <TableCell><Badge className="text-[10px]">{item.state}</Badge></TableCell>
+                                            <TableCell className="text-right">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => setDetailItem(item)}>Ver Detalles</DropdownMenuItem>
+                                                            <EditClothingItemDialog item={item} onSave={handleDataChange} firefighters={firefighters}>
+                                                                <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/>Editar</DropdownMenuItem>
+                                                            </EditClothingItemDialog>
+                                                            <DropdownMenuItem onClick={() => handleCloneClick(item)}><Copy className="mr-2 h-4 w-4"/>Clonar</DropdownMenuItem>
+                                                            <DropdownMenuSeparator />
+                                                            <AlertDialogTrigger asChild>
+                                                                <DropdownMenuItem className='text-destructive'><Trash2 className="mr-2 h-4 w-4"/>Eliminar</DropdownMenuItem>
+                                                            </AlertDialogTrigger>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle></AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(item.id)} variant="destructive">Eliminar</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="reports">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5"/> Reportes de Ropería</CardTitle>
+                            <CardDescription>Generación de fichas de entrega y reportes de stock por bombero.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex justify-center py-10">
+                            <Button size="lg" onClick={() => router.push('/clothing-reports')}>
+                                Abrir Panel de Informes <ArrowRight className="ml-2 h-5 w-5"/>
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
 
             <AddClothingItemDialog 
                 open={isCloneDialogOpen}
@@ -202,7 +289,7 @@ export default function ClothingPage() {
                 onOpenChange={(isOpen) => {
                     if (!isOpen) {
                         setDetailItem(null);
-                        setSearchTerm(''); // Clear search term after closing dialog
+                        setSearchTerm('');
                     }
                 }}
             />

@@ -328,6 +328,9 @@ export type AuditLog = {
     details?: Record<string, any>;
 };
 
+export type ClothingCategory = 'Fajina' | 'Media Gala' | 'Servicios';
+export type ClothingSubCategory = 'General' | 'Incendio' | 'Rescate' | 'Forestal' | 'GORA' | 'Buceo';
+
 export type ClothingItem = {
     id: string;
     code: string;

@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Filter, LayoutList } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter, MaterialRequest } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -12,7 +12,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { createMaterialRequest } from "@/services/material-requests.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,6 +38,7 @@ export default function MaterialsPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
     const [activeTab, setActiveTab] = useState('inventory');
+    const router = useRouter();
     
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
@@ -280,9 +281,10 @@ export default function MaterialsPage() {
             </PageHeader>
             
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className={cn("grid w-full mb-6", isPrivileged ? "grid-cols-3 max-w-xl mx-auto" : "grid-cols-2 max-w-md mx-auto")}>
-                    <TabsTrigger value="search">Búsqueda Rápida</TabsTrigger>
-                    <TabsTrigger value="inventory">Inventario Completo</TabsTrigger>
+                <TabsList className={cn("grid w-full mb-6", isPrivileged ? "grid-cols-4 max-w-2xl mx-auto" : "grid-cols-3 max-w-md mx-auto")}>
+                    <TabsTrigger value="search">Búsqueda</TabsTrigger>
+                    <TabsTrigger value="inventory">Inventario</TabsTrigger>
+                    <TabsTrigger value="reports">Informes</TabsTrigger>
                     {isPrivileged && <TabsTrigger value="requests" className="relative">
                         Solicitudes
                         <Badge className="absolute -top-2 -right-2 bg-red-600">!</Badge>
@@ -429,6 +431,20 @@ export default function MaterialsPage() {
                                     )}
                                 </TableBody>
                             </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+
+                <TabsContent value="reports">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5"/> Reportes Técnicos</CardTitle>
+                            <CardDescription>Acceda a los filtros avanzados y exportación de inventarios precisos.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex justify-center py-10">
+                            <Button size="lg" onClick={() => router.push('/materials-reports')}>
+                                Abrir Panel de Informes <ArrowRight className="ml-2 h-5 w-5"/>
+                            </Button>
                         </CardContent>
                     </Card>
                 </TabsContent>
