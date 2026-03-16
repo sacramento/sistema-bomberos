@@ -182,7 +182,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         filtered.forEach(s => {
             const participants = new Set([...(s.instructorIds || []), ...(s.assistantIds || []), ...(s.attendeeIds || [])]);
             participants.forEach(id => {
-                const f = allFirefighters.find(ff => f.id === id);
+                const f = allFirefighters.find(ff => ff.id === id);
                 if (!f || f.status === 'Inactive') return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
                 if (filterStation.length > 0 && !filterStation.includes(f.firehouse)) return;
@@ -237,7 +237,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 }
 
 export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
-    // Similar logic but for workshops
     return <ClassesReportTab context={context} />;
 }
 

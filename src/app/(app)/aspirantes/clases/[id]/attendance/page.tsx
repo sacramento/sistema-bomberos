@@ -74,7 +74,7 @@ export default function AspiranteClassAttendancePage() {
                     if (data) {
                         const uniqueParticipants = new Map<string, Firefighter>();
                         [...data.instructors, ...data.assistants, ...data.attendees].forEach(p => {
-                            if (p.status === 'Active') {
+                            if (p.status === 'Active' || p.status === 'Auxiliar') {
                                 uniqueParticipants.set(p.id, p);
                             }
                         });
