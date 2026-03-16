@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -6,7 +7,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { useEffect, useState, useMemo } from 'react';
 import { Firefighter, Session, AttendanceStatus, Specialization } from '@/lib/types';
 import { getFirefighters } from '@/services/firefighters.service';
-import { getSessions } from '@/services/sessions.service';
+import { getAspiranteSessions } from '@/services/aspirantes-sessions.service';
+import { getAspiranteWorkshops } from '@/services/aspirantes-workshops.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
@@ -52,12 +54,13 @@ export default function AspirantesDashboardPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [firefightersData, sessionsData] = await Promise.all([
+        const [firefightersData, sessionsData, workshopsData] = await Promise.all([
           getFirefighters(),
-          getSessions(),
+          getAspiranteSessions(),
+          getAspiranteWorkshops(),
         ]);
         setFirefighters(firefightersData);
-        setSessions(sessionsData);
+        setSessions([...sessionsData, ...workshopsData]);
       } catch (error) {
         console.error("Failed to fetch dashboard data", error);
         toast({ title: "Error", description: "No se pudieron cargar los datos del dashboard.", variant: "destructive" });
@@ -71,34 +74,19 @@ export default function AspirantesDashboardPage() {
  const attendanceDataByGroup = useMemo(() => {
     const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
 
-    const aspiranteSessions = sessions.filter(session => 
-      session.attendees.every(a => a.rank === 'ASPIRANTE')
-    );
-
     let allRecords: { status: AttendanceStatus; firefighter: Firefighter; session: Session }[] = [];
-    aspiranteSessions.forEach(session => {
+    sessions.forEach(session => {
         if(!session.attendance) return;
         
-        const participantIds = new Set([
-            ...Object.keys(session.attendance),
-            ...(session.instructorIds || []),
-            ...(session.assistantIds || [])
-        ]);
+        // En el dashboard de aspirantes, solo computamos la asistencia de los alumnos (Aspirantes)
+        const participantIds = new Set(Object.keys(session.attendance));
 
         participantIds.forEach(id => {
             const firefighter = firefighterMap.get(id);
-            if (!firefighter) return;
+            if (!firefighter || firefighter.rank !== 'ASPIRANTE') return;
 
-            // Only count aspirantes for the statistics
-            if (firefighter.rank !== 'ASPIRANTE') return;
-
-            let status = session.attendance![id];
-            if (!status) {
-                 if (session.instructorIds?.includes(id) || session.assistantIds?.includes(id)) {
-                    status = 'present';
-                 }
-            }
-             if (status) {
+            const status = session.attendance![id];
+            if (status) {
                 allRecords.push({ status, firefighter, session });
             }
         });
@@ -139,19 +127,7 @@ export default function AspirantesDashboardPage() {
     !['General'].includes(key) && attendanceDataByGroup[key]?.totalForPercentage > 0
   );
   
-  if (loading) {
-      return (
-          <>
-            <PageHeader
-                title="Dashboard Aspirantes"
-                description="Cargando resumen de actividad de los aspirantes..."
-            />
-             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
-             </div>
-          </>
-      )
-  }
+  if (loading) return <div className="p-8"><Skeleton className="h-96 w-full" /></div>;
 
   const renderChart = (title: string, data: AttendanceSummary) => {
     const hasData = data && data.totalForPercentage > 0;
@@ -177,11 +153,9 @@ export default function AspirantesDashboardPage() {
                                         if (active && payload && payload.length) {
                                             return (
                                                 <div className="rounded-lg border bg-background p-2 shadow-sm">
-                                                    <div className="grid grid-cols-2 gap-2">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm text-muted-foreground">{payload[0].name}</span>
-                                                            <span className="font-bold">{payload[0].value}</span>
-                                                        </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm text-muted-foreground">{payload[0].name}</span>
+                                                        <span className="font-bold">{payload[0].value}</span>
                                                     </div>
                                                 </div>
                                             );
@@ -218,22 +192,13 @@ export default function AspirantesDashboardPage() {
 
   return (
     <>
-      <PageHeader
-        title="Dashboard Aspirantes"
-        description="Bienvenido, aquí hay un resumen de la actividad de los aspirantes."
-      />
-        <div className="mb-8">
-             {renderChart('Asistencia General', attendanceDataByGroup['General'])}
-        </div>
-
+      <PageHeader title="Dashboard Aspirantes" description="Resumen de actividad y formación del personal aspirante." />
+        <div className="mb-8">{renderChart('Asistencia General de Aspirantes', attendanceDataByGroup['General'])}</div>
         {specializationsWithData.length > 0 && (
             <div>
-                <h2 className="font-headline text-2xl font-semibold tracking-tight mb-4">Asistencia por Especialidad</h2>
+                <h2 className="font-headline text-2xl font-semibold tracking-tight mb-4">Por Especialidad</h2>
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {specializationsWithData.map(spec => {
-                         const data = attendanceDataByGroup[spec];
-                         return <div key={spec}>{renderChart(spec, data)}</div>;
-                    })}
+                    {specializationsWithData.map(spec => <div key={spec}>{renderChart(spec, attendanceDataByGroup[spec])}</div>)}
                  </div>
             </div>
         )}

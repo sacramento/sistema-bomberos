@@ -58,9 +58,6 @@ export default function AspiranteWorkshopAttendancePage() {
     const [saving, setSaving] = useState(false);
     const [attendance, setAttendance] = useState<Record<string, AttendanceStatus>>({});
     
-    const instructorIds = useMemo(() => new Set(session?.instructors.map(i => i.id)), [session]);
-    const assistantIds = useMemo(() => new Set(session?.assistants.map(a => a.id)), [session]);
-    
     const activeRole = getActiveRole(pathname);
     const canEdit = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Instructor', [activeRole]);
 
@@ -72,32 +69,22 @@ export default function AspiranteWorkshopAttendancePage() {
                     const data = await getAspiranteWorkshopById(sessionId);
                     setSession(data);
                     if (data) {
-                        const uniqueParticipants = new Map<string, Firefighter>();
-                        [...data.instructors, ...data.assistants, ...data.attendees].forEach(p => {
-                            if (p.status === 'Active' || p.status === 'Auxiliar') {
-                                uniqueParticipants.set(p.id, p);
-                            }
-                        });
-                        const participants = Array.from(uniqueParticipants.values());
-                        setAllParticipants(participants);
+                        // Filtrar SOLO aspirantes para el listado de alumnos
+                        const aspirantes = data.attendees.filter(p => p.rank === 'ASPIRANTE' && (p.status === 'Active' || p.status === 'Auxiliar'));
+                        setAllParticipants(aspirantes);
 
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
                             setAttendance(data.attendance);
                         } else {
-                            // If no attendance is saved, create a default one
                             const initialAttendance: Record<string, AttendanceStatus> = {};
-                            participants.forEach(p => {
+                            aspirantes.forEach(p => {
                                 initialAttendance[p.id] = 'present';
                             });
                             setAttendance(initialAttendance);
                         }
                     }
                 } catch (error) {
-                    toast({
-                        title: "Error",
-                        description: "No se pudo cargar el taller.",
-                        variant: "destructive"
-                    });
+                    toast({ title: "Error", description: "No se pudo cargar el taller.", variant: "destructive" });
                 } finally {
                     setLoading(false);
                 }
@@ -105,20 +92,6 @@ export default function AspiranteWorkshopAttendancePage() {
         };
         fetchSession();
     }, [sessionId, toast]);
-
-    const groupedAttendees = useMemo(() => {
-        if (!allParticipants) return [];
-        // For aspirantes, we don't need to group by firehouse
-        const aspirantes = allParticipants.filter(a => a.rank === 'ASPIRANTE').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-        const instructorsAndAssistants = allParticipants.filter(a => a.rank !== 'ASPIRANTE').sort((a,b) => (a.legajo || '').localeCompare(b.legajo || ''));
-
-        const groups = [];
-        if (instructorsAndAssistants.length > 0) groups.push({ title: 'INSTRUCTORES Y AYUDANTES', firefighters: instructorsAndAssistants });
-        if (aspirantes.length > 0) groups.push({ title: 'ASPIRANTES', firefighters: aspirantes });
-
-        return groups;
-    }, [allParticipants]);
-
 
     const summary = useMemo(() => {
         if (!allParticipants) return { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, total: 0 };
@@ -131,47 +104,8 @@ export default function AspiranteWorkshopAttendancePage() {
         return { present, absent, tardy, excused, recupero, total };
     }, [attendance, allParticipants]);
 
-    if (loading) {
-         return (
-             <>
-                <PageHeader title="..." description="...">
-                    <Skeleton className="h-10 w-32" />
-                </PageHeader>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                    {Array.from({ length: 4 }).map((_, index) => (
-                        <Card key={index}>
-                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <Skeleton className="h-5 w-20" />
-                                <Skeleton className="h-4 w-4" />
-                            </CardHeader>
-                            <CardContent>
-                                <Skeleton className="h-8 w-12 mb-1" />
-                                <Skeleton className="h-4 w-28" />
-                            </CardContent>
-                        </Card>
-                    ))}
-                </div>
-                 <Card>
-                    <CardHeader>
-                        <Skeleton className="h-7 w-48" />
-                        <Skeleton className="h-4 w-64 mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-40 w-full" />
-                    </CardContent>
-                 </Card>
-             </>
-         )
-    }
-
-    if (!session) {
-        return (
-          <div className="flex flex-col items-center justify-center h-full text-center">
-            <PageHeader title="Taller No Encontrado" />
-            <p>No se pudo encontrar el taller solicitado.</p>
-          </div>
-        )
-    }
+    if (loading) return <div className="space-y-8"><Skeleton className="h-20 w-full" /><Skeleton className="h-96 w-full" /></div>;
+    if (!session) return <div className="p-8 text-center">Taller no encontrado.</div>;
     
     const handleStatusChange = (firefighterId: string, status: AttendanceStatus) => {
         setAttendance(prev => ({...prev, [firefighterId]: status}));
@@ -182,172 +116,74 @@ export default function AspiranteWorkshopAttendancePage() {
         try {
             if (!user) throw new Error("Usuario no autenticado");
             await updateAspiranteWorkshopAttendance(sessionId, attendance, user);
-            toast({
-                title: "¡Éxito!",
-                description: "La asistencia ha sido guardada correctamente."
-            });
+            toast({ title: "¡Éxito!", description: "La asistencia ha sido guardada correctamente." });
         } catch (error) {
-             toast({
-                title: "Error",
-                description: "No se pudo guardar la asistencia.",
-                variant: "destructive"
-            });
+             toast({ title: "Error", description: "No se pudo guardar la asistencia.", variant: "destructive" });
         } finally {
             setSaving(false);
         }
     };
 
-    const summaryCards = [
-        { title: "Presentes", value: summary.present + summary.recupero, icon: UserCheck, color: "text-green-500" },
-        { title: "Ausentes", value: summary.absent, icon: UserX, color: "text-red-500" },
-        { title: "Tardes", value: summary.tardy, icon: Clock, color: "text-yellow-500" },
-        { title: "Justificados", value: summary.excused, icon: ShieldAlert, color: "text-violet-500" },
-    ];
-    
-    const renderFirefighterName = (firefighter: Firefighter) => {
-        const isInstructor = instructorIds.has(firefighter.id);
-        const isAssistant = assistantIds.has(firefighter.id);
-
-        return (
-            <div className="flex items-center gap-2">
-                <span>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</span>
-                {isInstructor && <Badge variant="destructive">I</Badge>}
-                {isAssistant && <Badge variant="secondary">A</Badge>}
-            </div>
-        );
-    }
-    
-    const renderTableBody = (isSummaryView: boolean) => (
-         <TableBody>
-            {groupedAttendees.map(group => (
-                <React.Fragment key={group.title}>
-                    <TableRow className="bg-muted hover:bg-muted">
-                        <TableCell colSpan={isSummaryView ? 2 : 2} className="font-bold text-muted-foreground text-center tracking-wider">
-                           --- {group.title} ---
-                        </TableCell>
-                    </TableRow>
-                    {group.firefighters.map(firefighter => (
-                        <TableRow key={firefighter.id}>
-                            <TableCell className="font-medium">
-                                <div>{renderFirefighterName(firefighter)}</div>
-                            </TableCell>
-                            {isSummaryView && (
-                                <TableCell>
-                                    <Badge className={cn("whitespace-nowrap", getStatusClass(attendance[firefighter.id]))}>
-                                        {getStatusLabel(attendance[firefighter.id])}
-                                    </Badge>
-                                </TableCell>
-                            )}
-                            {!isSummaryView && (
-                                <TableCell className="text-right">
-                                        <Select 
-                                        value={attendance[firefighter.id]} 
-                                        onValueChange={(status) => handleStatusChange(firefighter.id, status as AttendanceStatus)}
-                                        disabled={!canEdit}
-                                    >
-                                        <SelectTrigger className={cn("w-[140px] ml-auto", getStatusClass(attendance[firefighter.id]))}>
-                                            <SelectValue placeholder="Seleccionar..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {statusOptions.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </TableCell>
-                            )}
-                        </TableRow>
-                    ))}
-                </React.Fragment>
-            ))}
-        </TableBody>
-    );
-    
     const formattedDate = format(parseISO(session.date), "dd 'de' MMMM 'de' yyyy", { locale: es });
 
     return (
         <>
-            <PageHeader title={`Asistencia: ${session.title}`} description={`Taller del ${formattedDate} a las ${session.startTime}hs.`}>
-                <Button variant="outline">
-                    <Download className="mr-2 h-4 w-4" />
-                    Exportar
-                </Button>
+            <PageHeader title={`Asistencia: ${session.title}`} description={`Taller del ${formattedDate} @ ${session.startTime}hs.`}>
+                <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Exportar</Button>
             </PageHeader>
             
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-                 {summaryCards.map((card, index) => (
-                    <Card key={index}>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                             <card.icon className={cn("h-4 w-4 text-muted-foreground", card.color)} />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{card.value}</div>
-                            <p className="text-xs text-muted-foreground">de {summary.total} participantes</p>
-                        </CardContent>
-                    </Card>
-                 ))}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <Card className="md:col-span-2">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><UserCog className="h-4 w-4" /> Personal de Instrucción</CardTitle></CardHeader>
+                    <CardContent className="space-y-4">
+                        <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Instructores:</p>
+                            <div className="flex flex-wrap gap-2">{session.instructors.map(i => <Badge key={i.id} variant="destructive">{i.legajo} - {i.lastName}</Badge>)}</div>
+                        </div>
+                        {session.assistants.length > 0 && (
+                            <div>
+                                <p className="text-xs font-semibold text-muted-foreground mb-1">Ayudantes:</p>
+                                <div className="flex flex-wrap gap-2">{session.assistants.map(a => <Badge key={a.id} variant="secondary">{a.legajo} - {a.lastName}</Badge>)}</div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Resumen Aspirantes</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between text-sm"><span>Presentes:</span> <span className="font-bold text-green-600">{summary.present + summary.recupero}</span></div>
+                        <div className="flex justify-between text-sm"><span>Total Alumnos:</span> <span className="font-bold">{summary.total}</span></div>
+                    </CardContent>
+                </Card>
             </div>
 
             <Tabs defaultValue={canEdit ? "register" : "view"} className="w-full">
-                <TabsList className={cn("grid w-full mb-4", canEdit ? "grid-cols-2 max-w-md mx-auto" : "grid-cols-1 max-w-[200px] mx-auto")}>
-                    {canEdit && <TabsTrigger value="register"><Edit className="mr-2 h-4 w-4"/>Registrar Asistencia</TabsTrigger>}
-                    <TabsTrigger value="view"><Eye className="mr-2 h-4 w-4"/>Ver Resumen</TabsTrigger>
-                </TabsList>
-                
-                {canEdit && (
-                    <TabsContent value="register">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="font-headline">Lista de Participantes</CardTitle>
-                                <CardDescription>Seleccione el estado de cada aspirante, instructor y ayudante.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Legajo y Nombre</TableHead>
-                                                <TableHead className="text-right">Estado</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        {renderTableBody(false)}
-                                    </Table>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="justify-end">
-                                <Button onClick={handleSaveChanges} disabled={saving}>
-                                    <Save className="mr-2 h-4 w-4" />
-                                    {saving ? 'Guardando...' : 'Guardar Cambios'}
-                                </Button>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-                )}
-                
-                <TabsContent value="view">
+                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-6"><TabsTrigger value="register">Registrar</TabsTrigger><TabsTrigger value="view">Ver Listado</TabsTrigger></TabsList>
+                <TabsContent value="register">
                     <Card>
-                        <CardHeader>
-                            <CardTitle className="font-headline">Resumen de Asistencia</CardTitle>
-                            <CardDescription>Resumen de la asistencia registrada para este taller.</CardDescription>
-                        </CardHeader>
+                        <CardHeader><CardTitle>Lista de Alumnos (Aspirantes)</CardTitle></CardHeader>
                         <CardContent>
-                                <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Legajo y Nombre</TableHead>
-                                            <TableHead>Estado</TableHead>
+                            <Table>
+                                <TableHeader><TableRow><TableHead>Aspirante</TableHead><TableHead className="text-right">Estado</TableHead></TableRow></TableHeader>
+                                <TableBody>
+                                    {allParticipants.map(f => (
+                                        <TableRow key={f.id}>
+                                            <TableCell className="font-medium">{f.legajo} - {f.lastName}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Select value={attendance[f.id]} onValueChange={(s) => handleStatusChange(f.id, s as AttendanceStatus)} disabled={!canEdit}>
+                                                    <SelectTrigger className={cn("w-[140px] ml-auto h-8 text-xs", getStatusClass(attendance[f.id]))}><SelectValue /></SelectTrigger>
+                                                    <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                                </Select>
+                                            </TableCell>
                                         </TableRow>
-                                    </TableHeader>
-                                    {renderTableBody(true)}
-                                </Table>
-                            </div>
+                                    ))}
+                                </TableBody>
+                            </Table>
                         </CardContent>
+                        <CardFooter className="justify-end border-t pt-4"><Button onClick={handleSaveChanges} disabled={saving}><Save className="mr-2 h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar'}</Button></CardFooter>
                     </Card>
                 </TabsContent>
+                <TabsContent value="view"><Card><CardHeader><CardTitle>Asistencia Registrada</CardTitle></CardHeader><CardContent><Table><TableBody>{allParticipants.map(f => (<TableRow key={f.id}><TableCell>{f.legajo} - {f.lastName}</TableCell><TableCell><Badge className={getStatusClass(attendance[f.id])}>{getStatusLabel(attendance[f.id])}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent></Card></TabsContent>
             </Tabs>
         </>
     );
