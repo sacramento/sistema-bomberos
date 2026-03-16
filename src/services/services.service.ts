@@ -1,8 +1,9 @@
+
 'use client';
 
 import { db } from '@/lib/firebase/firestore';
 import { Service, Firefighter, Vehicle, LoggedInUser } from '@/lib/types';
-import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc, setDoc, getDoc } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { getVehicles } from './vehicles.service';
 import { logAction } from './audit.service';
@@ -57,6 +58,45 @@ export const getServices = async (): Promise<Service[]> => {
             });
             errorEmitter.emit('permission-error', permissionError);
             return [];
+        });
+};
+
+/**
+ * Retrieves a single service by ID with enriched personnel data.
+ */
+export const getServiceById = async (id: string): Promise<Service | null> => {
+    if (!db) return null;
+    const docRef = doc(db, 'services', id);
+    
+    return getDoc(docRef)
+        .then(async (docSnap) => {
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                const firefighters = await getFirefighters();
+                const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
+                
+                const getPersonnel = (id?: string) => id ? firefighterMap.get(id) : undefined;
+                const getPersonnelList = (ids?: string[]) => ids?.map(id => firefighterMap.get(id)).filter((f): f is Firefighter => !!f) || [];
+
+                return {
+                    id: docSnap.id,
+                    ...data,
+                    status: data.status || 'Activo',
+                    command: getPersonnel(data.commandId),
+                    serviceChief: getPersonnel(data.serviceChiefId),
+                    stationOfficer: getPersonnel(data.stationOfficerId),
+                    onDutyPersonnel: getPersonnelList(data.onDutyIds),
+                    offDutyPersonnel: getPersonnelList(data.offDutyIds),
+                } as Service;
+            }
+            return null;
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            }));
+            return null;
         });
 };
 
