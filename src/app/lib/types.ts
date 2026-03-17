@@ -315,7 +315,8 @@ export type AuditLogAction =
   | 'CREATE_DRIVER' | 'UPDATE_DRIVER' | 'DELETE_DRIVER'
   | 'CREATE_SERVICE' | 'UPDATE_SERVICE' | 'DELETE_SERVICE'
   | 'CREATE_CASCADE_CHARGE'
-  | 'CREATE_CASCADE_SYSTEM_CHARGE';
+  | 'CREATE_CASCADE_SYSTEM_CHARGE'
+  | 'CREATE_DUTY_CHECK';
 
 export type AuditLog = {
     id: string;
@@ -328,70 +329,23 @@ export type AuditLog = {
     details?: Record<string, any>;
 };
 
-export type ClothingCategory = 'Fajina' | 'Media Gala' | 'Servicios';
-export type ClothingSubCategory = 'General' | 'Incendio' | 'Rescate' | 'Forestal' | 'GORA' | 'Buceo';
+export type DutyCheckStatus = 'OK' | 'FALLA';
 
-export type ClothingItem = {
+export type DutyCheckItem = {
     id: string;
-    code: string;
-    categoryId: string;
-    subCategoryId: string;
-    itemTypeId: string;
-    type: string; 
-    size: string;
-    brand?: string;
-    model?: string;
+    name: string;
+    status: DutyCheckStatus;
     observations?: string;
-    state: 'Nuevo' | 'Bueno' | 'Regular' | 'Malo' | 'Baja';
-    firefighterId?: string; 
-    deliveredAt?: string;
-    firefighter?: Firefighter;
-}
+};
 
-export type ServiceType = 'Incendio' | 'Rescate' | 'Accidente' | 'HazMat' | 'Forestal' | 'Especial' | 'G.O.R.A' | 'Buceo' | 'Otros';
-export type SummonMethod = 'Alarma' | 'VHF' | 'Teléfono' | 'En el Cuartel';
-
-export type InterveningVehicle = {
+export type DutyCheck = {
+    id: string;
+    weekId: string;
     vehicleId: string;
-    departureDateTime: string;
-    returnDateTime: string;
-}
-
-export type Service = {
-    id: string; 
-    cuartel: 'C1' | 'C2' | 'C3';
-    year: number;
-    manualId: number;
-    status?: 'Activo' | 'Anulado';
-    
-    startDateTime: string;
-    endDateTime: string;
-    serviceType: ServiceType;
-    serviceCode: string; 
-    zone: number; 
-    inConjunction: boolean; 
-    address: string;
-    latitude?: number;
-    longitude?: number;
-    locationDetails?: string; 
-    
-    summonMethods: SummonMethod[];
-    
-    commandId: string;
-    serviceChiefId: string;
-    stationOfficerId: string; 
-    onDutyIds?: string[];
-    offDutyIds?: string[];
-    
-    interveningVehicles?: InterveningVehicle[];
-    
-    collaboration?: string;
-    recognition?: string;
-    observations?: string;
-    
-    command?: Firefighter;
-    serviceChief?: Firefighter;
-    stationOfficer?: Firefighter;
-    onDutyPersonnel?: Firefighter[];
-    offDutyPersonnel?: Firefighter[];
+    inspectorId: string;
+    inspectorName: string;
+    cuartel: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
+    date: string;
+    vehicleChecks: DutyCheckItem[];
+    equipmentChecks: (DutyCheckItem & { materialId: string, materialCode?: string })[];
 }
