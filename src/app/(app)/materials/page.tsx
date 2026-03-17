@@ -1,9 +1,8 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Filter, LayoutList } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Filter, LayoutList, ArrowRight } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter, MaterialRequest } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
