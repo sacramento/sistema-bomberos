@@ -67,11 +67,12 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
     setStatus('Active');
   }
 
+  const noCuartelNeeded = rank === 'ASPIRANTE' || status === 'Auxiliar';
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const isAspirante = rank === 'ASPIRANTE';
     
-    if (!legajo || !firstName || !lastName || !rank || (!isAspirante && !firehouse) || !status) {
+    if (!legajo || !firstName || !lastName || !rank || (!noCuartelNeeded && !firehouse) || !status) {
         toast({
             title: "Error",
             description: "Por favor, complete todos los campos obligatorios.",
@@ -93,7 +94,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             firstName,
             lastName,
             rank: rank as Firefighter['rank'],
-            firehouse: isAspirante ? 'Sin asignar' : firehouse,
+            firehouse: noCuartelNeeded ? 'Sin asignar' : firehouse,
             status,
         };
         
@@ -168,13 +169,31 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
                 </SelectContent>
               </Select>
             </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="status" className="text-right">
+                Estado
+              </Label>
+              <Select onValueChange={(value) => {
+                  setStatus(value as Firefighter['status']);
+                  if (value === 'Auxiliar') setFirehouse('Sin asignar');
+              }} value={status} required>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Seleccione un estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map(s => (
+                    <SelectItem key={s} value={s}>{s === 'Active' ? 'Activo' : s === 'Inactive' ? 'Inactivo' : 'Auxiliar'}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="firehouse" className="text-right">
                 Cuartel
               </Label>
-              <Select onValueChange={setFirehouse} value={rank === 'ASPIRANTE' ? 'Sin asignar' : firehouse} disabled={rank === 'ASPIRANTE'} required={rank !== 'ASPIRANTE'}>
+              <Select onValueChange={setFirehouse} value={noCuartelNeeded ? 'Sin asignar' : firehouse} disabled={noCuartelNeeded} required={!noCuartelNeeded}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder={rank === 'ASPIRANTE' ? 'No requiere cuartel' : 'Seleccione un cuartel'} />
+                  <SelectValue placeholder={noCuartelNeeded ? 'No requiere cuartel' : 'Seleccione un cuartel'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
@@ -182,21 +201,6 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
                   <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
                    {existingFirehouses.filter(h => !['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Sin asignar'].includes(h)).map(house => (
                     <SelectItem key={house} value={house}>{house}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="status" className="text-right">
-                Estado
-              </Label>
-              <Select onValueChange={(value) => setStatus(value as Firefighter['status'])} value={status} required>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccione un estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  {statuses.map(s => (
-                    <SelectItem key={s} value={s}>{s === 'Active' ? 'Activo' : s === 'Inactive' ? 'Inactivo' : 'Auxiliar'}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

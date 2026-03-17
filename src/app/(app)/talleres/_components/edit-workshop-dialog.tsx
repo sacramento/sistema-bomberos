@@ -223,7 +223,7 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
   
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeOrAuxiliarFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -247,7 +247,8 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
     let filteredByGroup: Firefighter[] = [];
 
     if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-        let filtered = activeFirefighters;
+        // Los filtros masivos SOLO incluyen personal ACTIVO
+        let filtered = allFirefighters.filter(f => f.status === 'Active');
         
         if (selectedHierarchies.length > 0) {
             const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
@@ -267,6 +268,7 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
         filteredByGroup = filtered;
     }
     
+    // Unimos con manualAttendees (que pueden ser auxiliares)
     const combined = [...manualAttendees, ...filteredByGroup];
     const uniqueAttendeesMap = new Map<string, Firefighter>();
     combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
@@ -277,7 +279,7 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
     const assistantIds = new Set(assistants.map(a => a.id));
 
     setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
-  }, [activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
 
   useEffect(() => {
     if (step === 4) {
@@ -406,21 +408,21 @@ export default function EditWorkshopDialog({ children, session, onWorkshopUpdate
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label>Ayudantes (Opcional)</Label>
-               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
+               <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
             <p className="text-xs text-muted-foreground">Los asistentes no pueden ser seleccionados como instructores o ayudantes y viceversa.</p>
           </div>
         );
       case 3:
          const instructorAndAssistantIds = new Set([...instructors.map(i => i.id), ...assistants.map(a => a.id)]);
-         const availableForManualAdd = activeFirefighters.filter(f => !instructorAndAssistantIds.has(f.id));
+         const availableForManualAdd = activeOrAuxiliarFirefighters.filter(f => !instructorAndAssistantIds.has(f.id));
         return (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Modifique la lista de asistentes. Use los filtros para añadir grupos o edite la lista manualmente.</p>
+            <p className="text-sm text-muted-foreground">Modifique la lista de asistentes. Use los filtros para añadir grupos (solo activos) o edite la lista manualmente (incluye auxiliares).</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <div className="space-y-2">
                 <Label>Añadir por Jerarquía</Label>

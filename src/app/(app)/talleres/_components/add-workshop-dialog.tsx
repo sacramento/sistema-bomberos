@@ -223,7 +223,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeOrAuxiliarFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
 
   useEffect(() => {
@@ -247,8 +247,9 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
   const handleAttendeesUpdate = useCallback(() => {
     let filteredByGroup: Firefighter[] = [];
 
+    // Los filtros masivos SOLO incluyen personal ACTIVO
     if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-        let filtered = activeFirefighters;
+        let filtered = allFirefighters.filter(f => f.status === 'Active');
         
         if (selectedHierarchies.length > 0) {
             const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
@@ -268,6 +269,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
         filteredByGroup = filtered;
     }
     
+    // Unimos con manualAttendees (que pueden ser auxiliares)
     const combined = [...filteredByGroup, ...manualAttendees];
     const uniqueAttendeesMap = new Map<string, Firefighter>();
     combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
@@ -278,7 +280,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
     const assistantIds = new Set(assistants.map(a => a.id));
 
     setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
-  }, [activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
 
   useEffect(() => {
     if (step === 4) {
@@ -329,7 +331,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
     if (attendees.length === 0) {
          toast({
             title: "Sin asistentes",
-            description: "No se encontraron bomberos para asignar a este taller. El taller no fue creado.",
+            description: "Debe asignar al menos un integrante al taller.",
             variant: "destructive",
         });
         setLoading(false);
@@ -337,7 +339,7 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
     }
     
     try {
-        const newWorkshopData: Omit<Session, 'id'> = {
+        const newWorkshopData: Omit<Session, 'id' | 'attendance'> = {
             title,
             specialization: specialization as Session['specialization'],
             description,
@@ -408,18 +410,18 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="instructor">Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="assistant">Ayudantes (Opcional)</Label>
-              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
           </div>
         );
       case 3:
         return (
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Asigne asistentes de forma masiva utilizando filtros o agregue integrantes específicos manualmente.</p>
+            <p className="text-sm text-muted-foreground">Asigne asistentes de forma masiva (solo activos) o agregue auxiliares manualmente.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
               <div className="space-y-2">
                 <Label>Seleccionar por Jerarquía</Label>
@@ -430,13 +432,10 @@ export default function AddWorkshopDialog({ children, onWorkshopAdded }: { child
                 <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={selectedStations} onSelectedChange={setSelectedStations} />
               </div>
               <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label>Agregar Integrantes Adicionales (Opcional)</Label>
-                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeFirefighters} />
+                <Label>Individual (Agregar Auxiliares aquí)</Label>
+                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeOrAuxiliarFirefighters} />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground pt-2">
-                Si no se selecciona ninguna jerarquía o cuartel, no se incluirá a nadie automáticamente. Use los filtros para asignaciones masivas.
-            </p>
           </div>
         );
        case 4:

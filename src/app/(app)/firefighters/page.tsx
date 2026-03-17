@@ -150,7 +150,7 @@ export default function FirefightersPage() {
                     <TableCell>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</TableCell>
                     <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
                     <TableCell className="hidden sm:table-cell">
-                        {firefighter.rank === 'ASPIRANTE' ? (
+                        {firefighter.rank === 'ASPIRANTE' || firefighter.status === 'Auxiliar' ? (
                             <span className="text-muted-foreground italic text-xs">Sin asignar</span>
                         ) : (
                             firefighter.firehouse
@@ -187,10 +187,10 @@ export default function FirefightersPage() {
                             </DropdownMenu>
                             <AlertDialogContent>
                                 <AlertDialogHeader>
-                                <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Esto eliminará permanentemente al integrante <span className="font-semibold">{`${firefighter.firstName} ${firefighter.lastName}`}</span>.
-                                </AlertDialogDescription>
+                                    <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Esta acción no se puede deshacer. Esto eliminará permanentemente al integrante <span className="font-semibold">{`${firefighter.firstName} ${firefighter.lastName}`}</span>.
+                                    </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
                                     <AlertDialogCancel>Cancelar</AlertDialogCancel>

@@ -224,7 +224,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
-  const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  const activeOrAuxiliarFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
 
 
   useEffect(() => {
@@ -248,8 +248,9 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
   const handleAttendeesUpdate = useCallback(() => {
     let filteredByGroup: Firefighter[] = [];
 
+    // Los filtros de grupo SOLO incluyen personal ACTIVO (no auxiliares)
     if (selectedHierarchies.length > 0 || selectedStations.length > 0) {
-        let filtered = activeFirefighters;
+        let filtered = allFirefighters.filter(f => f.status === 'Active');
         
         if (selectedHierarchies.length > 0) {
             const suboficialRanks = ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR'];
@@ -269,6 +270,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
         filteredByGroup = filtered;
     }
     
+    // Los manualAttendees pueden ser Auxiliares
     const combined = [...filteredByGroup, ...manualAttendees];
     const uniqueAttendeesMap = new Map<string, Firefighter>();
     combined.forEach(f => uniqueAttendeesMap.set(f.id, f));
@@ -279,7 +281,7 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
     const assistantIds = new Set(assistants.map(a => a.id));
 
     setAttendees(finalAttendees.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
-  }, [activeFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
+  }, [allFirefighters, selectedHierarchies, selectedStations, manualAttendees, instructors, assistants]);
 
   useEffect(() => {
     if (step === 4) {
@@ -409,18 +411,18 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Instructores</Label>
-              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Instructores" selected={instructors} onSelectedChange={setInstructors} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
             <div className="space-y-2">
               <Label>Ayudantes (Opcional)</Label>
-              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeFirefighters} excludeAspirantes={true} />
+              <MultiSelectFirefighter title="Ayudantes" selected={assistants} onSelectedChange={setAssistants} firefighters={activeOrAuxiliarFirefighters} excludeAspirantes={true} />
             </div>
           </div>
         );
       case 3:
         return (
           <div className="space-y-4 text-xs">
-            <p className="text-muted-foreground mb-4">Asigne asistentes por grupos o individualmente.</p>
+            <p className="text-muted-foreground mb-4">Asigne asistentes por grupos (solo activos) o individualmente (incluye auxiliares).</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Por Jerarquía</Label>
@@ -431,8 +433,8 @@ export default function AddClassDialog({ children, onClassAdded }: { children: R
                 <MultiSelectFilter title="Cuarteles" options={stationOptions} selected={selectedStations} onSelectedChange={setSelectedStations} />
               </div>
               <div className="col-span-1 md:col-span-2 space-y-2">
-                <Label>Individual</Label>
-                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeFirefighters} />
+                <Label>Individual (Agregar Auxiliares aquí)</Label>
+                <MultiSelectFirefighter title="integrantes" selected={manualAttendees} onSelectedChange={setManualAttendees} firefighters={activeOrAuxiliarFirefighters} />
               </div>
             </div>
           </div>
