@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 
 const CHECKABLE_CATEGORY_CODES = [
     '08.3.1', '06.3.1', '08.1.1', '03.1', '06.1.1', '09.1.1', '09.1.2', '01.5', '05.4.3', '05.2.1'
