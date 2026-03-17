@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Firefighter, Vehicle, Specialization } from "@/lib/types";
+import { Firefighter, Vehicle, Specialization, VehicleStatus } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addVehicle } from "@/services/vehicles.service";
 import { Loader2 } from "lucide-react";
@@ -27,6 +28,7 @@ const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const statuses: VehicleStatus[] = ['Operativo', 'No operativo', 'Fuera de Dotación'];
 
 export default function AddVehicleDialog({ children, onVehicleAdded }: { children: React.ReactNode; onVehicleAdded: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -47,6 +49,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
     capacidadAgua: 0,
     tipoVehiculo: 'Liviana',
     traccion: '4x4',
+    status: 'Operativo',
     encargadoIds: [],
     materialEncargadoIds: [],
     observaciones: ''
@@ -92,6 +95,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         capacidadAgua: 0,
         tipoVehiculo: 'Liviana',
         traccion: '4x4',
+        status: 'Operativo',
         encargadoIds: [],
         materialEncargadoIds: [],
         observaciones: ''
@@ -157,6 +161,13 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                     <Input id="kilometraje" type="number" value={formData.kilometraje || ''} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
+                    <Label htmlFor="status">Estado del Móvil</Label>
+                    <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
                     <Label htmlFor="cuartel">Cuartel</Label>
                     <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -169,15 +180,6 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                         title="encargados"
                         selected={activeFirefighters.filter(f => formData.encargadoIds.includes(f.id))}
                         onSelectedChange={(fs) => setFormData(p => ({...p, encargadoIds: fs.map(f => f.id)}))}
-                        firefighters={activeFirefighters}
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Encargados Materiales</Label>
-                    <MultiFirefighterSelect
-                        title="encargados"
-                        selected={activeFirefighters.filter(f => formData.materialEncargadoIds.includes(f.id))}
-                        onSelectedChange={(fs) => setFormData(p => ({...p, materialEncargadoIds: fs.map(f => f.id)}))}
                         firefighters={activeFirefighters}
                     />
                 </div>

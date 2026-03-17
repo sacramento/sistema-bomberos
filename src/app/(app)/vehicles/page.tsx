@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Vehicle } from "@/lib/types";
+import { Vehicle, VehicleStatus } from "@/lib/types";
 import { MoreHorizontal, PlusCircle, Trash2, Edit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState, useMemo } from 'react';
@@ -28,6 +28,15 @@ const getCuartelBadgeClass = (cuartel: Vehicle['cuartel']) => {
         case 'Cuartel 2': return 'bg-blue-500 text-white hover:bg-blue-500/90';
         case 'Cuartel 3': return 'bg-green-600 text-white hover:bg-green-600/90';
         default: return 'bg-secondary text-secondary-foreground';
+    }
+}
+
+const getStatusBadge = (status: VehicleStatus) => {
+    switch (status) {
+        case 'Operativo': return <Badge className="bg-green-600">Operativo</Badge>;
+        case 'No operativo': return <Badge variant="destructive">No operativo</Badge>;
+        case 'Fuera de Dotación': return <Badge variant="secondary">Fuera de Dotación</Badge>;
+        default: return <Badge variant="outline">{status}</Badge>;
     }
 }
 
@@ -139,6 +148,7 @@ export default function VehiclesPage() {
               <TableRow>
                 <TableHead>Móvil Nº</TableHead>
                 <TableHead>Marca y Modelo</TableHead>
+                <TableHead className="hidden md:table-cell">Estado</TableHead>
                 <TableHead className="hidden md:table-cell">Cuartel</TableHead>
                 <TableHead className="hidden lg:table-cell">Encargado(s)</TableHead>
                 <TableHead>
@@ -152,6 +162,7 @@ export default function VehiclesPage() {
                   <TableRow key={index}>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell className="hidden lg:table-cell"><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
@@ -168,6 +179,9 @@ export default function VehiclesPage() {
                         </Button>
                     </TableCell>
                     <TableCell>{`${vehicle.marca} ${vehicle.modelo}`}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                        {getStatusBadge(vehicle.status)}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                         <Badge className={cn(getCuartelBadgeClass(vehicle.cuartel))}>{vehicle.cuartel}</Badge>
                     </TableCell>
@@ -208,7 +222,7 @@ export default function VehiclesPage() {
                                 <AlertDialogHeader>
                                 <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Esto eliminará permanentemente el móvil <span className="font-semibold">{vehicle.numeroMovil}</span>.
+                                    Esta acción no se puede deshacer. Esto eliminará permanentemente la ficha del móvil <span className="font-semibold">{vehicle.numeroMovil}</span>.
                                 </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>

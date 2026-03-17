@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Vehicle, Firefighter, MaintenanceItem, LoggedInUser } from '@/lib/types';
@@ -40,6 +41,7 @@ const docToVehicle = async (
         capacidadAgua: data.capacidadAgua || 0,
         tipoVehiculo: data.tipoVehiculo || 'Liviana',
         traccion: data.traccion || 'Trasera',
+        status: data.status || 'Operativo',
         encargadoIds: data.encargadoIds || [],
         materialEncargadoIds: data.materialEncargadoIds || [],
         observaciones: data.observaciones || '',

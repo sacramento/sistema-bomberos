@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect, useMemo } from "react";
-import { Firefighter, Vehicle, Specialization } from "@/lib/types";
+import { Firefighter, Vehicle, Specialization, VehicleStatus } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateVehicle } from "@/services/vehicles.service";
 import { useAuth } from "@/context/auth-context";
@@ -29,6 +29,7 @@ const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 
 const vehicleTypes = ['Liviana', 'Mediana', 'Pesada', 'Cisterna'];
 const tractions = ['Trasera', 'Delantera', '4x4'];
 const cuarteles = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const statuses: VehicleStatus[] = ['Operativo', 'No operativo', 'Fuera de Dotación'];
 
 export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated }: { children: React.ReactNode; vehicle: Vehicle; onVehicleUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
@@ -129,6 +130,13 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                     <Input id="kilometraje" type="number" value={formData.kilometraje || 0} onChange={handleInputChange} />
                 </div>
                 <div className="space-y-2">
+                    <Label htmlFor="status">Estado del Móvil</Label>
+                    <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div className="space-y-2">
                     <Label htmlFor="cuartel">Cuartel</Label>
                     <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)} disabled={!canEditAllFields}>
                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -141,16 +149,6 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                         title="encargados"
                         selected={selectedEncargados}
                         onSelectedChange={setSelectedEncargados}
-                        firefighters={activeFirefighters}
-                        disabled={!canEditAllFields}
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label>Encargados Materiales</Label>
-                    <MultiFirefighterSelect
-                        title="encargados"
-                        selected={selectedMaterialEncargados}
-                        onSelectedChange={setSelectedMaterialEncargados}
                         firefighters={activeFirefighters}
                         disabled={!canEditAllFields}
                     />

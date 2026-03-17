@@ -45,6 +45,9 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const activeRole = getActiveRole(pathname);
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
 
+    // Only show vehicles that are NOT decommissioned (Fuera de Dotación)
+    const availableVehicles = useMemo(() => vehicles.filter(v => v.status !== 'Fuera de Dotación'), [vehicles]);
+
     // Form state
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
@@ -232,7 +235,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                             <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div className="space-y-2">
                                     <Label>Móvil</Label>
-                                    <Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select>
+                                    <Select value={vehiculoId} onValueChange={setVehiculoId}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{availableVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil}</SelectItem>)}</SelectContent></Select>
                                 </div>
                                 <div className="space-y-2"><Label>Baulera</Label><Select value={baulera} onValueChange={setBaulera}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent>{vehicleCompartments.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
                             </div>

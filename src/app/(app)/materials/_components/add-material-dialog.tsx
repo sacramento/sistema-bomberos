@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -59,11 +60,14 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
         return firefighters.find(f => f.legajo === user.id);
     }, [user, firefighters]);
 
+    // Only show vehicles that are NOT decommissioned (Fuera de Dotación)
+    const availableVehicles = useMemo(() => vehicles.filter(v => v.status !== 'Fuera de Dotación'), [vehicles]);
+
     const managedVehicles = useMemo(() => {
-        if (isPrivileged) return vehicles;
+        if (isPrivileged) return availableVehicles;
         if (!loggedInFirefighter) return [];
-        return vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id));
-    }, [isPrivileged, vehicles, loggedInFirefighter]);
+        return availableVehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id));
+    }, [isPrivileged, availableVehicles, loggedInFirefighter]);
 
     const [codigo, setCodigo] = useState('');
     const [nombre, setNombre] = useState('');
@@ -109,7 +113,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                 if (!isPrivileged && user) {
                     const firefighter = fData.find(f => f.legajo === user.id);
                     if (firefighter) {
-                        const managed = vData.filter(v => v.materialEncargadoIds?.includes(firefighter.id));
+                        const managed = vData.filter(v => v.materialEncargadoIds?.includes(firefighter.id) && v.status !== 'Fuera de Dotación');
                         if (managed.length === 1) setVehiculoId(managed[0].id);
                     }
                 }

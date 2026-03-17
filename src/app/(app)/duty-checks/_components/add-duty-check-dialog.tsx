@@ -57,7 +57,8 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             Promise.all([getWeeks(), getVehicles(), getMaterials()])
                 .then(([w, v, m]) => {
                     setWeeks(w.slice(0, 10)); // Last 10 weeks
-                    setVehicles(v);
+                    // Filter: Only Operativo vehicles can be checked
+                    setVehicles(v.filter(vehicle => vehicle.status === 'Operativo'));
                     setMaterials(m);
                 })
                 .finally(() => setLoading(false));
@@ -194,6 +195,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                         {vehicles.map(v => <SelectItem key={v.id} value={v.id}>Móvil {v.numeroMovil} - {v.marca}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
+                                <p className="text-[10px] text-muted-foreground italic">Solo se muestran móviles con estado "Operativo".</p>
                             </div>
                             <div className="space-y-2">
                                 <Label>Fecha del Control</Label>

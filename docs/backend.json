@@ -35,7 +35,8 @@
         "marca": { "type": "string" },
         "modelo": { "type": "string" },
         "cuartel": { "type": "string" },
-        "kilometraje": { "type": "number" }
+        "kilometraje": { "type": "number" },
+        "status": { "type": "string", "enum": ["Operativo", "No operativo", "Fuera de Dotación"] }
       }
     }
   },

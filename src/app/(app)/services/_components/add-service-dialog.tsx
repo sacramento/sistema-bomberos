@@ -189,6 +189,9 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
   const progress = (step / totalSteps) * 100;
   
   const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
+  
+  // Only operative vehicles can be dispatched to a new service
+  const operativeVehicles = useMemo(() => allVehicles.filter(v => v.status === 'Operativo'), [allVehicles]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -440,7 +443,7 @@ export default function AddServiceDialog({ children, onServiceAdded }: { childre
                                     <SelectTrigger><SelectValue placeholder="Seleccionar..."/></SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="particular">Vehículo Particular</SelectItem>
-                                        {allVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
+                                        {operativeVehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.numeroMovil} - {v.marca}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
