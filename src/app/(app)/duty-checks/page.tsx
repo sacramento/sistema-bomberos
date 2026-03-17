@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -6,17 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useEffect, useState, useMemo } from "react";
 import { DutyCheck, Week } from "@/lib/types";
-import { getDutyChecks } from "@/services/duty-checks.service";
+import { getDutyChecks, deleteDutyChecksBatch } from "@/services/duty-checks.service";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { PlusCircle, Eye, AlertTriangle, CheckCircle2, History, ClipboardCheck, Loader2, Calendar, Building2 } from "lucide-react";
+import { PlusCircle, Eye, AlertTriangle, CheckCircle2, History, ClipboardCheck, Loader2, Calendar, Building2, MoreVertical, Trash2, Edit } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import AddDutyCheckDialog from "./_components/add-duty-check-dialog";
 import DutyCheckDetailsDialog from "./_components/duty-check-details-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 
 type DutyCheckBatch = {
     id: string;
@@ -29,13 +32,16 @@ type DutyCheckBatch = {
 };
 
 export default function DutyChecksPage() {
-    const { user } = useAuth();
+    const { user, getActiveRole } = useAuth();
     const { toast } = useToast();
     const [checks, setChecks] = useState<DutyCheck[]>([]);
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedBatch, setSelectedBatch] = useState<DutyCheckBatch | null>(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
+
+    const activeRole = getActiveRole('/duty-checks');
+    const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -81,8 +87,7 @@ export default function DutyChecksPage() {
     }, [checks, weeks]);
 
     const handleViewBatchDetails = (batch: DutyCheckBatch) => {
-        // Since the details dialog expects one check, but we have a batch, 
-        // we'll consolidate the batch into one "virtual" check for display purposes.
+        // Consolidate the batch into one "virtual" check for display purposes.
         const consolidatedCheck: DutyCheck = {
             ...batch.checks[0],
             vehicleId: batch.checks.map(c => c.vehicleId.split('-')[0]).join(', '),
@@ -93,15 +98,29 @@ export default function DutyChecksPage() {
         setDetailsOpen(true);
     };
 
+    const handleDeleteBatch = async (batch: DutyCheckBatch) => {
+        if (!user) return;
+        try {
+            const ids = batch.checks.map(c => c.id);
+            await deleteDutyChecksBatch(ids, user);
+            toast({ title: "Inspección eliminada", description: "Se han borrado todos los registros de esta dotación." });
+            fetchData();
+        } catch (error: any) {
+            toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
+        }
+    };
+
     return (
         <>
             <PageHeader title="Control de Guardia" description="Registro semanal de operatividad de móviles y materiales.">
-                <AddDutyCheckDialog onCheckAdded={fetchData} actor={user}>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Nuevo Control de Dotación
-                    </Button>
-                </AddDutyCheckDialog>
+                {user && (
+                    <AddDutyCheckDialog onCheckAdded={fetchData} actor={user}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Nuevo Control de Dotación
+                        </Button>
+                    </AddDutyCheckDialog>
+                )}
             </PageHeader>
 
             <div className="grid gap-6">
@@ -173,9 +192,48 @@ export default function DutyChecksPage() {
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    <Button variant="ghost" size="sm" onClick={() => handleViewBatchDetails(batch)}>
-                                                        <Eye className="h-4 w-4 mr-2" /> Ver Informe
-                                                    </Button>
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="ghost" size="sm" onClick={() => handleViewBatchDetails(batch)}>
+                                                            <Eye className="h-4 w-4 mr-2" /> Ver Informe
+                                                        </Button>
+                                                        {isPrivileged && (
+                                                            <AlertDialog>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild>
+                                                                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                                            <MoreVertical className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent align="end">
+                                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                                                        <DropdownMenuItem className="opacity-50 cursor-not-allowed">
+                                                                            <Edit className="mr-2 h-4 w-4" /> Editar (Próximamente)
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuSeparator />
+                                                                        <AlertDialogTrigger asChild>
+                                                                            <DropdownMenuItem className="text-destructive focus:text-destructive">
+                                                                                <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todo
+                                                                            </DropdownMenuItem>
+                                                                        </AlertDialogTrigger>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                                <AlertDialogContent>
+                                                                    <AlertDialogHeader>
+                                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
+                                                                        <AlertDialogDescription>
+                                                                            Esta acción eliminará permanentemente todos los registros de control ({batch.checks.length} móviles) realizados el {format(parseISO(batch.date), 'P', { locale: es })} para el {batch.cuartel}.
+                                                                        </AlertDialogDescription>
+                                                                    </AlertDialogHeader>
+                                                                    <AlertDialogFooter>
+                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                        <AlertDialogAction onClick={() => handleDeleteBatch(batch)} variant="destructive">
+                                                                            Eliminar
+                                                                        </AlertDialogAction>
+                                                                    </AlertDialogFooter>
+                                                                </AlertDialogContent>
+                                                            </AlertDialog>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         );

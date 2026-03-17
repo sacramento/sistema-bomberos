@@ -111,6 +111,11 @@ const translateLog = (log: AuditLog): string => {
         // Cascade
         CREATE_CASCADE_CHARGE: l => `Registró una carga de cascada para el tubo ${l.details?.materialCode}.`,
         CREATE_CASCADE_SYSTEM_CHARGE: l => `Registró una carga del sistema de cascada para los tubos: ${l.details?.tubes?.join(', ')}.`,
+
+        // Duty Checks
+        CREATE_DUTY_CHECK: l => `Registró un control de guardia para la dotación.`,
+        UPDATE_DUTY_CHECK: l => `Actualizó un registro de control de guardia.`,
+        DELETE_DUTY_CHECK: l => `Eliminó un control de guardia (${l.details?.count || 1} móviles).`,
     };
 
     const translator = translations[action];

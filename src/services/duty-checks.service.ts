@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { DutyCheck, LoggedInUser } from '@/lib/types';
-import { collection, getDocs, doc, setDoc, query, orderBy, limit, getDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, limit, getDoc, writeBatch, deleteDoc, updateDoc } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -25,7 +25,7 @@ const cleanData = (obj: any): any => {
 export const getDutyChecks = async (): Promise<DutyCheck[]> => {
     if (!db) return [];
     const colRef = collection(db, DUTY_CHECKS_COLLECTION);
-    const q = query(colRef, orderBy('date', 'desc'), limit(50));
+    const q = query(colRef, orderBy('date', 'desc'), limit(100));
     
     return getDocs(q)
         .then((querySnapshot) => {
@@ -87,6 +87,70 @@ export const addDutyChecksBatch = async (checks: Omit<DutyCheck, 'id'>[], actor:
             errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: colRef.path,
                 operation: 'write',
+            }));
+        });
+}
+
+/**
+ * Updates an existing duty check.
+ */
+export const updateDutyCheck = async (id: string, data: Partial<Omit<DutyCheck, 'id'>>, actor: LoggedInUser) => {
+    if (!db || !actor) return;
+    const docRef = doc(db, DUTY_CHECKS_COLLECTION, id);
+    const cleaned = cleanData(data);
+
+    return updateDoc(docRef, cleaned)
+        .then(() => {
+            logAction(actor, 'UPDATE_DUTY_CHECK', { entity: 'dutyCheck', id }, cleaned);
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'update',
+                requestResourceData: cleaned,
+            }));
+        });
+};
+
+/**
+ * Deletes a single duty check.
+ */
+export const deleteDutyCheck = async (id: string, actor: LoggedInUser) => {
+    if (!db || !actor) return;
+    const docRef = doc(db, DUTY_CHECKS_COLLECTION, id);
+
+    return deleteDoc(docRef)
+        .then(() => {
+            logAction(actor, 'DELETE_DUTY_CHECK', { entity: 'dutyCheck', id });
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'delete',
+            }));
+        });
+};
+
+/**
+ * Deletes a batch of duty checks (e.g. all checks from a specific inspection session).
+ */
+export const deleteDutyChecksBatch = async (ids: string[], actor: LoggedInUser) => {
+    if (!db || !actor || ids.length === 0) return;
+    const batch = writeBatch(db);
+    
+    ids.forEach(id => {
+        const docRef = doc(db, DUTY_CHECKS_COLLECTION, id);
+        batch.delete(docRef);
+    });
+
+    return batch.commit()
+        .then(() => {
+            logAction(actor, 'DELETE_DUTY_CHECK', { entity: 'dutyCheck', id: 'batch' }, { count: ids.length });
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: DUTY_CHECKS_COLLECTION,
+                operation: 'delete',
             }));
         });
 }

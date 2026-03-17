@@ -77,6 +77,8 @@ export type Course = {
   endDate: string;
 }
 
+export type VehicleStatus = 'Operativo' | 'No operativo' | 'Fuera de Dotación';
+
 export type Vehicle = {
   id: string;
   numeroMovil: string;
@@ -90,6 +92,7 @@ export type Vehicle = {
   capacidadAgua: number;
   tipoVehiculo: 'Liviana' | 'Mediana' | 'Pesada' | 'Cisterna';
   traccion: 'Trasera' | 'Delantera' | '4x4';
+  status: VehicleStatus;
   encargadoIds: string[]; 
   materialEncargadoIds: string[]; 
   observaciones: string;
@@ -316,7 +319,7 @@ export type AuditLogAction =
   | 'CREATE_SERVICE' | 'UPDATE_SERVICE' | 'DELETE_SERVICE'
   | 'CREATE_CASCADE_CHARGE'
   | 'CREATE_CASCADE_SYSTEM_CHARGE'
-  | 'CREATE_DUTY_CHECK';
+  | 'CREATE_DUTY_CHECK' | 'UPDATE_DUTY_CHECK' | 'DELETE_DUTY_CHECK';
 
 export type AuditLog = {
     id: string;
