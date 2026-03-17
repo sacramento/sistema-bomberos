@@ -23,12 +23,32 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
 const CHECKABLE_CATEGORY_CODES = [
-    '08.3.1', '06.3.1', '08.1.1', '03.1', '06.1.1', '09.1.1', '09.1.2', '01.5', '05.4.3', '05.2.1'
+    '08.3.1', // Motobombas
+    '06.3.1', // Grupos Electrógenos
+    '08.1.1', // Motosierras
+    '08.1.2', // Motodiscos
+    '03.1',   // Herramientas Hidráulicas (Holmatro, etc)
+    '06.1.1', // Linternas
+    '09.1.1', // Handies VHF
+    '09.1.2', // Bases VHF
+    '01.5',   // Equipos ERA
+    '01.6.1', // Alarma PASS
+    '05.4.3', // DEA
+    '05.2.1'  // Oxígeno
 ];
 
 const VEHICLE_BASE_CHECKS = [
-    "Encendido Motor", "Encastre Bomba", "Nivel Agua", "Nivel Combustible",
-    "Balizas", "Sirenas", "Luces Posición", "Luces Stop", "Luces Alta/Baja", "Luces Giro"
+    "Encendido Motor", 
+    "Encastre Bomba", 
+    "Tanque de Agua (Lleno)", 
+    "Nivel Combustible",
+    "Balizas", 
+    "Sirenas", 
+    "Guiños / Virajes",
+    "Luces de Posición", 
+    "Luces de Freno", 
+    "Luces Altas", 
+    "Luces Bajas"
 ];
 
 type VehicleCheckState = {
