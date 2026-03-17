@@ -22,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
+// Categorías técnicas que disparan el chequeo dinámico
 const CHECKABLE_CATEGORY_CODES = [
     '08.3.1', // Motobombas
     '06.3.1', // Grupos Electrógenos
@@ -29,14 +30,15 @@ const CHECKABLE_CATEGORY_CODES = [
     '08.1.2', // Motodiscos
     '03.1',   // Herramientas Hidráulicas
     '06.1',   // Linternas / Iluminación
-    '09.1',   // Comunicaciones VHF
-    '01.5',   // Equipos ERA
+    '09.1',   // Comunicaciones VHF (Handies y Bases)
+    '01.5',   // Equipos ERA (Aire)
     '01.6.1', // Alarma PASS
     '05.4.3', // DEA
     '05.2.1', // Oxígeno
     '08.4'    // Equipos a Batería / Eléctricos
 ];
 
+// Ítems base de inspección del vehículo
 const VEHICLE_BASE_CHECKS = [
     "Encendido Motor", 
     "Encastre Bomba", 
@@ -82,7 +84,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             setLoading(true);
             Promise.all([getWeeks(), getVehicles(), getMaterials()])
                 .then(([w, v, m]) => {
-                    setWeeks(w.slice(0, 10));
+                    setWeeks(w.slice(0, 10)); // Solo las últimas 10 semanas
                     setAllVehicles(v);
                     setAllMaterials(m);
                 })
@@ -97,7 +99,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             const vMaterials = allMaterials.filter(m => {
                 const isAssigned = m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId === v.id;
                 const isCritical = CHECKABLE_CATEGORY_CODES.some(code => 
-                    m.itemTypeId.startsWith(code) || m.subCategoryId.startsWith(code)
+                    m.itemTypeId.startsWith(code) || m.subCategoryId.startsWith(code) || m.categoryId === code
                 );
                 return isAssigned && isCritical;
             });
@@ -105,13 +107,13 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             return {
                 vehicleId: v.id,
                 numeroMovil: v.numeroMovil,
-                vehicleChecks: VEHICLE_BASE_CHECKS.map(name => ({ id: name, name, status: 'OK' })),
+                vehicleChecks: VEHICLE_BASE_CHECKS.map(name => ({ id: name, name, status: 'OK' as DutyCheckStatus })),
                 equipmentChecks: vMaterials.map(m => ({
                     id: m.id,
                     materialId: m.id,
                     materialCode: m.codigo,
                     name: m.nombre,
-                    status: 'OK'
+                    status: 'OK' as DutyCheckStatus
                 }))
             };
         });
@@ -206,10 +208,10 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
         try {
             const batchData: Omit<DutyCheck, 'id'>[] = vehicleStates.map(state => ({
                 weekId: selectedWeekId,
-                vehicleId: state.vehicleId,
+                vehicleId: state.numeroMovil,
                 inspectorId: actor.id,
                 inspectorName: actor.name,
-                cuartel: selectedWeek.firehouse,
+                cuartel: selectedWeek.firehouse as any,
                 date: checkDate,
                 vehicleChecks: state.vehicleChecks,
                 equipmentChecks: state.equipmentChecks
@@ -239,32 +241,34 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
     const currentState = vehicleStates[currentVehicleIndex];
 
     const renderItem = (item: any, type: 'vehicle' | 'equipment') => (
-        <div key={item.id} className="p-4 border rounded-lg bg-card space-y-3">
-            <div className="flex justify-between items-center">
-                <span className="font-semibold text-sm">{item.name} {item.materialCode && <span className="text-[10px] text-muted-foreground font-mono ml-2">[{item.materialCode}]</span>}</span>
+        <div key={`${currentVehicleIndex}-${item.id}`} className="p-4 border rounded-lg bg-card space-y-3 shadow-sm">
+            <div className="flex justify-between items-center gap-2">
+                <span className="font-semibold text-sm flex-grow">{item.name} {item.materialCode && <Badge variant="outline" className="ml-2 font-mono text-[10px]">{item.materialCode}</Badge>}</span>
                 <RadioGroup 
                     value={item.status} 
                     onValueChange={(v) => updateCheckStatus(type, item.id, v as DutyCheckStatus)}
                     className="flex gap-2"
                 >
-                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'OK' ? "bg-green-600 text-white border-green-600" : "hover:bg-muted")}>
+                    <div className={cn("flex items-center gap-1 border rounded-md px-3 py-1 cursor-pointer transition-colors", item.status === 'OK' ? "bg-green-600 text-white border-green-600" : "hover:bg-muted")}>
                         <RadioGroupItem value="OK" id={`ok-${item.id}-${currentVehicleIndex}`} className="hidden" />
                         <Label htmlFor={`ok-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">OK</Label>
                     </div>
-                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'FALLA' ? "bg-red-600 text-white border-red-600" : "hover:bg-muted")}>
+                    <div className={cn("flex items-center gap-1 border rounded-md px-3 py-1 cursor-pointer transition-colors", item.status === 'FALLA' ? "bg-red-600 text-white border-red-600" : "hover:bg-muted")}>
                         <RadioGroupItem value="FALLA" id={`falla-${item.id}-${currentVehicleIndex}`} className="hidden" />
                         <Label htmlFor={`falla-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">FALLA</Label>
                     </div>
                 </RadioGroup>
             </div>
             {item.status === 'FALLA' && (
-                <Textarea 
-                    placeholder="Describa la falla o novedad..." 
-                    className="text-xs h-20 border-red-200 focus-visible:ring-red-500"
-                    value={item.observations || ''}
-                    onChange={(e) => updateCheckObs(type, item.id, e.target.value)}
-                    required
-                />
+                <div className="animate-in fade-in slide-in-from-top-1">
+                    <Textarea 
+                        placeholder="Describa la falla o novedad obligatoriamente..." 
+                        className="text-xs h-20 border-red-200 focus-visible:ring-red-500"
+                        value={item.observations || ''}
+                        onChange={(e) => updateCheckObs(type, item.id, e.target.value)}
+                        required
+                    />
+                </div>
             )}
         </div>
     );
@@ -273,118 +277,131 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
         <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if(!isOpen) resetForm(); }}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-2">
+                <DialogHeader className="p-6 pb-2 border-b bg-muted/10">
                     <DialogTitle className="font-headline flex items-center gap-2 text-xl">
                         <ClipboardList className="h-6 w-6 text-primary" /> Control de Guardia
                     </DialogTitle>
                     <DialogDescription>
-                        {step === 1 ? 'Configure la inspección general.' : `Inspeccionando Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
+                        {step === 1 ? 'Seleccione la guardia y fecha para iniciar.' : `Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
                     </DialogDescription>
-                    <div className="space-y-2 mt-4">
-                        <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground">
-                            <span>Progreso Dotación</span>
-                            <span>{Math.round(((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100)}%</span>
+                    {step > 1 && (
+                        <div className="space-y-2 mt-4">
+                            <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground">
+                                <span>Progreso de Dotación</span>
+                                <span>{Math.round(((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100)}%</span>
+                            </div>
+                            <Progress value={((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100} className="h-1.5" />
                         </div>
-                        <Progress value={((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100} className="h-1.5" />
-                    </div>
+                    )}
                 </DialogHeader>
 
-                <ScrollArea className="flex-grow px-6 py-4">
-                    {step === 1 && (
-                        <div className="space-y-6">
-                            <div className="space-y-2">
-                                <Label>Seleccionar Semana de Guardia</Label>
-                                <Select value={selectedWeekId} onValueChange={setSelectedWeekId}>
-                                    <SelectTrigger><SelectValue placeholder="Semana..." /></SelectTrigger>
-                                    <SelectContent>
-                                        {weeks.map(w => <SelectItem key={w.id} value={w.id}>{w.name} ({w.firehouse})</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                {selectedWeek && <p className="text-xs text-primary font-medium">✓ Se controlarán todos los móviles operativos del {selectedWeek.firehouse}.</p>}
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Fecha del Control</Label>
-                                <Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} />
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 2 && currentState && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-bold flex items-center gap-2 text-primary"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Luces y Sistemas</h3>
-                                <Badge variant="outline" className="text-[10px]">PARTE 1/2</Badge>
-                            </div>
-                            <Separator />
-                            <div className="grid grid-cols-1 gap-3">
-                                {currentState.vehicleChecks.map(item => renderItem(item, 'vehicle'))}
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 3 && currentState && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-bold flex items-center gap-2 text-primary"><Package className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Equipamiento</h3>
-                                <Badge variant="outline" className="text-[10px]">PARTE 2/2</Badge>
-                            </div>
-                            <Separator />
-                            {currentState.equipmentChecks.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-3">
-                                    {currentState.equipmentChecks.map(item => renderItem(item, 'equipment'))}
+                <ScrollArea className="flex-grow">
+                    <div className="px-6 py-6 space-y-6">
+                        {step === 1 && (
+                            <div className="space-y-6 animate-in fade-in">
+                                <div className="space-y-2">
+                                    <Label>Semana de Guardia</Label>
+                                    <Select value={selectedWeekId} onValueChange={setSelectedWeekId}>
+                                        <SelectTrigger className="h-12"><SelectValue placeholder="Seleccionar semana..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {weeks.map(w => <SelectItem key={w.id} value={w.id}>{w.name} ({w.firehouse})</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    {selectedWeek && <p className="text-xs text-primary font-bold mt-2">✓ Se inspeccionarán {allVehicles.filter(v => v.cuartel === selectedWeek.firehouse && v.status === 'Operativo').length} móviles operativos en {selectedWeek.firehouse}.</p>}
                                 </div>
-                            ) : (
-                                <div className="text-center py-10 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">No se encontraron materiales críticos asignados en el inventario de este móvil.</div>
-                            )}
-                        </div>
-                    )}
-
-                    {step === 4 && (
-                        <div className="space-y-6 animate-in zoom-in-95 duration-300">
-                            <Card className="bg-primary/5 p-4 space-y-2 border-primary/20">
-                                <h3 className="font-bold text-lg text-primary">Resumen Final de Dotación</h3>
-                                <p className="text-sm"><strong>Cuartel:</strong> {selectedWeek?.firehouse}</p>
-                                <p className="text-sm"><strong>Responsable:</strong> {actor?.name}</p>
-                            </Card>
-                            <div className="space-y-4">
-                                {vehicleStates.map((state) => {
-                                    const vFails = state.vehicleChecks.filter(c => c.status === 'FALLA').length;
-                                    const eFails = state.equipmentChecks.filter(c => c.status === 'FALLA').length;
-                                    const totalFails = vFails + eFails;
-                                    return (
-                                        <div key={state.vehicleId} className="flex items-center justify-between p-3 border rounded-lg bg-card">
-                                            <div className="flex items-center gap-3">
-                                                <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center font-bold text-xs">{state.numeroMovil}</div>
-                                                <span className="font-semibold text-sm">Móvil {state.numeroMovil}</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {totalFails > 0 ? (
-                                                    <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Fallas</Badge>
-                                                ) : (
-                                                    <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                <div className="space-y-2">
+                                    <Label>Fecha del Control</Label>
+                                    <Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} className="h-12" />
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {step === 2 && currentState && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
+                                    <h3 className="font-bold flex items-center gap-2 text-primary"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Luces y Sistemas</h3>
+                                    <Badge variant="outline">PARTE 1/2</Badge>
+                                </div>
+                                <div className="grid grid-cols-1 gap-3 pb-4">
+                                    {currentState.vehicleChecks.map(item => renderItem(item, 'vehicle'))}
+                                </div>
+                            </div>
+                        )}
+
+                        {step === 3 && currentState && (
+                            <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
+                                    <h3 className="font-bold flex items-center gap-2 text-primary"><Package className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Equipamiento</h3>
+                                    <Badge variant="outline">PARTE 2/2</Badge>
+                                </div>
+                                {currentState.equipmentChecks.length > 0 ? (
+                                    <div className="grid grid-cols-1 gap-3 pb-4">
+                                        {currentState.equipmentChecks.map(item => renderItem(item, 'equipment'))}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-16 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">
+                                        No se detectó equipamiento crítico (motores, radios, linternas, etc.) asignado a este móvil en el inventario.
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {step === 4 && (
+                            <div className="space-y-6 animate-in zoom-in-95 duration-300">
+                                <Card className="bg-primary/5 p-6 space-y-2 border-primary/20">
+                                    <h3 className="font-bold text-xl text-primary">Resumen Final</h3>
+                                    <div className="grid grid-cols-2 gap-4 mt-2">
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Cuartel</p>
+                                            <p className="font-semibold text-sm">{selectedWeek?.firehouse}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Responsable</p>
+                                            <p className="font-semibold text-sm">{actor?.name}</p>
+                                        </div>
+                                    </div>
+                                </Card>
+                                <div className="space-y-3">
+                                    <Label className="text-xs uppercase font-bold">Estado de la Dotación</Label>
+                                    {vehicleStates.map((state) => {
+                                        const vFails = state.vehicleChecks.filter(c => c.status === 'FALLA').length;
+                                        const eFails = state.equipmentChecks.filter(c => c.status === 'FALLA').length;
+                                        const totalFails = vFails + eFails;
+                                        return (
+                                            <div key={state.vehicleId} className="flex items-center justify-between p-4 border rounded-xl bg-card shadow-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">{state.numeroMovil}</div>
+                                                    <span className="font-bold text-sm">Móvil {state.numeroMovil}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {totalFails > 0 ? (
+                                                        <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Novedades</Badge>
+                                                    ) : (
+                                                        <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </ScrollArea>
 
-                <DialogFooter className="p-6 border-t bg-muted/10">
+                <DialogFooter className="p-6 border-t bg-muted/10 shadow-inner">
                     <div className="flex justify-between w-full">
                         <Button variant="ghost" onClick={handleBack} disabled={step === 1 || loading}>
                             <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
                         </Button>
                         {step < 4 ? (
-                            <Button onClick={handleNext} disabled={loading}>
+                            <Button onClick={handleNext} disabled={loading} size="lg">
                                 Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         ) : (
-                            <Button onClick={handleSubmit} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
+                            <Button onClick={handleSubmit} disabled={loading} size="lg" className="bg-green-600 hover:bg-green-700 text-white px-8">
                                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
-                                Finalizar y Guardar Dotación
+                                Finalizar Control
                             </Button>
                         )}
                     </div>
