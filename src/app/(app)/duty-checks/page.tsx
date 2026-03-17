@@ -91,8 +91,20 @@ export default function DutyChecksPage() {
         const consolidatedCheck: DutyCheck = {
             ...batch.checks[0],
             vehicleId: batch.checks.map(c => c.vehicleId.split('-')[0]).join(', '),
-            vehicleChecks: batch.checks.flatMap(c => c.vehicleChecks.map(vc => ({...vc, name: `[Móv ${c.vehicleId.split('-')[0]}] ${vc.name}`}))),
-            equipmentChecks: batch.checks.flatMap(c => c.equipmentChecks.map(ec => ({...ec, name: `[Móv ${c.vehicleId.split('-')[0]}] ${ec.name}`}))),
+            vehicleChecks: batch.checks.flatMap((c, idx) => 
+                c.vehicleChecks.map(vc => ({
+                    ...vc, 
+                    id: `${idx}_${vc.id}`, // Ensure unique key for each item in the consolidated list
+                    name: `[Móv ${c.vehicleId.split('-')[0]}] ${vc.name}`
+                }))
+            ),
+            equipmentChecks: batch.checks.flatMap((c, idx) => 
+                c.equipmentChecks.map(ec => ({
+                    ...ec, 
+                    id: `${idx}_${ec.id}`, // Ensure unique key for each item in the consolidated list
+                    name: `[Móv ${c.vehicleId.split('-')[0]}] ${ec.name}`
+                }))
+            ),
         };
         setSelectedBatch({ ...batch, checks: [consolidatedCheck] });
         setDetailsOpen(true);
