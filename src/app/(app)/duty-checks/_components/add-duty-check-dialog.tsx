@@ -84,7 +84,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             setLoading(true);
             Promise.all([getWeeks(), getVehicles(), getMaterials()])
                 .then(([w, v, m]) => {
-                    setWeeks(w.slice(0, 10)); // Solo las últimas 10 semanas
+                    setWeeks(w.slice(0, 10));
                     setAllVehicles(v);
                     setAllMaterials(m);
                 })
@@ -276,8 +276,8 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
     return (
         <Dialog open={open} onOpenChange={(isOpen) => { setOpen(isOpen); if(!isOpen) resetForm(); }}>
             <DialogTrigger asChild>{children}</DialogTrigger>
-            <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-                <DialogHeader className="p-6 pb-2 border-b bg-muted/10">
+            <DialogContent className="sm:max-w-2xl h-[90vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2 border-b bg-muted/10 shrink-0">
                     <DialogTitle className="font-headline flex items-center gap-2 text-xl">
                         <ClipboardList className="h-6 w-6 text-primary" /> Control de Guardia
                     </DialogTitle>
@@ -295,101 +295,103 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                     )}
                 </DialogHeader>
 
-                <ScrollArea className="flex-grow">
-                    <div className="px-6 py-6 space-y-6">
-                        {step === 1 && (
-                            <div className="space-y-6 animate-in fade-in">
-                                <div className="space-y-2">
-                                    <Label>Semana de Guardia</Label>
-                                    <Select value={selectedWeekId} onValueChange={setSelectedWeekId}>
-                                        <SelectTrigger className="h-12"><SelectValue placeholder="Seleccionar semana..." /></SelectTrigger>
-                                        <SelectContent>
-                                            {weeks.map(w => <SelectItem key={w.id} value={w.id}>{w.name} ({w.firehouse})</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                    {selectedWeek && <p className="text-xs text-primary font-bold mt-2">✓ Se inspeccionarán {allVehicles.filter(v => v.cuartel === selectedWeek.firehouse && v.status === 'Operativo').length} móviles operativos en {selectedWeek.firehouse}.</p>}
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    <ScrollArea className="h-full">
+                        <div className="px-6 py-6 space-y-6">
+                            {step === 1 && (
+                                <div className="space-y-6 animate-in fade-in">
+                                    <div className="space-y-2">
+                                        <Label>Semana de Guardia</Label>
+                                        <Select value={selectedWeekId} onValueChange={setSelectedWeekId}>
+                                            <SelectTrigger className="h-12"><SelectValue placeholder="Seleccionar semana..." /></SelectTrigger>
+                                            <SelectContent>
+                                                {weeks.map(w => <SelectItem key={w.id} value={w.id}>{w.name} ({w.firehouse})</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        {selectedWeek && <p className="text-xs text-primary font-bold mt-2">✓ Se inspeccionarán {allVehicles.filter(v => v.cuartel === selectedWeek.firehouse && v.status === 'Operativo').length} móviles operativos en {selectedWeek.firehouse}.</p>}
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Fecha del Control</Label>
+                                        <Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} className="h-12" />
+                                    </div>
                                 </div>
-                                <div className="space-y-2">
-                                    <Label>Fecha del Control</Label>
-                                    <Input type="date" value={checkDate} onChange={e => setCheckDate(e.target.value)} className="h-12" />
-                                </div>
-                            </div>
-                        )}
+                            )}
 
-                        {step === 2 && currentState && (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                                <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
-                                    <h3 className="font-bold flex items-center gap-2 text-primary"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Luces y Sistemas</h3>
-                                    <Badge variant="outline">PARTE 1/2</Badge>
-                                </div>
-                                <div className="grid grid-cols-1 gap-3 pb-4">
-                                    {currentState.vehicleChecks.map(item => renderItem(item, 'vehicle'))}
-                                </div>
-                            </div>
-                        )}
-
-                        {step === 3 && currentState && (
-                            <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
-                                <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
-                                    <h3 className="font-bold flex items-center gap-2 text-primary"><Package className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Equipamiento</h3>
-                                    <Badge variant="outline">PARTE 2/2</Badge>
-                                </div>
-                                {currentState.equipmentChecks.length > 0 ? (
+                            {step === 2 && currentState && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                    <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
+                                        <h3 className="font-bold flex items-center gap-2 text-primary text-sm sm:text-base"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Luces y Sistemas</h3>
+                                        <Badge variant="outline" className="text-[10px]">PARTE 1/2</Badge>
+                                    </div>
                                     <div className="grid grid-cols-1 gap-3 pb-4">
-                                        {currentState.equipmentChecks.map(item => renderItem(item, 'equipment'))}
+                                        {currentState.vehicleChecks.map(item => renderItem(item, 'vehicle'))}
                                     </div>
-                                ) : (
-                                    <div className="text-center py-16 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">
-                                        No se detectó equipamiento crítico (motores, radios, linternas, etc.) asignado a este móvil en el inventario.
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {step === 4 && (
-                            <div className="space-y-6 animate-in zoom-in-95 duration-300">
-                                <Card className="bg-primary/5 p-6 space-y-2 border-primary/20">
-                                    <h3 className="font-bold text-xl text-primary">Resumen Final</h3>
-                                    <div className="grid grid-cols-2 gap-4 mt-2">
-                                        <div>
-                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Cuartel</p>
-                                            <p className="font-semibold text-sm">{selectedWeek?.firehouse}</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[10px] uppercase font-bold text-muted-foreground">Responsable</p>
-                                            <p className="font-semibold text-sm">{actor?.name}</p>
-                                        </div>
-                                    </div>
-                                </Card>
-                                <div className="space-y-3">
-                                    <Label className="text-xs uppercase font-bold">Estado de la Dotación</Label>
-                                    {vehicleStates.map((state) => {
-                                        const vFails = state.vehicleChecks.filter(c => c.status === 'FALLA').length;
-                                        const eFails = state.equipmentChecks.filter(c => c.status === 'FALLA').length;
-                                        const totalFails = vFails + eFails;
-                                        return (
-                                            <div key={state.vehicleId} className="flex items-center justify-between p-4 border rounded-xl bg-card shadow-sm">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">{state.numeroMovil}</div>
-                                                    <span className="font-bold text-sm">Móvil {state.numeroMovil}</span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {totalFails > 0 ? (
-                                                        <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Novedades</Badge>
-                                                    ) : (
-                                                        <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
                                 </div>
-                            </div>
-                        )}
-                    </div>
-                </ScrollArea>
+                            )}
 
-                <DialogFooter className="p-6 border-t bg-muted/10 shadow-inner">
+                            {step === 3 && currentState && (
+                                <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
+                                    <div className="flex items-center justify-between sticky top-0 bg-background/95 py-2 z-10 backdrop-blur-sm">
+                                        <h3 className="font-bold flex items-center gap-2 text-primary text-sm sm:text-base"><Package className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Equipamiento</h3>
+                                        <Badge variant="outline" className="text-[10px]">PARTE 2/2</Badge>
+                                    </div>
+                                    {currentState.equipmentChecks.length > 0 ? (
+                                        <div className="grid grid-cols-1 gap-3 pb-4">
+                                            {currentState.equipmentChecks.map(item => renderItem(item, 'equipment'))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-16 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">
+                                            No se detectó equipamiento crítico (motores, radios, linternas, etc.) asignado a este móvil en el inventario.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {step === 4 && (
+                                <div className="space-y-6 animate-in zoom-in-95 duration-300">
+                                    <Card className="bg-primary/5 p-6 space-y-2 border-primary/20">
+                                        <h3 className="font-bold text-xl text-primary">Resumen Final</h3>
+                                        <div className="grid grid-cols-2 gap-4 mt-2">
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Cuartel</p>
+                                                <p className="font-semibold text-sm">{selectedWeek?.firehouse}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] uppercase font-bold text-muted-foreground">Responsable</p>
+                                                <p className="font-semibold text-sm">{actor?.name}</p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                    <div className="space-y-3">
+                                        <Label className="text-xs uppercase font-bold">Estado de la Dotación</Label>
+                                        {vehicleStates.map((state) => {
+                                            const vFails = state.vehicleChecks.filter(c => c.status === 'FALLA').length;
+                                            const eFails = state.equipmentChecks.filter(c => c.status === 'FALLA').length;
+                                            const totalFails = vFails + eFails;
+                                            return (
+                                                <div key={state.vehicleId} className="flex items-center justify-between p-4 border rounded-xl bg-card shadow-sm">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">{state.numeroMovil}</div>
+                                                        <span className="font-bold text-sm">Móvil {state.numeroMovil}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {totalFails > 0 ? (
+                                                            <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Novedades</Badge>
+                                                        ) : (
+                                                            <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </ScrollArea>
+                </div>
+
+                <DialogFooter className="p-6 border-t bg-muted/10 shrink-0">
                     <div className="flex justify-between w-full">
                         <Button variant="ghost" onClick={handleBack} disabled={step === 1 || loading}>
                             <ArrowLeft className="mr-2 h-4 w-4" /> Anterior
