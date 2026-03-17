@@ -120,9 +120,8 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
   const [time, setTime] = useState('');
   const [instructors, setInstructors] = useState<Firefighter[]>([]);
   const [assistants, setAssistants] = useState<Firefighter[]>([]);
-  const [attendees, setAttendees] = useState<Firefighter[]>([]);
 
-  const totalSteps = 4;
+  const totalSteps = 3;
   const progress = (step / totalSteps) * 100;
 
   const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
@@ -147,18 +146,6 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
     fetchAllFirefighters();
   }, [open, toast]);
 
-  const handleAttendeesUpdate = useCallback(() => {
-    const instructorIds = new Set(instructors.map(i => i.id));
-    const assistantIds = new Set(assistants.map(a => a.id));
-    setAttendees(prev => prev.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
-  }, [instructors, assistants]);
-
-  useEffect(() => {
-    if (step === 4) {
-        handleAttendeesUpdate();
-    }
-  }, [step, handleAttendeesUpdate]);
-  
   const resetForm = useCallback(() => {
     setTitle('');
     setSpecialization('');
@@ -167,7 +154,6 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
     setTime('');
     setInstructors([]);
     setAssistants([]);
-    setAttendees([]);
     setStep(1);
   }, []);
 
@@ -188,10 +174,6 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
       toast({ title: "Sin instructores", description: "Debe seleccionar al menos un instructor.", variant: "destructive" });
       return;
     }
-    if (step === 3 && attendees.length === 0) {
-      toast({ title: "Sin asistentes", description: "Debe seleccionar al menos un aspirante.", variant: "destructive" });
-      return;
-    }
     setStep(s => Math.min(s + 1, totalSteps));
   };
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
@@ -200,10 +182,10 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
   const handleSubmit = async () => {
     setLoading(true);
     
-    if (attendees.length === 0) {
+    if (aspirantes.length === 0) {
          toast({
-            title: "Sin asistentes",
-            description: "No se puede crear un taller sin aspirantes.",
+            title: "Sin aspirantes",
+            description: "No hay aspirantes activos disponibles.",
             variant: "destructive",
         });
         setLoading(false);
@@ -219,14 +201,14 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
             startTime: time,
             instructors,
             assistants,
-            attendees,
+            attendees: aspirantes,
         };
         
         await addAspiranteWorkshop(newWorkshopData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
 
         toast({
             title: "¡Éxito!",
-            description: `El nuevo taller para aspirantes ha sido creado.`,
+            description: `El taller para los ${aspirantes.length} aspirantes ha sido creado.`,
         });
         
         onWorkshopAdded();
@@ -290,20 +272,10 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
             </div>
           </div>
         );
-      case 3:
-        return (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">Seleccione los aspirantes que participarán en el taller.</p>
-            <div className="space-y-2">
-                <Label>Asistentes (Aspirantes)</Label>
-                <MultiSelectFirefighter title="aspirantes" selected={attendees} onSelectedChange={setAttendees} firefighters={aspirantes} />
-              </div>
-          </div>
-        );
-       case 4:
+       case 3:
             return (
                 <div className="space-y-4 text-sm">
-                    <h4 className="font-bold text-base">Por favor, revise y confirme los detalles del taller:</h4>
+                    <h4 className="font-bold text-base">Revise los detalles del taller:</h4>
                     <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                        <p><strong>Título:</strong> {title}</p>
                        <p><strong>Especialidad:</strong> {specialization}</p>
@@ -311,10 +283,10 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
                        <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
-                           <p className="font-semibold">Total de Aspirantes Asignados: {attendees.length}</p>
-                           {attendees.length > 0 && (
-                               <div className="text-xs text-muted-foreground h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                                   {attendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
+                           <p className="font-semibold text-primary">Se incluirán automáticamente todos los aspirantes activos ({aspirantes.length}):</p>
+                           {aspirantes.length > 0 && (
+                               <div className="text-xs text-muted-foreground h-32 overflow-y-auto border bg-background rounded-md p-2 mt-1">
+                                   {aspirantes.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
                                </div>
                            )}
                        </div>
@@ -331,9 +303,9 @@ export default function AddAspiranteWorkshopDialog({ children, onWorkshopAdded }
         <DialogTrigger asChild>{children}</DialogTrigger>
         <DialogContent className="w-[95vw] max-w-xl rounded-md flex flex-col max-h-[90vh]">
              <DialogHeader>
-                <DialogTitle className="font-headline">Crear Nuevo Taller para Aspirantes</DialogTitle>
+                <DialogTitle className="font-headline">Crear Taller para Aspirantes</DialogTitle>
                 <DialogDescription>
-                Paso {step} de {totalSteps} - Complete los detalles del nuevo taller.
+                Paso {step} de {totalSteps} - Complete los detalles.
                 </DialogDescription>
                 <Progress value={progress} className="mt-2" />
             </DialogHeader>

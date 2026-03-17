@@ -120,9 +120,8 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
   const [time, setTime] = useState(session.startTime);
   const [instructors, setInstructors] = useState<Firefighter[]>(session.instructors);
   const [assistants, setAssistants] = useState<Firefighter[]>(session.assistants);
-  const [attendees, setAttendees] = useState<Firefighter[]>(session.attendees);
 
-  const totalSteps = 4;
+  const totalSteps = 3;
   const progress = (step / totalSteps) * 100;
   
   const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
@@ -147,18 +146,6 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
     fetchAllFirefighters();
   }, [open, toast]);
 
-  const handleAttendeesUpdate = useCallback(() => {
-    const instructorIds = new Set(instructors.map(i => i.id));
-    const assistantIds = new Set(assistants.map(a => a.id));
-    setAttendees(prev => prev.filter(f => !instructorIds.has(f.id) && !assistantIds.has(f.id)));
-  }, [instructors, assistants]);
-
-  useEffect(() => {
-    if (step === 4) {
-        handleAttendeesUpdate();
-    }
-  }, [step, handleAttendeesUpdate]);
-  
   const resetForm = useCallback(() => {
     setStep(1);
     setTitle(session.title);
@@ -168,7 +155,6 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
     setTime(session.startTime);
     setInstructors(session.instructors);
     setAssistants(session.assistants);
-    setAttendees(session.attendees);
   }, [session]);
 
   const handleOpenChange = useCallback((isOpen: boolean) => {
@@ -188,10 +174,6 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
       toast({ title: "Sin instructores", description: "Debe seleccionar al menos un instructor.", variant: "destructive" });
       return;
     }
-    if (step === 3 && attendees.length === 0) {
-      toast({ title: "Sin asistentes", description: "Debe seleccionar al menos un aspirante.", variant: "destructive" });
-      return;
-    }
     setStep(s => Math.min(s + 1, totalSteps));
   };
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
@@ -200,10 +182,11 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
   const handleSubmit = async () => {
     setLoading(true);
     
-    if (attendees.length === 0) {
+    // Al editar, sincronizamos la lista de alumnos con la lista actual de aspirantes
+    if (aspirantes.length === 0) {
         toast({
-            title: "Sin asistentes",
-            description: "No puede haber un taller sin aspirantes.",
+            title: "Sin aspirantes",
+            description: "No hay aspirantes disponibles.",
             variant: "destructive",
         });
         setLoading(false);
@@ -219,7 +202,7 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
             startTime: time,
             instructors,
             assistants,
-            attendees: attendees,
+            attendees: aspirantes,
         };
         
         await updateAspiranteWorkshop(session.id, updatedData, { id: 'admin', name: 'Admin', role: 'Master', roles: { asistencia: 'Administrador', aspirantes: 'Administrador', semanas: 'Administrador', movilidad: 'Administrador', materiales: 'Administrador', ayudantia: 'Administrador', roperia: 'Administrador', servicios: 'Administrador', cascada: 'Administrador' } });
@@ -289,20 +272,10 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
             </div>
           </div>
         );
-      case 3:
-        return (
-          <div className="space-y-4">
-             <p className="text-sm text-muted-foreground">Seleccione los aspirantes que participarán en el taller.</p>
-            <div className="space-y-2">
-                <Label>Asistentes (Aspirantes)</Label>
-                <MultiSelectFirefighter title="aspirantes" selected={attendees} onSelectedChange={setAttendees} firefighters={aspirantes} />
-            </div>
-          </div>
-        );
-       case 4:
+       case 3:
             return (
                 <div className="space-y-4 text-sm">
-                    <h4 className="font-bold text-base">Por favor, revise y confirme los cambios:</h4>
+                    <h4 className="font-bold text-base">Revise los cambios:</h4>
                     <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                        <p><strong>Título:</strong> {title}</p>
                        <p><strong>Especialidad:</strong> {specialization}</p>
@@ -310,10 +283,10 @@ export default function EditAspiranteWorkshopDialog({ children, session, onWorks
                        <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
-                           <p className="font-semibold">Total de Aspirantes Asignados: {attendees.length}</p>
-                           {attendees.length > 0 && (
-                               <div className="text-xs text-muted-foreground h-24 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                                   {attendees.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
+                           <p className="font-semibold text-primary">Se actualizará la lista para incluir a todos los aspirantes actuales ({aspirantes.length}):</p>
+                           {aspirantes.length > 0 && (
+                               <div className="text-xs text-muted-foreground h-32 overflow-y-auto border bg-background rounded-md p-2 mt-1">
+                                   {aspirantes.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
                                </div>
                            )}
                        </div>
