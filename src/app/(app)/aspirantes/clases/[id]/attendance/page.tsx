@@ -207,7 +207,7 @@ export default function AspiranteClassAttendancePage() {
                                             <TableCell className="text-right">
                                                 <Select value={attendance[f.id]} onValueChange={(s) => handleStatusChange(f.id, s as AttendanceStatus)} disabled={!canEdit}>
                                                     <SelectTrigger className={cn("w-[140px] ml-auto h-8 text-xs", getStatusClass(attendance[f.id]))}><SelectValue /></SelectTrigger>
-                                                    <SelectContent>{statusOptions.map(o => <SelectItem key={option.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                                    <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                                                 </Select>
                                             </TableCell>
                                         </TableRow>
@@ -216,7 +216,10 @@ export default function AspiranteClassAttendancePage() {
                             </Table>
                         </CardContent>
                         <CardFooter className="justify-end border-t pt-4">
-                            <Button onClick={handleSaveChanges} disabled={saving}><Save className="mr-2 h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar Asistencia'}</Button>
+                            <Button onClick={handleSaveChanges} disabled={saving}>
+                                <Save className="mr-2 h-4 w-4" />
+                                {saving ? 'Guardando...' : 'Guardar Asistencia'}
+                            </Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
