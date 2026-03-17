@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,7 @@ import { getWeeks } from "@/services/weeks.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getMaterials } from "@/services/materials.service";
 import { addDutyChecksBatch } from "@/services/duty-checks.service";
-import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, Save, ClipboardList, Truck, Package } from "lucide-react";
+import { Loader2, ArrowRight, ArrowLeft, CheckCircle2, AlertTriangle, Save, ClipboardList, Truck, Package, CalendarDays } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
@@ -21,6 +22,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { format, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
 
 // Categorías técnicas que disparan el chequeo dinámico
 const CHECKABLE_CATEGORY_CODES = [
@@ -84,7 +87,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             setLoading(true);
             Promise.all([getWeeks(), getVehicles(), getMaterials()])
                 .then(([w, v, m]) => {
-                    setWeeks(w.slice(0, 10));
+                    setWeeks(w.slice(0, 15));
                     setAllVehicles(v);
                     setAllMaterials(m);
                 })
@@ -126,9 +129,10 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                 toast({ title: "Falta semana", description: "Seleccione una semana de guardia.", variant: "destructive" });
                 return;
             }
+            // Solo vehículos operativos del cuartel de la semana
             const filtered = allVehicles.filter(v => v.cuartel === selectedWeek?.firehouse && v.status === 'Operativo');
             if (filtered.length === 0) {
-                toast({ title: "Sin móviles", description: "No hay móviles operativos en este cuartel.", variant: "destructive" });
+                toast({ title: "Sin móviles", description: "No hay móviles operativos registrados en este cuartel.", variant: "destructive" });
                 return;
             }
             setTargetVehicles(filtered);
@@ -218,7 +222,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             }));
 
             await addDutyChecksBatch(batchData, actor);
-            toast({ title: "¡Éxito!", description: `Se registraron los controles de la dotación.` });
+            toast({ title: "¡Éxito!", description: `Se registró el control de la dotación completa.` });
             onCheckAdded();
             setOpen(false);
             resetForm();
@@ -262,7 +266,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             {item.status === 'FALLA' && (
                 <div className="animate-in fade-in slide-in-from-top-1">
                     <Textarea 
-                        placeholder="Describa la falla o novedad obligatoriamente..." 
+                        placeholder="Describa la falla obligatoriamente..." 
                         className="text-xs h-20 border-red-200 focus-visible:ring-red-500"
                         value={item.observations || ''}
                         onChange={(e) => updateCheckObs(type, item.id, e.target.value)}
@@ -282,12 +286,12 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                         <ClipboardList className="h-6 w-6 text-primary" /> Control de Guardia
                     </DialogTitle>
                     <DialogDescription>
-                        {step === 1 ? 'Seleccione la guardia y fecha para iniciar.' : `Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
+                        {step === 1 ? 'Seleccione la guardia para iniciar la inspección de la dotación.' : `Inspeccionando Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
                     </DialogDescription>
                     {step > 1 && (
                         <div className="space-y-2 mt-4">
                             <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground">
-                                <span>Progreso de Dotación</span>
+                                <span>Progreso Dotación</span>
                                 <span>{Math.round(((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100)}%</span>
                             </div>
                             <Progress value={((currentVehicleIndex + (step === 4 ? 1 : 0)) / (targetVehicles.length || 1)) * 100} className="h-1.5" />
@@ -303,12 +307,25 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                     <div className="space-y-2">
                                         <Label>Semana de Guardia</Label>
                                         <Select value={selectedWeekId} onValueChange={setSelectedWeekId}>
-                                            <SelectTrigger className="h-12"><SelectValue placeholder="Seleccionar semana..." /></SelectTrigger>
+                                            <SelectTrigger className="h-14"><SelectValue placeholder="Seleccionar semana..." /></SelectTrigger>
                                             <SelectContent>
-                                                {weeks.map(w => <SelectItem key={w.id} value={w.id}>{w.name} ({w.firehouse})</SelectItem>)}
+                                                {weeks.map(w => (
+                                                    <SelectItem key={w.id} value={w.id}>
+                                                        <div className="flex flex-col text-left">
+                                                            <span className="font-bold">{w.name} ({w.firehouse})</span>
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                {format(parseISO(w.periodStartDate), 'dd/MM')} al {format(parseISO(w.periodEndDate), 'dd/MM')}
+                                                            </span>
+                                                        </div>
+                                                    </SelectItem>
+                                                ))}
                                             </SelectContent>
                                         </Select>
-                                        {selectedWeek && <p className="text-xs text-primary font-bold mt-2">✓ Se inspeccionarán {allVehicles.filter(v => v.cuartel === selectedWeek.firehouse && v.status === 'Operativo').length} móviles operativos en {selectedWeek.firehouse}.</p>}
+                                        {selectedWeek && (
+                                            <p className="text-xs text-primary font-bold mt-2 flex items-center gap-2">
+                                                <Truck className="h-3 w-3"/> Se inspeccionarán {allVehicles.filter(v => v.cuartel === selectedWeek.firehouse && v.status === 'Operativo').length} móviles operativos en {selectedWeek.firehouse}.
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="space-y-2">
                                         <Label>Fecha del Control</Label>
@@ -376,7 +393,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                                     </div>
                                                     <div className="flex items-center gap-2">
                                                         {totalFails > 0 ? (
-                                                            <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Novedades</Badge>
+                                                            <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Fallas</Badge>
                                                         ) : (
                                                             <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
                                                         )}

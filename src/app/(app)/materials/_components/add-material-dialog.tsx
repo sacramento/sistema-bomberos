@@ -60,7 +60,7 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
         return firefighters.find(f => f.legajo === user.id);
     }, [user, firefighters]);
 
-    // Only show vehicles that are NOT decommissioned (Fuera de Dotación)
+    // Solo vehículos que NO están fuera de dotación
     const availableVehicles = useMemo(() => vehicles.filter(v => v.status !== 'Fuera de Dotación'), [vehicles]);
 
     const managedVehicles = useMemo(() => {
@@ -185,7 +185,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
         }
     };
 
-    const isHose = itemTypeId === '02.2.1' || itemTypeId === '02.2.2' || itemTypeId === '11.2.1';
     const needsTechnicalDetails = (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) || (categoryId === '11' && subCategoryId === '11.2');
 
     return (
@@ -241,12 +240,6 @@ export default function AddMaterialDialog({ children, onMaterialAdded, open: con
                                     </Select>
                                     {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar..." />}
                                 </div>
-                                {isHose && (
-                                    <div className="space-y-2">
-                                        <Label>Composición</Label>
-                                        <Select value={composicion} onValueChange={setComposicion}><SelectTrigger><SelectValue placeholder="Tela/Goma..."/></SelectTrigger><SelectContent>{composicionOptions.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select>
-                                    </div>
-                                )}
                             </>
                         )}
                         <div className="space-y-2"><Label>Estado</Label><Select value={estado} onValueChange={(v) => setEstado(v as any)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{estados.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
