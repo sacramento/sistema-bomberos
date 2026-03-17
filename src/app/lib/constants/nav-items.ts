@@ -22,6 +22,7 @@ import {
   Settings,
   BookCopy,
   Droplets,
+  ClipboardCheck,
 } from 'lucide-react';
 import type { ActiveRole } from '@/lib/types';
 
@@ -52,6 +53,7 @@ export const navItems: NavItem[] = [
   // Semanas
   { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/duty-checks', icon: ClipboardCheck, label: 'Control de Guardia', roles: ['Master', 'Administrador', 'Oficial', 'Encargado'], module: 'semanas' },
   { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   
   // Movilidad
