@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Firefighter, LoggedInUser } from '@/lib/types';
@@ -84,9 +85,11 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
         const docRef = doc(firefightersCollection); 
         batch.set(docRef, cleanData({
             ...firefighter,
-            status: firefighter.status === 'Active' || firefighter.status === 'Inactive' ? firefighter.status : 'Active'
+            status: firefighter.status || 'Active'
         }));
     }
+    
+    // Non-blocking batch commit
     batch.commit().catch(async (error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: firefightersCollection.path,
@@ -94,7 +97,7 @@ export const batchAddFirefighters = async (firefighters: Omit<Firefighter, 'id'>
         }));
     });
     
-    await logAction(actor, 'BATCH_IMPORT_FIREFIGHTERS', { entity: 'firefighter', id: 'batch' }, { count: firefighters.length });
+    logAction(actor, 'BATCH_IMPORT_FIREFIGHTERS', { entity: 'firefighter', id: 'batch' }, { count: firefighters.length });
 };
 
 export const updateFirefighter = (id: string, firefighterData: Partial<Omit<Firefighter, 'id'>>, actor: LoggedInUser) => {

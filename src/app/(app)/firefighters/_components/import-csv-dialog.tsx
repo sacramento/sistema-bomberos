@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -19,6 +20,7 @@ import { batchAddFirefighters } from '@/services/firefighters.service';
 import Papa from 'papaparse';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileText, Loader2, Upload } from 'lucide-react';
+import { useAuth } from '@/context/auth-context';
 
 // Define the required headers for the CSV file
 const REQUIRED_HEADERS = ['legajo', 'nombre', 'apellido', 'rank', 'firehouse'];
@@ -34,6 +36,7 @@ export default function ImportCsvDialog({
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -51,6 +54,15 @@ export default function ImportCsvDialog({
       toast({
         title: 'Error',
         description: 'Por favor, seleccione un archivo CSV para importar.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: 'Error de sesión',
+        description: 'No se pudo identificar al usuario actual para realizar el registro en la bitácora.',
         variant: 'destructive',
       });
       return;
@@ -78,7 +90,7 @@ export default function ImportCsvDialog({
 
         const firefightersToUpload = results.data.map(row => {
             const statusValue = row.status?.trim() || '';
-            const isValidStatus = statusValue.toLowerCase() === 'active' || statusValue.toLowerCase() === 'inactive';
+            const isValidStatus = statusValue.toLowerCase() === 'active' || statusValue.toLowerCase() === 'inactive' || statusValue.toLowerCase() === 'auxiliar';
             
             return {
                 legajo: row.legajo.trim(),
@@ -86,7 +98,7 @@ export default function ImportCsvDialog({
                 lastName: row.apellido.trim(),
                 rank: row.rank.trim().toUpperCase(),
                 firehouse: row.firehouse.trim(),
-                status: isValidStatus ? (statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase() as 'Active' | 'Inactive') : 'Active'
+                status: isValidStatus ? (statusValue.charAt(0).toUpperCase() + statusValue.slice(1).toLowerCase() as 'Active' | 'Inactive' | 'Auxiliar') : 'Active'
             } as Omit<Firefighter, 'id'>
         });
         
@@ -102,7 +114,7 @@ export default function ImportCsvDialog({
 
 
         try {
-          await batchAddFirefighters(firefightersToUpload);
+          await batchAddFirefighters(firefightersToUpload, user);
           toast({
             title: '¡Éxito!',
             description: `${firefightersToUpload.length} bomberos han sido importados correctamente.`,
@@ -151,7 +163,7 @@ export default function ImportCsvDialog({
                 <FileText className="h-4 w-4" />
                 <AlertTitle>Formato del Archivo</AlertTitle>
                 <AlertDescription>
-                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, nombre, apellido, rank, firehouse</strong>. Opcionalmente puede incluir la columna `status` (valores: `Active` o `Inactive`); si se omite, el bombero se creará como `Active`.
+                    El archivo CSV debe contener las siguientes columnas: <strong>legajo, nombre, apellido, rank, firehouse</strong>. Opcionalmente puede incluir la columna `status` (valores: `Active`, `Inactive` o `Auxiliar`); si se omite, el bombero se creará como `Active`.
                 </AlertDescription>
             </Alert>
             <div className="grid w-full items-center gap-1.5">
