@@ -88,7 +88,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
       }
   }, [open, initialData])
   
-  
   const resetForm = useCallback(() => {
     setName('');
     setFirehouse('');
@@ -99,6 +98,11 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
     setObservations('');
     setStep(1);
   }, []);
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (!isOpen) resetForm();
+  };
 
   const handleNext = () => {
     if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
