@@ -28,27 +28,28 @@ const CHECKABLE_CATEGORY_CODES = [
     '08.1.1', // Motosierras
     '08.1.2', // Motodiscos
     '03.1',   // Herramientas Hidráulicas (Holmatro, etc)
-    '06.1.1', // Linternas
-    '09.1.1', // Handies VHF
-    '09.1.2', // Bases VHF
+    '06.1',   // Linternas / Iluminación
+    '09.1',   // Comunicaciones VHF (Handies y Bases)
     '01.5',   // Equipos ERA
     '01.6.1', // Alarma PASS
     '05.4.3', // DEA
-    '05.2.1'  // Oxígeno
+    '05.2.1', // Oxígeno
+    '08.4'    // Equipos a Batería / Eléctricos
 ];
 
 const VEHICLE_BASE_CHECKS = [
     "Encendido Motor", 
-    "Encastre Bomba", 
+    "Encastre Bomba (si tiene)", 
     "Tanque de Agua (Lleno)", 
     "Nivel Combustible",
-    "Balizas", 
-    "Sirenas", 
-    "Guiños / Virajes",
+    "Nivel Aceite Motor",
+    "Sirena",
+    "Balizas (Luces de Emergencia)", 
     "Luces de Posición", 
-    "Luces de Freno", 
-    "Luces Altas", 
-    "Luces Bajas"
+    "Luces de Stop (Freno)", 
+    "Luces de Reversa",
+    "Luces de Giro (Guiños)",
+    "Luces Altas / Bajas"
 ];
 
 type VehicleCheckState = {
@@ -62,7 +63,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
     const [open, setOpen] = useState(false);
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
-    const [step, setStep] = useState(1); // 1: Setup, 2: Vehicle Checks, 3: Equipment Checks, 4: Summary
+    const [step, setStep] = useState(1); 
     
     // Selection Sources
     const [weeks, setWeeks] = useState<Week[]>([]);
@@ -82,7 +83,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             setLoading(true);
             Promise.all([getWeeks(), getVehicles(), getMaterials()])
                 .then(([w, v, m]) => {
-                    setWeeks(w.slice(0, 10)); // Last 10 weeks
+                    setWeeks(w.slice(0, 10));
                     setAllVehicles(v);
                     setAllMaterials(m);
                 })
@@ -96,7 +97,9 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
         const states: VehicleCheckState[] = vList.map(v => {
             const vMaterials = allMaterials.filter(m => {
                 const isAssigned = m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId === v.id;
-                const isCritical = CHECKABLE_CATEGORY_CODES.some(code => m.itemTypeId.startsWith(code) || m.subCategoryId.startsWith(code));
+                const isCritical = CHECKABLE_CATEGORY_CODES.some(code => 
+                    m.itemTypeId.startsWith(code) || m.subCategoryId.startsWith(code)
+                );
                 return isAssigned && isCritical;
             });
 
@@ -214,7 +217,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
             }));
 
             await addDutyChecksBatch(batchData, actor);
-            toast({ title: "¡Éxito!", description: `Se registraron los controles de ${batchData.length} móviles.` });
+            toast({ title: "¡Éxito!", description: `Se registraron los controles de la dotación.` });
             onCheckAdded();
             setOpen(false);
             resetForm();
@@ -246,12 +249,12 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                     className="flex gap-2"
                 >
                     <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'OK' ? "bg-green-600 text-white" : "hover:bg-muted")}>
-                        <RadioGroupItem value="OK" id={`ok-${item.id}`} className="hidden" />
-                        <Label htmlFor={`ok-${item.id}`} className="cursor-pointer text-[10px] font-bold uppercase">OK</Label>
+                        <RadioGroupItem value="OK" id={`ok-${item.id}-${currentVehicleIndex}`} className="hidden" />
+                        <Label htmlFor={`ok-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">OK</Label>
                     </div>
                     <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'FALLA' ? "bg-red-600 text-white" : "hover:bg-muted")}>
-                        <RadioGroupItem value="FALLA" id={`falla-${item.id}`} className="hidden" />
-                        <Label htmlFor={`falla-${item.id}`} className="cursor-pointer text-[10px] font-bold uppercase">FALLA</Label>
+                        <RadioGroupItem value="FALLA" id={`falla-${item.id}-${currentVehicleIndex}`} className="hidden" />
+                        <Label htmlFor={`falla-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">FALLA</Label>
                     </div>
                 </RadioGroup>
             </div>
@@ -276,7 +279,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                         <ClipboardList className="h-6 w-6 text-primary" /> Control de Guardia
                     </DialogTitle>
                     <DialogDescription>
-                        {step === 1 ? 'Configure la inspección general.' : `Controlando Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
+                        {step === 1 ? 'Configure la inspección general.' : `Inspeccionando Móvil ${currentVehicle?.numeroMovil} (${currentVehicleIndex + 1} de ${targetVehicles.length})`}
                     </DialogDescription>
                     <div className="space-y-2 mt-4">
                         <div className="flex justify-between text-[10px] uppercase font-bold text-muted-foreground">
@@ -310,7 +313,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                     {step === 2 && currentState && (
                         <div className="space-y-4 animate-in fade-in slide-in-from-right-2 duration-300">
                             <div className="flex items-center justify-between">
-                                <h3 className="font-bold flex items-center gap-2 text-primary"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Estado General</h3>
+                                <h3 className="font-bold flex items-center gap-2 text-primary"><Truck className="h-5 w-5" /> Móvil {currentVehicle?.numeroMovil} - Luces y Sistemas</h3>
                                 <Badge variant="outline" className="text-[10px]">PARTE 1/2</Badge>
                             </div>
                             <Separator />
@@ -332,7 +335,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                     {currentState.equipmentChecks.map(item => renderItem(item, 'equipment'))}
                                 </div>
                             ) : (
-                                <div className="text-center py-10 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">No se encontraron materiales críticos asignados para controlar.</div>
+                                <div className="text-center py-10 text-muted-foreground italic bg-muted/20 rounded-lg border-2 border-dashed">No se encontraron materiales críticos asignados en el inventario de este móvil.</div>
                             )}
                         </div>
                     )}
@@ -345,7 +348,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                 <p className="text-sm"><strong>Responsable:</strong> {actor?.name}</p>
                             </Card>
                             <div className="space-y-4">
-                                {vehicleStates.map((state, idx) => {
+                                {vehicleStates.map((state) => {
                                     const vFails = state.vehicleChecks.filter(c => c.status === 'FALLA').length;
                                     const eFails = state.equipmentChecks.filter(c => c.status === 'FALLA').length;
                                     const totalFails = vFails + eFails;
