@@ -93,6 +93,10 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
         setStep(s => s + 1);
     };
 
+    const handleBack = () => {
+        setStep(s => Math.max(s - 1, 1));
+    };
+
     const updateCheckStatus = (list: any[], id: string, status: DutyCheckStatus, setFn: any) => {
         setFn(list.map(item => item.id === id ? { ...item, status } : item));
     };
