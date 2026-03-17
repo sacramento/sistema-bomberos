@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/firebase/firestore';
 import { DutyCheck, LoggedInUser } from '@/lib/types';
-import { collection, getDocs, doc, setDoc, query, orderBy, limit, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, query, orderBy, limit, getDoc, writeBatch } from 'firebase/firestore';
 import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -65,6 +65,31 @@ export const addDutyCheck = async (data: Omit<DutyCheck, 'id'>, actor: LoggedInU
             }));
         });
 };
+
+/**
+ * Adds multiple duty checks in a single batch.
+ */
+export const addDutyChecksBatch = async (checks: Omit<DutyCheck, 'id'>[], actor: LoggedInUser) => {
+    if (!db || !actor || checks.length === 0) return;
+    const batch = writeBatch(db);
+    const colRef = collection(db, DUTY_CHECKS_COLLECTION);
+    
+    checks.forEach(check => {
+        const docRef = doc(colRef);
+        batch.set(docRef, cleanData(check));
+    });
+
+    return batch.commit()
+        .then(() => {
+            logAction(actor, 'CREATE_DUTY_CHECK', { entity: 'dutyCheck', id: 'batch' }, { count: checks.length });
+        })
+        .catch(async (error) => {
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
+                path: colRef.path,
+                operation: 'write',
+            }));
+        });
+}
 
 /**
  * Gets a specific duty check by ID.
