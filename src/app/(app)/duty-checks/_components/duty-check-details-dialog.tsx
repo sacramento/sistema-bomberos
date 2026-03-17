@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,19 +7,19 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
-import { CheckCircle2, AlertTriangle, User, Calendar, Truck, Package } from "lucide-react";
+import { Calendar, Truck, Package } from "lucide-react";
 
 export default function DutyCheckDetailsDialog({ check, open, onOpenChange }: { check: DutyCheck | null, open: boolean, onOpenChange: (open: boolean) => void }) {
     if (!check) return null;
 
-    const renderItem = (item: DutyCheckItem & { materialCode?: string }) => (
-        <div key={item.id} className="p-3 border rounded-md flex flex-col gap-2 bg-card">
+    const renderItem = (item: DutyCheckItem & { materialCode?: string, uniqueId: string }) => (
+        <div key={item.uniqueId} className="p-3 border rounded-md flex flex-col gap-2 bg-card">
             <div className="flex justify-between items-start">
                 <div className="space-y-1">
                     <p className="font-semibold text-sm">{item.name}</p>
                     {item.materialCode && <p className="font-mono text-[10px] text-muted-foreground">Cód: {item.materialCode}</p>}
                 </div>
-                <Badge variant={item.status === 'OK' ? 'default' : 'destructive'} className={item.status === 'OK' ? 'bg-green-600' : ''}>
+                <Badge variant={item.status === 'OK' ? 'default' : 'destructive'} className={item.status === 'OK' ? 'bg-green-600 text-white' : ''}>
                     {item.status}
                 </Badge>
             </div>
@@ -42,7 +41,7 @@ export default function DutyCheckDetailsDialog({ check, open, onOpenChange }: { 
                 
                 <div className="grid grid-cols-2 gap-4 text-xs mt-2">
                     <div className="flex items-center gap-2"><Calendar className="h-3 w-3 text-primary" /> {format(parseISO(check.date), 'PPP', { locale: es })}</div>
-                    <div className="flex items-center gap-2"><Truck className="h-3 w-3 text-primary" /> Móvil ID: {check.vehicleId}</div>
+                    <div className="flex items-center gap-2"><Truck className="h-3 w-3 text-primary" /> Móvil: {check.vehicleId}</div>
                 </div>
 
                 <Separator className="my-4" />
@@ -51,20 +50,20 @@ export default function DutyCheckDetailsDialog({ check, open, onOpenChange }: { 
                     <div className="space-y-6 pb-4">
                         <section className="space-y-3">
                             <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                                <Truck className="h-3 w-3" /> Estado del Camión
+                                <Truck className="h-3 w-3" /> Estado del Vehículo
                             </h4>
                             <div className="grid grid-cols-1 gap-2">
-                                {check.vehicleChecks.map(renderItem)}
+                                {check.vehicleChecks.map((item, idx) => renderItem({ ...item, uniqueId: `v-${idx}-${item.id}` }))}
                             </div>
                         </section>
 
                         <section className="space-y-3">
                             <h4 className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                                <Package className="h-3 w-3" /> Estado de Equipos
+                                <Package className="h-3 w-3" /> Equipamiento Crítico
                             </h4>
                             <div className="grid grid-cols-1 gap-2">
                                 {check.equipmentChecks.length > 0 ? 
-                                    check.equipmentChecks.map(renderItem) : 
+                                    check.equipmentChecks.map((item, idx) => renderItem({ ...item, uniqueId: `e-${idx}-${item.id}` })) : 
                                     <p className="text-xs italic text-center py-4">No se controlaron materiales.</p>
                                 }
                             </div>

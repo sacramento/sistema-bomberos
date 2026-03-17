@@ -27,9 +27,9 @@ const CHECKABLE_CATEGORY_CODES = [
     '06.3.1', // Grupos Electrógenos
     '08.1.1', // Motosierras
     '08.1.2', // Motodiscos
-    '03.1',   // Herramientas Hidráulicas (Holmatro, etc)
+    '03.1',   // Herramientas Hidráulicas
     '06.1',   // Linternas / Iluminación
-    '09.1',   // Comunicaciones VHF (Handies y Bases)
+    '09.1',   // Comunicaciones VHF
     '01.5',   // Equipos ERA
     '01.6.1', // Alarma PASS
     '05.4.3', // DEA
@@ -39,17 +39,18 @@ const CHECKABLE_CATEGORY_CODES = [
 
 const VEHICLE_BASE_CHECKS = [
     "Encendido Motor", 
-    "Encastre Bomba (si tiene)", 
+    "Encastre Bomba", 
     "Tanque de Agua (Lleno)", 
     "Nivel Combustible",
     "Nivel Aceite Motor",
     "Sirena",
-    "Balizas (Luces de Emergencia)", 
+    "Balizas (Emergencia)", 
     "Luces de Posición", 
     "Luces de Stop (Freno)", 
     "Luces de Reversa",
     "Luces de Giro (Guiños)",
-    "Luces Altas / Bajas"
+    "Luces Altas",
+    "Luces Bajas"
 ];
 
 type VehicleCheckState = {
@@ -65,12 +66,10 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
     const [loading, setLoading] = useState(false);
     const [step, setStep] = useState(1); 
     
-    // Selection Sources
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [allVehicles, setAllVehicles] = useState<Vehicle[]>([]);
     const [allMaterials, setAllMaterials] = useState<Material[]>([]);
 
-    // Form State
     const [selectedWeekId, setSelectedWeekId] = useState('');
     const [checkDate, setCheckDate] = useState(new Date().toISOString().split('T')[0]);
     
@@ -248,11 +247,11 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                     onValueChange={(v) => updateCheckStatus(type, item.id, v as DutyCheckStatus)}
                     className="flex gap-2"
                 >
-                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'OK' ? "bg-green-600 text-white" : "hover:bg-muted")}>
+                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'OK' ? "bg-green-600 text-white border-green-600" : "hover:bg-muted")}>
                         <RadioGroupItem value="OK" id={`ok-${item.id}-${currentVehicleIndex}`} className="hidden" />
                         <Label htmlFor={`ok-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">OK</Label>
                     </div>
-                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'FALLA' ? "bg-red-600 text-white" : "hover:bg-muted")}>
+                    <div className={cn("flex items-center gap-1 border rounded-md px-2 py-1 cursor-pointer transition-colors", item.status === 'FALLA' ? "bg-red-600 text-white border-red-600" : "hover:bg-muted")}>
                         <RadioGroupItem value="FALLA" id={`falla-${item.id}-${currentVehicleIndex}`} className="hidden" />
                         <Label htmlFor={`falla-${item.id}-${currentVehicleIndex}`} className="cursor-pointer text-[10px] font-bold uppercase">FALLA</Label>
                     </div>
@@ -362,7 +361,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                                 {totalFails > 0 ? (
                                                     <Badge variant="destructive" className="gap-1"><AlertTriangle className="h-3 w-3"/> {totalFails} Fallas</Badge>
                                                 ) : (
-                                                    <Badge className="bg-green-600 gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
+                                                    <Badge className="bg-green-600 text-white gap-1"><CheckCircle2 className="h-3 w-3"/> Sin novedades</Badge>
                                                 )}
                                             </div>
                                         </div>
@@ -383,7 +382,7 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                 Siguiente <ArrowRight className="ml-2 h-4 w-4" />
                             </Button>
                         ) : (
-                            <Button onClick={handleSubmit} disabled={loading} className="bg-green-600 hover:bg-green-700">
+                            <Button onClick={handleSubmit} disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
                                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
                                 Finalizar y Guardar Dotación
                             </Button>

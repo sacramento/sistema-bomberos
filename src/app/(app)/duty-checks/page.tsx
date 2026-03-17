@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -11,7 +10,7 @@ import { getDutyChecks, deleteDutyChecksBatch } from "@/services/duty-checks.ser
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { PlusCircle, Eye, AlertTriangle, CheckCircle2, History, ClipboardCheck, Loader2, Calendar, Building2, MoreVertical, Trash2, Edit } from "lucide-react";
+import { PlusCircle, Eye, AlertTriangle, CheckCircle2, History, Loader2, Calendar, Building2, MoreVertical, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import AddDutyCheckDialog from "./_components/add-duty-check-dialog";
@@ -37,7 +36,7 @@ export default function DutyChecksPage() {
     const [checks, setChecks] = useState<DutyCheck[]>([]);
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedBatch, setSelectedBatch] = useState<DutyCheckBatch | null>(null);
+    const [selectedBatchItem, setSelectedBatchItem] = useState<DutyCheck | null>(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
 
     const activeRole = getActiveRole('/duty-checks');
@@ -87,26 +86,14 @@ export default function DutyChecksPage() {
     }, [checks, weeks]);
 
     const handleViewBatchDetails = (batch: DutyCheckBatch) => {
-        // Consolidate the batch into one "virtual" check for display purposes.
-        const consolidatedCheck: DutyCheck = {
+        // Consolidate for display
+        const consolidated: DutyCheck = {
             ...batch.checks[0],
-            vehicleId: batch.checks.map(c => c.vehicleId.split('-')[0]).join(', '),
-            vehicleChecks: batch.checks.flatMap((c, idx) => 
-                c.vehicleChecks.map(vc => ({
-                    ...vc, 
-                    id: `${idx}_${vc.id}`, // Ensure unique key for each item in the consolidated list
-                    name: `[Móv ${c.vehicleId.split('-')[0]}] ${vc.name}`
-                }))
-            ),
-            equipmentChecks: batch.checks.flatMap((c, idx) => 
-                c.equipmentChecks.map(ec => ({
-                    ...ec, 
-                    id: `${idx}_${ec.id}`, // Ensure unique key for each item in the consolidated list
-                    name: `[Móv ${c.vehicleId.split('-')[0]}] ${ec.name}`
-                }))
-            ),
+            vehicleId: batch.checks.map(c => c.vehicleId).join(', '),
+            vehicleChecks: batch.checks.flatMap((c) => c.vehicleChecks.map(v => ({ ...v, name: `[Móvil ${c.vehicleId}] ${v.name}` }))),
+            equipmentChecks: batch.checks.flatMap((c) => c.equipmentChecks.map(e => ({ ...e, name: `[Móvil ${c.vehicleId}] ${e.name}` })))
         };
-        setSelectedBatch({ ...batch, checks: [consolidatedCheck] });
+        setSelectedBatchItem(consolidated);
         setDetailsOpen(true);
     };
 
@@ -115,7 +102,7 @@ export default function DutyChecksPage() {
         try {
             const ids = batch.checks.map(c => c.id);
             await deleteDutyChecksBatch(ids, user);
-            toast({ title: "Inspección eliminada", description: "Se han borrado todos los registros de esta dotación." });
+            toast({ title: "Inspección eliminada", description: "Se han borrado los registros de la dotación." });
             fetchData();
         } catch (error: any) {
             toast({ title: "Error al eliminar", description: error.message, variant: "destructive" });
@@ -186,7 +173,7 @@ export default function DutyChecksPage() {
                                                     <div className="flex flex-wrap gap-1">
                                                         {batch.checks.map(c => (
                                                             <Badge key={c.id} variant="outline" className="text-[10px] px-1.5 py-0">
-                                                                Móvil {c.vehicleId.split('-')[0]}
+                                                                Móvil {c.vehicleId}
                                                             </Badge>
                                                         ))}
                                                     </div>
@@ -198,7 +185,7 @@ export default function DutyChecksPage() {
                                                             <AlertTriangle className="h-3 w-3" /> {totalFails} Fallas
                                                         </Badge>
                                                     ) : (
-                                                        <Badge className="bg-green-600 gap-1">
+                                                        <Badge className="bg-green-600 text-white gap-1">
                                                             <CheckCircle2 className="h-3 w-3" /> OK
                                                         </Badge>
                                                     )}
@@ -206,7 +193,7 @@ export default function DutyChecksPage() {
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-2">
                                                         <Button variant="ghost" size="sm" onClick={() => handleViewBatchDetails(batch)}>
-                                                            <Eye className="h-4 w-4 mr-2" /> Ver Informe
+                                                            <Eye className="h-4 w-4 mr-2" /> Informe
                                                         </Button>
                                                         {isPrivileged && (
                                                             <AlertDialog>
@@ -218,10 +205,6 @@ export default function DutyChecksPage() {
                                                                     </DropdownMenuTrigger>
                                                                     <DropdownMenuContent align="end">
                                                                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                                        <DropdownMenuItem className="opacity-50 cursor-not-allowed">
-                                                                            <Edit className="mr-2 h-4 w-4" /> Editar (Próximamente)
-                                                                        </DropdownMenuItem>
-                                                                        <DropdownMenuSeparator />
                                                                         <AlertDialogTrigger asChild>
                                                                             <DropdownMenuItem className="text-destructive focus:text-destructive">
                                                                                 <Trash2 className="mr-2 h-4 w-4" /> Eliminar Todo
@@ -233,7 +216,7 @@ export default function DutyChecksPage() {
                                                                     <AlertDialogHeader>
                                                                         <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                                                                         <AlertDialogDescription>
-                                                                            Esta acción eliminará permanentemente todos los registros de control ({batch.checks.length} móviles) realizados el {format(parseISO(batch.date), 'P', { locale: es })} para el {batch.cuartel}.
+                                                                            Se eliminará permanentemente esta inspección de dotación completa.
                                                                         </AlertDialogDescription>
                                                                     </AlertDialogHeader>
                                                                     <AlertDialogFooter>
@@ -253,7 +236,7 @@ export default function DutyChecksPage() {
                                 ) : (
                                     <TableRow>
                                         <TableCell colSpan={6} className="h-32 text-center text-muted-foreground italic">
-                                            Aún no se han registrado controles de guardia.
+                                            Aún no hay registros.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -264,7 +247,7 @@ export default function DutyChecksPage() {
             </div>
 
             <DutyCheckDetailsDialog 
-                check={selectedBatch?.checks[0] || null} 
+                check={selectedBatchItem} 
                 open={detailsOpen} 
                 onOpenChange={setDetailsOpen} 
             />
