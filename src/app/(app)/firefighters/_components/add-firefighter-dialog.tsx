@@ -48,7 +48,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
         if (open) {
           try {
             const firefighters = await getFirefighters();
-            const uniqueFirehouses = Array.from(new Set(firefighters.map(f => f.firehouse)));
+            const uniqueFirehouses = Array.from(new Set(firefighters.map(f => f.firehouse).filter(h => h && h !== 'Sin asignar')));
             setExistingFirehouses(uniqueFirehouses);
           } catch (error) {
             console.error("Failed to fetch existing firehouses", error);
@@ -69,10 +69,12 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!legajo || !firstName || !lastName || !rank || !firehouse || !status) {
+    const isAspirante = rank === 'ASPIRANTE';
+    
+    if (!legajo || !firstName || !lastName || !rank || (!isAspirante && !firehouse) || !status) {
         toast({
             title: "Error",
-            description: "Por favor, complete todos los campos.",
+            description: "Por favor, complete todos los campos obligatorios.",
             variant: "destructive",
         });
         return;
@@ -91,7 +93,7 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
             firstName,
             lastName,
             rank: rank as Firefighter['rank'],
-            firehouse,
+            firehouse: isAspirante ? 'Sin asignar' : firehouse,
             status,
         };
         
@@ -152,7 +154,10 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Label htmlFor="rank" className="text-right">
                 Rango
               </Label>
-              <Select onValueChange={(value) => setRank(value as Firefighter['rank'])} value={rank} required>
+              <Select onValueChange={(value) => {
+                  setRank(value as Firefighter['rank']);
+                  if (value === 'ASPIRANTE') setFirehouse('Sin asignar');
+              }} value={rank} required>
                 <SelectTrigger className="col-span-3">
                   <SelectValue placeholder="Seleccione un rango" />
                 </SelectTrigger>
@@ -167,15 +172,15 @@ export default function AddFirefighterDialog({ children, onFirefighterAdded }: {
               <Label htmlFor="firehouse" className="text-right">
                 Cuartel
               </Label>
-              <Select onValueChange={setFirehouse} value={firehouse} required>
+              <Select onValueChange={setFirehouse} value={rank === 'ASPIRANTE' ? 'Sin asignar' : firehouse} disabled={rank === 'ASPIRANTE'} required={rank !== 'ASPIRANTE'}>
                 <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Seleccione un cuartel" />
+                  <SelectValue placeholder={rank === 'ASPIRANTE' ? 'No requiere cuartel' : 'Seleccione un cuartel'} />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Cuartel 1">Cuartel 1</SelectItem>
                   <SelectItem value="Cuartel 2">Cuartel 2</SelectItem>
                   <SelectItem value="Cuartel 3">Cuartel 3</SelectItem>
-                   {existingFirehouses.filter(h => !['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].includes(h)).map(house => (
+                   {existingFirehouses.filter(h => !['Cuartel 1', 'Cuartel 2', 'Cuartel 3', 'Sin asignar'].includes(h)).map(house => (
                     <SelectItem key={house} value={house}>{house}</SelectItem>
                   ))}
                 </SelectContent>

@@ -122,7 +122,7 @@ export default function FirefightersPage() {
                 <TableHead>Legajo</TableHead>
                 <TableHead>Nombre Completo</TableHead>
                 <TableHead className="hidden md:table-cell">Rango</TableHead>
-                <TableHead className="hidden sm:table-cell">Depósito</TableHead>
+                <TableHead className="hidden sm:table-cell">Cuartel</TableHead>
                 <TableHead>Estado</TableHead>
                 {canManage && (
                     <TableHead>
@@ -149,7 +149,13 @@ export default function FirefightersPage() {
                     <TableCell className="font-medium">{firefighter.legajo}</TableCell>
                     <TableCell>{`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}</TableCell>
                     <TableCell className="hidden md:table-cell">{firefighter.rank}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{firefighter.firehouse}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                        {firefighter.rank === 'ASPIRANTE' ? (
+                            <span className="text-muted-foreground italic text-xs">Sin asignar</span>
+                        ) : (
+                            firefighter.firehouse
+                        )}
+                    </TableCell>
                     <TableCell>
                       {getStatusBadge(firefighter.status)}
                     </TableCell>
