@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, Filter, LayoutList, ArrowRight, Copy } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, Filter, ArrowRight, Copy } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { ClothingItem, Firefighter } from "@/lib/types";
 import { getClothingItems, deleteClothingItem } from "@/services/clothing.service";
@@ -65,6 +65,14 @@ export default function ClothingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    const filteredItems = useMemo(() => {
+        if (!searchTerm) return items;
+        return items.filter(i => 
+            i.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            i.type.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [items, searchTerm]);
+
     const handleDataChange = () => {
         fetchData();
     };
@@ -122,14 +130,6 @@ export default function ClothingPage() {
             </>
         )
     }
-
-    const filteredItems = useMemo(() => {
-        if (!searchTerm) return items;
-        return items.filter(i => 
-            i.code.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            i.type.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-    }, [items, searchTerm]);
 
     return (
         <>
@@ -215,7 +215,7 @@ export default function ClothingPage() {
                                         Array.from({ length: 5 }).map((_, i) => (
                                             <TableRow key={i}><TableCell colSpan={6}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                         ))
-                                    ) : items.map(item => (
+                                    ) : filteredItems.map(item => (
                                         <TableRow key={item.id}>
                                             <TableCell className="font-mono text-xs font-bold">{item.code}</TableCell>
                                             <TableCell className="text-sm font-medium">{item.type}</TableCell>

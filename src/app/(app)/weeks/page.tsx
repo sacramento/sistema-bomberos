@@ -9,13 +9,18 @@ import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, isWithinInterval, startOfDay, endOfDay, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
     const [weeks, setWeeks] = useState<Week[]>([]);
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const fetchWeeks = async () => {
         setLoading(true);
@@ -42,6 +47,8 @@ export default function WeeksDashboardPage() {
     }
     
     const { activeWeeksSummary, weeksToShow } = useMemo(() => {
+        if (!mounted) return { activeWeeksSummary: {}, weeksToShow: {} };
+
         const today = new Date();
         const activeSummary: Record<string, string> = {
             'Cuartel 1': 'Ninguna',
@@ -50,14 +57,20 @@ export default function WeeksDashboardPage() {
         };
 
         weeks.forEach(week => {
-            const startDate = startOfDay(parseISO(week.periodStartDate));
-            const endDate = endOfDay(parseISO(week.periodEndDate));
-            
-            if (isWithinInterval(today, { start: startDate, end: endDate })) {
-                if (activeSummary.hasOwnProperty(week.firehouse)) {
-                    activeSummary[week.firehouse] = week.name;
+            try {
+                const sDate = parseISO(week.periodStartDate);
+                const eDate = parseISO(week.periodEndDate);
+                if (!isValid(sDate) || !isValid(eDate)) return;
+
+                const startDate = startOfDay(sDate);
+                const endDate = endOfDay(eDate);
+                
+                if (isWithinInterval(today, { start: startDate, end: endDate })) {
+                    if (activeSummary.hasOwnProperty(week.firehouse)) {
+                        activeSummary[week.firehouse] = week.name;
+                    }
                 }
-            }
+            } catch (e) {}
         });
 
         const grouped = weeks.reduce((acc, week) => {
@@ -80,7 +93,7 @@ export default function WeeksDashboardPage() {
             activeWeeksSummary: activeSummary,
             weeksToShow: grouped
         };
-    }, [weeks]);
+    }, [weeks, mounted]);
 
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
     
@@ -97,7 +110,7 @@ export default function WeeksDashboardPage() {
                     <CardDescription>Resumen de las semanas de guardia en curso.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {loading ? (
+                    {loading || !mounted ? (
                         <div className="space-y-2">
                            <Skeleton className="h-6 w-full" />
                            <Skeleton className="h-6 w-full" />

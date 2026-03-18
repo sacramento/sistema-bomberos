@@ -1,10 +1,11 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, ClipboardList, Filter, LayoutList, ArrowRight } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter, ArrowRight } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle, Firefighter, MaterialRequest } from "@/lib/types";
+import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -38,17 +39,16 @@ export default function MaterialsPage() {
     const [detailItem, setDetailItem] = useState<Material | null>(null);
     const [activeTab, setActiveTab] = useState('inventory');
     const router = useRouter();
+    const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
     
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
 
-    const { toast } = useToast();
-    const { user, getActiveRole } = useAuth();
-    const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
-
-    const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
-    const isEncargado = activeRole === 'Encargado';
+    const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const isEncargado = useMemo(() => activeRole === 'Encargado', [activeRole]);
     
     const loggedInFirefighter = useMemo(() => {
         if (!user || firefighters.length === 0) return null;
@@ -60,9 +60,9 @@ export default function MaterialsPage() {
         return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id)).map(v => v.id));
     }, [loggedInFirefighter, vehicles, isEncargado]);
 
-    const canAdd = isPrivileged || (isEncargado && managedVehicleIds.size > 0);
+    const canAdd = useMemo(() => isPrivileged || (isEncargado && managedVehicleIds.size > 0), [isPrivileged, isEncargado, managedVehicleIds]);
 
-    const fetchAllData = async () => {
+    const fetchData = async () => {
         setLoading(true);
         try {
             const [materialsData, vehiclesData, firefightersData] = await Promise.all([
@@ -81,12 +81,12 @@ export default function MaterialsPage() {
     };
     
     useEffect(() => {
-        fetchAllData();
+        fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleDataChange = () => {
-        fetchAllData();
+        fetchData();
     };
 
     const handleDelete = async (m: Material) => {
@@ -96,7 +96,7 @@ export default function MaterialsPage() {
             try {
                 await deleteMaterial(m.id, user);
                 toast({ title: "Material eliminado" });
-                fetchAllData();
+                fetchData();
             } catch (error: any) {
                 toast({ variant: "destructive", title: "Error", description: error.message });
             }
@@ -194,6 +194,14 @@ export default function MaterialsPage() {
         }
         return sortableItems;
     }, [materials, sortConfig]);
+
+    const filteredItems = useMemo(() => {
+        if (!searchTerm) return sortedMaterials;
+        return sortedMaterials.filter(i => 
+            i.codigo.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            i.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [sortedMaterials, searchTerm]);
 
     const requestSort = (key: string) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -354,8 +362,8 @@ export default function MaterialsPage() {
                                         Array.from({ length: 5 }).map((_, i) => (
                                             <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-5 w-full" /></TableCell></TableRow>
                                         ))
-                                    ) : sortedMaterials.length > 0 ? (
-                                        sortedMaterials.map(m => (
+                                    ) : filteredItems.length > 0 ? (
+                                        filteredItems.map(m => (
                                         <TableRow key={m.id}>
                                             <TableCell>
                                                 {m.codigo ? (

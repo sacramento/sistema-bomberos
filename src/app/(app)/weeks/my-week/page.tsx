@@ -13,7 +13,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname, useRouter } from "next/navigation";
-import { parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { parseISO, isWithinInterval, startOfDay, endOfDay, isValid } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyWeekPage() {
@@ -24,9 +24,14 @@ export default function MyWeekPage() {
     const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
+    const [mounted, setMounted] = useState(false);
 
     const activeRole = getActiveRole(pathname);
     const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const fetchAllData = async () => {
         if (!user) {
@@ -58,7 +63,7 @@ export default function MyWeekPage() {
     }, [user]);
 
     const { weeksToShow, activeWeek, canManage, loggedInFirefighter } = useMemo(() => {
-        if (loading || !user) {
+        if (loading || !user || !mounted) {
             return { weeksToShow: [], activeWeek: null, canManage: false, loggedInFirefighter: null };
         }
 
@@ -83,9 +88,18 @@ export default function MyWeekPage() {
         const foundActiveWeek = allWeeks.find(week => {
             const isMember = week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id;
             if (!isMember) return false;
-            const startDate = startOfDay(parseISO(week.periodStartDate));
-            const endDate = endOfDay(parseISO(week.periodEndDate));
-            return isWithinInterval(today, { start: startDate, end: endDate });
+            
+            try {
+                const sDate = parseISO(week.periodStartDate);
+                const eDate = parseISO(week.periodEndDate);
+                if (!isValid(sDate) || !isValid(eDate)) return false;
+                
+                const startDate = startOfDay(sDate);
+                const endDate = endOfDay(eDate);
+                return isWithinInterval(today, { start: startDate, end: endDate });
+            } catch (e) {
+                return false;
+            }
         });
         
         return {
@@ -95,17 +109,17 @@ export default function MyWeekPage() {
             loggedInFirefighter: firefighterData || null
         };
 
-    }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged]);
+    }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged, mounted]);
 
     // Redirección manejada correctamente en useEffect para evitar errores de Build
     useEffect(() => {
-        if (!loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
+        if (!loading && mounted && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             router.replace(`/weeks/${activeWeek.id}`);
         }
-    }, [loading, activeWeek, isPrivileged, activeRole, router]);
+    }, [loading, activeWeek, isPrivileged, activeRole, router, mounted]);
 
 
-    if (loading) {
+    if (loading || !mounted) {
         return (
              <>
                 <PageHeader title={isPrivileged ? "Gestión de Semanas" : "Mis Semanas"} description="Gestiona y visualiza las semanas de guardia." />
