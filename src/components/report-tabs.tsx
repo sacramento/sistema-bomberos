@@ -196,18 +196,51 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.text(dateText, 14, currentY); currentY += 5;
             if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
             
-            doc.setFontSize(12); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
-            doc.text(`Resumen: ${stats.length} Integrantes Evaluados`, 14, currentY + 5); currentY += 15;
+            if (viewMode === 'by-class' || filterFirefighter !== 'all') {
+                doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
+                const detailTitle = filterFirefighter !== 'all' ? `Historial Detallado: ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Detalle de Sesiones";
+                doc.text(detailTitle, 14, currentY + 10);
+                currentY += 15;
 
-            (doc as any).autoTable({
-                startY: currentY,
-                head: [['Integrante', 'Presentes', 'Ausentes', 'Tardes', 'Recup.', 'Tasa %']],
-                body: stats.map(s => [
-                    `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
-                    s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`
-                ]),
-                theme: 'striped', headStyles: { fillColor: '#333' }
-            });
+                const head = filterFirefighter !== 'all' 
+                    ? [['Fecha', 'Clase', 'Especialidad', 'Estado']] 
+                    : [['Fecha', 'Clase', 'Especialidad', 'Pres.', 'Aus.', 'Rec.']];
+
+                const body = filteredSessions.map(s => {
+                    const dateStr = format(parseISO(s.date), 'dd/MM/yy');
+                    if (filterFirefighter !== 'all') {
+                        const status = s.attendance?.[filterFirefighter] || 'present';
+                        return [dateStr, s.title, s.specialization, getStatusLabel(status)];
+                    }
+                    const att = s.attendance || {};
+                    const p = Object.values(att).filter(v => v === 'present').length;
+                    const a = Object.values(att).filter(v => v === 'absent').length;
+                    const r = Object.values(att).filter(v => v === 'recupero').length;
+                    return [dateStr, s.title, s.specialization, p, a, r];
+                });
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head,
+                    body,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333' },
+                    styles: { fontSize: 8 }
+                });
+            } else {
+                doc.setFontSize(12); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
+                doc.text(`Resumen: ${stats.length} Integrantes Evaluados`, 14, currentY + 5); currentY += 15;
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['Integrante', 'Presentes', 'Ausentes', 'Tardes', 'Recup.', 'Tasa %']],
+                    body: stats.map(s => [
+                        `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
+                        s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`
+                    ]),
+                    theme: 'striped', headStyles: { fillColor: '#333' }
+                });
+            }
             doc.save(`reporte-asistencia-clases-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
@@ -466,15 +499,52 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
             doc.text(`Reporte de Asistencia: Talleres`, 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
-            (doc as any).autoTable({
-                startY: 45,
-                head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
-                body: stats.map(s => [
-                    `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
-                    s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`
-                ]),
-                theme: 'striped', headStyles: { fillColor: '#333' }
-            });
+
+            let currentY = 45;
+            doc.setFontSize(10); doc.setTextColor(100);
+            const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
+            doc.text(dateText, 14, currentY); currentY += 5;
+
+            if (viewMode === 'by-class' || filterFirefighter !== 'all') {
+                doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
+                const detailTitle = filterFirefighter !== 'all' ? `Historial Detallado: ${allFirefighters.find(f => f.id === filterFirefighter)?.lastName}` : "Detalle de Talleres";
+                doc.text(detailTitle, 14, currentY + 10);
+                currentY += 15;
+
+                const head = filterFirefighter !== 'all' 
+                    ? [['Fecha', 'Taller', 'Especialidad', 'Estado']] 
+                    : [['Fecha', 'Taller', 'Especialidad', 'Pres.']];
+
+                const body = filteredWorkshops.map(s => {
+                    const dateStr = format(parseISO(s.date), 'dd/MM/yy');
+                    if (filterFirefighter !== 'all') {
+                        const status = s.attendance?.[filterFirefighter] || 'present';
+                        return [dateStr, s.title, s.specialization, getStatusLabel(status)];
+                    }
+                    const att = s.attendance || {};
+                    const p = Object.values(att).filter(v => v === 'present').length;
+                    return [dateStr, s.title, s.specialization, p];
+                });
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head,
+                    body,
+                    theme: 'striped',
+                    headStyles: { fillColor: '#333' },
+                    styles: { fontSize: 8 }
+                });
+            } else {
+                (doc as any).autoTable({
+                    startY: currentY + 10,
+                    head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                    body: stats.map(s => [
+                        `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
+                        s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`
+                    ]),
+                    theme: 'striped', headStyles: { fillColor: '#333' }
+                });
+            }
             doc.save(`reporte-asistencia-talleres-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
