@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, Filter, BarChart3, ListFilter, LayoutGrid, Download, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, Filter, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -81,7 +81,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
-    const [viewMode, setViewMode] = useState<'totals' | 'percentages'>('totals');
+    const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
@@ -108,8 +108,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
     }, [context, toast]);
 
-    const reportData = useMemo(() => {
-        const filteredSessions = allSessions.filter(s => {
+    const { filteredSessions, stats, pieData } = useMemo(() => {
+        const filtered = allSessions.filter(s => {
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return false;
             if (filterDate?.from) {
                 const sDate = parseISO(s.date);
@@ -121,7 +121,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
         const statsMap = new Map<string, AttendanceStats>();
 
-        filteredSessions.forEach(s => {
+        filtered.forEach(s => {
             s.attendees.forEach(f => {
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
@@ -158,11 +158,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return acc;
         }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 });
 
-        const pieData = Object.entries(totals).map(([name, value]) => ({
+        const pData = Object.entries(totals).map(([name, value]) => ({
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        return { stats: statsArray, pieData, totals };
+        return { filteredSessions: filtered, stats: statsArray, pieData: pData };
     }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context]);
 
     const generatePdf = async () => {
@@ -186,12 +186,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
             
             doc.setFontSize(12); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
-            doc.text(`Resumen: ${reportData.stats.length} Integrantes Evaluados`, 14, currentY + 5); currentY += 15;
+            doc.text(`Resumen: ${stats.length} Integrantes Evaluados`, 14, currentY + 5); currentY += 15;
 
             (doc as any).autoTable({
                 startY: currentY,
                 head: [['Integrante', 'Presentes', 'Ausentes', 'Tardes', 'Recup.', 'Tasa %']],
-                body: reportData.stats.map(s => [
+                body: stats.map(s => [
                     `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
                     s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`
                 ]),
@@ -227,11 +227,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="flex bg-muted p-1 rounded-md">
-                        <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                    <div className="flex bg-muted p-1 rounded-md gap-1">
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 px-3 text-xs">Clase por Clase</Button>
                     </div>
-                    <Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>
+                    <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF
                     </Button>
                 </CardFooter>
@@ -240,34 +241,93 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1">
                     <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/> Distribución</CardTitle></CardHeader>
-                    <CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{reportData.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent>
+                    <CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent>
                 </Card>
                 <Card className="lg:col-span-2">
-                    <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><LayoutGrid className="h-4 w-4"/> Detalle por Integrante</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Presente' : 'Pres. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Ausente' : 'Aus. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Tarde' : 'Tard. %'}</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (
-                        <TableRow key={s.firefighter.id}>
-                            <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
-                            <TableCell className="text-center">
-                                {viewMode === 'totals' 
-                                    ? s.present + s.recupero 
-                                    : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
-                                }
-                            </TableCell>
-                            <TableCell className="text-center text-red-600">
-                                {viewMode === 'totals' 
-                                    ? s.absent 
-                                    : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
-                                }
-                            </TableCell>
-                            <TableCell className="text-center">
-                                {viewMode === 'totals' 
-                                    ? s.tardy 
-                                    : s.total > 0 ? (s.tardy / s.total * 100).toFixed(0) + '%' : '0%'
-                                }
-                            </TableCell>
-                            <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
-                        </TableRow>
-                    ))}</TableBody></Table></ScrollArea></CardContent></Card>
+                    <CardHeader>
+                        <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
+                            {viewMode === 'by-class' ? <List className="h-4 w-4"/> : <LayoutGrid className="h-4 w-4"/>}
+                            {viewMode === 'by-class' ? 'Detalle por Sesión' : 'Detalle por Integrante'}
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <ScrollArea className="h-[350px] overflow-auto">
+                            {viewMode === 'by-class' ? (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Fecha</TableHead>
+                                            <TableHead>Título</TableHead>
+                                            <TableHead className="text-center">Pres.</TableHead>
+                                            <TableHead className="text-center">Aus.</TableHead>
+                                            <TableHead className="text-right">Recup.</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredSessions.map(s => {
+                                            const att = s.attendance || {};
+                                            const pCount = Object.values(att).filter(v => v === 'present').length;
+                                            const aCount = Object.values(att).filter(v => v === 'absent').length;
+                                            const rCount = Object.values(att).filter(v => v === 'recupero').length;
+                                            return (
+                                                <TableRow key={s.id}>
+                                                    <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                                    <TableCell className="text-xs font-medium">
+                                                        <div className="flex flex-col">
+                                                            <span>{s.title}</span>
+                                                            <span className="text-[10px] text-muted-foreground">{s.specialization}</span>
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-center text-green-600 font-bold">{pCount}</TableCell>
+                                                    <TableCell className="text-center text-red-600">{aCount}</TableCell>
+                                                    <TableCell className="text-right text-blue-600">{rCount}</TableCell>
+                                                </TableRow>
+                                            )
+                                        })}
+                                    </TableBody>
+                                </Table>
+                            ) : (
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Integrante</TableHead>
+                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Presente' : 'Pres. %'}</TableHead>
+                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Ausente' : 'Aus. %'}</TableHead>
+                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Tarde' : 'Tard. %'}</TableHead>
+                                            <TableHead className="text-right">Tasa %</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {stats.map((s) => (
+                                            <TableRow key={s.firefighter.id}>
+                                                <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                                                <TableCell className="text-center">
+                                                    {viewMode === 'totals' 
+                                                        ? s.present + s.recupero 
+                                                        : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="text-center text-red-600">
+                                                    {viewMode === 'totals' 
+                                                        ? s.absent 
+                                                        : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    {viewMode === 'totals' 
+                                                        ? s.tardy 
+                                                        : s.total > 0 ? (s.tardy / s.total * 100).toFixed(0) + '%' : '0%'
+                                                    }
+                                                </TableCell>
+                                                <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );
@@ -286,7 +346,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
-    const [viewMode, setViewMode] = useState<'totals' | 'percentages'>('totals');
+    const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
@@ -313,7 +373,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         });
     }, [context, toast]);
 
-    const reportData = useMemo(() => {
+    const { filteredWorkshops, stats, pieData } = useMemo(() => {
         const filtered = allWorkshops.filter(s => {
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return false;
             if (filterDate?.from) {
@@ -358,11 +418,11 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return acc;
         }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 });
 
-        const pieData = Object.entries(totals).map(([name, value]) => ({
+        const pData = Object.entries(totals).map(([name, value]) => ({
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        return { stats: statsArray, pieData };
+        return { filteredWorkshops: filtered, stats: statsArray, pieData: pData };
     }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context]);
 
     const generatePdf = async () => {
@@ -378,7 +438,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             (doc as any).autoTable({
                 startY: 45,
                 head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
-                body: reportData.stats.map(s => [
+                body: stats.map(s => [
                     `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
                     s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`
                 ]),
@@ -407,34 +467,87 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                    <div className="flex bg-muted p-1 rounded-md">
-                        <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                    <div className="flex bg-muted p-1 rounded-md gap-1">
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 px-3 text-xs">Clase por Clase</Button>
                     </div>
-                    <Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
+                    <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
                 </CardFooter>
             </Card>
-            {reportData.stats.length > 0 ? (
+            {stats.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{reportData.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                    <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Resumen Alumnos</CardTitle></CardHeader><CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Asis.' : 'Asis. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Aus.' : 'Aus. %'}</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (
-                        <TableRow key={s.firefighter.id}>
-                            <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
-                            <TableCell className="text-center">
-                                {viewMode === 'totals' 
-                                    ? s.present + s.recupero 
-                                    : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
-                                }
-                            </TableCell>
-                            <TableCell className="text-center text-red-600">
-                                {viewMode === 'totals' 
-                                    ? s.absent 
-                                    : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
-                                }
-                            </TableCell>
-                            <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
-                        </TableRow>
-                    ))}</TableBody></Table></ScrollArea></CardContent></Card>
+                    <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
+                                {viewMode === 'by-class' ? <List className="h-4 w-4"/> : <LayoutGrid className="h-4 w-4"/>}
+                                {viewMode === 'by-class' ? 'Detalle por Sesión' : 'Resumen Integrantes'}
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <ScrollArea className="h-[350px] overflow-auto">
+                                {viewMode === 'by-class' ? (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Fecha</TableHead>
+                                                <TableHead>Taller</TableHead>
+                                                <TableHead className="text-center">Pres.</TableHead>
+                                                <TableHead className="text-right">Recup.</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredWorkshops.map(s => {
+                                                const att = s.attendance || {};
+                                                const pCount = Object.values(att).filter(v => v === 'present').length;
+                                                const rCount = Object.values(att).filter(v => v === 'recupero').length;
+                                                return (
+                                                    <TableRow key={s.id}>
+                                                        <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                                        <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                                        <TableCell className="text-center text-green-600 font-bold">{pCount}</TableCell>
+                                                        <TableCell className="text-right text-blue-600">{rCount}</TableCell>
+                                                    </TableRow>
+                                                )
+                                            })}
+                                        </TableBody>
+                                    </Table>
+                                ) : (
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Integrante</TableHead>
+                                                <TableHead className="text-center">{viewMode === 'totals' ? 'Asis.' : 'Asis. %'}</TableHead>
+                                                <TableHead className="text-center">{viewMode === 'totals' ? 'Aus.' : 'Aus. %'}</TableHead>
+                                                <TableHead className="text-right">Tasa %</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {stats.map((s) => (
+                                                <TableRow key={s.firefighter.id}>
+                                                    <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                                                    <TableCell className="text-center">
+                                                        {viewMode === 'totals' 
+                                                            ? s.present + s.recupero 
+                                                            : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="text-center text-red-600">
+                                                        {viewMode === 'totals' 
+                                                            ? s.absent 
+                                                            : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
+                                                        }
+                                                    </TableCell>
+                                                    <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                )}
+                            </ScrollArea>
+                        </CardContent>
+                    </Card>
                 </div>
             ) : <div className="text-center py-20 border-2 border-dashed rounded-lg text-muted-foreground italic">No hay registros con estos filtros.</div>}
         </div>
