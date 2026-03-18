@@ -52,6 +52,17 @@ const getStatusLabel = (status: AttendanceStatus) => {
     return labels[status] || "N/A";
 }
 
+const getStatusBadgeClass = (status: AttendanceStatus) => {
+    switch (status) {
+        case "present": return "bg-green-600 text-white";
+        case "absent": return "bg-red-600 text-white";
+        case "tardy": return "bg-yellow-500 text-black";
+        case "excused": return "bg-violet-600 text-white";
+        case "recupero": return "bg-blue-600 text-white";
+        default: return "";
+    }
+}
+
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
@@ -228,9 +239,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
-                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
-                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 px-3 text-xs">Clase por Clase</Button>
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
                     </div>
                     <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF
@@ -258,13 +269,33 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                         <TableRow>
                                             <TableHead>Fecha</TableHead>
                                             <TableHead>Título</TableHead>
-                                            <TableHead className="text-center">Pres.</TableHead>
-                                            <TableHead className="text-center">Aus.</TableHead>
-                                            <TableHead className="text-right">Recup.</TableHead>
+                                            {filterFirefighter !== 'all' ? (
+                                                <TableHead className="text-right">Estado Individual</TableHead>
+                                            ) : (
+                                                <>
+                                                    <TableHead className="text-center">Pres.</TableHead>
+                                                    <TableHead className="text-center">Aus.</TableHead>
+                                                    <TableHead className="text-right">Recup.</TableHead>
+                                                </>
+                                            )}
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredSessions.map(s => {
+                                            if (filterFirefighter !== 'all') {
+                                                const status = s.attendance?.[filterFirefighter] || 'present';
+                                                return (
+                                                    <TableRow key={s.id}>
+                                                        <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                                        <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                                        <TableCell className="text-right">
+                                                            <Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>
+                                                                {getStatusLabel(status)}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )
+                                            }
                                             const att = s.attendance || {};
                                             const pCount = Object.values(att).filter(v => v === 'present').length;
                                             const aCount = Object.values(att).filter(v => v === 'absent').length;
@@ -373,7 +404,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         });
     }, [context, toast]);
 
-    const { filteredWorkshops, stats, pieData } = useMemo(() => {
+    const { stats, pieData, filteredWorkshops } = useMemo(() => {
         const filtered = allWorkshops.filter(s => {
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return false;
             if (filterDate?.from) {
@@ -422,7 +453,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        return { filteredWorkshops: filtered, stats: statsArray, pieData: pData };
+        return { stats: statsArray, pieData: pData, filteredWorkshops: filtered };
     }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context]);
 
     const generatePdf = async () => {
@@ -468,9 +499,9 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
-                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
-                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 px-3 text-xs">Clase por Clase</Button>
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
                     </div>
                     <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
                 </CardFooter>
@@ -493,21 +524,36 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                             <TableRow>
                                                 <TableHead>Fecha</TableHead>
                                                 <TableHead>Taller</TableHead>
-                                                <TableHead className="text-center">Pres.</TableHead>
-                                                <TableHead className="text-right">Recup.</TableHead>
+                                                {filterFirefighter !== 'all' ? (
+                                                    <TableHead className="text-right">Estado Individual</TableHead>
+                                                ) : (
+                                                    <TableHead className="text-center">Pres.</TableHead>
+                                                )}
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {filteredWorkshops.map(s => {
+                                                if (filterFirefighter !== 'all') {
+                                                    const status = s.attendance?.[filterFirefighter] || 'present';
+                                                    return (
+                                                        <TableRow key={s.id}>
+                                                            <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                                            <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                                            <TableCell className="text-right">
+                                                                <Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>
+                                                                    {getStatusLabel(status)}
+                                                                </Badge>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )
+                                                }
                                                 const att = s.attendance || {};
                                                 const pCount = Object.values(att).filter(v => v === 'present').length;
-                                                const rCount = Object.values(att).filter(v => v === 'recupero').length;
                                                 return (
                                                     <TableRow key={s.id}>
                                                         <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                                         <TableCell className="text-xs font-medium">{s.title}</TableCell>
                                                         <TableCell className="text-center text-green-600 font-bold">{pCount}</TableCell>
-                                                        <TableCell className="text-right text-blue-600">{rCount}</TableCell>
                                                     </TableRow>
                                                 )
                                             })}
