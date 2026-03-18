@@ -71,6 +71,12 @@ const getStatusBadgeClass = (status: AttendanceStatus) => {
     }
 }
 
+const getPercentageColor = (pct: number) => {
+    if (pct >= 70) return "bg-emerald-500 text-white";
+    if (pct >= 60) return "bg-amber-500 text-amber-950";
+    return "bg-rose-500 text-white";
+};
+
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
@@ -188,7 +194,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     }, [context, toast]);
 
     const { filteredSessions, stats, pieData } = useMemo(() => {
-        // 1. Filtrado de sesiones
         const filtered = allSessions.filter(s => {
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return false;
             if (filterDate?.from) {
@@ -199,7 +204,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return true;
         });
 
-        // 2. Ordenamiento de sesiones (para vista Clase por Clase)
         if (viewMode === 'by-class') {
             filtered.sort((a, b) => {
                 let aVal: any;
@@ -221,7 +225,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             });
         }
 
-        // 3. Cálculo de estadísticas por integrante
         const statsMap = new Map<string, AttendanceStats>();
 
         filtered.forEach(s => {
@@ -263,7 +266,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             });
         });
 
-        // 4. Ordenamiento de integrantes (para vistas Totales/Porcentajes)
         let statsArray = Array.from(statsMap.values()).map(s => {
             const effectiveAttendance = s.present + s.recupero + (s.tardy * 0.5);
             s.percentage = s.total > 0 ? (effectiveAttendance / s.total) * 100 : 0;
@@ -380,7 +382,18 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
                         s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`
                     ]),
-                    theme: 'striped', headStyles: { fillColor: '#333' }
+                    theme: 'striped', headStyles: { fillColor: '#333' },
+                    didParseCell: function(data: any) {
+                        if (data.section === 'body' && data.column.index === 5) {
+                            const text = data.cell.text[0];
+                            const pct = parseFloat(text.replace('%', ''));
+                            if (!isNaN(pct)) {
+                                if (pct >= 70) data.cell.styles.textColor = [16, 185, 129];
+                                else if (pct >= 60) data.cell.styles.textColor = [245, 158, 11];
+                                else data.cell.styles.textColor = [244, 63, 94];
+                            }
+                        }
+                    }
                 });
             }
             doc.save(`reporte-asistencia-clases-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -551,7 +564,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                                         : s.total > 0 ? (s.tardy / s.total * 100).toFixed(0) + '%' : '0%'
                                                     }
                                                 </TableCell>
-                                                <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                                                <TableCell className="text-right">
+                                                    <Badge className={cn("text-[10px] font-bold min-w-[45px] justify-center", getPercentageColor(s.percentage))}>
+                                                        {s.percentage.toFixed(0)}%
+                                                    </Badge>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -619,7 +636,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return true;
         });
 
-        // Ordenamiento de talleres (para vista Clase por Clase)
         if (viewMode === 'by-class') {
             filtered.sort((a, b) => {
                 let aVal: any;
@@ -786,7 +802,18 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                         `${s.firefighter.legajo} - ${s.firefighter.lastName}`,
                         s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`
                     ]),
-                    theme: 'striped', headStyles: { fillColor: '#333' }
+                    theme: 'striped', headStyles: { fillColor: '#333' },
+                    didParseCell: function(data: any) {
+                        if (data.section === 'body' && data.column.index === 4) {
+                            const text = data.cell.text[0];
+                            const pct = parseFloat(text.replace('%', ''));
+                            if (!isNaN(pct)) {
+                                if (pct >= 70) data.cell.styles.textColor = [16, 185, 129];
+                                else if (pct >= 60) data.cell.styles.textColor = [245, 158, 11];
+                                else data.cell.styles.textColor = [244, 63, 94];
+                            }
+                        }
+                    }
                 });
             }
             doc.save(`reporte-asistencia-talleres-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -923,7 +950,11 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                                             : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
                                                         }
                                                     </TableCell>
-                                                    <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                                                    <TableCell className="text-right">
+                                                        <Badge className={cn("text-[10px] font-bold min-w-[45px] justify-center", getPercentageColor(s.percentage))}>
+                                                            {s.percentage.toFixed(0)}%
+                                                        </Badge>
+                                                    </TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
