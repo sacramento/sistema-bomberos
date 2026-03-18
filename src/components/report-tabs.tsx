@@ -211,10 +211,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Reporte</CardTitle>
-                        <div className="flex bg-muted p-1 rounded-md">
-                            <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                            <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
-                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -230,7 +226,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4">
+                <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="flex bg-muted p-1 rounded-md">
+                        <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                    </div>
                     <Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF
                     </Button>
@@ -398,10 +398,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle>
-                        <div className="flex bg-muted p-1 rounded-md">
-                            <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
-                            <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
-                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
@@ -410,7 +406,13 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4"><Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="flex bg-muted p-1 rounded-md">
+                        <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                    </div>
+                    <Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
+                </CardFooter>
             </Card>
             {reportData.stats.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -522,7 +524,9 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex justify-end">
+                    <Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
+                </CardFooter>
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/> Listado de Capacitaciones</CardTitle></CardHeader>
