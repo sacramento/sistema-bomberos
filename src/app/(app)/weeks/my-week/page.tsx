@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -24,21 +23,17 @@ export default function MyWeekPage() {
     const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
-    const [mounted, setMounted] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     const activeRole = getActiveRole(pathname);
     const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
 
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
     const fetchAllData = async () => {
-        if (!user) {
-            setLoading(false);
-            return;
-        };
-
+        if (!user) return;
         setLoading(true);
         try {
             const [weeksData, firefightersData] = await Promise.all([
@@ -50,7 +45,7 @@ export default function MyWeekPage() {
         } catch (error) {
             toast({
                 title: "Error",
-                description: "No se pudieron cargar los datos de la semana.",
+                description: "No se pudieron cargar los datos.",
                 variant: "destructive"
             });
         } finally {
@@ -59,11 +54,13 @@ export default function MyWeekPage() {
     };
     
     useEffect(() => {
-        fetchAllData();
-    }, [user]);
+        if (isMounted && user) {
+            fetchAllData();
+        }
+    }, [isMounted, user]);
 
     const { weeksToShow, activeWeek, canManage, loggedInFirefighter } = useMemo(() => {
-        if (loading || !user || !mounted) {
+        if (!isMounted || !user) {
             return { weeksToShow: [], activeWeek: null, canManage: false, loggedInFirefighter: null };
         }
 
@@ -82,7 +79,7 @@ export default function MyWeekPage() {
             );
         }
 
-        const sortedWeeks = visibleWeeks.sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
+        const sortedWeeks = [...visibleWeeks].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
         
         const today = new Date();
         const foundActiveWeek = allWeeks.find(week => {
@@ -109,25 +106,22 @@ export default function MyWeekPage() {
             loggedInFirefighter: firefighterData || null
         };
 
-    }, [allWeeks, allFirefighters, user, activeRole, loading, isPrivileged, mounted]);
+    }, [isMounted, allWeeks, allFirefighters, user, activeRole, isPrivileged]);
 
-    // Redirección manejada correctamente en useEffect para evitar errores de Build
     useEffect(() => {
-        if (!loading && mounted && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
+        if (isMounted && !loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
             router.replace(`/weeks/${activeWeek.id}`);
         }
-    }, [loading, activeWeek, isPrivileged, activeRole, router, mounted]);
+    }, [isMounted, loading, activeWeek, isPrivileged, activeRole, router]);
 
 
-    if (loading || !mounted) {
+    if (!isMounted || loading) {
         return (
-             <>
-                <PageHeader title={isPrivileged ? "Gestión de Semanas" : "Mis Semanas"} description="Gestiona y visualiza las semanas de guardia." />
-                <div className="space-y-4">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                </div>
-            </>
+             <div className="p-8 space-y-4">
+                <Skeleton className="h-10 w-64" />
+                <Skeleton className="h-32 w-full" />
+                <Skeleton className="h-32 w-full" />
+            </div>
         )
     }
     
