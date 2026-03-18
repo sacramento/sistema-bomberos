@@ -101,6 +101,9 @@ export default function MaterialsReportPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
     
+    // Configuración de Reporte
+    const [includePendings, setIncludePendings] = useState(false);
+    
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
 
@@ -195,6 +198,9 @@ export default function MaterialsReportPage() {
 
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
+            // Lógica de Pendientes: si no está activo "Incluir Pendientes", filtramos materiales sin código
+            if (!includePendings && !m.codigo) return false;
+
             if (searchTerm && !m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) && !m.codigo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
             
             // Jerarquía
@@ -216,7 +222,7 @@ export default function MaterialsReportPage() {
             
             return true;
         });
-    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
+    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates, includePendings]);
 
     // Sorting logic for filtered materials
     const sortedFilteredMaterials = useMemo(() => {
@@ -309,7 +315,7 @@ export default function MaterialsReportPage() {
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
             doc.text("Reporte de Inventario Técnico", 14, 22);
-            doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             let currentY = 45;
             if (includeKPIs) {
@@ -355,7 +361,21 @@ export default function MaterialsReportPage() {
             
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="lg:col-span-3">
-                    <CardHeader><CardTitle className="text-lg">Búsqueda Rápida</CardTitle></CardHeader>
+                    <CardHeader className="pb-3">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle>
+                            <div className="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-full border">
+                                <Switch 
+                                    id="include-pendings" 
+                                    checked={includePendings} 
+                                    onCheckedChange={setIncludePendings} 
+                                />
+                                <Label htmlFor="include-pendings" className="text-[10px] font-bold uppercase cursor-pointer">
+                                    Incluir Pendientes (Sin Código)
+                                </Label>
+                            </div>
+                        </div>
+                    </CardHeader>
                     <CardContent className="flex gap-4">
                         <div className="relative flex-grow">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -422,7 +442,7 @@ export default function MaterialsReportPage() {
                 <Card className="border-l-4 border-l-slate-500">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                            <Package className="h-3 w-3" /> Integridad de Datos
+                            <Layers className="h-3 w-3" /> Integridad de Datos
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
