@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
+import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown, ArrowUp, ArrowDown, Filter, UserCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -158,6 +158,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+    const [filterParticipation, setFilterParticipation] = useState<'alumno' | 'todos'>('todos');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -200,7 +201,29 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         const statsMap = new Map<string, AttendanceStats>();
 
         filtered.forEach(s => {
+            // Recolectar participantes según el filtro de participación
+            const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
+            
+            // Alumnos
             s.attendees.forEach(f => {
+                participants.push({ f, status: (s.attendance?.[f.id] || 'present') as AttendanceStatus });
+            });
+
+            // Si se incluyen instructores/ayudantes, sumarlos como presentes
+            if (filterParticipation === 'todos') {
+                s.instructors.forEach(f => {
+                    if (!participants.some(p => p.f.id === f.id)) {
+                        participants.push({ f, status: 'present' });
+                    }
+                });
+                s.assistants.forEach(f => {
+                    if (!participants.some(p => p.f.id === f.id)) {
+                        participants.push({ f, status: 'present' });
+                    }
+                });
+            }
+
+            participants.forEach(({ f, status }) => {
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterHierarchy !== 'all') {
@@ -208,8 +231,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     if (!group?.ranks.includes(f.rank)) return;
                 }
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
-
-                const status = s.attendance?.[f.id] || 'present';
                 if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
 
                 if (!statsMap.has(f.id)) {
@@ -261,43 +282,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        let filteredByStatusSessions = filtered.filter(s => {
-            if (filterStatuses.length === 0) return true;
-            if (filterFirefighter !== 'all') {
-                const status = s.attendance?.[filterFirefighter] || 'present';
-                return filterStatuses.includes(status);
-            }
-            const attendeeStatuses = s.attendance ? Object.entries(s.attendance)
-                .filter(([fid]) => {
-                    const f = allFirefighters.find(ff => ff.id === fid);
-                    if (!f) return false;
-                    if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return false;
-                    if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return false;
-                    if (filterHierarchy !== 'all') {
-                        const group = hierarchyGroups.find(g => g.id === filterHierarchy);
-                        if (!group?.ranks.includes(f.rank)) return false;
-                    }
-                    return true;
-                }).map(([_, stat]) => stat) : [];
-            
-            return attendeeStatuses.some(st => filterStatuses.includes(stat));
-        });
-
-        if (viewMode === 'by-class') {
-            filteredByStatusSessions.sort((a, b) => {
-                const direction = sortConfig.direction === 'asc' ? 1 : -1;
-                if (sortConfig.key === 'date') {
-                    return (parseISO(a.date).getTime() - parseISO(b.date).getTime()) * direction;
-                }
-                if (sortConfig.key === 'title') {
-                    return a.title.localeCompare(b.title) * direction;
-                }
-                return 0;
-            });
-        }
-
-        return { filteredSessions: filteredByStatusSessions, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortConfig, viewMode, allFirefighters]);
+        return { filteredSessions: filtered, stats: statsArray, pieData: pData };
+    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, allFirefighters]);
 
     const toggleSort = (key: SortConfig['key']) => {
         setSortConfig(prev => ({
@@ -322,13 +308,14 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-            doc.text(`Reporte de Asistencia: Clases (${context})`, 14, 22);
+            doc.text(`Reporte de Asistencia: Clases`, 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
 
             let currentY = 45;
             doc.setFontSize(10); doc.setTextColor(100);
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
+            doc.text(`Participación: ${filterParticipation === 'todos' ? 'Todo el Personal' : 'Solo Alumnos'}`, 14, currentY); currentY += 5;
             if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
             
             if (viewMode === 'by-class' || filterFirefighter !== 'all') {
@@ -338,14 +325,17 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 currentY += 15;
 
                 const head = filterFirefighter !== 'all' 
-                    ? [['Fecha', 'Clase', 'Especialidad', 'Estado']] 
+                    ? [['Fecha', 'Clase', 'Función', 'Estado']] 
                     : [['Fecha', 'Clase', 'Especialidad', 'Pres.', 'Aus.', 'Rec.']];
 
                 const body = filteredSessions.map(s => {
                     const dateStr = format(parseISO(s.date), 'dd/MM/yy');
                     if (filterFirefighter !== 'all') {
-                        const status = s.attendance?.[filterFirefighter] || 'present';
-                        return [dateStr, s.title, s.specialization, getStatusLabel(status)];
+                        let functionLabel = 'Alumno';
+                        let status = (s.attendance?.[filterFirefighter] || 'present') as AttendanceStatus;
+                        if (s.instructorIds?.includes(filterFirefighter)) { functionLabel = 'Instructor'; status = 'present'; }
+                        else if (s.assistantIds?.includes(filterFirefighter)) { functionLabel = 'Ayudante'; status = 'present'; }
+                        return [dateStr, s.title, functionLabel, getStatusLabel(status)];
                     }
                     const att = s.attendance || {};
                     const p = Object.values(att).filter(v => v === 'present').length;
@@ -403,6 +393,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
+                    <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal (incl. Instrucción)</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
@@ -454,14 +445,22 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                     <TableBody>
                                         {filteredSessions.map(s => {
                                             if (filterFirefighter !== 'all') {
-                                                const status = s.attendance?.[filterFirefighter] || 'present';
+                                                let isInst = s.instructorIds?.includes(filterFirefighter);
+                                                let isAsst = s.assistantIds?.includes(filterFirefighter);
+                                                let status = (isInst || isAsst) ? 'present' : (s.attendance?.[filterFirefighter] || 'present');
                                                 return (
                                                     <TableRow key={s.id}>
                                                         <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                                        <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                                        <TableCell className="text-xs font-medium">
+                                                            <div className="flex flex-col">
+                                                                <span>{s.title}</span>
+                                                                {isInst && <Badge variant="destructive" className="w-fit text-[8px] h-3 px-1 mt-1">INSTRUCTOR</Badge>}
+                                                                {isAsst && <Badge variant="secondary" className="w-fit text-[8px] h-3 px-1 mt-1">AYUDANTE</Badge>}
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="text-right">
-                                                            <Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>
-                                                                {getStatusLabel(status)}
+                                                            <Badge className={cn("text-[10px]", getStatusBadgeClass(status as any))}>
+                                                                {getStatusLabel(status as any)}
                                                             </Badge>
                                                         </TableCell>
                                                     </TableRow>
@@ -563,6 +562,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
+    const [filterParticipation, setFilterParticipation] = useState<'alumno' | 'todos'>('todos');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -604,7 +604,22 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
         const statsMap = new Map<string, AttendanceStats>();
         filtered.forEach(s => {
+            const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
+            
             s.attendees.forEach(f => {
+                participants.push({ f, status: (s.attendance?.[f.id] || 'present') as AttendanceStatus });
+            });
+
+            if (filterParticipation === 'todos') {
+                s.instructors.forEach(f => {
+                    if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' });
+                });
+                s.assistants.forEach(f => {
+                    if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' });
+                });
+            }
+
+            participants.forEach(({ f, status }) => {
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterHierarchy !== 'all') {
@@ -612,8 +627,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     if (!group?.ranks.includes(f.rank)) return;
                 }
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
-
-                const status = s.attendance?.[f.id] || 'present';
                 if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
 
                 if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
@@ -636,7 +649,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         statsArray.sort((a, b) => {
             let aVal: any;
             let bVal: any;
-
             switch (sortConfig.key) {
                 case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
                 case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
@@ -646,7 +658,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                 default: return 0;
             }
-
             const direction = sortConfig.direction === 'asc' ? 1 : -1;
             if (aVal < bVal) return -1 * direction;
             if (aVal > bVal) return 1 * direction;
@@ -662,30 +673,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        let filteredByStatusWorkshops = filtered.filter(s => {
-            if (filterStatuses.length === 0) return true;
-            if (filterFirefighter !== 'all') {
-                const status = s.attendance?.[filterFirefighter] || 'present';
-                return filterStatuses.includes(status);
-            }
-            return true; 
-        });
-
-        if (viewMode === 'by-class') {
-            filteredByStatusWorkshops.sort((a, b) => {
-                const direction = sortConfig.direction === 'asc' ? 1 : -1;
-                if (sortConfig.key === 'date') {
-                    return (parseISO(a.date).getTime() - parseISO(b.date).getTime()) * direction;
-                }
-                if (sortConfig.key === 'title') {
-                    return a.title.localeCompare(b.title) * direction;
-                }
-                return 0;
-            });
-        }
-
-        return { stats: statsArray, pieData: pData, filteredWorkshops: filteredByStatusWorkshops };
-    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortConfig, viewMode]);
+        return { stats: statsArray, pieData: pData, filteredWorkshops: filtered };
+    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig]);
 
     const toggleSort = (key: SortConfig['key']) => {
         setSortConfig(prev => ({
@@ -714,7 +703,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.setFontSize(10); doc.setTextColor(100);
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
-            if (filterStatuses.length > 0) doc.text(`Estados: ${filterStatuses.map(s => getStatusLabel(s as any)).join(', ')}`, 14, currentY); currentY += 5;
+            doc.text(`Participación: ${filterParticipation === 'todos' ? 'Todo el Personal' : 'Solo Alumnos'}`, 14, currentY); currentY += 5;
 
             if (viewMode === 'by-class' || filterFirefighter !== 'all') {
                 doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
@@ -723,14 +712,17 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 currentY += 15;
 
                 const head = filterFirefighter !== 'all' 
-                    ? [['Fecha', 'Taller', 'Especialidad', 'Estado']] 
+                    ? [['Fecha', 'Taller', 'Función', 'Estado']] 
                     : [['Fecha', 'Taller', 'Especialidad', 'Pres.']];
 
                 const body = filteredWorkshops.map(s => {
                     const dateStr = format(parseISO(s.date), 'dd/MM/yy');
                     if (filterFirefighter !== 'all') {
-                        const status = s.attendance?.[filterFirefighter] || 'present';
-                        return [dateStr, s.title, s.specialization, getStatusLabel(status)];
+                        let role = 'Alumno';
+                        let status = (s.attendance?.[filterFirefighter] || 'present') as AttendanceStatus;
+                        if (s.instructorIds?.includes(filterFirefighter)) { role = 'Instructor'; status = 'present'; }
+                        else if (s.assistantIds?.includes(filterFirefighter)) { role = 'Ayudante'; status = 'present'; }
+                        return [dateStr, s.title, role, getStatusLabel(status)];
                     }
                     const att = s.attendance || {};
                     const p = Object.values(att).filter(v => v === 'present').length;
@@ -776,6 +768,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
+                    <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal (incl. Instrucción)</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
@@ -818,14 +811,22 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                         <TableBody>
                                             {filteredWorkshops.map(s => {
                                                 if (filterFirefighter !== 'all') {
-                                                    const status = s.attendance?.[filterFirefighter] || 'present';
+                                                    let isInst = s.instructorIds?.includes(filterFirefighter);
+                                                    let isAsst = s.assistantIds?.includes(filterFirefighter);
+                                                    let status = (isInst || isAsst) ? 'present' : (s.attendance?.[filterFirefighter] || 'present');
                                                     return (
                                                         <TableRow key={s.id}>
                                                             <TableCell className="text-[10px] font-mono">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                                            <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                                            <TableCell className="text-xs font-medium">
+                                                                <div className="flex flex-col">
+                                                                    <span>{s.title}</span>
+                                                                    {isInst && <Badge variant="destructive" className="w-fit text-[8px] h-3 px-1 mt-1">INSTRUCTOR</Badge>}
+                                                                    {isAsst && <Badge variant="secondary" className="w-fit text-[8px] h-3 px-1 mt-1">AYUDANTE</Badge>}
+                                                                </div>
+                                                            </TableCell>
                                                             <TableCell className="text-right">
-                                                                <Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>
-                                                                    {getStatusLabel(status)}
+                                                                <Badge className={cn("text-[10px]", getStatusBadgeClass(status as any))}>
+                                                                    {getStatusLabel(status as any)}
                                                                 </Badge>
                                                             </TableCell>
                                                         </TableRow>
