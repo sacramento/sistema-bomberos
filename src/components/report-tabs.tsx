@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, Filter, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List } from "lucide-react";
+import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, Filter, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -74,6 +74,8 @@ type AttendanceStats = {
     percentage: number;
 };
 
+type SortOrder = 'percentage-desc' | 'percentage-asc' | 'name-asc' | 'legajo-asc';
+
 function ScrollArea({ className, children }: { className?: string, children: React.ReactNode }) {
     return <div className={cn("relative overflow-auto", className)}>{children}</div>;
 }
@@ -92,6 +94,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -158,11 +161,22 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             });
         });
 
-        const statsArray = Array.from(statsMap.values()).map(s => {
+        let statsArray = Array.from(statsMap.values()).map(s => {
             const effectiveAttendance = s.present + s.recupero + (s.tardy * 0.5);
             s.percentage = s.total > 0 ? (effectiveAttendance / s.total) * 100 : 0;
             return s;
-        }).sort((a, b) => b.percentage - a.percentage);
+        });
+
+        // Apply custom sorting
+        statsArray.sort((a, b) => {
+            switch (sortOrder) {
+                case 'percentage-desc': return b.percentage - a.percentage;
+                case 'percentage-asc': return a.percentage - b.percentage;
+                case 'name-asc': return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
+                case 'legajo-asc': return a.firefighter.legajo.localeCompare(b.firefighter.legajo, undefined, { numeric: true });
+                default: return 0;
+            }
+        });
 
         const totals = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero;
@@ -174,7 +188,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         })).filter(d => d.value > 0);
 
         return { filteredSessions: filtered, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context]);
+    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context, sortOrder]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) {
@@ -257,7 +271,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Reporte</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="space-y-2">
                         <Label>Período</Label>
                         <Popover>
@@ -269,6 +283,18 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2">
+                        <Label>Ordenar por</Label>
+                        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
+                            <SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="percentage-desc">Tasa % (Mayor a Menor)</SelectItem>
+                                <SelectItem value="percentage-asc">Tasa % (Menor a Mayor)</SelectItem>
+                                <SelectItem value="name-asc">Apellido (A-Z)</SelectItem>
+                                <SelectItem value="legajo-asc">Legajo (Menor a Mayor)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
@@ -410,6 +436,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -471,11 +498,21 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             });
         });
 
-        const statsArray = Array.from(statsMap.values()).map(s => {
+        let statsArray = Array.from(statsMap.values()).map(s => {
             const effectiveAttendance = s.present + s.recupero + (s.tardy * 0.5);
             s.percentage = s.total > 0 ? (effectiveAttendance / s.total) * 100 : 0;
             return s;
-        }).sort((a, b) => b.percentage - a.percentage);
+        });
+
+        statsArray.sort((a, b) => {
+            switch (sortOrder) {
+                case 'percentage-desc': return b.percentage - a.percentage;
+                case 'percentage-asc': return a.percentage - b.percentage;
+                case 'name-asc': return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
+                case 'legajo-asc': return a.firefighter.legajo.localeCompare(b.firefighter.legajo, undefined, { numeric: true });
+                default: return 0;
+            }
+        });
 
         const totals = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero;
@@ -487,7 +524,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         })).filter(d => d.value > 0);
 
         return { stats: statsArray, pieData: pData, filteredWorkshops: filtered };
-    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context]);
+    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context, sortOrder]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -561,11 +598,23 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="range" selected={filterDate} onSelect={setFilterDate} locale={es}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2">
+                        <Label>Ordenar por</Label>
+                        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
+                            <SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="percentage-desc">Tasa % (Mayor a Menor)</SelectItem>
+                                <SelectItem value="percentage-asc">Tasa % (Menor a Mayor)</SelectItem>
+                                <SelectItem value="name-asc">Apellido (A-Z)</SelectItem>
+                                <SelectItem value="legajo-asc">Legajo (Menor a Mayor)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
