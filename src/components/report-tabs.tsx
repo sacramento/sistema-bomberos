@@ -183,7 +183,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.setFontSize(10); doc.setTextColor(100);
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
-            if (filterCuartel !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
+            if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
             
             doc.setFontSize(12); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
             doc.text(`Resumen: ${reportData.stats.length} Integrantes Evaluados`, 14, currentY + 5); currentY += 15;
@@ -209,7 +209,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Reporte</CardTitle>
                         <div className="flex bg-muted p-1 rounded-md">
                             <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
@@ -244,7 +244,30 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 </Card>
                 <Card className="lg:col-span-2">
                     <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><LayoutGrid className="h-4 w-4"/> Detalle por Integrante</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">Presente</TableHead><TableHead className="text-center">Ausente</TableHead><TableHead className="text-center">Tarde</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell><TableCell className="text-center">{s.present + s.recupero}</TableCell><TableCell className="text-center text-red-600">{s.absent}</TableCell><TableCell className="text-center">{s.tardy}</TableCell><TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent></Card>
+                    <CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Presente' : 'Pres. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Ausente' : 'Aus. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Tarde' : 'Tard. %'}</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (
+                        <TableRow key={s.firefighter.id}>
+                            <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                            <TableCell className="text-center">
+                                {viewMode === 'totals' 
+                                    ? s.present + s.recupero 
+                                    : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
+                                }
+                            </TableCell>
+                            <TableCell className="text-center text-red-600">
+                                {viewMode === 'totals' 
+                                    ? s.absent 
+                                    : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
+                                }
+                            </TableCell>
+                            <TableCell className="text-center">
+                                {viewMode === 'totals' 
+                                    ? s.tardy 
+                                    : s.total > 0 ? (s.tardy / s.total * 100).toFixed(0) + '%' : '0%'
+                                }
+                            </TableCell>
+                            <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                        </TableRow>
+                    ))}</TableBody></Table></ScrollArea></CardContent></Card>
             </div>
         </div>
     );
@@ -263,6 +286,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [viewMode, setViewMode] = useState<'totals' | 'percentages'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
@@ -371,19 +395,44 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle></CardHeader>
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle>
+                        <div className="flex bg-muted p-1 rounded-md">
+                            <Button variant={viewMode === 'totals' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 px-3 text-xs">Totales</Button>
+                            <Button variant={viewMode === 'percentages' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className="h-8 px-3 text-xs">Porcentajes</Button>
+                        </div>
+                    </div>
+                </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="range" selected={filterDate} onSelect={setFilterDate} locale={es}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4"><Button onClick={generatePdf} disabled={generatingPdf || reportData.stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             {reportData.stats.length > 0 ? (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{reportData.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                    <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Resumen Alumnos</CardTitle></CardHeader><CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">Asis.</TableHead><TableHead className="text-center">Aus.</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell><TableCell className="text-center">{s.present + s.recupero}</TableCell><TableCell className="text-center text-red-600">{s.absent}</TableCell><TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}</TableBody></Table></ScrollArea></CardContent></Card>
+                    <Card><CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground">Resumen Alumnos</CardTitle></CardHeader><CardContent className="p-0"><ScrollArea className="h-[350px] overflow-auto"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Asis.' : 'Asis. %'}</TableHead><TableHead className="text-center">{viewMode === 'totals' ? 'Aus.' : 'Aus. %'}</TableHead><TableHead className="text-right">Tasa %</TableHead></TableRow></TableHeader><TableBody>{reportData.stats.map((s) => (
+                        <TableRow key={s.firefighter.id}>
+                            <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                            <TableCell className="text-center">
+                                {viewMode === 'totals' 
+                                    ? s.present + s.recupero 
+                                    : s.total > 0 ? ((s.present + s.recupero) / s.total * 100).toFixed(0) + '%' : '0%'
+                                }
+                            </TableCell>
+                            <TableCell className="text-center text-red-600">
+                                {viewMode === 'totals' 
+                                    ? s.absent 
+                                    : s.total > 0 ? (s.absent / s.total * 100).toFixed(0) + '%' : '0%'
+                                }
+                            </TableCell>
+                            <TableCell className="text-right"><Badge variant={s.percentage >= 80 ? 'default' : 'secondary'} className={cn(s.percentage >= 80 ? 'bg-green-600' : '')}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                        </TableRow>
+                    ))}</TableBody></Table></ScrollArea></CardContent></Card>
                 </div>
             ) : <div className="text-center py-20 border-2 border-dashed rounded-lg text-muted-foreground italic">No hay registros con estos filtros.</div>}
         </div>
@@ -477,8 +526,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/> Listado de Capacitaciones</CardTitle></CardHeader>
-                <CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead>Curso</TableHead><TableHead>Lugar</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}{filtered.length === 0 && (<TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell></TableRow>)}</TableBody></Table></CardContent>
-            </Card>
+                <CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead>/TableHead><TableHead>Curso</TableHead><TableHead>Lugar</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}{filtered.length === 0 && (<TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
         </div>
     );
 }
