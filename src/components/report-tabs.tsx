@@ -188,6 +188,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     }, [context, toast]);
 
     const { filteredSessions, stats, pieData } = useMemo(() => {
+        // 1. Filtrado de sesiones
         const filtered = allSessions.filter(s => {
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return false;
             if (filterDate?.from) {
@@ -198,28 +199,43 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return true;
         });
 
+        // 2. Ordenamiento de sesiones (para vista Clase por Clase)
+        if (viewMode === 'by-class') {
+            filtered.sort((a, b) => {
+                let aVal: any;
+                let bVal: any;
+                if (sortConfig.key === 'date') {
+                    aVal = parseISO(a.date).getTime();
+                    bVal = parseISO(b.date).getTime();
+                } else if (sortConfig.key === 'title') {
+                    aVal = a.title.toLowerCase();
+                    bVal = b.title.toLowerCase();
+                } else {
+                    aVal = parseISO(a.date).getTime();
+                    bVal = parseISO(b.date).getTime();
+                }
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (aVal < bVal) return -1 * direction;
+                if (aVal > bVal) return 1 * direction;
+                return 0;
+            });
+        }
+
+        // 3. Cálculo de estadísticas por integrante
         const statsMap = new Map<string, AttendanceStats>();
 
         filtered.forEach(s => {
-            // Recolectar participantes según el filtro de participación
             const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
-            
-            // Alumnos
             s.attendees.forEach(f => {
                 participants.push({ f, status: (s.attendance?.[f.id] || 'present') as AttendanceStatus });
             });
 
-            // Si se incluyen instructores/ayudantes, sumarlos como presentes
             if (filterParticipation === 'todos') {
                 s.instructors.forEach(f => {
-                    if (!participants.some(p => p.f.id === f.id)) {
-                        participants.push({ f, status: 'present' });
-                    }
+                    if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' });
                 });
                 s.assistants.forEach(f => {
-                    if (!participants.some(p => p.f.id === f.id)) {
-                        participants.push({ f, status: 'present' });
-                    }
+                    if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' });
                 });
             }
 
@@ -247,31 +263,32 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             });
         });
 
+        // 4. Ordenamiento de integrantes (para vistas Totales/Porcentajes)
         let statsArray = Array.from(statsMap.values()).map(s => {
             const effectiveAttendance = s.present + s.recupero + (s.tardy * 0.5);
             s.percentage = s.total > 0 ? (effectiveAttendance / s.total) * 100 : 0;
             return s;
         });
 
-        statsArray.sort((a, b) => {
-            let aVal: any;
-            let bVal: any;
-
-            switch (sortConfig.key) {
-                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
-                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
-                case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
-                case 'absent': aVal = a.absent; bVal = b.absent; break;
-                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
-                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
-                default: return 0;
-            }
-
-            const direction = sortConfig.direction === 'asc' ? 1 : -1;
-            if (aVal < bVal) return -1 * direction;
-            if (aVal > bVal) return 1 * direction;
-            return 0;
-        });
+        if (viewMode !== 'by-class') {
+            statsArray.sort((a, b) => {
+                let aVal: any;
+                let bVal: any;
+                switch (sortConfig.key) {
+                    case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                    case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
+                    case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
+                    case 'absent': aVal = a.absent; bVal = b.absent; break;
+                    case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
+                    case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
+                    default: return 0;
+                }
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (aVal < bVal) return -1 * direction;
+                if (aVal > bVal) return 1 * direction;
+                return 0;
+            });
+        }
 
         const totals = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero;
@@ -283,7 +300,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         })).filter(d => d.value > 0);
 
         return { filteredSessions: filtered, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, allFirefighters]);
+    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, allFirefighters]);
 
     const toggleSort = (key: SortConfig['key']) => {
         setSortConfig(prev => ({
@@ -602,6 +619,28 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return true;
         });
 
+        // Ordenamiento de talleres (para vista Clase por Clase)
+        if (viewMode === 'by-class') {
+            filtered.sort((a, b) => {
+                let aVal: any;
+                let bVal: any;
+                if (sortConfig.key === 'date') {
+                    aVal = parseISO(a.date).getTime();
+                    bVal = parseISO(b.date).getTime();
+                } else if (sortConfig.key === 'title') {
+                    aVal = a.title.toLowerCase();
+                    bVal = b.title.toLowerCase();
+                } else {
+                    aVal = parseISO(a.date).getTime();
+                    bVal = parseISO(b.date).getTime();
+                }
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (aVal < bVal) return -1 * direction;
+                if (aVal > bVal) return 1 * direction;
+                return 0;
+            });
+        }
+
         const statsMap = new Map<string, AttendanceStats>();
         filtered.forEach(s => {
             const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
@@ -646,23 +685,25 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return s;
         });
 
-        statsArray.sort((a, b) => {
-            let aVal: any;
-            let bVal: any;
-            switch (sortConfig.key) {
-                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
-                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
-                case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
-                case 'absent': aVal = a.absent; bVal = b.absent; break;
-                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
-                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
-                default: return 0;
-            }
-            const direction = sortConfig.direction === 'asc' ? 1 : -1;
-            if (aVal < bVal) return -1 * direction;
-            if (aVal > bVal) return 1 * direction;
-            return 0;
-        });
+        if (viewMode !== 'by-class') {
+            statsArray.sort((a, b) => {
+                let aVal: any;
+                let bVal: any;
+                switch (sortConfig.key) {
+                    case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                    case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
+                    case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
+                    case 'absent': aVal = a.absent; bVal = b.absent; break;
+                    case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
+                    case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
+                    default: return 0;
+                }
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (aVal < bVal) return -1 * direction;
+                if (aVal > bVal) return 1 * direction;
+                return 0;
+            });
+        }
 
         const totals = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero;
@@ -674,7 +715,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         })).filter(d => d.value > 0);
 
         return { stats: statsArray, pieData: pData, filteredWorkshops: filtered };
-    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig]);
+    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode]);
 
     const toggleSort = (key: SortConfig['key']) => {
         setSortConfig(prev => ({
@@ -1026,10 +1067,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>
-                                    Legajo {getSortIcon('legajo')}
-                                </TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
-                                    Integrante {getSortIcon('name')}
+                                    Integrante {getSortIcon('legajo')}
                                 </TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>
                                     Curso {getSortIcon('title')}
@@ -1043,8 +1081,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         <TableBody>
                             {filtered.map(c => (
                                 <TableRow key={c.id}>
-                                    <TableCell className="text-xs font-mono">{c.firefighterLegajo}</TableCell>
-                                    <TableCell className="text-xs font-medium">{c.firefighterName}</TableCell>
+                                    <TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell>
                                     <TableCell className="text-xs">{c.title}</TableCell>
                                     <TableCell className="text-xs">{c.location}</TableCell>
                                     <TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell>
@@ -1052,7 +1089,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             ))}
                             {filtered.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell>
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
