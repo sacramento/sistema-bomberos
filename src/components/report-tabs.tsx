@@ -82,7 +82,10 @@ type AttendanceStats = {
     percentage: number;
 };
 
-type SortOrder = 'percentage-desc' | 'percentage-asc' | 'name-asc' | 'legajo-asc';
+type SortConfig = {
+    key: 'legajo' | 'name' | 'present' | 'absent' | 'tardy' | 'percentage' | 'date' | 'title';
+    direction: 'asc' | 'desc';
+};
 
 function ScrollArea({ className, children }: { className?: string, children: React.ReactNode }) {
     return <div className={cn("relative overflow-auto", className)}>{children}</div>;
@@ -155,7 +158,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
-    const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -207,8 +210,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
 
                 const status = s.attendance?.[f.id] || 'present';
-                
-                // Status Filter logic
                 if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
 
                 if (!statsMap.has(f.id)) {
@@ -232,13 +233,23 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
 
         statsArray.sort((a, b) => {
-            switch (sortOrder) {
-                case 'percentage-desc': return b.percentage - a.percentage;
-                case 'percentage-asc': return a.percentage - b.percentage;
-                case 'name-asc': return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
-                case 'legajo-asc': return a.firefighter.legajo.localeCompare(b.firefighter.legajo, undefined, { numeric: true });
+            let aVal: any;
+            let bVal: any;
+
+            switch (sortConfig.key) {
+                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
+                case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
+                case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
+                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                 default: return 0;
             }
+
+            const direction = sortConfig.direction === 'asc' ? 1 : -1;
+            if (aVal < bVal) return -1 * direction;
+            if (aVal > bVal) return 1 * direction;
+            return 0;
         });
 
         const totals = statsArray.reduce((acc, s) => {
@@ -250,14 +261,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        // Also filter the visible sessions in by-class view based on status filter
-        const filteredByStatusSessions = filtered.filter(s => {
+        let filteredByStatusSessions = filtered.filter(s => {
             if (filterStatuses.length === 0) return true;
             if (filterFirefighter !== 'all') {
                 const status = s.attendance?.[filterFirefighter] || 'present';
                 return filterStatuses.includes(status);
             }
-            // In summary mode, show session if anyone matching filters had a filtered status
             const attendeeStatuses = s.attendance ? Object.entries(s.attendance)
                 .filter(([fid]) => {
                     const f = allFirefighters.find(ff => ff.id === fid);
@@ -274,8 +283,33 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return attendeeStatuses.some(st => filterStatuses.includes(stat));
         });
 
+        if (viewMode === 'by-class') {
+            filteredByStatusSessions.sort((a, b) => {
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (sortConfig.key === 'date') {
+                    return (parseISO(a.date).getTime() - parseISO(b.date).getTime()) * direction;
+                }
+                if (sortConfig.key === 'title') {
+                    return a.title.localeCompare(b.title) * direction;
+                }
+                return 0;
+            });
+        }
+
         return { filteredSessions: filteredByStatusSessions, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortOrder, allFirefighters]);
+    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortConfig, viewMode, allFirefighters]);
+
+    const toggleSort = (key: SortConfig['key']) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortIcon = (key: SortConfig['key']) => {
+        if (sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+    };
 
     const generatePdf = async () => {
         if (!logoDataUrl) {
@@ -296,7 +330,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
             if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
-            if (filterStatuses.length > 0) doc.text(`Estados: ${filterStatuses.map(s => getStatusLabel(s as any)).join(', ')}`, 14, currentY); currentY += 5;
             
             if (viewMode === 'by-class' || filterFirefighter !== 'all') {
                 doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
@@ -347,31 +380,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         } finally { setGeneratingPdf(false); }
     };
 
-    const getSortIcon = (type: 'percentage' | 'name' | 'legajo') => {
-        const isActive = (type === 'percentage' && (sortOrder === 'percentage-desc' || sortOrder === 'percentage-asc')) ||
-                         (type === 'name' && sortOrder === 'name-asc') ||
-                         (type === 'legajo' && sortOrder === 'legajo-asc');
-        
-        if (!isActive) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
-        
-        if (type === 'percentage') {
-            return sortOrder === 'percentage-desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />;
-        }
-        return <ArrowDown className="h-3 w-3 ml-1" />;
-    };
-
-    const toggleSort = (type: 'percentage' | 'name' | 'legajo') => {
-        if (type === 'percentage') {
-            setSortOrder(sortOrder === 'percentage-desc' ? 'percentage-asc' : 'percentage-desc');
-        } else if (type === 'name') {
-            setSortOrder('name-asc');
-        } else {
-            setSortOrder('legajo-asc');
-        }
-    };
-
-    if (loading) return <Skeleton className="h-96 w-full" />;
-
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
 
     return (
@@ -395,24 +403,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
-                    <div className="space-y-2">
-                        <Label>Ordenar por</Label>
-                        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
-                            <SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="percentage-desc">Tasa % (Mayor a Menor)</SelectItem>
-                                <SelectItem value="percentage-asc">Tasa % (Menor a Mayor)</SelectItem>
-                                <SelectItem value="name-asc">Apellido (A-Z)</SelectItem>
-                                <SelectItem value="legajo-asc">Legajo (Menor a Mayor)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
-                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
-                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('totals'); setSortConfig({ key: 'percentage', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('percentages'); setSortConfig({ key: 'percentage', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('by-class'); setSortConfig({ key: 'date', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
                     </div>
                     <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>
                         {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF
@@ -438,8 +434,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead>Título</TableHead>
+                                            <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>
+                                                Fecha {getSortIcon('date')}
+                                            </TableHead>
+                                            <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>
+                                                Título {getSortIcon('title')}
+                                            </TableHead>
                                             {filterFirefighter !== 'all' ? (
                                                 <TableHead className="text-right">Estado Individual</TableHead>
                                             ) : (
@@ -498,9 +498,15 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                             <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
                                                 Integrante {getSortIcon('name')}
                                             </TableHead>
-                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Presente' : 'Pres. %'}</TableHead>
-                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Ausente' : 'Aus. %'}</TableHead>
-                                            <TableHead className="text-center">{viewMode === 'totals' ? 'Tarde' : 'Tard. %'}</TableHead>
+                                            <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>
+                                                {viewMode === 'totals' ? 'Presente' : 'Pres. %'} {getSortIcon('present')}
+                                            </TableHead>
+                                            <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>
+                                                {viewMode === 'totals' ? 'Ausente' : 'Aus. %'} {getSortIcon('absent')}
+                                            </TableHead>
+                                            <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('tardy')}>
+                                                {viewMode === 'totals' ? 'Tarde' : 'Tard. %'} {getSortIcon('tardy')}
+                                            </TableHead>
                                             <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>
                                                 Tasa % {getSortIcon('percentage')}
                                             </TableHead>
@@ -557,7 +563,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
-    const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
@@ -628,13 +634,23 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         });
 
         statsArray.sort((a, b) => {
-            switch (sortOrder) {
-                case 'percentage-desc': return b.percentage - a.percentage;
-                case 'percentage-asc': return a.percentage - b.percentage;
-                case 'name-asc': return a.firefighter.lastName.localeCompare(b.firefighter.lastName);
-                case 'legajo-asc': return a.firefighter.legajo.localeCompare(b.firefighter.legajo, undefined, { numeric: true });
+            let aVal: any;
+            let bVal: any;
+
+            switch (sortConfig.key) {
+                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
+                case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
+                case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
+                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                 default: return 0;
             }
+
+            const direction = sortConfig.direction === 'asc' ? 1 : -1;
+            if (aVal < bVal) return -1 * direction;
+            if (aVal > bVal) return 1 * direction;
+            return 0;
         });
 
         const totals = statsArray.reduce((acc, s) => {
@@ -646,7 +662,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        const filteredByStatusWorkshops = filtered.filter(s => {
+        let filteredByStatusWorkshops = filtered.filter(s => {
             if (filterStatuses.length === 0) return true;
             if (filterFirefighter !== 'all') {
                 const status = s.attendance?.[filterFirefighter] || 'present';
@@ -655,8 +671,33 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return true; 
         });
 
+        if (viewMode === 'by-class') {
+            filteredByStatusWorkshops.sort((a, b) => {
+                const direction = sortConfig.direction === 'asc' ? 1 : -1;
+                if (sortConfig.key === 'date') {
+                    return (parseISO(a.date).getTime() - parseISO(b.date).getTime()) * direction;
+                }
+                if (sortConfig.key === 'title') {
+                    return a.title.localeCompare(b.title) * direction;
+                }
+                return 0;
+            });
+        }
+
         return { stats: statsArray, pieData: pData, filteredWorkshops: filteredByStatusWorkshops };
-    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortOrder]);
+    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortConfig, viewMode]);
+
+    const toggleSort = (key: SortConfig['key']) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortIcon = (key: SortConfig['key']) => {
+        if (sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+    };
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -719,31 +760,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         } finally { setGeneratingPdf(false); }
     };
 
-    const getSortIcon = (type: 'percentage' | 'name' | 'legajo') => {
-        const isActive = (type === 'percentage' && (sortOrder === 'percentage-desc' || sortOrder === 'percentage-asc')) ||
-                         (type === 'name' && sortOrder === 'name-asc') ||
-                         (type === 'legajo' && sortOrder === 'legajo-asc');
-        
-        if (!isActive) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
-        
-        if (type === 'percentage') {
-            return sortOrder === 'percentage-desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />;
-        }
-        return <ArrowDown className="h-3 w-3 ml-1" />;
-    };
-
-    const toggleSort = (type: 'percentage' | 'name' | 'legajo') => {
-        if (type === 'percentage') {
-            setSortOrder(sortOrder === 'percentage-desc' ? 'percentage-asc' : 'percentage-desc');
-        } else if (type === 'name') {
-            setSortOrder('name-asc');
-        } else {
-            setSortOrder('legajo-asc');
-        }
-    };
-
-    if (loading) return <Skeleton className="h-96 w-full" />;
-
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
 
     return (
@@ -760,24 +776,12 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
-                    <div className="space-y-2">
-                        <Label>Ordenar por</Label>
-                        <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
-                            <SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="percentage-desc">Tasa % (Mayor a Menor)</SelectItem>
-                                <SelectItem value="percentage-asc">Tasa % (Menor a Mayor)</SelectItem>
-                                <SelectItem value="name-asc">Apellido (A-Z)</SelectItem>
-                                <SelectItem value="legajo-asc">Legajo (Menor a Mayor)</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
                     <div className="flex bg-muted p-1 rounded-md gap-1">
-                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
-                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('percentages')} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
-                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
+                        <Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('totals'); setSortConfig({ key: 'percentage', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'totals' && "bg-primary text-primary-foreground")}>Totales</Button>
+                        <Button variant={viewMode === 'percentages' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('percentages'); setSortConfig({ key: 'percentage', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'percentages' && "bg-primary text-primary-foreground")}>Porcentajes</Button>
+                        <Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => { setViewMode('by-class'); setSortConfig({ key: 'date', direction: 'desc' }); }} className={cn("h-8 px-3 text-xs", viewMode === 'by-class' && "bg-primary text-primary-foreground")}>Clase por Clase</Button>
                     </div>
                     <Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button>
                 </CardFooter>
@@ -798,8 +802,12 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Fecha</TableHead>
-                                                <TableHead>Taller</TableHead>
+                                                <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>
+                                                    Fecha {getSortIcon('date')}
+                                                </TableHead>
+                                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>
+                                                    Taller {getSortIcon('title')}
+                                                </TableHead>
                                                 {filterFirefighter !== 'all' ? (
                                                     <TableHead className="text-right">Estado Individual</TableHead>
                                                 ) : (
@@ -845,8 +853,12 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
                                                     Integrante {getSortIcon('name')}
                                                 </TableHead>
-                                                <TableHead className="text-center">{viewMode === 'totals' ? 'Asis.' : 'Asis. %'}</TableHead>
-                                                <TableHead className="text-center">{viewMode === 'totals' ? 'Aus.' : 'Aus. %'}</TableHead>
+                                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>
+                                                    {viewMode === 'totals' ? 'Asis.' : 'Asis. %'} {getSortIcon('present')}
+                                                </TableHead>
+                                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>
+                                                    {viewMode === 'totals' ? 'Aus.' : 'Aus. %'} {getSortIcon('absent')}
+                                                </TableHead>
                                                 <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>
                                                     Tasa % {getSortIcon('percentage')}
                                                 </TableHead>
@@ -891,6 +903,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [allCourses, setAllCourses] = useState<Course[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
     
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
@@ -923,14 +936,48 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
     }, [context, toast]);
 
-    const filtered = allCourses.filter(c => {
-        if (filterFirefighter !== 'all' && c.firefighterId !== filterFirefighter) return false;
-        if (filterFirehouse !== 'all') {
-            const f = allFirefighters.find(f => f.id === c.firefighterId);
-            if (f?.firehouse !== filterFirehouse) return false;
-        }
-        return true;
-    });
+    const filtered = useMemo(() => {
+        let result = allCourses.filter(c => {
+            if (filterFirefighter !== 'all' && c.firefighterId !== filterFirefighter) return false;
+            if (filterFirehouse !== 'all') {
+                const f = allFirefighters.find(f => f.id === c.firefighterId);
+                if (f?.firehouse !== filterFirehouse) return false;
+            }
+            return true;
+        });
+
+        result.sort((a, b) => {
+            let aVal: any;
+            let bVal: any;
+            const direction = sortConfig.direction === 'asc' ? 1 : -1;
+
+            switch (sortConfig.key) {
+                case 'legajo': aVal = a.firefighterLegajo; bVal = b.firefighterLegajo; break;
+                case 'name': aVal = a.firefighterName; bVal = b.firefighterName; break;
+                case 'date': aVal = a.startDate; bVal = b.startDate; break;
+                case 'title': aVal = a.title; bVal = b.title; break;
+                default: return 0;
+            }
+
+            if (aVal < bVal) return -1 * direction;
+            if (aVal > bVal) return 1 * direction;
+            return 0;
+        });
+
+        return result;
+    }, [allCourses, filterFirefighter, filterFirehouse, allFirefighters, sortConfig]);
+
+    const toggleSort = (key: SortConfig['key']) => {
+        setSortConfig(prev => ({
+            key,
+            direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const getSortIcon = (key: SortConfig['key']) => {
+        if (sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        return sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+    };
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -977,16 +1024,26 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Integrante</TableHead>
-                                <TableHead>Curso</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>
+                                    Legajo {getSortIcon('legajo')}
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
+                                    Integrante {getSortIcon('name')}
+                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>
+                                    Curso {getSortIcon('title')}
+                                </TableHead>
                                 <TableHead>Lugar</TableHead>
-                                <TableHead className="text-right">Fecha</TableHead>
+                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('date')}>
+                                    Fecha {getSortIcon('date')}
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {filtered.map(c => (
                                 <TableRow key={c.id}>
-                                    <TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell>
+                                    <TableCell className="text-xs font-mono">{c.firefighterLegajo}</TableCell>
+                                    <TableCell className="text-xs font-medium">{c.firefighterName}</TableCell>
                                     <TableCell className="text-xs">{c.title}</TableCell>
                                     <TableCell className="text-xs">{c.location}</TableCell>
                                     <TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell>
@@ -994,7 +1051,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             ))}
                             {filtered.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell>
+                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
