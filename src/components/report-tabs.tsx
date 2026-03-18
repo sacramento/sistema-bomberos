@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, Filter, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown, ArrowUp, ArrowDown, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -259,6 +259,29 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         } finally { setGeneratingPdf(false); }
     };
 
+    const getSortIcon = (type: 'percentage' | 'name' | 'legajo') => {
+        const isActive = (type === 'percentage' && (sortOrder === 'percentage-desc' || sortOrder === 'percentage-asc')) ||
+                         (type === 'name' && sortOrder === 'name-asc') ||
+                         (type === 'legajo' && sortOrder === 'legajo-asc');
+        
+        if (!isActive) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        
+        if (type === 'percentage') {
+            return sortOrder === 'percentage-desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />;
+        }
+        return <ArrowDown className="h-3 w-3 ml-1" />;
+    };
+
+    const toggleSort = (type: 'percentage' | 'name' | 'legajo') => {
+        if (type === 'percentage') {
+            setSortOrder(sortOrder === 'percentage-desc' ? 'percentage-asc' : 'percentage-desc');
+        } else if (type === 'name') {
+            setSortOrder('name-asc');
+        } else {
+            setSortOrder('legajo-asc');
+        }
+    };
+
     if (loading) return <Skeleton className="h-96 w-full" />;
 
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
@@ -380,17 +403,25 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
-                                            <TableHead>Integrante</TableHead>
+                                            <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>
+                                                Legajo {getSortIcon('legajo')}
+                                            </TableHead>
+                                            <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
+                                                Integrante {getSortIcon('name')}
+                                            </TableHead>
                                             <TableHead className="text-center">{viewMode === 'totals' ? 'Presente' : 'Pres. %'}</TableHead>
                                             <TableHead className="text-center">{viewMode === 'totals' ? 'Ausente' : 'Aus. %'}</TableHead>
                                             <TableHead className="text-center">{viewMode === 'totals' ? 'Tarde' : 'Tard. %'}</TableHead>
-                                            <TableHead className="text-right">Tasa %</TableHead>
+                                            <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>
+                                                Tasa % {getSortIcon('percentage')}
+                                            </TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {stats.map((s) => (
                                             <TableRow key={s.firefighter.id}>
-                                                <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                                                <TableCell className="text-xs font-mono">{s.firefighter.legajo}</TableCell>
+                                                <TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell>
                                                 <TableCell className="text-center">
                                                     {viewMode === 'totals' 
                                                         ? s.present + s.recupero 
@@ -586,6 +617,29 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         } finally { setGeneratingPdf(false); }
     };
 
+    const getSortIcon = (type: 'percentage' | 'name' | 'legajo') => {
+        const isActive = (type === 'percentage' && (sortOrder === 'percentage-desc' || sortOrder === 'percentage-asc')) ||
+                         (type === 'name' && sortOrder === 'name-asc') ||
+                         (type === 'legajo' && sortOrder === 'legajo-asc');
+        
+        if (!isActive) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
+        
+        if (type === 'percentage') {
+            return sortOrder === 'percentage-desc' ? <ArrowDown className="h-3 w-3 ml-1" /> : <ArrowUp className="h-3 w-3 ml-1" />;
+        }
+        return <ArrowDown className="h-3 w-3 ml-1" />;
+    };
+
+    const toggleSort = (type: 'percentage' | 'name' | 'legajo') => {
+        if (type === 'percentage') {
+            setSortOrder(sortOrder === 'percentage-desc' ? 'percentage-asc' : 'percentage-desc');
+        } else if (type === 'name') {
+            setSortOrder('name-asc');
+        } else {
+            setSortOrder('legajo-asc');
+        }
+    };
+
     if (loading) return <Skeleton className="h-96 w-full" />;
 
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
@@ -682,16 +736,24 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>Integrante</TableHead>
+                                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>
+                                                    Legajo {getSortIcon('legajo')}
+                                                </TableHead>
+                                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>
+                                                    Integrante {getSortIcon('name')}
+                                                </TableHead>
                                                 <TableHead className="text-center">{viewMode === 'totals' ? 'Asis.' : 'Asis. %'}</TableHead>
                                                 <TableHead className="text-center">{viewMode === 'totals' ? 'Aus.' : 'Aus. %'}</TableHead>
-                                                <TableHead className="text-right">Tasa %</TableHead>
+                                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>
+                                                    Tasa % {getSortIcon('percentage')}
+                                                </TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {stats.map((s) => (
                                                 <TableRow key={s.firefighter.id}>
-                                                    <TableCell className="text-xs font-medium">{s.firefighter.legajo} - {s.firefighter.lastName}</TableCell>
+                                                    <TableCell className="text-xs font-mono">{s.firefighter.legajo}</TableCell>
+                                                    <TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell>
                                                     <TableCell className="text-center">
                                                         {viewMode === 'totals' 
                                                             ? s.present + s.recupero 
