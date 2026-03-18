@@ -38,6 +38,14 @@ const PIE_CHART_COLORS = {
     recupero: "#3B82F6",
 };
 
+const attendanceStatusOptions = [
+    { value: 'present', label: 'Presente' },
+    { value: 'absent', label: 'Ausente' },
+    { value: 'tardy', label: 'Tarde' },
+    { value: 'excused', label: 'Justificado' },
+    { value: 'recupero', label: 'Recuperó' },
+];
+
 const hierarchyGroups = [
     { id: 'aspirantes', label: 'Aspirantes', ranks: ['ASPIRANTE'] },
     { id: 'bomberos', label: 'Bomberos', ranks: ['BOMBERO', 'ADAPTACION'] },
@@ -80,6 +88,58 @@ function ScrollArea({ className, children }: { className?: string, children: Rea
     return <div className={cn("relative overflow-auto", className)}>{children}</div>;
 }
 
+const MultiSelectFilter = ({ 
+    title, 
+    options, 
+    selected, 
+    onSelectedChange, 
+    searchPlaceholder 
+}: { 
+    title: string; 
+    options: { value: string; label: string }[]; 
+    selected: string[]; 
+    onSelectedChange: (selected: string[]) => void; 
+    searchPlaceholder?: string; 
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        onSelectedChange(isSelected ? selected.filter(s => s !== value) : [...selected, value]);
+    };
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-xs text-left">
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? selected.map(v => (
+                             <Badge variant="secondary" key={v} className="text-[10px] py-0 px-1">
+                                 {options.find(o => o.value === v)?.label || v}
+                             </Badge>
+                         )) : `Filtrar ${title.toLowerCase()}...`}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder || `Buscar...`} />
+                    <CommandList>
+                        <CommandEmpty>Sin resultados.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((opt) => (
+                                <CommandItem key={opt.value} value={opt.label} onSelect={() => handleSelect(opt.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(opt.value) ? "opacity-100" : "opacity-0")} />
+                                    {opt.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -94,6 +154,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
     const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -147,6 +208,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
                 const status = s.attendance?.[f.id] || 'present';
                 
+                // Status Filter logic
+                if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
+
                 if (!statsMap.has(f.id)) {
                     statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
                 }
@@ -167,7 +231,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return s;
         });
 
-        // Apply custom sorting
         statsArray.sort((a, b) => {
             switch (sortOrder) {
                 case 'percentage-desc': return b.percentage - a.percentage;
@@ -187,8 +250,32 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        return { filteredSessions: filtered, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context, sortOrder]);
+        // Also filter the visible sessions in by-class view based on status filter
+        const filteredByStatusSessions = filtered.filter(s => {
+            if (filterStatuses.length === 0) return true;
+            if (filterFirefighter !== 'all') {
+                const status = s.attendance?.[filterFirefighter] || 'present';
+                return filterStatuses.includes(status);
+            }
+            // In summary mode, show session if anyone matching filters had a filtered status
+            const attendeeStatuses = s.attendance ? Object.entries(s.attendance)
+                .filter(([fid]) => {
+                    const f = allFirefighters.find(ff => ff.id === fid);
+                    if (!f) return false;
+                    if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return false;
+                    if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return false;
+                    if (filterHierarchy !== 'all') {
+                        const group = hierarchyGroups.find(g => g.id === filterHierarchy);
+                        if (!group?.ranks.includes(f.rank)) return false;
+                    }
+                    return true;
+                }).map(([_, stat]) => stat) : [];
+            
+            return attendeeStatuses.some(st => filterStatuses.includes(stat));
+        });
+
+        return { filteredSessions: filteredByStatusSessions, stats: statsArray, pieData: pData };
+    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortOrder, allFirefighters]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) {
@@ -209,6 +296,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
             if (filterFirehouse !== 'all') doc.text(`Cuartel: ${filterFirehouse}`, 14, currentY); currentY += 5;
+            if (filterStatuses.length > 0) doc.text(`Estados: ${filterStatuses.map(s => getStatusLabel(s as any)).join(', ')}`, 14, currentY); currentY += 5;
             
             if (viewMode === 'by-class' || filterFirefighter !== 'all') {
                 doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
@@ -294,7 +382,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Reporte</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div className="space-y-2">
                         <Label>Período</Label>
                         <Popover>
@@ -306,6 +394,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
                     <div className="space-y-2">
                         <Label>Ordenar por</Label>
                         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
@@ -467,6 +556,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
     const [sortOrder, setSortOrder] = useState<SortOrder>('percentage-desc');
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -518,6 +608,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
 
                 const status = s.attendance?.[f.id] || 'present';
+                if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
+
                 if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
                 const current = statsMap.get(f.id)!;
                 current.total++;
@@ -554,8 +646,17 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc'
         })).filter(d => d.value > 0);
 
-        return { stats: statsArray, pieData: pData, filteredWorkshops: filtered };
-    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, context, sortOrder]);
+        const filteredByStatusWorkshops = filtered.filter(s => {
+            if (filterStatuses.length === 0) return true;
+            if (filterFirefighter !== 'all') {
+                const status = s.attendance?.[filterFirefighter] || 'present';
+                return filterStatuses.includes(status);
+            }
+            return true; 
+        });
+
+        return { stats: statsArray, pieData: pData, filteredWorkshops: filteredByStatusWorkshops };
+    }, [allWorkshops, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, context, sortOrder]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -572,6 +673,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.setFontSize(10); doc.setTextColor(100);
             const dateText = filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo";
             doc.text(dateText, 14, currentY); currentY += 5;
+            if (filterStatuses.length > 0) doc.text(`Estados: ${filterStatuses.map(s => getStatusLabel(s as any)).join(', ')}`, 14, currentY); currentY += 5;
 
             if (viewMode === 'by-class' || filterFirefighter !== 'all') {
                 doc.setFontSize(14); doc.setTextColor(0); doc.setFont('helvetica', 'bold');
@@ -652,11 +754,12 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                         <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle>
                     </div>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="range" selected={filterDate} onSelect={setFilterDate} locale={es}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={setFilterHierarchy} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{hierarchyGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.label}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Estado Asistencia</Label><MultiSelectFilter title="Estados" options={attendanceStatusOptions} selected={filterStatuses} onSelectedChange={setFilterStatuses} /></div>
                     <div className="space-y-2">
                         <Label>Ordenar por</Label>
                         <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as SortOrder)} disabled={viewMode === 'by-class'}>
