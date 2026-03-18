@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -16,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -27,7 +26,6 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -100,9 +98,6 @@ export default function MaterialsReportPage() {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
-    
-    // Configuración de Reporte
-    const [includePendings, setIncludePendings] = useState(false);
     
     // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
@@ -180,7 +175,6 @@ export default function MaterialsReportPage() {
         return isPrivileged;
     }
 
-    // Opciones dinámicas para los filtros jerárquicos
     const subCategoryOptions = useMemo(() => {
         if (filterCategories.length === 0) return [];
         return MATERIAL_CATEGORIES
@@ -198,9 +192,6 @@ export default function MaterialsReportPage() {
 
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
-            // Lógica de Pendientes: si no está activo "Incluir Pendientes", filtramos materiales sin código
-            if (!includePendings && !m.codigo) return false;
-
             if (searchTerm && !m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) && !m.codigo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
             
             // Jerarquía
@@ -222,9 +213,8 @@ export default function MaterialsReportPage() {
             
             return true;
         });
-    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates, includePendings]);
+    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
 
-    // Sorting logic for filtered materials
     const sortedFilteredMaterials = useMemo(() => {
         let sortableItems = [...filteredMaterials];
         if (sortConfig !== null) {
@@ -292,17 +282,6 @@ export default function MaterialsReportPage() {
         };
     }, [filteredMaterials]);
 
-    const handleDelete = async (materialId: string) => {
-        if (!user) return;
-        try {
-            await deleteMaterial(materialId, user);
-            toast({ title: "Material eliminado" });
-            handleDataChange();
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Error", description: error.message });
-        }
-    }
-
     const generatePdf = async () => {
         if (!logoDataUrl) {
             toast({ title: "Espere un momento", description: "Cargando logo..." });
@@ -320,30 +299,26 @@ export default function MaterialsReportPage() {
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Resumen Estadístico del Inventario Filtrado`, 14, currentY);
+                doc.text(`Resumen Estadístico`, 14, currentY);
                 currentY += 10;
-                
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Total de elementos: ${kpis.total}`, 14, currentY); currentY += 6;
-                
+                doc.text(`Total elementos: ${kpis.total}`, 14, currentY); currentY += 6;
                 doc.setFont('helvetica', 'normal');
-                doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent}) | ${kpis.outOfService} Fuera de Servicio`, 14, currentY); currentY += 6;
-                doc.text(`Condición Física: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 10;
+                doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
+                doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 10;
             }
 
             if (includeInventoryDetails && sortedFilteredMaterials.length > 0) {
                 (doc as any).autoTable({
                     startY: currentY,
-                    head: [['Código', 'Nombre', 'Marca/Modelo', 'Ubicación', 'Medida', 'Acople', 'Comp.', 'Estado']],
+                    head: [['Código', 'Nombre', 'Ubicación', 'Medida', 'Acople', 'Estado']],
                     body: sortedFilteredMaterials.map(m => [
-                        m.codigo || 'Pendiente', 
+                        m.codigo || 'S/C', 
                         m.nombre,
-                        `${m.marca || ''} ${m.modelo || ''}`.trim() || 'N/A',
                         m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
                         m.medida || '-',
                         m.acople || '-',
-                        m.composicion || '-',
                         m.estado
                     ]),
                     theme: 'striped',
@@ -351,9 +326,11 @@ export default function MaterialsReportPage() {
                     styles: { fontSize: 8 }
                 });
             }
-            doc.save(`reporte-materiales-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`reporte-materiales-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
+
+    if (loading) return <Skeleton className="w-full h-[600px]" />;
 
     return (
         <div className="space-y-8 pb-20">
@@ -362,19 +339,7 @@ export default function MaterialsReportPage() {
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="lg:col-span-3">
                     <CardHeader className="pb-3">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                            <CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle>
-                            <div className="flex items-center space-x-2 bg-muted/50 px-3 py-1.5 rounded-full border">
-                                <Switch 
-                                    id="include-pendings" 
-                                    checked={includePendings} 
-                                    onCheckedChange={setIncludePendings} 
-                                />
-                                <Label htmlFor="include-pendings" className="text-[10px] font-bold uppercase cursor-pointer">
-                                    Incluir Pendientes (Sin Código)
-                                </Label>
-                            </div>
-                        </div>
+                        <CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle>
                     </CardHeader>
                     <CardContent className="flex gap-4">
                         <div className="relative flex-grow">
@@ -410,9 +375,6 @@ export default function MaterialsReportPage() {
                         <div className="flex justify-between items-center">
                             <span className="text-sm font-medium">Fuera de Servicio:</span>
                             <span className="text-xl font-bold text-red-600">{kpis.outOfService}</span>
-                        </div>
-                        <div className="pt-1 text-[10px] text-muted-foreground text-right font-bold">
-                            {kpis.servicePercent} Operativo
                         </div>
                     </CardContent>
                 </Card>
@@ -451,7 +413,7 @@ export default function MaterialsReportPage() {
                             <span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span>
                         </div>
                         <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Pendientes:</span>
+                            <span className="text-sm font-medium">Sin Código:</span>
                             <span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span>
                         </div>
                     </CardContent>
@@ -523,127 +485,52 @@ export default function MaterialsReportPage() {
             <Card>
                 <CardHeader className="border-b">
                     <div className="flex justify-between items-center">
-                        <div>
-                            <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
-                            <CardDescription>Haga clic en los encabezados para ordenar el listado.</CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                            <Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
-                                {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                                Generar PDF con este orden
-                            </Button>
-                        </div>
+                        <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
+                        <Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
+                            {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            Exportar PDF
+                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="p-0 overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[100px] cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('codigo')}>
-                                    <div className="flex items-center">Código {getSortIcon('codigo')}</div>
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('nombre')}>
-                                    <div className="flex items-center">Nombre {getSortIcon('nombre')}</div>
-                                </TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('ubicacion')}>
-                                    <div className="flex items-center">Ubicación {getSortIcon('ubicacion')}</div>
-                                </TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead>
                                 <TableHead>Medida</TableHead>
                                 <TableHead>Acople</TableHead>
-                                <TableHead>Comp.</TableHead>
-                                <TableHead className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => requestSort('estado')}>
-                                    <div className="flex items-center justify-end">Estado {getSortIcon('estado')}</div>
-                                </TableHead>
+                                <TableHead className="text-right">Estado</TableHead>
                                 <TableHead className="text-right">Acciones</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {loading ? (
-                                <TableRow><TableCell colSpan={8}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
+                                <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
                             ) : sortedFilteredMaterials.length > 0 ? (
                                 sortedFilteredMaterials.map(m => (
-                                    <TableRow key={m.id} className="hover:bg-muted/50">
-                                        <TableCell className="font-mono text-xs font-bold">
-                                            {m.codigo || <span className="text-amber-600 italic">Pendiente</span>}
-                                        </TableCell>
-                                        <TableCell className="text-sm font-medium">
-                                            {m.nombre}
-                                            <span className="block text-[10px] text-muted-foreground">{m.marca} {m.modelo}</span>
-                                        </TableCell>
-                                        <TableCell className="text-xs">
-                                            {m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}
-                                        </TableCell>
+                                    <TableRow key={m.id}>
+                                        <TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell>
+                                        <TableCell className="text-sm font-medium">{m.nombre}</TableCell>
+                                        <TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell>
                                         <TableCell className="text-xs">{m.medida || '-'}</TableCell>
                                         <TableCell className="text-xs">{m.acople || '-'}</TableCell>
-                                        <TableCell className="text-xs">{m.composicion || '-'}</TableCell>
+                                        <TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell>
                                         <TableCell className="text-right">
-                                            <Badge className={cn("text-[10px]", m.estado === 'En Servicio' ? 'bg-green-600' : 'bg-red-600')}>
-                                                {m.estado}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <AlertDialog>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                                        <DropdownMenuItem onClick={() => setDetailItem(m)}>
-                                                            <Eye className="mr-2 h-4 w-4" /> Ver Detalles
-                                                        </DropdownMenuItem>
-                                                        {canEditMaterial(m) && (
-                                                            <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
-                                                                <DropdownMenuItem onSelect={e => e.preventDefault()}>
-                                                                    <Edit className="mr-2 h-4 w-4"/> Editar
-                                                                </DropdownMenuItem>
-                                                            </EditMaterialDialog>
-                                                        )}
-                                                        {canDeleteMaterial(m) && (
-                                                            <>
-                                                                <DropdownMenuSeparator />
-                                                                <AlertDialogTrigger asChild>
-                                                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={e => e.preventDefault()}>
-                                                                        <Trash2 className="mr-2 h-4 w-4"/> Eliminar
-                                                                    </DropdownMenuItem>
-                                                                </AlertDialogTrigger>
-                                                            </>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
-                                                        <AlertDialogDescription>Esta acción eliminará el material "{m.nombre}" permanentemente de la base de datos.</AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDelete(m.id)} variant="destructive">Eliminar</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
+                                            <Button variant="ghost" size="icon" onClick={() => setDetailItem(m)}><Eye className="h-4 w-4"/></Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground italic">
-                                        No se encontraron materiales con los filtros aplicados.
-                                    </TableCell>
-                                </TableRow>
+                                <TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>
                             )}
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
 
-            <MaterialDetailDialog
-                material={detailItem}
-                open={!!detailItem}
-                onOpenChange={(isOpen) => {
-                    if (!isOpen) setDetailItem(null);
-                }}
-            />
+            <MaterialDetailDialog material={detailItem} open={!!detailItem} onOpenChange={(isOpen) => { if (!isOpen) setDetailItem(null); }} />
         </div>
     );
 }
