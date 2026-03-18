@@ -526,7 +526,34 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2"><BarChart3 className="h-4 w-4"/> Listado de Capacitaciones</CardTitle></CardHeader>
-                <CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead>/TableHead><TableHead>Curso</TableHead><TableHead>Lugar</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}{filtered.length === 0 && (<TableRow><TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Integrante</TableHead>
+                                <TableHead>Curso</TableHead>
+                                <TableHead>Lugar</TableHead>
+                                <TableHead className="text-right">Fecha</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filtered.map(c => (
+                                <TableRow key={c.id}>
+                                    <TableCell className="text-xs font-medium">{c.firefighterLegajo} - {c.firefighterName}</TableCell>
+                                    <TableCell className="text-xs">{c.title}</TableCell>
+                                    <TableCell className="text-xs">{c.location}</TableCell>
+                                    <TableCell className="text-right text-xs font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell>
+                                </TableRow>
+                            ))}
+                            {filtered.length === 0 && (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground italic">No hay cursos registrados con estos filtros.</TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
         </div>
     );
 }
