@@ -92,7 +92,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -125,8 +125,18 @@ export default function AddAspiranteClassDialog({ children, onClassAdded }: { ch
   const progress = (step / totalSteps) * 100;
 
   const activeFirefighters = useMemo(() => allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), [allFirefighters]);
-  const aspirantes = useMemo(() => activeFirefighters.filter(f => f.rank === 'ASPIRANTE'), [activeFirefighters]);
-  const instructorsAndAssistants = useMemo(() => activeFirefighters.filter(f => f.rank !== 'ASPIRANTE'), [activeFirefighters]);
+  
+  const aspirantes = useMemo(() => 
+    activeFirefighters
+        .filter(f => f.rank === 'ASPIRANTE')
+        .sort((a, b) => a.legajo.localeCompare(b.legajo, undefined, { numeric: true }))
+  , [activeFirefighters]);
+
+  const instructorsAndAssistants = useMemo(() => 
+    activeFirefighters
+        .filter(f => f.rank !== 'ASPIRANTE')
+        .sort((a, b) => a.legajo.localeCompare(b.legajo, undefined, { numeric: true }))
+  , [activeFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {
@@ -280,13 +290,13 @@ export default function AddAspiranteClassDialog({ children, onClassAdded }: { ch
                        <p><strong>Título:</strong> {title}</p>
                        <p><strong>Especialidad:</strong> {specialization}</p>
                        <p><strong>Fecha y Hora:</strong> {date} a las {time}hs</p>
-                       <p><strong>Instructores:</strong> {instructors.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
-                       <p><strong>Ayudantes:</strong> {assistants.map(f => f.lastName).join(', ') || 'Ninguno'}</p>
+                       <p><strong>Instructores:</strong> {instructors.map(f => `${f.legajo} - ${f.lastName}`).join(', ') || 'Ninguno'}</p>
+                       <p><strong>Ayudantes:</strong> {assistants.map(f => `${f.legajo} - ${f.lastName}`).join(', ') || 'Ninguno'}</p>
                        <div className="pt-2">
                            <p className="font-semibold text-primary">Se incluirán automáticamente todos los aspirantes activos ({aspirantes.length}):</p>
                            {aspirantes.length > 0 && (
                                <div className="text-xs text-muted-foreground h-32 overflow-y-auto border bg-background rounded-md p-2 mt-1">
-                                   {aspirantes.map(f => `${f.lastName}, ${f.firstName}`).join('; ')}
+                                   {aspirantes.map(f => `${f.legajo} - ${f.lastName}, ${f.firstName}`).join('; ')}
                                </div>
                            )}
                        </div>

@@ -70,7 +70,11 @@ export default function AspiranteWorkshopAttendancePage() {
                     setSession(data);
                     if (data) {
                         // Filtrar SOLO aspirantes para el listado de alumnos
-                        const aspirantes = data.attendees.filter(p => p.rank === 'ASPIRANTE' && (p.status === 'Active' || p.status === 'Auxiliar'));
+                        // Ordenamos por legajo numérico
+                        const aspirantes = data.attendees
+                            .filter(p => p.rank === 'ASPIRANTE' && (p.status === 'Active' || p.status === 'Auxiliar'))
+                            .sort((a, b) => a.legajo.localeCompare(b.legajo, undefined, { numeric: true }));
+                        
                         setAllParticipants(aspirantes);
 
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
@@ -120,6 +124,7 @@ export default function AspiranteWorkshopAttendancePage() {
         } catch (error) {
              toast({ title: "Error", description: "No se pudo guardar la asistencia.", variant: "destructive" });
         } finally {
+            setLoading(false);
             setSaving(false);
         }
     };
@@ -164,11 +169,11 @@ export default function AspiranteWorkshopAttendancePage() {
                         <CardHeader><CardTitle>Lista de Alumnos (Aspirantes)</CardTitle></CardHeader>
                         <CardContent>
                             <Table>
-                                <TableHeader><TableRow><TableHead>Aspirante</TableHead><TableHead className="text-right">Estado</TableHead></TableRow></TableHeader>
+                                <TableHeader><TableRow><TableHead>Legajo y Nombre</TableHead><TableHead className="text-right">Estado</TableHead></TableRow></TableHeader>
                                 <TableBody>
                                     {allParticipants.map(f => (
                                         <TableRow key={f.id}>
-                                            <TableCell className="font-medium">{f.legajo} - {f.lastName}</TableCell>
+                                            <TableCell className="font-medium">{f.legajo} - {f.lastName}, {f.firstName}</TableCell>
                                             <TableCell className="text-right">
                                                 <Select value={attendance[f.id]} onValueChange={(s) => handleStatusChange(f.id, s as AttendanceStatus)} disabled={!canEdit}>
                                                     <SelectTrigger className={cn("w-[140px] ml-auto h-8 text-xs", getStatusClass(attendance[f.id]))}><SelectValue /></SelectTrigger>
@@ -183,7 +188,23 @@ export default function AspiranteWorkshopAttendancePage() {
                         <CardFooter className="justify-end border-t pt-4"><Button onClick={handleSaveChanges} disabled={saving}><Save className="mr-2 h-4 w-4" /> {saving ? 'Guardando...' : 'Guardar'}</Button></CardFooter>
                     </Card>
                 </TabsContent>
-                <TabsContent value="view"><Card><CardHeader><CardTitle>Asistencia Registrada</CardTitle></CardHeader><CardContent><Table><TableBody>{allParticipants.map(f => (<TableRow key={f.id}><TableCell>{f.legajo} - {f.lastName}</TableCell><TableCell><Badge className={getStatusClass(attendance[f.id])}>{getStatusLabel(attendance[f.id])}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent></Card></TabsContent>
+                <TabsContent value="view">
+                    <Card>
+                        <CardHeader><CardTitle>Asistencia Registrada</CardTitle></CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableBody>
+                                    {allParticipants.map(f => (
+                                        <TableRow key={f.id}>
+                                            <TableCell>{f.legajo} - {f.lastName}, {f.firstName}</TableCell>
+                                            <TableCell><Badge className={getStatusClass(attendance[f.id])}>{getStatusLabel(attendance[f.id])}</Badge></TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
         </>
     );

@@ -53,7 +53,7 @@ const MultiSelectFirefighter = ({
         }
     };
     
-    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}`;
+    const getDisplayText = (f: Firefighter) => `${f.legajo} - ${f.lastName}, ${f.firstName}`;
 
     return (
         <Popover open={open} onOpenChange={setOpen}>
@@ -94,7 +94,7 @@ const MultiSelectFirefighter = ({
                                             selected.some(s => s.id === firefighter.id) ? "opacity-100" : "opacity-0"
                                         )}
                                     />
-                                    {`${firefighter.legajo} - ${firefighter.firstName} ${firefighter.lastName}`}
+                                    {`${firefighter.legajo} - ${firefighter.lastName}, ${firefighter.firstName}`}
                                 </CommandItem>
                             ))}
                         </CommandGroup>
@@ -117,7 +117,11 @@ export default function AddAspiranteCourseDialog({ children, onCourseAdded }: { 
   const [location, setLocation] = useState('');
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
-  const aspirantes = useMemo(() => allFirefighters.filter(f => f.rank === 'ASPIRANTE' && (f.status === 'Active' || f.status === 'Auxiliar')), [allFirefighters]);
+  const aspirantes = useMemo(() => 
+    allFirefighters
+        .filter(f => f.rank === 'ASPIRANTE' && (f.status === 'Active' || f.status === 'Auxiliar'))
+        .sort((a, b) => a.legajo.localeCompare(b.legajo, undefined, { numeric: true }))
+  , [allFirefighters]);
 
   useEffect(() => {
     const fetchAllFirefighters = async () => {

@@ -71,7 +71,11 @@ export default function AspiranteClassAttendancePage() {
                     setSession(data);
                     if (data) {
                         // En este módulo, SOLO los aspirantes son alumnos de los que se toma asistencia
-                        const aspirantes = data.attendees.filter(p => p.rank === 'ASPIRANTE' && (p.status === 'Active' || p.status === 'Auxiliar'));
+                        // Ordenamos por legajo numérico
+                        const aspirantes = data.attendees
+                            .filter(p => p.rank === 'ASPIRANTE' && (p.status === 'Active' || p.status === 'Auxiliar'))
+                            .sort((a, b) => a.legajo.localeCompare(b.legajo, undefined, { numeric: true }));
+                        
                         setAllParticipants(aspirantes);
 
                         if (data.attendance && Object.keys(data.attendance).length > 0) {
@@ -139,6 +143,7 @@ export default function AspiranteClassAttendancePage() {
         } catch (error) {
              toast({ title: "Error", description: "No se pudo guardar la asistencia.", variant: "destructive" });
         } finally {
+            setLoading(false);
             setSaving(false);
         }
     };
@@ -233,7 +238,7 @@ export default function AspiranteClassAttendancePage() {
                                 <TableBody>
                                     {allParticipants.map(f => (
                                         <TableRow key={f.id}>
-                                            <TableCell className="font-medium">{f.legajo} - {f.lastName}</TableCell>
+                                            <TableCell className="font-medium">{f.legajo} - {f.lastName}, {f.firstName}</TableCell>
                                             <TableCell><Badge className={getStatusClass(attendance[f.id])}>{getStatusLabel(attendance[f.id])}</Badge></TableCell>
                                         </TableRow>
                                     ))}
