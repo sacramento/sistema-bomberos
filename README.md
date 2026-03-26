@@ -1,53 +1,43 @@
-# Firebase Studio
 
-This is a NextJS starter in Firebase Studio.
+# SMA - Sistema de Gestión Operativa Integral (Bomberos)
 
-To get started, take a look at src/app/page.tsx.
+Esta es una plataforma profesional diseñada para la gestión de Cuerpos de Bomberos, enfocada en la centralización de datos de personal, materiales, flota y asistencia.
+
+## 🚀 Cómo empezar
+Si eres administrador, puedes navegar por los diferentes módulos desde el Dashboard principal.
+
+## 📄 Documentación Importante
+Para entender cómo funciona el sistema y cómo gestionarlo a futuro, consulta los siguientes archivos:
+- [Propuesta Técnica](docs/propuesta-comercial.md): Visión general de los módulos.
+- [Guía de Costos y Migración](docs/GUIA_MIGRACION_Y_COSTOS.md): Información sobre el uso de Firebase y Google AI Studio.
+- [Estructura de Categorías](docs/categorias-materiales.md): Cómo se clasifican los equipos técnicos.
 
 ---
 
-## Cómo Descargar el Código del Proyecto a tu Computadora
+## 📥 Cómo Descargar el Código a tu Computadora
 
-Si el botón de descarga de Firebase Studio no funciona, el método profesional y más recomendado para bajar tu código es usando Git y GitHub. Esto te da una copia de seguridad y control de versiones.
-
-### Pasos a Seguir
-
-Sigue estas instrucciones **dentro de la terminal de Firebase Studio**.
+Para llevar este proyecto a tu propia infraestructura o seguir editándolo localmente, sigue estos pasos **dentro de la terminal de Firebase Studio**.
 
 **1. Inicializa tu Repositorio Local**
-
-Si es la primera vez que haces esto en este proyecto, ejecuta los siguientes comandos uno por uno:
-
 ```bash
 git init -b main
 git add .
-git commit -m "Initial commit from Firebase Studio"
+git commit -m "Versión estable SMA"
 ```
 
 **2. Crea un Repositorio en GitHub**
+*   Ve a [GitHub.com](https://github.com) y crea un nuevo repositorio vacío (sin README ni .gitignore).
 
-*   Ve a [GitHub.com](https://github.com) y crea un **nuevo repositorio vacío**. No agregues un `README` ni un archivo `.gitignore` desde GitHub.
-*   Después de crearlo, GitHub te mostrará una página con comandos. Busca la sección que dice **"…or push an existing repository from the command line"**.
+**3. Conecta y Sube tu Código**
+```bash
+git remote add origin https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
+git push -u origin main
+```
 
-**3. Conecta y Sube tu Código a GitHub**
+**4. Descarga (Clona) en tu PC**
+```bash
+git clone https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
+```
 
-*   Copia los comandos que te proporciona GitHub. Se verán parecidos a esto:
-
-    ```bash
-    git remote add origin https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
-    git push -u origin main
-    ```
-
-*   Pega y ejecuta esos comandos en la terminal de Firebase Studio. Esto subirá todo tu proyecto al repositorio de GitHub que acabas de crear.
-
-**4. Descarga (Clona) el Proyecto a tu Computadora**
-
-*   Ahora que tu código está en GitHub, abre una terminal en **tu propia computadora** (no en Firebase Studio).
-*   Navega a la carpeta donde quieras guardar el proyecto.
-*   Ejecuta el comando `git clone` usando la URL de tu repositorio:
-
-    ```bash
-    git clone https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
-    ```
-
-¡Y listo! Ahora tendrás una copia completa y funcional del proyecto en tu máquina local.
+---
+*Desarrollado por OZNOVA Systems.*
