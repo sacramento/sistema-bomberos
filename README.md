@@ -3,41 +3,37 @@
 
 Esta es una plataforma profesional diseñada para la gestión de Cuerpos de Bomberos, enfocada en la centralización de datos de personal, materiales, flota y asistencia.
 
-## 🚀 Cómo empezar
-Si eres administrador, puedes navegar por los diferentes módulos desde el Dashboard principal.
+## 🚀 GUÍA RÁPIDA: Cómo descargar el código (Paso a Paso)
 
-## 📄 Documentación Importante
-Para entender cómo funciona el sistema y cómo gestionarlo a futuro, consulta los siguientes archivos:
-- [Propuesta Técnica](docs/propuesta-comercial.md): Visión general de los módulos.
-- [Guía de Costos y Migración](docs/GUIA_MIGRACION_Y_COSTOS.md): Información sobre el uso de Firebase y Google AI Studio.
-- [Estructura de Categorías](docs/categorias-materiales.md): Cómo se clasifican los equipos técnicos.
+Si querés llevarte este código a tu computadora o subirlo a tu propio GitHub, seguí estos pasos exactos dentro de la **Terminal** de Firebase Studio (la pestaña de abajo):
 
----
-
-## 📥 Cómo Descargar el Código a tu Computadora
-
-Para llevar este proyecto a tu propia infraestructura o seguir editándolo localmente, sigue estos pasos **dentro de la terminal de Firebase Studio**.
-
-**1. Inicializa tu Repositorio Local**
+### 1. Preparar el código en este editor
+Copiá y pegá estos comandos de a uno:
 ```bash
 git init -b main
 git add .
-git commit -m "Versión estable SMA"
+git commit -m "Version Estable SMA"
 ```
 
-**2. Crea un Repositorio en GitHub**
-*   Ve a [GitHub.com](https://github.com) y crea un nuevo repositorio vacío (sin README ni .gitignore).
+### 2. Crear un lugar en GitHub
+1. Entrá a [GitHub.com](https://github.com) y creá un repositorio nuevo (botón "New").
+2. Ponéle nombre (ej: `sistema-bomberos`) y dale a "Create repository".
+3. GitHub te va a dar una dirección (URL) que termina en `.git`. Copiala.
 
-**3. Conecta y Sube tu Código**
+### 3. Conectar y Subir
+Reemplazá `TU_URL_AQUI` por la dirección que copiaste:
 ```bash
-git remote add origin https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
+git remote add origin TU_URL_AQUI
 git push -u origin main
 ```
 
-**4. Descarga (Clona) en tu PC**
-```bash
-git clone https://github.com/TU_USUARIO/NOMBRE_DE_TU_REPO.git
-```
+---
+
+## 📄 Documentación del Sistema
+Para entender cómo funciona la gestión, consultá:
+- [Propuesta Técnica](docs/propuesta-comercial.md): Visión general de los módulos.
+- [Guía de Costos y Migración](docs/GUIA_MIGRACION_Y_COSTOS.md): Todo sobre Firebase y cómo mantener la app gratis.
+- [Estructura de Categorías](docs/categorias-materiales.md): Cómo se clasifican los equipos.
 
 ---
-*Desarrollado por OZNOVA Systems.*
+*Desarrollado por OZNOVA Systems para la profesionalización tecnológica de los Cuerpos de Bomberos.*
