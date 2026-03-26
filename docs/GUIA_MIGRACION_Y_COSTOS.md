@@ -1,48 +1,37 @@
 
-# Guía de Costos y Migración - Plataforma SMA
+# Guía de Supervivencia: Migración y Costos (SMA)
 
-Este documento explica cómo funciona el modelo de costos de los servicios utilizados en esta aplicación y los pasos para llevar la app a producción de forma gratuita o económica.
+Este documento es tu hoja de ruta para cuando decidas sacar la app del "taller de pruebas" (Firebase Studio) y llevarla a la "vida real".
 
-## 1. Costos de los Servicios (Plan Spark)
+## 1. ¿Dónde vive mi app? (Los 3 pilares)
 
-La aplicación SMA está construida sobre tecnologías que ofrecen capas gratuitas muy amplias, ideales para instituciones como Cuerpos de Bomberos.
+No te confundas con los nombres técnicos. Tu app necesita tres cosas para existir fuera de aquí:
 
-### Firebase (Base de Datos, Autenticación y Hosting)
-Firebase utiliza el **Plan Spark**, que es 100% gratuito mientras no se excedan estos límites:
-
-*   **Firestore (Base de Datos):**
-    *   **Lecturas:** 50,000 por día (Gratis).
-    *   **Escrituras:** 20,000 por día (Gratis).
-    *   **Eliminaciones:** 20,000 por día (Gratis).
-    *   **Almacenamiento:** 1 GB total.
-*   **Autenticación:** Gratis para los primeros 50,000 usuarios activos mensuales.
-*   **Hosting (Web):** 10 GB de almacenamiento y 360 MB de transferencia diaria.
-
-> **Nota:** Un cuartel con 100 integrantes que cargan servicios y toman asistencia difícilmente consumirá más de 2,000 o 3,000 lecturas diarias. Estás muy lejos del límite.
-
-### Google AI Studio (IA - Gemini)
-*   **Plan Gratuito:** Disponible para uso moderado. Permite hasta 15 consultas por minuto sin costo.
-*   **Privacidad:** En el plan gratuito, los datos (anonimizados) podrían usarse para mejorar los modelos. Para máxima privacidad institucional, se puede pasar al plan pago que cobra centavos por millón de tokens.
+1.  **El Código (GitHub):** Es lo que ya hiciste. Es el "plano" de la app. Si Firebase Studio desaparece, vos descargás tu código de GitHub a tu computadora y listo.
+2.  **La Base de Datos (Firebase Console):** Es el servidor donde se guardan los bomberos. Tenés que crear un proyecto en [console.firebase.google.com](https://console.firebase.google.com). Es **GRATIS** (Plan Spark).
+3.  **La Inteligencia Artificial (Google AI Studio):** Es de donde sacás la "llave" para que la IA responda. Se obtiene en [aistudio.google.com](https://aistudio.google.com). Es **GRATIS**.
 
 ---
 
-## 2. Consejos para mantener la App Gratis
+## 2. Pasos para la Migración Final (Cuando cierren este estudio)
 
-1.  **Monitoreo:** Una vez migrada la app, en la [Consola de Firebase](https://console.firebase.google.com/), sección "Usage & Billing", podés ver exactamente cuántas lecturas y escrituras llevás en el día.
-2.  **Imágenes:** Si vas a subir fotos de vehículos o perfiles, tratá de que no sean archivos de 10MB. La app está configurada para manejar placeholders, pero si habilitás subida de archivos, el almacenamiento de 5GB (Storage) es tu límite.
-3.  **Usuarios:** No borres y crees usuarios todo el tiempo; mantené la base de datos limpia.
+Cuando Firebase Studio ya no esté disponible, tu rutina será esta:
 
----
-
-## 3. Pasos para la Migración Final
-
-Cuando decidas que la app está lista para el uso oficial:
-
-1.  **Cuenta Institucional:** Creá un correo de Google del cuartel (ej: `informatica@bomberosx.com.ar`).
-2.  **Proyecto Firebase:** Entra a la consola y creá un nuevo proyecto llamado "SMA-Cuartel-X".
-3.  **Configuración:** Descargá tu código desde aquí (vía Git) y actualizá el archivo `src/firebase/config.ts` con las credenciales de tu nuevo proyecto.
-4.  **Despliegue:** Usá el comando `firebase deploy` para que la app sea accesible desde una dirección `.web.app` o tu propio dominio.
+1.  **En tu PC:** Descargás un programa llamado "Visual Studio Code" (es el estándar mundial y es gratis).
+2.  **Desde GitHub:** Descargás tu código (haciendo un "Clone").
+3.  **Configuración:** Entrás al archivo `src/firebase/config.ts` y pegás los códigos de tu nuevo proyecto de Firebase.
+4.  **Despliegue:** Usás un comando (`firebase deploy`) y tu app ya estará en internet con una dirección propia (ej: `bomberos-tu-cuartel.web.app`).
 
 ---
 
+## 3. Costos (Plan Spark - 100% Gratis)
+
+Mientras seas un cuartel con un uso normal, **no vas a pagar nada**. Google te regala:
+*   50,000 lecturas diarias de base de datos.
+*   20,000 escrituras diarias.
+*   50,000 usuarios activos.
+
+**Consejo de Oro:** Nunca borres tu cuenta de GitHub. Ese es tu seguro de vida. Mientras el código esté ahí, la app nunca se pierde.
+
+---
 *Desarrollado por OZNOVA Systems para la profesionalización tecnológica de los Cuerpos de Bomberos.*

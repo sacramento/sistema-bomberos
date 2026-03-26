@@ -10,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { APP_CONFIG } from "@/lib/config";
 
 
 export default function LoginPage() {
@@ -24,14 +25,12 @@ export default function LoginPage() {
   };
   
   useEffect(() => {
-    // If a logged-in user somehow lands on the login page, redirect them away.
     if (user) {
       router.replace('/dashboard');
     }
   }, [user, router]);
 
 
-  // Prevent rendering the form if auth state is loading or user is already logged in
   if (loading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
@@ -49,9 +48,9 @@ export default function LoginPage() {
         <form onSubmit={handleLogin}>
           <CardHeader className="text-center pt-12">
              <div className="mb-4 flex justify-center">
-              <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={60} height={60} />
+              <Image src={APP_CONFIG.logoUrl} alt="Logo" width={60} height={60} />
             </div>
-            <CardTitle className="font-headline text-2xl">Plataforma SMA</CardTitle>
+            <CardTitle className="font-headline text-2xl">{APP_CONFIG.fullName}</CardTitle>
             <CardDescription>
               Inicie sesión para continuar.
             </CardDescription>
@@ -100,7 +99,7 @@ export default function LoginPage() {
       </Card>
       <footer className="absolute bottom-4 text-center w-full">
         <p className="text-xs text-muted-foreground">
-          desarrollado por OZNOVA Systems
+          desarrollado por {APP_CONFIG.developerName}
         </p>
       </footer>
     </div>

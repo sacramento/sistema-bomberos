@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import Link from 'next/link';
 import { ArrowRight, Flame, Package, ClipboardMinus, Shirt, Siren, Droplets, GraduationCap } from 'lucide-react';
 import Image from 'next/image';
+import { APP_CONFIG } from '@/lib/config';
 
 const moduleDetails: Record<string, { title: string; description: string; icon: any }> = {
     asistencia: {
@@ -83,12 +84,12 @@ export default function ModuleSelectionPage() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-[calc(100vh-theme(space.24))] p-4 sm:p-6 md:p-8 overflow-hidden">
         <div className="z-10 flex flex-col items-center text-center mb-12">
-            <Image src="https://i.ibb.co/yF0SYDNF/logo.png" alt="Logo" width={100} height={100} className="mb-4" />
+            <Image src={APP_CONFIG.logoUrl} alt="Logo" width={100} height={100} className="mb-4" />
             <h1 className="font-headline text-3xl md:text-4xl font-semibold tracking-tight text-slate-800">
                 Bienvenido/a, {user.name}
             </h1>
             <p className="text-slate-600 mt-2">
-                Por favor, seleccione un módulo para continuar.
+                {APP_CONFIG.welcomeMessage}
             </p>
         </div>
         

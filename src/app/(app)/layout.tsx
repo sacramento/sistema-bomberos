@@ -19,6 +19,7 @@ import { useState, useEffect } from 'react';
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import MobileNav from './_components/mobile-nav';
 import { navItems, type NavItem } from '@/app/lib/constants/nav-items';
+import { APP_CONFIG } from '@/lib/config';
 
 function Sidebar() {
   const pathname = usePathname();
@@ -71,7 +72,7 @@ function Sidebar() {
         <div className="flex h-16 items-center border-b px-4">
           <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
             <Flame className="h-6 w-6 text-primary" />
-            {!isCollapsed && <span className="font-headline">Plataforma SMA</span>}
+            {!isCollapsed && <span className="font-headline">Plataforma {APP_CONFIG.name}</span>}
           </Link>
           <Button variant="ghost" size="icon" className="ml-auto h-8 w-8" onClick={() => setIsCollapsed(!isCollapsed)}>
             <PanelLeft className={cn("h-5 w-5 transition-transform", isCollapsed && "rotate-180")} />
@@ -245,7 +246,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         {children}
                     </div>
                     <footer className="mt-8 text-center text-xs text-muted-foreground">
-                        <p>desarrollado por OZNOVA Systems</p>
+                        <p>desarrollado por {APP_CONFIG.developerName}</p>
                     </footer>
                 </main>
             </div>

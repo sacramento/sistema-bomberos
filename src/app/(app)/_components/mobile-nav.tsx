@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetClose, SheetHeader, SheetTitle 
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { navItems, type NavItem } from "@/app/lib/constants/nav-items";
+import { APP_CONFIG } from '@/lib/config';
 
 interface MobileNavProps {
     navItems: NavItem[];
@@ -34,7 +35,7 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
                  <div className="flex h-16 items-center justify-between px-4">
                      <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                         <Flame className="h-6 w-6 text-primary" />
-                        <span className="font-headline text-lg">SMA</span>
+                        <span className="font-headline text-lg">{APP_CONFIG.name}</span>
                     </Link>
                     <Button variant="ghost" size="icon" onClick={logout}>
                         <LogOut className="h-5 w-5" />
@@ -151,7 +152,7 @@ export default function MobileNav({ navItems: accessibleNavItems }: MobileNavPro
                 </Sheet>
                  <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
                     <Flame className="h-6 w-6 text-primary" />
-                    <span className="font-headline text-lg">SMA</span>
+                    <span className="font-headline text-lg">{APP_CONFIG.name}</span>
                 </Link>
                 <div className="w-10"></div>
             </div>
