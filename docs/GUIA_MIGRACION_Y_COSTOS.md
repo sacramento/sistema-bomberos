@@ -1,38 +1,48 @@
 
 # Guía de Costos y Migración - Plataforma SMA
 
-Este documento explica cómo funciona el modelo de costos de los servicios utilizados en esta aplicación y los pasos para llevar la app a producción.
+Este documento explica cómo funciona el modelo de costos de los servicios utilizados en esta aplicación y los pasos para llevar la app a producción de forma gratuita o económica.
 
-## 1. Costos de los Servicios
+## 1. Costos de los Servicios (Plan Spark)
 
 La aplicación SMA está construida sobre tecnologías que ofrecen capas gratuitas muy amplias, ideales para instituciones como Cuerpos de Bomberos.
 
 ### Firebase (Base de Datos, Autenticación y Hosting)
-Firebase ofrece el **Plan Spark**, que es 100% gratuito.
-- **Autenticación:** Gratis para los primeros 50,000 usuarios activos mensuales.
-- **Firestore (Datos):** Gratis hasta 50,000 lecturas y 20,000 escrituras **por día**. Un cuartel con 100 integrantes difícilmente alcance este límite en uso normal.
-- **Hosting:** Gratis hasta 10GB de almacenamiento de archivos.
+Firebase utiliza el **Plan Spark**, que es 100% gratuito mientras no se excedan estos límites:
 
-### Google AI Studio (Inteligencia Artificial - Gemini)
-El "cerebro" de la app utiliza la API de Gemini.
-- **Plan Gratuito:** Disponible para desarrollo y uso moderado. Permite hasta 15 consultas por minuto (RPM) en el modelo Flash 2.0 sin costo.
-- **Privacidad:** En el plan gratuito, Google podría usar los datos para mejorar sus modelos (anonimizados). Si la privacidad es crítica, se recomienda pasar al plan pago (que solo cobra centavos por cada millón de palabras).
+*   **Firestore (Base de Datos):**
+    *   **Lecturas:** 50,000 por día (Gratis).
+    *   **Escrituras:** 20,000 por día (Gratis).
+    *   **Eliminaciones:** 20,000 por día (Gratis).
+    *   **Almacenamiento:** 1 GB total.
+*   **Autenticación:** Gratis para los primeros 50,000 usuarios activos mensuales.
+*   **Hosting (Web):** 10 GB de almacenamiento y 360 MB de transferencia diaria.
 
----
+> **Nota:** Un cuartel con 100 integrantes que cargan servicios y toman asistencia difícilmente consumirá más de 2,000 o 3,000 lecturas diarias. Estás muy lejos del límite.
 
-## 2. Pasos para la Migración Final
-
-Cuando decidas que la app está lista para ser usada oficialmente por el cuartel, deberás:
-
-1. **Crear una Cuenta Institucional:** Se recomienda crear un correo de Google del cuartel (ej: `sistemas@bomberosx.com.ar`).
-2. **Descargar el Código:** Utiliza los comandos Git detallados en el `README.md` de la raíz.
-3. **Crear un Proyecto en Firebase Console:** Entra a [console.firebase.google.com](https://console.firebase.google.com) y crea un nuevo proyecto.
-4. **Configurar las Credenciales:** Reemplaza el archivo `src/firebase/config.ts` con los valores de tu nuevo proyecto.
-5. **Desplegar (Deploy):** Usa Firebase CLI para subir la app a la web.
+### Google AI Studio (IA - Gemini)
+*   **Plan Gratuito:** Disponible para uso moderado. Permite hasta 15 consultas por minuto sin costo.
+*   **Privacidad:** En el plan gratuito, los datos (anonimizados) podrían usarse para mejorar los modelos. Para máxima privacidad institucional, se puede pasar al plan pago que cobra centavos por millón de tokens.
 
 ---
 
-## 3. ¿Tengo que pagar ahora?
-**No.** Todo el desarrollo que estamos haciendo en este entorno está cubierto. Solo deberás considerar costos si la app crece a niveles de tráfico masivos, lo cual no es común en un entorno institucional cerrado.
+## 2. Consejos para mantener la App Gratis
 
-*Desarrollado por OZNOVA Systems para la profesionalización bomberil.*
+1.  **Monitoreo:** Una vez migrada la app, en la [Consola de Firebase](https://console.firebase.google.com/), sección "Usage & Billing", podés ver exactamente cuántas lecturas y escrituras llevás en el día.
+2.  **Imágenes:** Si vas a subir fotos de vehículos o perfiles, tratá de que no sean archivos de 10MB. La app está configurada para manejar placeholders, pero si habilitás subida de archivos, el almacenamiento de 5GB (Storage) es tu límite.
+3.  **Usuarios:** No borres y crees usuarios todo el tiempo; mantené la base de datos limpia.
+
+---
+
+## 3. Pasos para la Migración Final
+
+Cuando decidas que la app está lista para el uso oficial:
+
+1.  **Cuenta Institucional:** Creá un correo de Google del cuartel (ej: `informatica@bomberosx.com.ar`).
+2.  **Proyecto Firebase:** Entra a la consola y creá un nuevo proyecto llamado "SMA-Cuartel-X".
+3.  **Configuración:** Descargá tu código desde aquí (vía Git) y actualizá el archivo `src/firebase/config.ts` con las credenciales de tu nuevo proyecto.
+4.  **Despliegue:** Usá el comando `firebase deploy` para que la app sea accesible desde una dirección `.web.app` o tu propio dominio.
+
+---
+
+*Desarrollado por OZNOVA Systems para la profesionalización tecnológica de los Cuerpos de Bomberos.*
