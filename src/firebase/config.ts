@@ -1,8 +1,14 @@
+
+/**
+ * @fileOverview Configuración de Firebase utilizando variables de entorno.
+ * Esto evita exponer llaves privadas en repositorios públicos.
+ */
+
 export const firebaseConfig = {
-  "projectId": "fuegoregistro",
-  "appId": "1:582746733947:web:30bdc2e9c3edb80cd2d1de",
-  "apiKey": "AIzaSyAAMEjNcyIW3n2Za5pzP8MmSbfN-YHNGKU",
-  "authDomain": "fuegoregistro.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "582746733947"
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  measurementId: "", // Opcional, puedes agregarla si la usas
 };
