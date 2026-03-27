@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -33,6 +34,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
 import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
+import { APP_CONFIG } from "@/lib/config";
 
 const STATUS_COLORS: Record<string, string> = { 'En Servicio': "#22C55E", 'Fuera de Servicio': "#EF4444" };
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
@@ -99,20 +101,16 @@ export default function MaterialsReportPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [detailItem, setDetailItem] = useState<Material | null>(null);
     
-    // Sorting state
     const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'ascending' | 'descending' } | null>({ key: 'codigo', direction: 'ascending' });
 
-    // Filtros Jerárquicos
     const [filterCategories, setFilterCategories] = useState<string[]>([]);
     const [filterSubCategories, setFilterSubCategories] = useState<string[]>([]);
     const [filterItemTypes, setFilterItemTypes] = useState<string[]>([]);
     
-    // Filtros Técnicos
     const [filterAcoples, setFilterAcoples] = useState<string[]>([]);
     const [filterMedidas, setFilterMedidas] = useState<string[]>([]);
     const [filterComposiciones, setFilterComposiciones] = useState<string[]>([]);
     
-    // Filtros Ubicación
     const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
     const [filterStates, setFilterStates] = useState<string[]>([]);
@@ -122,7 +120,6 @@ export default function MaterialsReportPage() {
     const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
-    const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
@@ -146,7 +143,7 @@ export default function MaterialsReportPage() {
     
     useEffect(() => {
         handleDataChange();
-        fetch('https://i.ibb.co/yF0SYDNF/logo.png').then(r => r.blob()).then(b => {
+        fetch(APP_CONFIG.logoUrl).then(r => r.blob()).then(b => {
             const reader = new FileReader();
             reader.onloadend = () => setLogoDataUrl(reader.result as string);
             reader.readAsDataURL(b);
@@ -162,18 +159,6 @@ export default function MaterialsReportPage() {
         if (!loggedInFirefighter || !isEncargado) return new Set<string>();
         return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id)).map(v => v.id));
     }, [loggedInFirefighter, vehicles, isEncargado]);
-
-    const canEditMaterial = (m: Material) => {
-        if (isPrivileged) return true;
-        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
-            return true;
-        }
-        return false;
-    }
-
-    const canDeleteMaterial = (m: Material) => {
-        return isPrivileged;
-    }
 
     const subCategoryOptions = useMemo(() => {
         if (filterCategories.length === 0) return [];
@@ -193,24 +178,15 @@ export default function MaterialsReportPage() {
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
             if (searchTerm && !m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) && !m.codigo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-            
-            // Jerarquía
             if (filterCategories.length > 0 && !filterCategories.includes(m.categoryId)) return false;
             if (filterSubCategories.length > 0 && !filterSubCategories.includes(m.subCategoryId)) return false;
             if (filterItemTypes.length > 0 && !filterItemTypes.includes(m.itemTypeId)) return false;
-            
-            // Técnico
             if (filterAcoples.length > 0 && (!m.acople || !filterAcoples.includes(m.acople))) return false;
             if (filterMedidas.length > 0 && (!m.medida || !filterMedidas.includes(m.medida))) return false;
             if (filterComposiciones.length > 0 && (!m.composicion || !filterComposiciones.includes(m.composicion))) return false;
-
-            // Ubicación
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(m.cuartel)) return false;
             if (filterVehicles.length > 0 && (!m.ubicacion?.vehiculoId || !filterVehicles.includes(m.ubicacion.vehiculoId))) return false;
-            
-            // Estado
             if (filterStates.length > 0 && !filterStates.includes(m.estado)) return false;
-            
             return true;
         });
     }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
@@ -221,7 +197,6 @@ export default function MaterialsReportPage() {
             sortableItems.sort((a, b) => {
                 let aValue: any = a[sortConfig.key as keyof Material];
                 let bValue: any = b[sortConfig.key as keyof Material];
-
                 if (sortConfig.key === 'ubicacion') {
                     const getLocString = (m: Material) => m.ubicacion.type === 'vehiculo' 
                         ? `V-${m.vehiculo?.numeroMovil?.padStart(3, '0') || '999'}-${m.ubicacion.baulera}`
@@ -229,16 +204,10 @@ export default function MaterialsReportPage() {
                     aValue = getLocString(a);
                     bValue = getLocString(b);
                 }
-
                 if (typeof aValue === 'string') aValue = aValue.toLowerCase();
                 if (typeof bValue === 'string') bValue = bValue.toLowerCase();
-
-                if (aValue < bValue) {
-                    return sortConfig.direction === 'ascending' ? -1 : 1;
-                }
-                if (aValue > bValue) {
-                    return sortConfig.direction === 'ascending' ? 1 : -1;
-                }
+                if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
                 return 0;
             });
         }
@@ -255,54 +224,36 @@ export default function MaterialsReportPage() {
 
     const getSortIcon = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" />;
-        return sortConfig.direction === 'ascending' 
-            ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> 
-            : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
+        return sortConfig.direction === 'ascending' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
     };
 
     const kpis = useMemo(() => {
         const total = filteredMaterials.length;
         if (total === 0) return { total: 0, inService: 0, outOfService: 0, good: 0, regular: 0, bad: 0, servicePercent: '0%', goodPercent: '0%' };
-        
         const inService = filteredMaterials.filter(m => m.estado === 'En Servicio').length;
         const outOfService = total - inService;
         const good = filteredMaterials.filter(m => m.condicion === 'Bueno').length;
         const regular = filteredMaterials.filter(m => m.condicion === 'Regular').length;
         const bad = filteredMaterials.filter(m => m.condicion === 'Malo').length;
-        
-        return { 
-            total, 
-            inService, 
-            outOfService,
-            good, 
-            regular, 
-            bad,
-            servicePercent: `${((inService / total) * 100).toFixed(0)}%`, 
-            goodPercent: `${((good / total) * 100).toFixed(0)}%` 
-        };
+        return { total, inService, outOfService, good, regular, bad, servicePercent: `${((inService / total) * 100).toFixed(0)}%`, goodPercent: `${((good / total) * 100).toFixed(0)}%` };
     }, [filteredMaterials]);
 
     const generatePdf = async () => {
-        if (!logoDataUrl) {
-            toast({ title: "Espere un momento", description: "Cargando logo..." });
-            return;
-        }
+        if (!logoDataUrl) return;
         setGeneratingPdf(true);
         const doc = new jsPDF('l', 'mm', 'a4'); 
         try {
             doc.setFillColor(220, 53, 69);
             doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-            doc.text("Reporte de Inventario Técnico", 14, 22);
+            doc.text(`Inventario Técnico - ${APP_CONFIG.name}`, 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
 
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Resumen Estadístico`, 14, currentY);
-                currentY += 10;
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
+                doc.text(`Resumen Estadístico`, 14, currentY); currentY += 10;
+                doc.setFontSize(10); doc.setFont('helvetica', 'bold');
                 doc.text(`Total elementos: ${kpis.total}`, 14, currentY); currentY += 6;
                 doc.setFont('helvetica', 'normal');
                 doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
@@ -321,9 +272,7 @@ export default function MaterialsReportPage() {
                         m.acople || '-',
                         m.estado
                     ]),
-                    theme: 'striped',
-                    headStyles: { fillColor: '#343a40' },
-                    styles: { fontSize: 8 }
+                    theme: 'striped', headStyles: { fillColor: '#343a40' }, styles: { fontSize: 8 }
                 });
             }
             doc.save(`reporte-materiales-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -335,201 +284,40 @@ export default function MaterialsReportPage() {
     return (
         <div className="space-y-8 pb-20">
             <PageHeader title="Reportes Avanzados de Materiales" description="Filtre por cualquier parámetro técnico para obtener inventarios precisos."/>
-            
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="lg:col-span-3">
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex gap-4">
-                        <div className="relative flex-grow">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                        </div>
-                        <QrScannerDialog onScan={(c) => setSearchTerm(c)}>
-                            <Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button>
-                        </QrScannerDialog>
-                    </CardContent>
-                </Card>
-                <Card className="border-primary/50 bg-primary/5">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total en Selección</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div>
-                        <p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen los filtros</p>
-                    </CardContent>
-                </Card>
+                <Card className="lg:col-span-3"><CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle></CardHeader><CardContent className="flex gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={(c) => setSearchTerm(c)}><Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button></QrScannerDialog></CardContent></Card>
+                <Card className="border-primary/50 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total en Selección</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div><p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen los filtros</p></CardContent></Card>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card className="border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                            <Activity className="h-3 w-3" /> Operatividad
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">En Servicio:</span>
-                            <span className="text-xl font-bold text-green-600">{kpis.inService}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Fuera de Servicio:</span>
-                            <span className="text-xl font-bold text-red-600">{kpis.outOfService}</span>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-amber-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                            <Shield className="h-3 w-3" /> Condición Física
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-3 gap-2">
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground">Bueno</p>
-                            <p className="text-lg font-bold text-green-600">{kpis.good}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground">Regular</p>
-                            <p className="text-lg font-bold text-amber-600">{kpis.regular}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] text-muted-foreground">Malo</p>
-                            <p className="text-lg font-bold text-red-600">{kpis.bad}</p>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-slate-500">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                            <Layers className="h-3 w-3" /> Integridad de Datos
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Codificados:</span>
-                            <span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <span className="text-sm font-medium">Sin Código:</span>
-                            <span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span>
-                        </div>
-                    </CardContent>
-                </Card>
+                <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent></Card>
+                <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent></Card>
+                <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent></Card>
             </div>
-
             <Card className="shadow-md">
-                <CardHeader className="bg-muted/30 border-b">
-                    <CardTitle className="text-base flex items-center gap-2"><Layers className="h-5 w-5 text-primary" /> Filtros de Clasificación Jerárquica</CardTitle>
-                </CardHeader>
+                <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Layers className="h-5 w-5 text-primary" /> Filtros de Clasificación Jerárquica</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold">1. Categoría</Label>
-                        <MultiSelectFilter title="Categorías" options={MATERIAL_CATEGORIES.map(c => ({ value: c.id, label: c.label }))} selected={filterCategories} onSelectedChange={(v) => { setFilterCategories(v); setFilterSubCategories([]); setFilterItemTypes([]); }} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold">2. Subcategoría</Label>
-                        <MultiSelectFilter title="Subcategorías" options={subCategoryOptions} selected={filterSubCategories} onSelectedChange={(v) => { setFilterSubCategories(v); setFilterItemTypes([]); }} />
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-xs font-bold">3. Tipo de Ítem</Label>
-                        <MultiSelectFilter title="Tipos" options={itemTypeOptions} selected={filterItemTypes} onSelectedChange={setFilterItemTypes} />
-                    </div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">1. Categoría</Label><MultiSelectFilter title="Categorías" options={MATERIAL_CATEGORIES.map(c => ({ value: c.id, label: c.label }))} selected={filterCategories} onSelectedChange={(v) => { setFilterCategories(v); setFilterSubCategories([]); setFilterItemTypes([]); }} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">2. Subcategoría</Label><MultiSelectFilter title="Subcategorías" options={subCategoryOptions} selected={filterSubCategories} onSelectedChange={(v) => { setFilterSubCategories(v); setFilterItemTypes([]); }} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">3. Tipo de Ítem</Label><MultiSelectFilter title="Tipos" options={itemTypeOptions} selected={filterItemTypes} onSelectedChange={setFilterItemTypes} /></div>
                 </CardContent>
             </Card>
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                    <CardHeader className="bg-muted/30 border-b">
-                        <CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Acople</Label>
-                            <MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Medida / Diámetro</Label>
-                            <MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Composición</Label>
-                            <MultiSelectFilter title="Composición" options={composicionOptions.map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="bg-muted/30 border-b">
-                        <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Cuartel</Label>
-                            <MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Móvil</Label>
-                            <MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móv ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label className="text-xs font-bold">Estado</Label>
-                            <MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} />
-                        </div>
-                    </CardContent>
-                </Card>
+                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                    <div className="space-y-2"><Label className="text-xs font-bold">Acople</Label><MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Medida / Diámetro</Label><MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={composicionOptions.map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
+                </CardContent></Card>
+                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                    <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Móvil</Label><MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móv ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
+                </CardContent></Card>
             </div>
-
-            <Card>
-                <CardHeader className="border-b">
-                    <div className="flex justify-between items-center">
-                        <CardTitle className="font-headline">Detalle de Equipamiento</CardTitle>
-                        <Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
-                            {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
-                            Exportar PDF
-                        </Button>
-                    </div>
-                </CardHeader>
-                <CardContent className="p-0 overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead>
-                                <TableHead>Medida</TableHead>
-                                <TableHead>Acople</TableHead>
-                                <TableHead className="text-right">Estado</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                <TableRow><TableCell colSpan={7}><Skeleton className="h-10 w-full"/></TableCell></TableRow>
-                            ) : sortedFilteredMaterials.length > 0 ? (
-                                sortedFilteredMaterials.map(m => (
-                                    <TableRow key={m.id}>
-                                        <TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell>
-                                        <TableCell className="text-sm font-medium">{m.nombre}</TableCell>
-                                        <TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell>
-                                        <TableCell className="text-xs">{m.medida || '-'}</TableCell>
-                                        <TableCell className="text-xs">{m.acople || '-'}</TableCell>
-                                        <TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell>
-                                        <TableCell className="text-right">
-                                            <Button variant="ghost" size="icon" onClick={() => setDetailItem(m)}><Eye className="h-4 w-4"/></Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+            <Card><CardHeader className="border-b"><div className="flex justify-between items-center"><CardTitle className="font-headline">Detalle de Equipamiento</CardTitle><Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exportar PDF</Button></div></CardHeader>
+                <CardContent className="p-0 overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead>Medida</TableHead><TableHead>Acople</TableHead><TableHead className="text-right">Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
+                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setDetailItem(m)}><Eye className="h-4 w-4"/></Button></TableCell></TableRow>)) : (<TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>)}</TableBody>
+                </Table></CardContent>
             </Card>
-
             <MaterialDetailDialog material={detailItem} open={!!detailItem} onOpenChange={(isOpen) => { if (!isOpen) setDetailItem(null); }} />
         </div>
     );
