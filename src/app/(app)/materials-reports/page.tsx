@@ -223,9 +223,7 @@ export default function MaterialsReportPage() {
     const locationOptions = useMemo(() => {
         return [
             ...vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` })),
-            { value: 'deposito_Cuartel 1', label: 'Depósito C1' },
-            { value: 'deposito_Cuartel 2', label: 'Depósito C2' },
-            { value: 'deposito_Cuartel 3', label: 'Depósito C3' }
+            { value: 'deposito', label: 'Depósito' }
         ];
     }, [vehicles]);
 
@@ -243,7 +241,7 @@ export default function MaterialsReportPage() {
             if (filterLocations.length > 0) {
                 const loc = m.ubicacion;
                 const isMatch = (loc.type === 'vehiculo' && loc.vehiculoId && filterLocations.includes(loc.vehiculoId)) ||
-                                (loc.type === 'deposito' && loc.deposito && filterLocations.includes(`deposito_${loc.deposito}`));
+                                (loc.type === 'deposito' && filterLocations.includes('deposito'));
                 if (!isMatch) return false;
             }
 
@@ -369,14 +367,14 @@ export default function MaterialsReportPage() {
                     <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={['Tela', 'Goma'].map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
                 </CardContent></Card>
                 <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                    <div className="space-y-2"><Label className="text-xs font-bold">Dueño (Cuartel)</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Ubicación Actual</Label><MultiSelectFilter title="Ubicaciones" options={locationOptions} selected={filterLocations} onSelectedChange={setFilterLocations} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
                 </CardContent></Card>
             </div>
             <Card><CardHeader className="border-b"><div className="flex justify-between items-center"><CardTitle className="font-headline">Detalle de Equipamiento</CardTitle><Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exportar PDF</Button></div></CardHeader>
                 <CardContent className="p-0 overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead>Medida</TableHead><TableHead>Acople</TableHead><TableHead className="text-right">Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
-                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right">
+                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                             <AlertDialog>
                                 <DropdownMenu>
