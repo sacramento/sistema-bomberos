@@ -13,6 +13,7 @@ import { getFirefighters } from "@/services/firefighters.service";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
 import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2, CalendarDays } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
 import AddTaskDialog from "../_components/add-task-dialog";
@@ -21,7 +22,6 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format, parseISO } from 'date-fns';
@@ -65,10 +65,12 @@ export default function WeekDetailPage() {
         // Si es el encargado específico de ESTA semana (Lead)
         if (week.leadId === user.id) return true;
 
-        // Si es Administrador o Encargado del módulo para este cuartel
-        if (activeRole === 'Administrador' || activeRole === 'Encargado') {
+        // Si es Administrador del módulo para este cuartel
+        if (activeRole === 'Administrador') {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
+
+        // El rol 'Encargado' del módulo solo puede gestionar si es el Lead de esta semana (ya cubierto arriba)
         return false;
     }, [user, week, activeRole, loggedInFirefighter]);
 

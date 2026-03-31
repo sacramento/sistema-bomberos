@@ -45,13 +45,19 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     const activeRole = getActiveRole(pathname);
 
     const canUserManageWeek = (week: Week) => {
-        if (!canManageGenerally) return false;
+        if (!user) return false;
         if (activeRole === 'Master') return true;
         
-        // Admins and Encargados can only manage weeks of their own firehouse
-        if (activeRole === 'Administrador' || activeRole === 'Encargado') {
+        // Administradores pueden gestionar cualquier semana de su cuartel
+        if (activeRole === 'Administrador') {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
+
+        // Encargados (del módulo) o Bomberos solo pueden gestionar si son el Lead específico de esta semana
+        if (activeRole === 'Encargado' || activeRole === 'Bombero') {
+            return user.id === week.leadId;
+        }
+
         return false;
     };
 

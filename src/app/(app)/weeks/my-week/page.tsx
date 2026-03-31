@@ -64,7 +64,9 @@ export default function MyWeekPage() {
         }
 
         const firefighterData = allFirefighters.find(f => f.legajo === user.id);
-        const canManageWeeks = isMaster || activeRole === 'Administrador' || activeRole === 'Encargado';
+        
+        // Solo Master y Administradores pueden crear semanas de forma general
+        const canManageWeeks = isMaster || activeRole === 'Administrador';
         
         let visibleWeeks: Week[] = [];
 
