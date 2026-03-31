@@ -60,15 +60,16 @@ export default function WeekDetailPage() {
     
     const canManage = useMemo(() => {
         if (!user || !week) return false;
+        // El Master gestiona TODO
         if (activeRole === 'Master') return true;
         
-        // Si es el encargado específico de ESTA semana (Lead)
-        if (week.leadId === user.id) return true;
-
-        // Si es Administrador del módulo para este cuartel
+        // Administradores gestionan su propio cuartel
         if (activeRole === 'Administrador') {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
+
+        // El Lead específico de la semana gestiona su pizarra y tareas
+        if (week.leadId === user.id) return true;
 
         return false;
     }, [user, week, activeRole, loggedInFirefighter]);
@@ -77,11 +78,13 @@ export default function WeekDetailPage() {
         if (!user || !week) return false;
         if (canManage) return true;
         if (activeRole === 'Oficial') return true;
-        if (activeRole === 'Administrador') return true; // Admins pueden ver detalles de todas para supervisar
         
-        // Para Bomberos y Encargados (que no son lead de esta semana): solo si están en la dotación
+        // El Administrador puede ver cualquier semana de su cuartel aunque no la gestione (ej: si es Lead otro)
+        if (activeRole === 'Administrador' && loggedInFirefighter?.firehouse === week.firehouse) return true;
+        
+        // Miembros de la dotación ven su propia semana
         return week.allMemberIds?.includes(user.id);
-    }, [canManage, user, week, activeRole]);
+    }, [canManage, user, week, activeRole, loggedInFirefighter]);
     
 
     const fetchWeekAndTasks = async () => {
@@ -214,7 +217,7 @@ export default function WeekDetailPage() {
 
             <div className="grid gap-8 md:grid-cols-3">
                 <div className="md:col-span-2 space-y-8">
-                    {/* Observations Card */}
+                    {/* Novedades */}
                     <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl">Pizarra de Novedades</CardTitle>
@@ -246,7 +249,7 @@ export default function WeekDetailPage() {
                         </CardContent>
                     </Card>
 
-                    {/* Tasks Card */}
+                    {/* Tareas */}
                      <Card>
                         <CardHeader>
                             <CardTitle className="font-headline text-xl flex items-center gap-2"><ListTodo className="h-5 w-5 text-primary" /> Tareas de la Semana</CardTitle>
@@ -331,7 +334,7 @@ export default function WeekDetailPage() {
                                                 <AlertDialogHeader>
                                                     <AlertDialogTitle>¿Eliminar esta tarea?</AlertDialogTitle>
                                                     <AlertDialogDescription>
-                                                        Esta acción no se puede deshacer. La tarea "{task.title}" será eliminada permanentemente de esta semana.
+                                                        Esta acción no se puede deshacer. La tarea "{task.title}" será eliminada permanentemente.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter>
@@ -355,7 +358,7 @@ export default function WeekDetailPage() {
                     </Card>
                 </div>
 
-                {/* Members Card */}
+                {/* Dotación */}
                 <div className="space-y-8">
                     <Card className="shadow-md border-primary/10">
                         <CardHeader className="bg-primary/5 border-b">

@@ -46,14 +46,15 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
 
     const canUserManageWeek = (week: Week) => {
         if (!user) return false;
+        // Solo el Master edita TODO
         if (activeRole === 'Master') return true;
         
-        // Administradores pueden gestionar cualquier semana de su cuartel
+        // Administradores solo gestionan su cuartel
         if (activeRole === 'Administrador') {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
 
-        // Encargados (del módulo) solo pueden gestionar si son el Lead específico de esta semana
+        // Encargados locales solo gestionan su semana asignada
         if (activeRole === 'Encargado') {
             return user.id === week.leadId;
         }
@@ -63,10 +64,10 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
 
     const canUserViewDetails = (week: Week) => {
         if (!user) return false;
-        // Roles de supervisión ven todo
+        // Roles de supervisión ven todo lo que esté listado
         if (['Master', 'Administrador', 'Oficial'].includes(activeRole)) return true;
         
-        // Bomberos y Encargados solo ven donde están asignados (Lead, Chofer o Miembro)
+        // Bomberos solo ven detalles donde participan
         return week.allMemberIds?.includes(user.id);
     };
 
@@ -74,7 +75,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
         if (!user) return;
         try {
             await deleteWeek(weekId, user);
-            toast({ title: "Éxito", description: "La semana y sus tareas asociadas han sido eliminadas." });
+            toast({ title: "Éxito", description: "La semana ha sido eliminada." });
             onDataChange();
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "No se pudo eliminar la semana.", variant: "destructive" });
@@ -95,22 +96,6 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
         );
     }
     
-    if (weeks.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg">
-                <div className="text-center">
-                    <h2 className="text-xl font-semibold">No hay semanas para mostrar</h2>
-                     <p className="text-muted-foreground mt-2">
-                        {canManageGenerally
-                         ? 'Cree una nueva semana para comenzar.'
-                         : 'No hay guardias registradas en este cuartel.'
-                        }
-                    </p>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="space-y-4">
             {weeks.map((week) => {
@@ -211,7 +196,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Esto eliminará permanentemente la semana "{week.name}" y todas sus tareas asociadas.
+                                Esta acción no se puede deshacer. Se eliminará la semana "{week.name}" permanentemente.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

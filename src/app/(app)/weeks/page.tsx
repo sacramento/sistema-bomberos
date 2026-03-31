@@ -64,10 +64,19 @@ export default function WeeksDashboardPage() {
         return firefighters.find(f => f.legajo === user.id) || null;
     }, [user, firefighters]);
 
+    const filteredWeeks = useMemo(() => {
+        if (!mounted || !user) return [];
+        // El Master ve todo. Los demás solo ven su cuartel.
+        if (isMaster) return weeks;
+        if (!loggedInFirefighter) return [];
+        
+        return weeks.filter(w => w.firehouse === loggedInFirefighter.firehouse);
+    }, [weeks, mounted, user, isMaster, loggedInFirefighter]);
+
     const weeksGrouped = useMemo(() => {
         if (!mounted) return {};
 
-        const grouped = weeks.reduce((acc, week) => {
+        const grouped = filteredWeeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -77,15 +86,17 @@ export default function WeeksDashboardPage() {
         }, {} as Record<string, Week[]>);
         
         return grouped;
-    }, [weeks, mounted]);
+    }, [filteredWeeks, mounted]);
 
-    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+    const firehouseOrder = isMaster 
+        ? ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] 
+        : (loggedInFirefighter?.firehouse ? [loggedInFirefighter.firehouse] : []);
     
     return (
         <>
             <PageHeader 
                 title="Semanas de Guardia" 
-                description="Listado general de guardias por cuartel."
+                description={isMaster ? "Listado general de guardias por cuartel." : `Guardias de ${loggedInFirefighter?.firehouse || 'mi cuartel'}`}
             >
                 {(isMaster || isLocalAdmin) && (
                     <AddWeekDialog onWeekAdded={handleDataChange} loggedInFirefighter={loggedInFirefighter}>
@@ -109,7 +120,7 @@ export default function WeeksDashboardPage() {
                    </div>
                ) : (
                    firehouseOrder.map(firehouse => (
-                        weeksGrouped[firehouse] && weeksGrouped[firehouse].length > 0 && (
+                        weeksGrouped[firehouse] && weeksGrouped[firehouse].length > 0 ? (
                             <div key={firehouse} className="mb-8">
                                 <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
                                 <WeekList 
@@ -120,8 +131,13 @@ export default function WeeksDashboardPage() {
                                     loggedInFirefighter={loggedInFirefighter}
                                 />
                             </div>
-                        )
+                        ) : null
                     ))
+               )}
+               {!loading && filteredWeeks.length === 0 && (
+                   <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-lg bg-muted/10">
+                       <p className="text-muted-foreground">No hay semanas registradas para mostrar.</p>
+                   </div>
                )}
             </div>
         </>
