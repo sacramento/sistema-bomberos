@@ -25,7 +25,6 @@ const estados: Material['estado'][] = ['En Servicio', 'Fuera de Servicio'];
 const condiciones: Material['condicion'][] = ['Bueno', 'Regular', 'Malo'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
-const composicionOptions = ['Tela', 'Goma'];
 
 const vehicleCompartments = [
     'Techo', 'Dotacion', 'Cabina',
@@ -45,7 +44,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
     const activeRole = getActiveRole(pathname);
     const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
 
-    // Only show vehicles that are NOT decommissioned (Fuera de Dotación)
+    // Solo vehículos que no están dados de baja
     const availableVehicles = useMemo(() => vehicles.filter(v => v.status !== 'Fuera de Dotación'), [vehicles]);
 
     // Form state
@@ -114,11 +113,22 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     };
 
+    /**
+     * Lógica Crítica: Un cambio requiere aprobación si el usuario no es Privilegiado
+     * Y el material cambia de ubicación física (Móvil -> Depósito, Móvil A -> Móvil B, etc.)
+     */
     const needsApproval = useMemo(() => {
         if (isPrivileged) return false;
+        
+        // Cambio de tipo de ubicación (Móvil <-> Depósito)
         if (material.ubicacion.type !== locationType) return true;
-        if (material.ubicacion.vehiculoId !== vehiculoId) return true;
-        if (material.cuartel !== cuartel && locationType === 'deposito') return true;
+        
+        // Si sigue en vehículo, verificar si cambió de móvil
+        if (locationType === 'vehiculo' && material.ubicacion.vehiculoId !== vehiculoId) return true;
+        
+        // Si sigue en depósito, verificar si cambió de cuartel
+        if (locationType === 'deposito' && material.cuartel !== cuartel) return true;
+        
         return false;
     }, [isPrivileged, material, locationType, vehiculoId, cuartel]);
 
@@ -147,14 +157,21 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
             };
 
             if (needsApproval) {
-                createMaterialRequest({
-                    type: 'UPDATE', materialId: material.id, materialNombre: material.nombre,
-                    materialCodigo: material.codigo, requestedById: user.id,
-                    requestedByName: user.name, data: dataToSave, originalData: material
+                // Si requiere aprobación, creamos una solicitud en lugar de actualizar
+                await createMaterialRequest({
+                    type: 'UPDATE', 
+                    materialId: material.id, 
+                    materialNombre: material.nombre,
+                    materialCodigo: material.codigo, 
+                    requestedById: user.id,
+                    requestedByName: user.name, 
+                    data: dataToSave, 
+                    originalData: material
                 });
-                toast({ title: "Solicitud enviada" });
+                toast({ title: "Solicitud de traslado enviada", description: "Un administrador deberá aprobar el cambio de ubicación." });
             } else {
-                updateMaterial(material.id, dataToSave, user);
+                // Si es un cambio técnico en el mismo móvil, el Encargado puede hacerlo directamente
+                await updateMaterial(material.id, dataToSave, user);
                 toast({ title: "Material actualizado" });
             }
             onMaterialUpdated();
@@ -166,13 +183,19 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
         }
     };
 
+    const needsTechnicalDetails = (categoryId === '02' && (subCategoryId === '02.1' || subCategoryId === '02.2')) || (categoryId === '11' && subCategoryId === '11.2');
+
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>{children}</DialogTrigger>
             <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="font-headline">Editar Material</DialogTitle>
-                    <DialogDescription>Modifique los datos operativos.</DialogDescription>
+                    <DialogDescription>
+                        {needsApproval 
+                            ? "Los cambios de ubicación requieren aprobación de un administrador." 
+                            : "Puede editar detalles técnicos del equipo asignado a su móvil."}
+                    </DialogDescription>
                 </DialogHeader>
                 <form id="edit-material-form" onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-2 space-y-4 py-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -205,6 +228,24 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         <div className="space-y-2"><Label>Nombre</Label><Input value={nombre} onChange={(e) => setNombre(e.target.value)} required /></div>
                         <div className="space-y-2"><Label>Marca</Label><Input value={marca} onChange={(e) => setMarca(e.target.value)} /></div>
                         <div className="space-y-2"><Label>Modelo</Label><Input value={modelo} onChange={(e) => setModelo(e.target.value)} /></div>
+                        
+                        {needsTechnicalDetails && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label>Acople</Label>
+                                    <Select value={acople} onValueChange={setAcople}><SelectTrigger><SelectValue placeholder="Tipo..."/></SelectTrigger><SelectContent>{acopleOptions.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Medida</Label>
+                                    <Select value={showCustomMedida ? 'Otra' : medida} onValueChange={(v) => { if(v==='Otra'){setShowCustomMedida(true); setMedida('');}else{setShowCustomMedida(false); setMedida(v);}}}>
+                                        <SelectTrigger><SelectValue placeholder="Diámetro..."/></SelectTrigger>
+                                        <SelectContent>{diameterOptions.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}<SelectItem value="Otra">Otra medida...</SelectItem></SelectContent>
+                                    </Select>
+                                    {showCustomMedida && <Input className="mt-2" value={medida} onChange={(e) => setMedida(e.target.value)} placeholder="Especificar..." />}
+                                </div>
+                            </>
+                        )}
+
                         <div className="space-y-2">
                             <Label>Estado</Label>
                             <Select value={estado} onValueChange={(v) => setEstado(v as any)}>
@@ -221,7 +262,10 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                         </div>
                     </div>
                     <div className="space-y-3 pt-4 border-t">
-                        <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación {needsApproval && <Badge variant="destructive" className="ml-2">Requiere aprobación</Badge>}</Label>
+                        <div className="flex items-center justify-between">
+                            <Label className="text-xs font-bold uppercase text-muted-foreground">Ubicación Actual</Label>
+                            {needsApproval && <Badge variant="destructive" className="animate-pulse">Requiere aprobación</Badge>}
+                        </div>
                         <RadioGroup value={locationType} onValueChange={(v) => setLocationType(v as any)}>
                             <div className="flex items-center space-x-2"><RadioGroupItem value="deposito" id="r-dep-edit" /><Label htmlFor="r-dep-edit">En Depósito</Label></div>
                             <div className="flex items-center space-x-2"><RadioGroupItem value="vehiculo" id="r-veh-edit" /><Label htmlFor="r-veh-edit">En Vehículo</Label></div>
@@ -246,7 +290,7 @@ export default function EditMaterialDialog({ children, material, onMaterialUpdat
                 <DialogFooter className="border-t pt-4">
                     <Button type="submit" form="edit-material-form" disabled={loading}>
                         {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : needsApproval ? <Send className="h-4 w-4 mr-2"/> : null} 
-                        {needsApproval ? "Solicitar Cambio" : "Guardar Cambios"}
+                        {needsApproval ? "Solicitar Traslado" : "Guardar Cambios"}
                     </Button>
                 </DialogFooter>
             </DialogContent>
