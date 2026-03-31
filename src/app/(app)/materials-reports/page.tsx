@@ -9,6 +9,7 @@ import { Material, Vehicle, Specialization, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getFirefighters } from "@/services/firefighters.service";
+import { createMaterialRequest } from "@/services/material-requests.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
@@ -31,7 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
 import { APP_CONFIG } from "@/lib/config";
@@ -39,7 +40,6 @@ import { APP_CONFIG } from "@/lib/config";
 const STATUS_COLORS: Record<string, string> = { 'En Servicio': "#22C55E", 'Fuera de Servicio': "#EF4444" };
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
-const composicionOptions = ['Tela', 'Goma'];
 
 const MultiSelectFilter = ({ 
     title, 
@@ -94,6 +94,9 @@ const MultiSelectFilter = ({
 };
 
 export default function MaterialsReportPage() {
+    const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
+    const pathname = usePathname();
     const [materials, setMaterials] = useState<Material[]>([]);
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
     const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
@@ -120,12 +123,9 @@ export default function MaterialsReportPage() {
     const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
-    const { user, getActiveRole } = useAuth();
-    const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
-
-    const isPrivileged = activeRole === 'Master' || activeRole === 'Administrador';
-    const isEncargado = activeRole === 'Encargado';
+    const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const isEncargado = useMemo(() => activeRole === 'Encargado', [activeRole]);
 
     const handleDataChange = async () => {
         setLoading(true);
@@ -159,6 +159,51 @@ export default function MaterialsReportPage() {
         if (!loggedInFirefighter || !isEncargado) return new Set<string>();
         return new Set(vehicles.filter(v => v.materialEncargadoIds?.includes(loggedInFirefighter.id)).map(v => v.id));
     }, [loggedInFirefighter, vehicles, isEncargado]);
+
+    const canEditMaterial = (m: Material) => {
+        if (isPrivileged) return true;
+        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
+            return true;
+        }
+        return false;
+    };
+
+    const canDeleteMaterial = (m: Material) => {
+        if (isPrivileged) return true;
+        if (isEncargado && m.ubicacion.type === 'vehiculo' && m.ubicacion.vehiculoId && managedVehicleIds.has(m.ubicacion.vehiculoId)) {
+            return true;
+        }
+        return false;
+    };
+
+    const handleDelete = async (m: Material) => {
+        if (!user) return;
+        if (isPrivileged) {
+            try {
+                await deleteMaterial(m.id, user);
+                toast({ title: "Material eliminado" });
+                handleDataChange();
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message });
+            }
+        } else if (isEncargado) {
+            try {
+                await createMaterialRequest({
+                    type: 'DELETE',
+                    materialId: m.id,
+                    materialNombre: m.nombre,
+                    materialCodigo: m.codigo,
+                    requestedById: user.id,
+                    requestedByName: user.name,
+                    data: {},
+                    originalData: m
+                });
+                toast({ title: "Solicitud de baja enviada", description: "Un administrador deberá confirmar la baja." });
+            } catch (error: any) {
+                toast({ variant: "destructive", title: "Error", description: error.message });
+            }
+        }
+    };
 
     const subCategoryOptions = useMemo(() => {
         if (filterCategories.length === 0) return [];
@@ -305,7 +350,7 @@ export default function MaterialsReportPage() {
                 <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                     <div className="space-y-2"><Label className="text-xs font-bold">Acople</Label><MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Medida / Diámetro</Label><MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} /></div>
-                    <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={composicionOptions.map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={['Tela', 'Goma'].map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
                 </CardContent></Card>
                 <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                     <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
@@ -315,7 +360,43 @@ export default function MaterialsReportPage() {
             </div>
             <Card><CardHeader className="border-b"><div className="flex justify-between items-center"><CardTitle className="font-headline">Detalle de Equipamiento</CardTitle><Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exportar PDF</Button></div></CardHeader>
                 <CardContent className="p-0 overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead>Medida</TableHead><TableHead>Acople</TableHead><TableHead className="text-right">Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
-                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setDetailItem(m)}><Eye className="h-4 w-4"/></Button></TableCell></TableRow>)) : (<TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>)}</TableBody>
+                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil}` : `Depósito ${m.cuartel}`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                            <AlertDialog>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => setDetailItem(m)}><Eye className="h-4 w-4 mr-2" /> Ver Detalles</DropdownMenuItem>
+                                        {canEditMaterial(m) && (
+                                            <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
+                                                <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Editar</DropdownMenuItem>
+                                            </EditMaterialDialog>
+                                        )}
+                                        {canDeleteMaterial(m) && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <AlertDialogTrigger asChild>
+                                                    <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Eliminar</DropdownMenuItem>
+                                                </AlertDialogTrigger>
+                                            </>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                                        <AlertDialogDescription>{isPrivileged ? "Esta acción eliminará el material permanentemente." : "Se enviará una solicitud de baja para revisión del administrador."}</AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">{isPrivileged ? "Eliminar" : "Enviar Solicitud"}</AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    </TableCell></TableRow>)) : (<TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>)}</TableBody>
                 </Table></CardContent>
             </Card>
             <MaterialDetailDialog material={detailItem} open={!!detailItem} onOpenChange={(isOpen) => { if (!isOpen) setDetailItem(null); }} />
