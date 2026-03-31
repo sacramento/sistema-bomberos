@@ -70,17 +70,18 @@ export default function WeekDetailPage() {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
 
-        // El rol 'Encargado' del módulo solo puede gestionar si es el Lead de esta semana (ya cubierto arriba)
         return false;
     }, [user, week, activeRole, loggedInFirefighter]);
 
     const canView = useMemo(() => {
+        if (!user || !week) return false;
         if (canManage) return true;
         if (activeRole === 'Oficial') return true;
-        if (activeRole === 'Administrador' && loggedInFirefighter?.firehouse === week?.firehouse) return true;
-        if (!user || !week || !week.allMembers) return false;
-        return week.allMembers.some(member => member && member.legajo === user.id);
-    }, [canManage, user, week, activeRole, loggedInFirefighter]);
+        if (activeRole === 'Administrador') return true; // Admins pueden ver detalles de todas para supervisar
+        
+        // Para Bomberos y Encargados (que no son lead de esta semana): solo si están en la dotación
+        return week.allMemberIds?.includes(user.id);
+    }, [canManage, user, week, activeRole]);
     
 
     const fetchWeekAndTasks = async () => {
@@ -181,7 +182,7 @@ export default function WeekDetailPage() {
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <h2 className="text-2xl font-bold mb-2 text-destructive">Acceso Denegado</h2>
                 <p className="text-muted-foreground mb-6">No tienes permisos para ver los detalles de esta semana de guardia.</p>
-                <Button onClick={() => router.push('/weeks/my-week')}>Volver a Mis Semanas</Button>
+                <Button onClick={() => router.push('/weeks')}>Volver a Semanas</Button>
             </div>
         );
     }
@@ -196,7 +197,7 @@ export default function WeekDetailPage() {
                 description={`Cuartel: ${week.firehouse}`}
             >
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => router.push('/weeks/my-week')}>
+                    <Button variant="outline" onClick={() => router.push('/weeks')}>
                         <ArrowLeft className="mr-2 h-4 w-4"/>
                         Volver
                     </Button>
@@ -320,7 +321,7 @@ export default function WeekDetailPage() {
                                                     </div>
                                                     <div className="flex flex-wrap gap-1 justify-end">
                                                         {task.assignedTo && task.assignedTo.length > 0 ?
-                                                            task.assignedTo.map(f => <Badge key={f.id} variant="secondary" className="text-[9px] h-5">{f.lastName}</Badge>) :
+                                                            task.assignedTo.map(f => f ? <Badge key={f.id} variant="secondary" className="text-[9px] h-5">{f.lastName}</Badge> : null) :
                                                             <Badge variant="outline" className="text-[9px] h-5">Sin asignar</Badge>
                                                         }
                                                     </div>

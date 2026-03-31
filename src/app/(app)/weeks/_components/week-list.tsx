@@ -53,12 +53,21 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
 
-        // Encargados (del módulo) o Bomberos solo pueden gestionar si son el Lead específico de esta semana
-        if (activeRole === 'Encargado' || activeRole === 'Bombero') {
+        // Encargados (del módulo) solo pueden gestionar si son el Lead específico de esta semana
+        if (activeRole === 'Encargado') {
             return user.id === week.leadId;
         }
 
         return false;
+    };
+
+    const canUserViewDetails = (week: Week) => {
+        if (!user) return false;
+        // Roles de supervisión ven todo
+        if (['Master', 'Administrador', 'Oficial'].includes(activeRole)) return true;
+        
+        // Bomberos y Encargados solo ven donde están asignados (Lead, Chofer o Miembro)
+        return week.allMemberIds?.includes(user.id);
     };
 
     const handleDeleteWeek = async (weekId: string) => {
@@ -94,7 +103,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                      <p className="text-muted-foreground mt-2">
                         {canManageGenerally
                          ? 'Cree una nueva semana para comenzar.'
-                         : 'No estás asignado a ninguna semana en esta categoría.'
+                         : 'No hay guardias registradas en este cuartel.'
                         }
                     </p>
                 </div>
@@ -105,8 +114,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     return (
         <div className="space-y-4">
             {weeks.map((week) => {
-                 const isMember = user ? week.allMembers?.some(m => m.legajo === user.id) : false;
-                 const canViewDetails = canManageGenerally || isMember || activeRole === 'Oficial' || (activeRole === 'Administrador' && loggedInFirefighter?.firehouse === week.firehouse);
+                 const canViewDetails = canUserViewDetails(week);
                  const showManagementOptions = canUserManageWeek(week);
 
                 return (

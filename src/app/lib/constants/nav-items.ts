@@ -51,10 +51,9 @@ export const navItems: NavItem[] = [
   { href: '/aspirantes-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Oficial', 'Instructor', 'Bombero'], module: 'aspirantes' },
   
   // Semanas
-  { href: '/weeks/my-week', icon: UserSquare, label: 'Mi Semana', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
-  { href: '/weeks', icon: CalendarCheck, label: 'Semanas', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/weeks', icon: CalendarCheck, label: 'Semanas de Guardia', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
   { href: '/duty-checks', icon: ClipboardCheck, label: 'Control de Guardia', roles: ['Master', 'Administrador', 'Oficial', 'Encargado'], module: 'semanas' },
-  { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
+  { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas Pendientes', roles: ['Master', 'Administrador', 'Oficial'], module: 'semanas'},
   
   // Movilidad
   { href: '/vehicles', icon: Truck, label: 'Móviles', roles: ['Master', 'Administrador', 'Oficial', 'Encargado Móvil'], module: 'movilidad'},

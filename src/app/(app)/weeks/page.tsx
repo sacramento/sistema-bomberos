@@ -4,14 +4,21 @@
 import { PageHeader } from "@/components/page-header";
 import { useEffect, useState, useMemo } from "react";
 import WeekList from "./_components/week-list";
-import { Week } from "@/lib/types";
+import { Week, Firefighter } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
+import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/context/auth-context";
+import AddWeekDialog from "./_components/add-week-dialog";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
+    const { user, getActiveRole } = useAuth();
     const [weeks, setWeeks] = useState<Week[]>([]);
+    const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
@@ -19,11 +26,19 @@ export default function WeeksDashboardPage() {
         setMounted(true);
     }, []);
 
-    const fetchWeeks = async () => {
+    const activeRole = getActiveRole('/weeks');
+    const isMaster = activeRole === 'Master';
+    const isLocalAdmin = activeRole === 'Administrador';
+
+    const fetchAllData = async () => {
         setLoading(true);
         try {
-            const data = await getWeeks();
-            setWeeks(data);
+            const [weeksData, firefightersData] = await Promise.all([
+                getWeeks(),
+                getFirefighters()
+            ]);
+            setWeeks(weeksData);
+            setFirefighters(firefightersData);
         } catch (error) {
             toast({
                 title: "Error",
@@ -36,18 +51,24 @@ export default function WeeksDashboardPage() {
     };
 
     useEffect(() => {
-        fetchWeeks();
-    }, [toast]);
+        fetchAllData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     
     const handleDataChange = () => {
-        fetchWeeks();
+        fetchAllData();
     }
     
-    const weeksToShow = useMemo(() => {
+    const loggedInFirefighter = useMemo(() => {
+        if (!user || firefighters.length === 0) return null;
+        return firefighters.find(f => f.legajo === user.id) || null;
+    }, [user, firefighters]);
+
+    const weeksGrouped = useMemo(() => {
         if (!mounted) return {};
 
         const grouped = weeks.reduce((acc, week) => {
-            const firehouse = week.firehouse || 'Sin Depósito';
+            const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
             }
@@ -55,11 +76,6 @@ export default function WeeksDashboardPage() {
             return acc;
         }, {} as Record<string, Week[]>);
         
-        // Take the last 6 weeks per firehouse
-        for (const firehouse in grouped) {
-            grouped[firehouse] = grouped[firehouse].slice(0, 6); 
-        }
-
         return grouped;
     }, [weeks, mounted]);
 
@@ -68,9 +84,18 @@ export default function WeeksDashboardPage() {
     return (
         <>
             <PageHeader 
-                title="Historial de Semanas de Guardia" 
-                description="Listado de las semanas de guardia registradas, agrupadas por cuartel."
-            />
+                title="Semanas de Guardia" 
+                description="Listado general de guardias por cuartel."
+            >
+                {(isMaster || isLocalAdmin) && (
+                    <AddWeekDialog onWeekAdded={handleDataChange} loggedInFirefighter={loggedInFirefighter}>
+                        <Button>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Crear Semana
+                        </Button>
+                    </AddWeekDialog>
+                )}
+            </PageHeader>
             
             <div className="space-y-12">
                {loading || !mounted ? (
@@ -84,15 +109,15 @@ export default function WeeksDashboardPage() {
                    </div>
                ) : (
                    firehouseOrder.map(firehouse => (
-                        weeksToShow[firehouse] && weeksToShow[firehouse].length > 0 && (
+                        weeksGrouped[firehouse] && weeksGrouped[firehouse].length > 0 && (
                             <div key={firehouse} className="mb-8">
                                 <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
                                 <WeekList 
-                                    weeks={weeksToShow[firehouse]} 
+                                    weeks={weeksGrouped[firehouse]} 
                                     isLoading={loading} 
                                     onDataChange={handleDataChange}
-                                    canManageGenerally={false} 
-                                    loggedInFirefighter={null}
+                                    canManageGenerally={isMaster || isLocalAdmin} 
+                                    loggedInFirefighter={loggedInFirefighter}
                                 />
                             </div>
                         )
