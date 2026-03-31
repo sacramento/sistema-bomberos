@@ -85,14 +85,13 @@ export default function AddWeekDialog({
   useEffect(() => {
       if (open) {
           if (initialData) {
-              setName(''); // Clear name even if cloning
+              setName(''); 
               setFirehouse(initialData.firehouse || '');
               setLead(initialData.lead || null);
               setDriver(initialData.driver || null);
               setMembers(initialData.members || []);
               setObservations(initialData.observations || '');
           } else {
-              // Auto-set firehouse for non-Master users
               if (!isMaster && loggedInFirefighter) {
                   setFirehouse(loggedInFirefighter.firehouse as any);
               }
@@ -132,7 +131,7 @@ export default function AddWeekDialog({
   const handleSubmit = async () => {
     setLoading(true);
     if (!name || !firehouse || !lead || !driver || !actor) {
-        toast({ title: "Error", description: "Faltan datos requeridos o sesión expirada.", variant: "destructive" });
+        toast({ title: "Error", description: "Faltan datos requeridos.", variant: "destructive" });
         setLoading(false);
         return;
     }
@@ -140,7 +139,7 @@ export default function AddWeekDialog({
     try {
         const weekData: Omit<Week, 'id' | 'allMemberIds' | 'allMembers'> = {
             name,
-            firehouse,
+            firehouse: firehouse as any,
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),

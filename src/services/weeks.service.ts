@@ -78,7 +78,7 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
         });
 }
 
-export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>, actor: LoggedInUser): Promise<string | void> => {
+export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMemberIds' | 'createdAt'>, actor: LoggedInUser): Promise<string | void> => {
     if (!db) return;
     const allMemberIds = Array.from(new Set([weekData.leadId, weekData.driverId, ...weekData.memberIds]));
     const dataToSave = cleanData({
@@ -104,7 +104,7 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
     return docRef.id;
 };
 
-export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>>, actor: LoggedInUser): Promise<void> => {
+export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds' | 'createdAt'>>, actor: LoggedInUser): Promise<void> => {
     if (!db) return;
     const docRef = doc(db, 'weeks', id);
     let dataToUpdate: any = cleanData(weekData);

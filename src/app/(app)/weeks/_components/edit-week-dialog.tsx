@@ -35,7 +35,7 @@ const stationOptions = [
 export default function EditWeekDialog({ children, week, onWeekUpdated }: { children: React.ReactNode; week: Week; onWeekUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { user: actor } = useAuth();
+  const { user: actor, getActiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 3;
@@ -51,6 +51,8 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   const [observations, setObservations] = useState(week.observations || '');
   
   const progress = (step / totalSteps) * 100;
+  const activeRole = getActiveRole('/weeks');
+  const isMaster = activeRole === 'Master';
   
   const activeFirefighters = useMemo(() => 
     allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), 
@@ -94,7 +96,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
     try {
         const weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>> = {
             name,
-            firehouse,
+            firehouse: firehouse as any,
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),
@@ -123,7 +125,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
             </div>
              <div className="space-y-2">
                 <Label>Cuartel</Label>
-                 <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} required>
+                 <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} disabled={!isMaster} required>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                         {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}

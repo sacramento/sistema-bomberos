@@ -30,7 +30,6 @@ export default function MyWeekPage() {
 
     const activeRole = getActiveRole(pathname);
     const isMaster = activeRole === 'Master';
-    const isPrivileged = isMaster || activeRole === 'Administrador';
 
     const fetchAllData = async () => {
         if (!user) return;
@@ -72,10 +71,8 @@ export default function MyWeekPage() {
         if (isMaster || activeRole === 'Oficial') {
             visibleWeeks = [...allWeeks];
         } else if ((activeRole === 'Encargado' || activeRole === 'Administrador') && firefighterData) {
-            // Admins and Encargados see their firehouse weeks
             visibleWeeks = allWeeks.filter(week => week.firehouse === firefighterData.firehouse);
         } else {
-            // Normal firefighters see weeks where they are members
             visibleWeeks = allWeeks.filter(week => 
                 week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id
             );
