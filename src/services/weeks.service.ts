@@ -97,7 +97,9 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
         driverId: weekData.driverId,
         memberIds: weekData.memberIds,
         allMemberIds: allMemberIds,
-        observations: weekData.observations
+        observations: weekData.observations,
+        periodStartDate: weekData.periodStartDate,
+        periodEndDate: weekData.periodEndDate
     });
 
     const dataToSave = {

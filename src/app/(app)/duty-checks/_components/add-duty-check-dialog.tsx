@@ -314,7 +314,11 @@ export default function AddDutyCheckDialog({ children, onCheckAdded, actor }: { 
                                                         <div className="flex flex-col text-left">
                                                             <span className="font-bold">{w.name} ({w.firehouse})</span>
                                                             <span className="text-[10px] text-muted-foreground">
-                                                                {format(parseISO(w.periodStartDate), 'dd/MM')} al {format(parseISO(w.periodEndDate), 'dd/MM')}
+                                                                {w.periodStartDate && w.periodEndDate ? (
+                                                                    <>{format(parseISO(w.periodStartDate), 'dd/MM')} al {format(parseISO(w.periodEndDate), 'dd/MM')}</>
+                                                                ) : (
+                                                                    <span>Período no definido</span>
+                                                                )}
                                                             </span>
                                                         </div>
                                                     </SelectItem>

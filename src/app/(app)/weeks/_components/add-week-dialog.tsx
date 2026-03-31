@@ -20,11 +20,16 @@ import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addWeek } from "@/services/weeks.service";
 import { cn } from "@/lib/utils";
-import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth-context";
 import { SingleFirefighterSelect, MultiFirefighterSelect } from "@/components/firefighter-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const stationOptions = [
     { value: 'Cuartel 1', label: 'Cuartel 1' },
@@ -59,6 +64,7 @@ export default function AddWeekDialog({
   const [driver, setDriver] = useState<Firefighter | null>(null);
   const [members, setMembers] = useState<Firefighter[]>([]);
   const [observations, setObservations] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   
   const progress = (step / totalSteps) * 100;
   const activeRole = getActiveRole('/weeks');
@@ -91,6 +97,7 @@ export default function AddWeekDialog({
               setDriver(initialData.driver || null);
               setMembers(initialData.members || []);
               setObservations(initialData.observations || '');
+              // We don't clone the exact dates by default to avoid overlaps
           } else {
               if (!isMaster && loggedInFirefighter) {
                   setFirehouse(loggedInFirefighter.firehouse as any);
@@ -106,6 +113,7 @@ export default function AddWeekDialog({
     setDriver(null);
     setMembers([]);
     setObservations('');
+    setDateRange(undefined);
     setStep(1);
   }, [isMaster, loggedInFirefighter]);
 
@@ -115,8 +123,8 @@ export default function AddWeekDialog({
   };
 
   const handleNext = () => {
-    if (step === 1 && (!name || !firehouse)) {
-      toast({ title: "Campos incompletos", description: "Faltan datos básicos.", variant: "destructive" });
+    if (step === 1 && (!name || !firehouse || !dateRange?.from || !dateRange?.to)) {
+      toast({ title: "Campos incompletos", description: "Faltan datos básicos y el período de vigencia.", variant: "destructive" });
       return;
     }
     if (step === 2 && (!lead || !driver)) {
@@ -130,7 +138,7 @@ export default function AddWeekDialog({
 
   const handleSubmit = async () => {
     setLoading(true);
-    if (!name || !firehouse || !lead || !driver || !actor) {
+    if (!name || !firehouse || !lead || !driver || !actor || !dateRange?.from || !dateRange?.to) {
         toast({ title: "Error", description: "Faltan datos requeridos.", variant: "destructive" });
         setLoading(false);
         return;
@@ -143,7 +151,9 @@ export default function AddWeekDialog({
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),
-            observations
+            observations,
+            periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
+            periodEndDate: format(dateRange.to, 'yyyy-MM-dd'),
         };
         
         await addWeek(weekData, actor);
@@ -176,6 +186,39 @@ export default function AddWeekDialog({
                 </Select>
                 {!isMaster && <p className="text-[10px] text-muted-foreground italic">Como administrador local, solo puedes crear semanas para tu cuartel.</p>}
             </div>
+            <div className="space-y-2">
+                <Label>Período de Vigencia</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>{format(dateRange.from, "dd/MM/yyyy", { locale: es })} - {format(dateRange.to, "dd/MM/yyyy", { locale: es })}</>
+                                ) : (
+                                    format(dateRange.from, "dd/MM/yyyy", { locale: es })
+                                )
+                            ) : (
+                                <span>Seleccionar fechas de inicio y fin</span>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={1}
+                            locale={es}
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
           </div>
         );
       case 2:
@@ -202,6 +245,7 @@ export default function AddWeekDialog({
                 <h4 className="font-bold text-base">Revisar y Guardar</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
+                   <p><strong>Vigencia:</strong> {dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'P', { locale: es })} al ${format(dateRange.to, 'P', { locale: es })}` : 'No definida'}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
                    <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}, ${lead.firstName}` : 'N/A'}</p>
                    <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}, ${driver.firstName}` : 'N/A'}</p>

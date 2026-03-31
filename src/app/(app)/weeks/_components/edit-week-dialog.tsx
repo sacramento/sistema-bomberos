@@ -20,11 +20,16 @@ import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateWeek } from "@/services/weeks.service";
 import { cn } from "@/lib/utils";
-import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Loader2, Calendar as CalendarIcon } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth-context";
 import { SingleFirefighterSelect, MultiFirefighterSelect } from "@/components/firefighter-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { DateRange } from "react-day-picker";
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const stationOptions = [
     { value: 'Cuartel 1', label: 'Cuartel 1' },
@@ -49,6 +54,12 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   const [driver, setDriver] = useState<Firefighter | null>(week.driver || null);
   const [members, setMembers] = useState<Firefighter[]>(week.members || []);
   const [observations, setObservations] = useState(week.observations || '');
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(
+      week.periodStartDate && week.periodEndDate ? {
+          from: parseISO(week.periodStartDate),
+          to: parseISO(week.periodEndDate)
+      } : undefined
+  );
   
   const progress = (step / totalSteps) * 100;
   const activeRole = getActiveRole('/weeks');
@@ -66,6 +77,10 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
       setDriver(week.driver || null);
       setMembers(week.members || []);
       setObservations(week.observations || '');
+      setDateRange(week.periodStartDate && week.periodEndDate ? {
+          from: parseISO(week.periodStartDate),
+          to: parseISO(week.periodEndDate)
+      } : undefined);
       setStep(1);
       
       getFirefighters().then(setAllFirefighters);
@@ -73,8 +88,8 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   }, [open, week]);
 
   const handleNext = () => {
-    if (step === 1 && (!name || !firehouse)) {
-      toast({ title: "Campos incompletos", description: "Por favor, complete los datos básicos.", variant: "destructive" });
+    if (step === 1 && (!name || !firehouse || !dateRange?.from || !dateRange?.to)) {
+      toast({ title: "Campos incompletos", description: "Por favor, complete los datos básicos y el período.", variant: "destructive" });
       return;
     }
     if (step === 2 && (!lead || !driver)) {
@@ -87,20 +102,22 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
 
   const handleSubmit = async () => {
-    if (!name || !firehouse || !lead || !driver || !actor) {
+    if (!name || !firehouse || !lead || !driver || !actor || !dateRange?.from || !dateRange?.to) {
         toast({ title: "Error", description: "Faltan datos para actualizar la semana.", variant: "destructive" });
         return;
     }
     
     setLoading(true);
     try {
-        const weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>> = {
+        const weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds' | 'createdAt'>> = {
             name,
             firehouse: firehouse as any,
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),
-            observations
+            observations,
+            periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
+            periodEndDate: format(dateRange.to, 'yyyy-MM-dd'),
         };
         
         await updateWeek(week.id, weekData, actor);
@@ -132,6 +149,39 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                     </SelectContent>
                 </Select>
             </div>
+            <div className="space-y-2">
+                <Label>Período de Vigencia</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant={"outline"}
+                            className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}
+                        >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {dateRange?.from ? (
+                                dateRange.to ? (
+                                    <>{format(dateRange.from, "dd/MM/yyyy", { locale: es })} - {format(dateRange.to, "dd/MM/yyyy", { locale: es })}</>
+                                ) : (
+                                    format(dateRange.from, "dd/MM/yyyy", { locale: es })
+                                )
+                            ) : (
+                                <span>Seleccionar fechas</span>
+                            )}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                            initialFocus
+                            mode="range"
+                            defaultMonth={dateRange?.from}
+                            selected={dateRange}
+                            onSelect={setDateRange}
+                            numberOfMonths={1}
+                            locale={es}
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
           </div>
         );
       case 2:
@@ -158,6 +208,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                 <h4 className="font-bold text-base">Revisar Cambios</h4>
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
+                   <p><strong>Vigencia:</strong> {dateRange?.from && dateRange?.to ? `${format(dateRange.from, 'P', { locale: es })} al ${format(dateRange.to, 'P', { locale: es })}` : 'No definida'}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
                    <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'N/A'}</p>
                    <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'N/A'}</p>
