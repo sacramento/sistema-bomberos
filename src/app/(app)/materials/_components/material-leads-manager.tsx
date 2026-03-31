@@ -15,6 +15,8 @@ import { Edit, Loader2, Save, Users } from 'lucide-react';
 import { MultiFirefighterSelect } from '@/components/firefighter-select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/auth-context';
+import { usePathname } from 'next/navigation';
 
 export default function MaterialLeadsManager({ actor }: { actor: LoggedInUser }) {
     const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -24,6 +26,11 @@ export default function MaterialLeadsManager({ actor }: { actor: LoggedInUser })
     const [selectedLeads, setSelectedLeads] = useState<Firefighter[]>([]);
     const [saving, setSaving] = useState(false);
     const { toast } = useToast();
+    const { getActiveRole } = useAuth();
+    const pathname = usePathname();
+
+    const activeRole = getActiveRole(pathname);
+    const canEdit = activeRole === 'Master' || activeRole === 'Administrador';
 
     const fetchData = async () => {
         setLoading(true);
@@ -44,12 +51,13 @@ export default function MaterialLeadsManager({ actor }: { actor: LoggedInUser })
     }, []);
 
     const handleEdit = (vehicle: Vehicle) => {
+        if (!canEdit) return;
         setEditingVehicle(vehicle);
         setSelectedLeads(vehicle.materialEncargados || []);
     };
 
     const handleSave = async () => {
-        if (!editingVehicle || !actor) return;
+        if (!editingVehicle || !actor || !canEdit) return;
         setSaving(true);
         try {
             await updateVehicle(editingVehicle.id, {
@@ -82,7 +90,7 @@ export default function MaterialLeadsManager({ actor }: { actor: LoggedInUser })
                             <TableHead>Unidad</TableHead>
                             <TableHead>Especialidad</TableHead>
                             <TableHead>Encargados Actuales</TableHead>
-                            <TableHead className="text-right">Acciones</TableHead>
+                            {canEdit && <TableHead className="text-right">Acciones</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -99,11 +107,13 @@ export default function MaterialLeadsManager({ actor }: { actor: LoggedInUser })
                                         )}
                                     </div>
                                 </TableCell>
-                                <TableCell className="text-right">
-                                    <Button variant="outline" size="sm" onClick={() => handleEdit(v)} className="h-8">
-                                        <Edit className="h-3.5 w-3.5 mr-2" /> Asignar
-                                    </Button>
-                                </TableCell>
+                                {canEdit && (
+                                    <TableCell className="text-right">
+                                        <Button variant="outline" size="sm" onClick={() => handleEdit(v)} className="h-8">
+                                            <Edit className="h-3.5 w-3.5 mr-2" /> Asignar
+                                        </Button>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))}
                     </TableBody>
