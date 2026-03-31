@@ -29,7 +29,8 @@ export default function MyWeekPage() {
     }, []);
 
     const activeRole = getActiveRole(pathname);
-    const isPrivileged = useMemo(() => activeRole === 'Master' || activeRole === 'Administrador', [activeRole]);
+    const isMaster = activeRole === 'Master';
+    const isPrivileged = isMaster || activeRole === 'Administrador';
 
     const fetchAllData = async () => {
         if (!user) return;
@@ -64,15 +65,17 @@ export default function MyWeekPage() {
         }
 
         const firefighterData = allFirefighters.find(f => f.legajo === user.id);
-        const canManageWeeks = activeRole === 'Master' || activeRole === 'Administrador' || activeRole === 'Encargado';
+        const canManageWeeks = isMaster || activeRole === 'Administrador' || activeRole === 'Encargado';
         
         let visibleWeeks: Week[] = [];
 
-        if (isPrivileged || activeRole === 'Oficial') {
+        if (isMaster || activeRole === 'Oficial') {
             visibleWeeks = [...allWeeks];
-        } else if (activeRole === 'Encargado' && firefighterData) {
+        } else if ((activeRole === 'Encargado' || activeRole === 'Administrador') && firefighterData) {
+            // Admins and Encargados see their firehouse weeks
             visibleWeeks = allWeeks.filter(week => week.firehouse === firefighterData.firehouse);
         } else {
+            // Normal firefighters see weeks where they are members
             visibleWeeks = allWeeks.filter(week => 
                 week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id
             );
@@ -84,7 +87,7 @@ export default function MyWeekPage() {
             loggedInFirefighter: firefighterData || null
         };
 
-    }, [isMounted, allWeeks, allFirefighters, user, activeRole, isPrivileged]);
+    }, [isMounted, allWeeks, allFirefighters, user, activeRole, isMaster]);
 
 
     if (!isMounted || loading) {
@@ -100,11 +103,11 @@ export default function MyWeekPage() {
     return (
         <>
             <PageHeader 
-                title={isPrivileged ? "Gestión de Semanas" : "Mis Semanas"}
-                description={isPrivileged ? "Cree, edite o clone semanas de guardia." : "Aquí puedes ver todas tus semanas asignadas."}
+                title={isMaster ? "Gestión de Semanas" : "Mis Semanas"}
+                description={isMaster ? "Cree, edite o clone semanas de guardia." : "Aquí puedes ver todas tus semanas asignadas."}
             >
-                {(activeRole === 'Master' || activeRole === 'Administrador') && (
-                    <AddWeekDialog onWeekAdded={fetchAllData}>
+                {canManage && (
+                    <AddWeekDialog onWeekAdded={fetchAllData} loggedInFirefighter={loggedInFirefighter}>
                         <Button>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Crear Semana

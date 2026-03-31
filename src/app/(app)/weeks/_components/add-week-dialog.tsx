@@ -32,10 +32,20 @@ const stationOptions = [
     { value: 'Cuartel 3', label: 'Cuartel 3' },
 ];
 
-export default function AddWeekDialog({ children, onWeekAdded, initialData }: { children: React.ReactNode; onWeekAdded: () => void; initialData?: Partial<Week> }) {
+export default function AddWeekDialog({ 
+    children, 
+    onWeekAdded, 
+    initialData,
+    loggedInFirefighter 
+}: { 
+    children: React.ReactNode; 
+    onWeekAdded: () => void; 
+    initialData?: Partial<Week>;
+    loggedInFirefighter: Firefighter | null;
+}) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { user: actor } = useAuth();
+  const { user: actor, getActiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
   const totalSteps = 3;
@@ -51,6 +61,8 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   const [observations, setObservations] = useState('');
   
   const progress = (step / totalSteps) * 100;
+  const activeRole = getActiveRole('/weeks');
+  const isMaster = activeRole === 'Master';
   
   const activeFirefighters = useMemo(() => 
     allFirefighters.filter(f => f.status === 'Active' || f.status === 'Auxiliar'), 
@@ -71,25 +83,32 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   }, [open, toast]);
 
   useEffect(() => {
-      if (open && initialData) {
-          setName('');
-          setFirehouse(initialData.firehouse || '');
-          setLead(initialData.lead || null);
-          setDriver(initialData.driver || null);
-          setMembers(initialData.members || []);
-          setObservations(initialData.observations || '');
+      if (open) {
+          if (initialData) {
+              setName(''); // Clear name even if cloning
+              setFirehouse(initialData.firehouse || '');
+              setLead(initialData.lead || null);
+              setDriver(initialData.driver || null);
+              setMembers(initialData.members || []);
+              setObservations(initialData.observations || '');
+          } else {
+              // Auto-set firehouse for non-Master users
+              if (!isMaster && loggedInFirefighter) {
+                  setFirehouse(loggedInFirefighter.firehouse as any);
+              }
+          }
       }
-  }, [open, initialData])
+  }, [open, initialData, isMaster, loggedInFirefighter])
   
   const resetForm = useCallback(() => {
     setName('');
-    setFirehouse('');
+    setFirehouse(!isMaster && loggedInFirefighter ? (loggedInFirefighter.firehouse as any) : '');
     setLead(null);
     setDriver(null);
     setMembers([]);
     setObservations('');
     setStep(1);
-  }, []);
+  }, [isMaster, loggedInFirefighter]);
 
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen);
@@ -150,12 +169,13 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
             </div>
              <div className="space-y-2">
                 <Label>Cuartel</Label>
-                 <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} required>
+                 <Select onValueChange={(value) => setFirehouse(value as Week['firehouse'])} value={firehouse} disabled={!isMaster} required>
                     <SelectTrigger><SelectValue placeholder="Seleccione un cuartel" /></SelectTrigger>
                     <SelectContent>
                         {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                     </SelectContent>
                 </Select>
+                {!isMaster && <p className="text-[10px] text-muted-foreground italic">Como administrador local, solo puedes crear semanas para tu cuartel.</p>}
             </div>
           </div>
         );
@@ -207,7 +227,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogTrigger asChild>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-lg flex flex-col">
+        <DialogContent className="sm:max-w-lg flex flex-col max-h-[90vh]">
              <DialogHeader>
                 <DialogTitle className="font-headline">{initialData ? 'Clonar Semana' : 'Crear Nueva Semana'}</DialogTitle>
                 <DialogDescription>Paso {step} de {totalSteps}</DialogDescription>

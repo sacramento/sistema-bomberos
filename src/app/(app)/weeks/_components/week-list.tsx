@@ -46,8 +46,10 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
 
     const canUserManageWeek = (week: Week) => {
         if (!canManageGenerally) return false;
-        if (activeRole === 'Master' || activeRole === 'Administrador') return true;
-        if (activeRole === 'Encargado') {
+        if (activeRole === 'Master') return true;
+        
+        // Admins and Encargados can only manage weeks of their own firehouse
+        if (activeRole === 'Administrador' || activeRole === 'Encargado') {
             return loggedInFirefighter?.firehouse === week.firehouse;
         }
         return false;
@@ -98,7 +100,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
         <div className="space-y-4">
             {weeks.map((week) => {
                  const isMember = user ? week.allMembers?.some(m => m.legajo === user.id) : false;
-                 const canViewDetails = canManageGenerally || isMember || activeRole === 'Oficial';
+                 const canViewDetails = canManageGenerally || isMember || activeRole === 'Oficial' || (activeRole === 'Administrador' && loggedInFirefighter?.firehouse === week.firehouse);
                  const showManagementOptions = canUserManageWeek(week);
 
                 return (
@@ -125,7 +127,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                                         <Edit className="mr-2 h-4 w-4" /> Editar
                                                     </DropdownMenuItem>
                                                 </EditWeekDialog>
-                                                <AddWeekDialog onWeekAdded={onDataChange} initialData={week}>
+                                                <AddWeekDialog onWeekAdded={onDataChange} initialData={week} loggedInFirefighter={loggedInFirefighter}>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
                                                         <Copy className="mr-2 h-4 w-4" /> Clonar
                                                     </DropdownMenuItem>
