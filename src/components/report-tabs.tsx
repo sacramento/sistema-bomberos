@@ -80,6 +80,17 @@ function ScrollArea({ className, children }: { className?: string, children: Rea
     return <div className={cn("relative overflow-auto", className)}>{children}</div>;
 }
 
+const getStatusBadgeClass = (status: AttendanceStatus) => {
+    switch (status) {
+        case "present": return "bg-green-600 text-white";
+        case "absent": return "bg-red-600 text-white";
+        case "tardy": return "bg-yellow-500 text-black";
+        case "excused": return "bg-violet-600 text-white";
+        case "recupero": return "bg-blue-600 text-white";
+        default: return "";
+    }
+}
+
 export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -275,13 +286,15 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
+                    <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
                                 {!isLimited && (
                                     <>
+                                        <TableHead>Personal</TableHead>
+                                        <TableHead>Alumnos</TableHead>
                                         <TableHead className="text-center">P</TableHead>
                                         <TableHead className="text-center">A</TableHead>
                                         <TableHead className="text-center">R</TableHead>
@@ -309,10 +322,19 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-xs font-medium max-w-[120px] truncate">{s.title}</TableCell>
                                     {!isLimited && (
                                         <>
+                                            <TableCell className="text-[9px] max-w-[150px]">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold">I: {s.instructors.map(i => i.lastName).join(', ')}</span>
+                                                    {s.assistants.length > 0 && <span className="text-muted-foreground">A: {s.assistants.map(a => a.lastName).join(', ')}</span>}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-[9px] max-w-[150px] truncate">
+                                                {s.attendees.map(a => a.lastName).join(', ')}
+                                            </TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
@@ -328,17 +350,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             </div>
         </div>
     );
-}
-
-const getStatusBadgeClass = (status: AttendanceStatus) => {
-    switch (status) {
-        case "present": return "bg-green-600 text-white";
-        case "absent": return "bg-red-600 text-white";
-        case "tardy": return "bg-yellow-500 text-black";
-        case "excused": return "bg-violet-600 text-white";
-        case "recupero": return "bg-blue-600 text-white";
-        default: return "";
-    }
 }
 
 export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
@@ -360,6 +371,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
+    const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -484,6 +496,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         } finally { setGeneratingPdf(false); }
     };
 
+    const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
+
     if (loading) return <Skeleton className="h-96 w-full" />;
 
     return (
@@ -492,6 +506,18 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Integrante</Label>
+                        {isLimited ? (
+                            <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
+                                {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
+                            </div>
+                        ) : (
+                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                                <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                            </Popover>
+                        )}
+                    </div>
                     <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
@@ -499,13 +525,15 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
+                    <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
                                 {!isLimited && (
                                     <>
+                                        <TableHead>Personal</TableHead>
+                                        <TableHead>Alumnos</TableHead>
                                         <TableHead className="text-center">P</TableHead>
                                         <TableHead className="text-center">A</TableHead>
                                         <TableHead className="text-center">R</TableHead>
@@ -532,10 +560,19 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-xs font-medium max-w-[120px] truncate">{s.title}</TableCell>
                                     {!isLimited && (
                                         <>
+                                            <TableCell className="text-[9px] max-w-[150px]">
+                                                <div className="flex flex-col">
+                                                    <span className="font-bold">I: {s.instructors.map(i => i.lastName).join(', ')}</span>
+                                                    {s.assistants.length > 0 && <span className="text-muted-foreground">A: {s.assistants.map(a => a.lastName).join(', ')}</span>}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-[9px] max-w-[150px] truncate">
+                                                {s.attendees.map(a => a.lastName).join(', ')}
+                                            </TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
                                             <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
@@ -569,6 +606,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
+    const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
         const load = async () => {
@@ -654,9 +692,9 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                 {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
                             </div>
                         ) : (
-                            <Popover onOpenChange={() => {}}>
+                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                                 <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                                <PopoverContent className="p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => setFilterFirefighter('all')}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => setFilterFirefighter(f.id)}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                                <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                             </Popover>
                         )}
                     </div>
