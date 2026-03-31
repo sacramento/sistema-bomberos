@@ -3,7 +3,7 @@
 
 import { Week, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -12,10 +12,16 @@ import { logAction } from './audit.service';
 const weeksCollection = collection(db, 'weeks');
 const tasksCollection = collection(db, 'tasks');
 
-// Helper to clean undefined values for Firestore
-const cleanData = (obj: any) => {
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    if (obj instanceof Date || obj.constructor?.name === 'FieldValue' || obj.constructor?.name === 'Timestamp' || obj._methodName) {
+        return obj;
+    }
+    if (Array.isArray(obj)) return obj.map(cleanData);
     return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined)
+        Object.entries(obj)
+            .filter(([_, v]) => v !== undefined)
+            .map(([k, v]) => [k, cleanData(v)])
     );
 };
 
@@ -47,11 +53,10 @@ export const getWeeks = async (): Promise<Week[]> => {
             return await Promise.all(weeksPromises);
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: weeksCollection.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 }
@@ -69,11 +74,10 @@ export const getWeekById = async (id: string): Promise<Week | null> => {
             return null;
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: docRef.path,
                 operation: 'get',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return null;
         });
 }
@@ -93,12 +97,11 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
     });
     const docRef = doc(weeksCollection);
     setDoc(docRef, dataToSave).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: dataToSave,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
     if (actor) logAction(actor, 'CREATE_WEEK', { entity: 'week', id: docRef.id }, dataToSave);
     return docRef.id;
@@ -121,12 +124,11 @@ export const updateWeek = async (id: string, weekData: Partial<Omit<Week, 'id' |
     }
     
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
     if (actor) logAction(actor, 'UPDATE_WEEK', { entity: 'week', id }, dataToUpdate);
 };
@@ -140,11 +142,10 @@ export const deleteWeek = async (id: string, actor: LoggedInUser): Promise<void>
     getDocs(tasksQuery).then(snapshot => {
         snapshot.forEach(taskDoc => batch.delete(taskDoc.ref));
         batch.commit().catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: 'weeks/tasks',
                 operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
         });
     });
     if (actor) logAction(actor, 'DELETE_WEEK', { entity: 'week', id });

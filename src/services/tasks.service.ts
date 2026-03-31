@@ -9,34 +9,43 @@ import { logAction } from './audit.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
-const tasksCollection = collection(db, 'tasks');
-
 /**
- * Helper para eliminar campos con valor 'undefined' que Firestore no acepta.
+ * Helper para eliminar campos con valor 'undefined' sin romper objetos especiales de Firestore.
  */
 const cleanData = (obj: any): any => {
     if (typeof obj !== 'object' || obj === null) return obj;
+    
+    // No limpiar objetos de Firestore ni Fechas
+    if (obj instanceof Date || obj.constructor?.name === 'FieldValue' || obj.constructor?.name === 'Timestamp' || obj._methodName) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(cleanData);
+    }
+
     return Object.fromEntries(
         Object.entries(obj)
             .filter(([_, v]) => v !== undefined)
-            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
+            .map(([k, v]) => [k, cleanData(v)])
     );
 };
 
-const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>): Promise<Task> => {
+const docToTask = (docSnap: any, firefighterMap: Map<string, Firefighter>): Task => {
     const data = docSnap.data();
     const assignedTo = (data.assignedToIds || []).map((id: string) => firefighterMap.get(id)).filter(Boolean) as Firefighter[];
     let createdAtString: string | null = null;
     
-    if (data.createdAt && typeof data.createdAt.toDate === 'function') {
-        createdAtString = data.createdAt.toDate().toISOString();
-    } else if (typeof data.createdAt === 'string') {
-        createdAtString = data.createdAt;
-    } else if (data.createdAt?.seconds) { 
-        try {
-            const timestamp = new Timestamp(data.createdAt.seconds, data.createdAt.nanoseconds);
-            createdAtString = timestamp.toDate().toISOString();
-        } catch (e) {}
+    if (data.createdAt) {
+        if (typeof data.createdAt.toDate === 'function') {
+            createdAtString = data.createdAt.toDate().toISOString();
+        } else if (data.createdAt instanceof Date) {
+            createdAtString = data.createdAt.toISOString();
+        } else if (data.createdAt.seconds) {
+            createdAtString = new Date(data.createdAt.seconds * 1000).toISOString();
+        } else if (typeof data.createdAt === 'string') {
+            createdAtString = data.createdAt;
+        }
     }
 
     return { 
@@ -55,49 +64,47 @@ const docToTask = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 
 export const getAllTasks = async (): Promise<Task[]> => {
     if (!db) return [];
+    const tasksCollection = collection(db, 'tasks');
     return getDocs(tasksCollection)
         .then(async (querySnapshot) => {
             const firefighters = await getFirefighters();
             const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-            const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-            const tasks = await Promise.all(tasksPromises);
+            const tasks = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
             return tasks.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: tasksCollection.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 };
 
 export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
     if (!db) return [];
+    const tasksCollection = collection(db, 'tasks');
     const q = query(tasksCollection, where('weekId', '==', weekId));
     return getDocs(q)
         .then(async (querySnapshot) => {
             const firefighters = await getFirefighters();
             const firefighterMap = new Map(firefighters.map(f => [f.id, f]));
-            const tasksPromises = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
-            const tasks = await Promise.all(tasksPromises);
+            const tasks = querySnapshot.docs.map(doc => docToTask(doc, firefighterMap));
             return tasks.sort((a, b) => a.title.localeCompare(b.title));
         })
         .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
+            errorEmitter.emit('permission-error', new FirestorePermissionError({
                 path: tasksCollection.path,
                 operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
+            }));
             return [];
         });
 }
 
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>, actor: LoggedInUser): Promise<string | void> => {
     if (!db) return;
+    const tasksCollection = collection(db, 'tasks');
     
-    // Aplicamos limpieza para eliminar campos 'undefined'
     const dataToSave = cleanData({ 
         ...taskData, 
         createdAt: serverTimestamp() 
@@ -105,12 +112,11 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'create
 
     const docRef = doc(tasksCollection);
     setDoc(docRef, dataToSave).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'create',
             requestResourceData: dataToSave,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
@@ -123,17 +129,15 @@ export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' |
     if (!db) return;
     const docRef = doc(db, 'tasks', id);
     
-    // Limpieza antes de actualizar
     const dataToUpdate = cleanData({ ...taskData });
     delete dataToUpdate.createdAt;
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'update',
             requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {
