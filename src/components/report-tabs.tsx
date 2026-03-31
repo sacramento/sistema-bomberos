@@ -41,14 +41,6 @@ const PIE_CHART_COLORS = {
     recupero: "#3B82F6",
 };
 
-const attendanceStatusOptions = [
-    { value: 'present', label: 'Presente' },
-    { value: 'absent', label: 'Ausente' },
-    { value: 'tardy', label: 'Tarde' },
-    { value: 'excused', label: 'Justificado' },
-    { value: 'recupero', label: 'Recuperó' },
-];
-
 const hierarchyGroups = [
     { id: 'aspirantes', label: 'Aspirantes', ranks: ['ASPIRANTE'] },
     { id: 'bomberos', label: 'Bomberos', ranks: ['BOMBERO', 'ADAPTACION'] },
@@ -80,7 +72,7 @@ type AttendanceStats = {
 };
 
 type SortConfig = {
-    key: 'legajo' | 'name' | 'present' | 'absent' | 'tardy' | 'percentage' | 'date' | 'title';
+    key: 'legajo' | 'name' | 'present' | 'absent' | 'tardy' | 'percentage' | 'date' | 'title' | 'recupero';
     direction: 'asc' | 'desc';
 };
 
@@ -123,7 +115,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 setAllSessions(sessionsData);
                 setAllFirefighters(firefightersData);
 
-                // Si es bombero, forzamos su filtro
                 if (isLimited && user) {
                     const me = firefightersData.find(f => f.legajo === user.id);
                     if (me) setFilterFirefighter(me.id);
@@ -165,7 +156,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             let sessionIncluded = false;
 
             participants.forEach(({ f, status }) => {
-                // Filtros de Seguridad y Jerarquía
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
@@ -173,7 +163,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
                 if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
 
-                // Contabilizar estadísticas
                 if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
                 const cur = statsMap.get(f.id)!; cur.total++;
                 if (status === 'present') cur.present++; else if (status === 'absent') cur.absent++; else if (status === 'tardy') cur.tardy++; else if (status === 'excused') cur.excused++; else if (status === 'recupero') cur.recupero++;
@@ -207,9 +196,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 switch (sortConfig.key) {
                     case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
                     case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
-                    case 'present': aVal = a.present + a.recupero; bVal = b.present + b.recupero; break;
+                    case 'present': aVal = a.present; bVal = b.present; break;
                     case 'absent': aVal = a.absent; bVal = b.absent; break;
-                    case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
+                    case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
                     case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                     default: return 0;
                 }
@@ -287,7 +276,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
-                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead><TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>Tasa % {getSortIcon('percentage')}</TableHead></>)}
+                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead><TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead></>)}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const myStatus = isLimited && user ? (s.attendance?.[stats[0]?.firefighter.id] || 'present') : 'present';
@@ -300,7 +289,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                     </TableCell>
                                 </TableRow>
                             )
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[45px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></ScrollArea></CardContent></Card>
             </div>
         </div>
@@ -422,8 +411,15 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
         if (viewMode !== 'by-class') {
             statsArray.sort((a, b) => {
+                let aVal: any, bVal: any;
+                switch (sortConfig.key) {
+                    case 'present': aVal = a.present; bVal = b.present; break;
+                    case 'absent': aVal = a.absent; bVal = b.absent; break;
+                    case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
+                    default: aVal = a.percentage; bVal = b.percentage; break;
+                }
                 const dir = sortConfig.direction === 'asc' ? 1 : -1;
-                return a.percentage < b.percentage ? -1 * dir : a.percentage > b.percentage ? 1 * dir : 0;
+                return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
             });
         }
 
@@ -454,8 +450,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         } finally { setGeneratingPdf(false); }
     };
 
-    const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
-
     if (loading) return <Skeleton className="h-96 w-full" />;
 
     return (
@@ -472,7 +466,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
-                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead>Integrante</TableHead><TableHead className="text-right">Tasa %</TableHead></>)}
+                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead>Integrante</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead><TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead></>)}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const myStatus = isLimited && user ? (s.attendance?.[stats[0]?.firefighter.id] || 'present') : 'present';
@@ -485,7 +479,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                     </TableCell>
                                 </TableRow>
                             )
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.lastName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></ScrollArea></CardContent></Card>
             </div>
         </div>
@@ -602,7 +596,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
-            <Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead>Curso</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-right text-[10px] font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></CardContent></Card>
+            <Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead>Curso</TableHead><TableHead>Lugar</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></CardContent></Card>
         </div>
     );
 }
