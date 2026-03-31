@@ -15,8 +15,9 @@ import { FirestorePermissionError } from '@/firebase/errors';
 const cleanData = (obj: any): any => {
     if (typeof obj !== 'object' || obj === null) return obj;
     
-    // No limpiar objetos de Firestore ni Fechas
-    if (obj instanceof Date || obj.constructor?.name === 'FieldValue' || obj.constructor?.name === 'Timestamp' || obj._methodName) {
+    // No limpiar ni recorrer recursivamente objetos de Firestore ni Fechas
+    // Detectamos FieldValue por sus propiedades internas o nombre de constructor
+    if (obj instanceof Date || obj.constructor?.name === 'Timestamp' || obj.constructor?.name === 'FieldValue' || obj._methodName) {
         return obj;
     }
 
@@ -24,11 +25,13 @@ const cleanData = (obj: any): any => {
         return obj.map(cleanData);
     }
 
-    return Object.fromEntries(
-        Object.entries(obj)
-            .filter(([_, v]) => v !== undefined)
-            .map(([k, v]) => [k, cleanData(v)])
-    );
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined) {
+            cleaned[key] = cleanData(value);
+        }
+    }
+    return cleaned;
 };
 
 const docToTask = (docSnap: any, firefighterMap: Map<string, Firefighter>): Task => {
@@ -37,12 +40,14 @@ const docToTask = (docSnap: any, firefighterMap: Map<string, Firefighter>): Task
     let createdAtString: string | null = null;
     
     if (data.createdAt) {
-        if (typeof data.createdAt.toDate === 'function') {
+        if (data.createdAt instanceof Timestamp) {
             createdAtString = data.createdAt.toDate().toISOString();
-        } else if (data.createdAt instanceof Date) {
-            createdAtString = data.createdAt.toISOString();
+        } else if (typeof data.createdAt.toDate === 'function') {
+            createdAtString = data.createdAt.toDate().toISOString();
         } else if (data.createdAt.seconds) {
             createdAtString = new Date(data.createdAt.seconds * 1000).toISOString();
+        } else if (data.createdAt instanceof Date) {
+            createdAtString = data.createdAt.toISOString();
         } else if (typeof data.createdAt === 'string') {
             createdAtString = data.createdAt;
         }
@@ -105,10 +110,12 @@ export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'create
     if (!db) return;
     const tasksCollection = collection(db, 'tasks');
     
-    const dataToSave = cleanData({ 
-        ...taskData, 
+    // Limpiamos los datos base y añadimos el serverTimestamp por separado
+    const cleanedTaskData = cleanData(taskData);
+    const dataToSave = { 
+        ...cleanedTaskData, 
         createdAt: serverTimestamp() 
-    });
+    };
 
     const docRef = doc(tasksCollection);
     setDoc(docRef, dataToSave).catch(async (error) => {
@@ -130,6 +137,7 @@ export const updateTask = async (id: string, taskData: Partial<Omit<Task, 'id' |
     const docRef = doc(db, 'tasks', id);
     
     const dataToUpdate = cleanData({ ...taskData });
+    // Nos aseguramos de no sobreescribir el createdAt original al actualizar
     delete dataToUpdate.createdAt;
 
     updateDoc(docRef, dataToUpdate).catch(async (error) => {
