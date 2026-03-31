@@ -18,7 +18,7 @@ export default function WeeksDashboardPage() {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const [weeks, setWeeks] = useState<Week[]>([]);
-    const [firefighters, setFirefighters] = useState<Firefighter[]>([]);
+    const [firefighters, setAllFirefighters] = useState<Firefighter[]>([]);
     const [loading, setLoading] = useState(true);
     const [mounted, setMounted] = useState(false);
 
@@ -38,7 +38,7 @@ export default function WeeksDashboardPage() {
                 getFirefighters()
             ]);
             setWeeks(weeksData);
-            setFirefighters(firefightersData);
+            setAllFirefighters(firefightersData);
         } catch (error) {
             toast({
                 title: "Error",
@@ -64,20 +64,10 @@ export default function WeeksDashboardPage() {
         return firefighters.find(f => f.legajo === user.id) || null;
     }, [user, firefighters]);
 
-    const filteredWeeks = useMemo(() => {
-        if (!mounted || !user) return [];
-        // El Master ve todo. Los demás solo ven su cuartel.
-        if (isMaster) return weeks;
-        if (!loggedInFirefighter) return [];
-        
-        // El filtro se basa en el cuartel del perfil del bombero
-        return weeks.filter(w => w.firehouse === loggedInFirefighter.firehouse);
-    }, [weeks, mounted, user, isMaster, loggedInFirefighter]);
-
     const weeksGrouped = useMemo(() => {
         if (!mounted) return {};
 
-        const grouped = filteredWeeks.reduce((acc, week) => {
+        const grouped = weeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Cuartel';
             if (!acc[firehouse]) {
                 acc[firehouse] = [];
@@ -87,17 +77,15 @@ export default function WeeksDashboardPage() {
         }, {} as Record<string, Week[]>);
         
         return grouped;
-    }, [filteredWeeks, mounted]);
+    }, [weeks, mounted]);
 
-    const firehouseOrder = isMaster 
-        ? ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'] 
-        : (loggedInFirefighter?.firehouse ? [loggedInFirefighter.firehouse] : []);
+    const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
     
     return (
         <>
             <PageHeader 
                 title="Semanas de Guardia" 
-                description={isMaster ? "Listado general de guardias por cuartel." : `Guardias de ${loggedInFirefighter?.firehouse || 'mi cuartel'}`}
+                description="Listado general de todas las guardias del departamento."
             >
                 {(isMaster || isLocalAdmin) && (
                     <AddWeekDialog onWeekAdded={handleDataChange} loggedInFirefighter={loggedInFirefighter}>
@@ -135,10 +123,9 @@ export default function WeeksDashboardPage() {
                         ) : null
                     ))
                )}
-               {!loading && filteredWeeks.length === 0 && (
+               {!loading && weeks.length === 0 && (
                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-lg bg-muted/10">
                        <p className="text-muted-foreground">No hay semanas registradas para mostrar.</p>
-                       {!loggedInFirefighter && !isMaster && <p className="text-xs text-destructive mt-2">Error: No se encontró un perfil de bombero asociado a tu legajo.</p>}
                    </div>
                )}
             </div>

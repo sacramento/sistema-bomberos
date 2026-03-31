@@ -61,14 +61,15 @@ export default function WeekDetailPage() {
     const canManage = useMemo(() => {
         if (!user || !week || !loggedInFirefighter) return false;
         
+        // Master gestiona todo
         if (activeRole === 'Master') return true;
         
+        // Administradores gestionan su propio cuartel
         if (activeRole === 'Administrador') {
             return loggedInFirefighter.firehouse === week.firehouse;
         }
 
         // El Encargado específico de la semana gestiona su pizarra y tareas
-        // Usamos el ID interno de base de datos para la comparación
         if (week.leadId === loggedInFirefighter.id) return true;
 
         return false;
@@ -76,13 +77,16 @@ export default function WeekDetailPage() {
 
     const canView = useMemo(() => {
         if (!user || !week || !loggedInFirefighter) return false;
-        if (canManage) return true;
-        if (activeRole === 'Oficial') return true;
         
+        // Supervisión ve todo
+        if (['Master', 'Oficial'].includes(activeRole)) return true;
+        
+        // Administradores ven su cuartel
         if (activeRole === 'Administrador' && loggedInFirefighter.firehouse === week.firehouse) return true;
         
+        // Bomberos y Encargados solo ven detalles donde participan
         return week.allMemberIds?.includes(loggedInFirefighter.id);
-    }, [canManage, user, week, activeRole, loggedInFirefighter]);
+    }, [user, week, activeRole, loggedInFirefighter]);
     
 
     const fetchWeekAndTasks = async () => {
@@ -182,7 +186,7 @@ export default function WeekDetailPage() {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <h2 className="text-2xl font-bold mb-2 text-destructive">Acceso Denegado</h2>
-                <p className="text-muted-foreground mb-6">No tienes permisos para ver los detalles de esta semana de guardia o el móvil no pertenece a tu cuartel.</p>
+                <p className="text-muted-foreground mb-6">No tienes permisos para ver los detalles de esta semana de guardia.</p>
                 <Button onClick={() => router.push('/weeks')}>Volver a Semanas</Button>
             </div>
         );

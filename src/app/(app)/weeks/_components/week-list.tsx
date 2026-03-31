@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, User, Truck, MoreVertical, Edit, Trash2, Copy, Users2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import EditWeekDialog from "./edit-week-dialog";
 import { deleteWeek } from "@/services/weeks.service";
@@ -44,21 +44,15 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     const pathname = usePathname();
     const activeRole = getActiveRole(pathname);
 
-    const canUserManageWeek = (week: Week) => {
+    const canUserManageWeekMetadata = (week: Week) => {
         if (!user || !loggedInFirefighter) return false;
         
-        // Solo el Master edita TODO
+        // Master gestiona todo
         if (activeRole === 'Master') return true;
         
-        // Administradores solo gestionan su cuartel
+        // Administradores gestionan su propio cuartel
         if (activeRole === 'Administrador') {
             return loggedInFirefighter.firehouse === week.firehouse;
-        }
-
-        // Encargados locales solo gestionan su semana asignada
-        // Usamos el ID de base de datos del bombero logueado
-        if (activeRole === 'Encargado') {
-            return loggedInFirefighter.id === week.leadId;
         }
 
         return false;
@@ -66,10 +60,14 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
 
     const canUserViewDetails = (week: Week) => {
         if (!user || !loggedInFirefighter) return false;
-        // Roles de supervisión ven todo lo que esté listado en su cuartel
-        if (['Master', 'Administrador', 'Oficial'].includes(activeRole)) return true;
         
-        // Bomberos y Encargados solo ven detalles donde participan
+        // Supervisión ve todo
+        if (['Master', 'Oficial'].includes(activeRole)) return true;
+        
+        // Administradores ven su cuartel
+        if (activeRole === 'Administrador' && loggedInFirefighter.firehouse === week.firehouse) return true;
+        
+        // Bomberos y Encargados solo ven donde participan
         return week.allMemberIds?.includes(loggedInFirefighter.id);
     };
 
@@ -101,8 +99,8 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     return (
         <div className="space-y-4">
             {weeks.map((week) => {
-                 const canViewDetails = canUserViewDetails(week);
-                 const showManagementOptions = canUserManageWeek(week);
+                 const canDetails = canUserViewDetails(week);
+                 const canMetadata = canUserManageWeekMetadata(week);
 
                 return (
                 <AlertDialog key={week.id}>
@@ -114,7 +112,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                     <h3 className="font-headline text-xl font-semibold">{week.name}</h3>
                                 </div>
                                 <div className="flex-shrink-0">
-                                     {showManagementOptions && (
+                                     {canMetadata && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
@@ -125,7 +123,7 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                                                 <EditWeekDialog week={week} onWeekUpdated={onDataChange}>
                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                        <Edit className="mr-2 h-4 w-4" /> Editar
+                                                        <Edit className="mr-2 h-4 w-4" /> Editar Ficha
                                                     </DropdownMenuItem>
                                                 </EditWeekDialog>
                                                 <AddWeekDialog onWeekAdded={onDataChange} initialData={week} loggedInFirefighter={loggedInFirefighter}>
@@ -133,9 +131,10 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                                                         <Copy className="mr-2 h-4 w-4" /> Clonar
                                                     </DropdownMenuItem>
                                                 </AddWeekDialog>
+                                                <DropdownMenuSeparator />
                                                 <AlertDialogTrigger asChild>
                                                     <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={(e) => e.preventDefault()}>
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Eliminar Semana
                                                     </DropdownMenuItem>
                                                 </AlertDialogTrigger>
                                             </DropdownMenuContent>
@@ -145,37 +144,37 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                             </div>
                            
                             <Accordion type="single" collapsible className="w-full text-sm">
-                                <AccordionItem value="item-1">
-                                    <AccordionTrigger>
+                                <AccordionItem value="item-1" className="border-none">
+                                    <AccordionTrigger className="hover:no-underline py-1">
                                         <div className="flex items-center gap-2">
                                             <Users2 className="h-4 w-4 text-muted-foreground"/>
-                                            <span className="font-medium">Ver Integrantes ({week.allMembers?.length || 0} en total)</span>
+                                            <span className="font-medium">Ver Dotación ({week.allMembers?.length || 0})</span>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent>
-                                        <ul className="space-y-3 pt-2 pl-2">
+                                        <ul className="space-y-2 pt-2 pl-2">
                                             {week.lead && (
                                                 <li className="flex items-center gap-3">
-                                                    <User className="h-4 w-4 text-muted-foreground"/>
+                                                    <User className="h-4 w-4 text-primary"/>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{`${week.lead.legajo} - ${week.lead.lastName}, ${week.lead.firstName}`}</span>
-                                                        <Badge variant="outline">Encargado</Badge>
+                                                        <span className="font-semibold text-xs">{`${week.lead.legajo} - ${week.lead.lastName}`}</span>
+                                                        <Badge variant="outline" className="text-[9px] h-4">ENCARGADO</Badge>
                                                     </div>
                                                 </li>
                                             )}
                                             {week.driver && (
                                                  <li className="flex items-center gap-3">
-                                                    <Truck className="h-4 w-4 text-muted-foreground"/>
+                                                    <Truck className="h-4 w-4 text-primary"/>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{`${week.driver.legajo} - ${week.driver.lastName}, ${week.driver.firstName}`}</span>
-                                                        <Badge variant="outline">Chofer</Badge>
+                                                        <span className="font-semibold text-xs">{`${week.driver.legajo} - ${week.driver.lastName}`}</span>
+                                                        <Badge variant="outline" className="text-[9px] h-4">CHOFER</Badge>
                                                     </div>
                                                 </li>
                                             )}
                                             {week.members?.map(member => (
                                                 <li key={member.id} className="flex items-center gap-3">
-                                                    <div className="w-4 h-4 shrink-0" />
-                                                    <p className="text-muted-foreground">{`${member.legajo} - ${member.lastName}, ${member.firstName}`}</p>
+                                                    <div className="w-4 h-4" />
+                                                    <p className="text-muted-foreground text-xs">{`${member.legajo} - ${member.lastName}`}</p>
                                                 </li>
                                             ))}
                                         </ul>
@@ -184,9 +183,9 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                             </Accordion>
 
                         </div>
-                         {canViewDetails && (
-                            <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/50">
-                                <Button asChild className="w-full sm:w-auto" variant="outline">
+                         {canDetails && (
+                            <div className="flex items-center justify-center p-4 border-t sm:border-t-0 sm:border-l bg-muted/30">
+                                <Button asChild className="w-full sm:w-auto" variant="default">
                                     <Link href={`/weeks/${week.id}`}>
                                         Ver Detalles <ArrowRight className="ml-2 h-4 w-4" />
                                     </Link>
@@ -198,13 +197,13 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
                         <AlertDialogHeader>
                             <AlertDialogTitle>¿Está seguro?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminará la semana "{week.name}" permanentemente.
+                                Esta acción no se puede deshacer. Se eliminará la semana "{week.name}" permanentemente del sistema.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancelar</AlertDialogCancel>
                             <AlertDialogAction onClick={() => handleDeleteWeek(week.id)} variant="destructive">
-                                Eliminar
+                                Eliminar Semana
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
