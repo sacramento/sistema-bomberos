@@ -34,11 +34,10 @@ const statuses: VehicleStatus[] = ['Operativo', 'No operativo', 'Fuera de Dotaci
 export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated }: { children: React.ReactNode; vehicle: Vehicle; onVehicleUpdated: () => void; }) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { user: actor } = useAuth();
+  const { user: actor, getActiveRole } = useAuth();
   const [loading, setLoading] = useState(false);
   const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
   
-  const { getActiveRole } = useAuth();
   const pathname = usePathname();
   const activeRole = getActiveRole(pathname);
 
@@ -100,96 +99,123 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="font-headline">Editar Móvil: {vehicle.numeroMovil}</DialogTitle>
-          <DialogDescription>Modifique la ficha técnica del vehículo.</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex-grow overflow-y-auto pr-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 py-4">
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="numeroMovil">Número de Móvil</Label>
-                    <Input id="numeroMovil" value={formData.numeroMovil || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+        <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
+          <DialogHeader className="px-1">
+            <DialogTitle className="font-headline">Editar Móvil: {vehicle.numeroMovil}</DialogTitle>
+            <DialogDescription>Modifique la ficha técnica y las asignaciones del vehículo.</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto pr-4 py-4 scrollbar-thin">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">Identificación</h4>
+                    <div className="space-y-2">
+                        <Label htmlFor="numeroMovil">Número de Móvil</Label>
+                        <Input id="numeroMovil" value={formData.numeroMovil || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="dominio">Dominio (Patente)</Label>
+                        <Input id="dominio" value={formData.dominio || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="marca">Marca</Label>
+                        <Input id="marca" value={formData.marca || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="modelo">Modelo</Label>
+                        <Input id="modelo" value={formData.modelo || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+                    </div>
                 </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="dominio">Dominio (Patente)</Label>
-                    <Input id="dominio" value={formData.dominio || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+
+                <div className="space-y-4">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">Estado y Ubicación</h4>
+                    <div className="space-y-2">
+                        <Label htmlFor="kilometraje">Kilometraje</Label>
+                        <Input id="kilometraje" type="number" value={formData.kilometraje || 0} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="status">Estado del Móvil</Label>
+                        <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="cuartel">Cuartel</Label>
+                        <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)} disabled={!canEditAllFields}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="especialidad">Especialidad</Label>
+                        <Select value={formData.especialidad} onValueChange={(v) => handleSelectChange('especialidad', v)} disabled={!canEditAllFields}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                        </Select>
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="marca">Marca</Label>
-                    <Input id="marca" value={formData.marca || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+
+                <div className="space-y-4">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">Responsables</h4>
+                    <div className="space-y-2">
+                        <Label>Encargados Mecánica</Label>
+                        <MultiFirefighterSelect
+                            title="encargados"
+                            selected={selectedEncargados}
+                            onSelectedChange={setSelectedEncargados}
+                            firefighters={activeFirefighters}
+                            disabled={!canEditAllFields}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Encargados Materiales</Label>
+                        <MultiFirefighterSelect
+                            title="encargados materiales"
+                            selected={selectedMaterialEncargados}
+                            onSelectedChange={setSelectedMaterialEncargados}
+                            firefighters={activeFirefighters}
+                            disabled={!canEditAllFields}
+                        />
+                    </div>
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="modelo">Modelo</Label>
-                    <Input id="modelo" value={formData.modelo || ''} onChange={handleInputChange} required disabled={!canEditAllFields}/>
+
+                <div className="space-y-4 md:col-span-2 lg:col-span-3">
+                    <h4 className="text-xs font-bold uppercase text-muted-foreground border-b pb-1">Especificaciones Técnicas</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="capacidadAgua">Capacidad de Agua (L)</Label>
+                            <Input id="capacidadAgua" type="number" value={formData.capacidadAgua || 0} onChange={handleInputChange} disabled={!canEditAllFields}/>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
+                            <Select value={formData.tipoVehiculo} onValueChange={(v) => handleSelectChange('tipoVehiculo', v)} disabled={!canEditAllFields}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{vehicleTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="traccion">Tracción</Label>
+                            <Select value={formData.traccion} onValueChange={(v) => handleSelectChange('traccion', v)} disabled={!canEditAllFields}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>{tractions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div className="space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="kilometraje">Kilometraje</Label>
-                    <Input id="kilometraje" type="number" value={formData.kilometraje || 0} onChange={handleInputChange} />
+
+                <div className="space-y-2 md:col-span-2 lg:col-span-3">
+                    <Label htmlFor="observaciones">Observaciones</Label>
+                    <Textarea id="observations" value={formData.observations || ''} onChange={handleInputChange} className="min-h-[100px]" />
                 </div>
-                <div className="space-y-2">
-                    <Label htmlFor="status">Estado del Móvil</Label>
-                    <Select value={formData.status} onValueChange={(v) => handleSelectChange('status', v)}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{statuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label htmlFor="cuartel">Cuartel</Label>
-                    <Select value={formData.cuartel} onValueChange={(v) => handleSelectChange('cuartel', v)} disabled={!canEditAllFields}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{cuarteles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                <div className="space-y-2">
-                    <Label>Encargados Mecánica</Label>
-                    <MultiFirefighterSelect
-                        title="encargados"
-                        selected={selectedEncargados}
-                        onSelectedChange={setSelectedEncargados}
-                        firefighters={activeFirefighters}
-                        disabled={!canEditAllFields}
-                    />
-                </div>
-            </div>
-            <div className="space-y-4">
-                 <div className="space-y-2">
-                    <Label htmlFor="capacidadAgua">Capacidad de Agua (L)</Label>
-                    <Input id="capacidadAgua" type="number" value={formData.capacidadAgua || 0} onChange={handleInputChange} disabled={!canEditAllFields}/>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="tipoVehiculo">Tipo de Vehículo</Label>
-                     <Select value={formData.tipoVehiculo} onValueChange={(v) => handleSelectChange('tipoVehiculo', v)} disabled={!canEditAllFields}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{vehicleTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="traccion">Tracción</Label>
-                    <Select value={formData.traccion} onValueChange={(v) => handleSelectChange('traccion', v)} disabled={!canEditAllFields}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>{tractions.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-            </div>
-            <div className="space-y-2 md:col-span-2 lg:col-span-3">
-                <Label htmlFor="observaciones">Observaciones</Label>
-                <Textarea id="observations" value={formData.observations || ''} onChange={handleInputChange} />
             </div>
           </div>
-        </form>
-         <DialogFooter className="pt-4 border-t">
-            <Button onClick={e => {
-                e.preventDefault();
-                const form = e.currentTarget.closest('div.flex-col')?.querySelector('form');
-                form?.requestSubmit();
-            }} disabled={loading}>
+          <DialogFooter className="pt-4 border-t px-1">
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                 Guardar Cambios
             </Button>
-        </DialogFooter>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
