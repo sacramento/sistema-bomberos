@@ -115,7 +115,7 @@ export default function MaterialsReportPage() {
     const [filterComposiciones, setFilterComposiciones] = useState<string[]>([]);
     
     const [filterFirehouses, setFilterFirehouses] = useState<string[]>([]);
-    const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
+    const [filterLocations, setFilterLocations] = useState<string[]>([]);
     const [filterStates, setFilterStates] = useState<string[]>([]);
     
     const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -220,6 +220,15 @@ export default function MaterialsReportPage() {
             .flatMap(s => s.items.map(i => ({ value: i.id, label: i.label })));
     }, [filterSubCategories]);
 
+    const locationOptions = useMemo(() => {
+        return [
+            ...vehicles.map(v => ({ value: v.id, label: `Móvil ${v.numeroMovil}` })),
+            { value: 'deposito_Cuartel 1', label: 'Depósito C1' },
+            { value: 'deposito_Cuartel 2', label: 'Depósito C2' },
+            { value: 'deposito_Cuartel 3', label: 'Depósito C3' }
+        ];
+    }, [vehicles]);
+
     const filteredMaterials = useMemo(() => {
         return materials.filter(m => {
             if (searchTerm && !m.nombre.toLowerCase().includes(searchTerm.toLowerCase()) && !m.codigo.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -230,11 +239,18 @@ export default function MaterialsReportPage() {
             if (filterMedidas.length > 0 && (!m.medida || !filterMedidas.includes(m.medida))) return false;
             if (filterComposiciones.length > 0 && (!m.composicion || !filterComposiciones.includes(m.composicion))) return false;
             if (filterFirehouses.length > 0 && !filterFirehouses.includes(m.cuartel)) return false;
-            if (filterVehicles.length > 0 && (!m.ubicacion?.vehiculoId || !filterVehicles.includes(m.ubicacion.vehiculoId))) return false;
+            
+            if (filterLocations.length > 0) {
+                const loc = m.ubicacion;
+                const isMatch = (loc.type === 'vehiculo' && loc.vehiculoId && filterLocations.includes(loc.vehiculoId)) ||
+                                (loc.type === 'deposito' && loc.deposito && filterLocations.includes(`deposito_${loc.deposito}`));
+                if (!isMatch) return false;
+            }
+
             if (filterStates.length > 0 && !filterStates.includes(m.estado)) return false;
             return true;
         });
-    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterVehicles, filterStates]);
+    }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterLocations, filterStates]);
 
     const sortedFilteredMaterials = useMemo(() => {
         let sortableItems = [...filteredMaterials];
@@ -353,8 +369,8 @@ export default function MaterialsReportPage() {
                     <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={['Tela', 'Goma'].map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
                 </CardContent></Card>
                 <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
-                    <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
-                    <div className="space-y-2"><Label className="text-xs font-bold">Móvil</Label><MultiSelectFilter title="Móviles" options={vehicles.map(v => ({ value: v.id, label: `Móv ${v.numeroMovil}` }))} selected={filterVehicles} onSelectedChange={setFilterVehicles} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Dueño (Cuartel)</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Ubicación Actual</Label><MultiSelectFilter title="Ubicaciones" options={locationOptions} selected={filterLocations} onSelectedChange={setFilterLocations} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
                 </CardContent></Card>
             </div>
