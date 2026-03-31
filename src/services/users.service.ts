@@ -10,10 +10,20 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const USERS_COLLECTION = 'users';
 
-const cleanData = (obj: any) => {
-    return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
-    );
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    if (obj instanceof Date || obj.constructor?.name === 'Timestamp' || obj.constructor?.name === 'FieldValue' || obj._methodName) {
+        return obj;
+    }
+    if (Array.isArray(obj)) return obj.map(cleanData);
+    
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined && value !== null) {
+            cleaned[key] = cleanData(value);
+        }
+    }
+    return cleaned;
 };
 
 const docToUser = (docSnap: any): User => {

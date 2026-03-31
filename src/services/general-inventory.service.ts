@@ -10,11 +10,18 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const cleanData = (obj: any): any => {
     if (typeof obj !== 'object' || obj === null) return obj;
-    return Object.fromEntries(
-        Object.entries(obj)
-            .filter(([_, v]) => v !== undefined)
-            .map(([k, v]) => [k, v === Object(v) && !Array.isArray(v) ? cleanData(v) : v])
-    );
+    if (obj instanceof Date || obj.constructor?.name === 'Timestamp' || obj.constructor?.name === 'FieldValue' || obj._methodName) {
+        return obj;
+    }
+    if (Array.isArray(obj)) return obj.map(cleanData);
+    
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined && value !== null) {
+            cleaned[key] = cleanData(value);
+        }
+    }
+    return cleaned;
 };
 
 /**

@@ -11,10 +11,29 @@ import { FirestorePermissionError } from '@/firebase/errors';
 
 const REQUESTS_COLLECTION = 'material_requests';
 
-const cleanData = (obj: any) => {
-    return Object.fromEntries(
-        Object.entries(obj).filter(([_, v]) => v !== undefined && v !== null)
-    );
+/**
+ * Función recursiva para eliminar campos 'undefined' o 'null'.
+ * Vital para la compatibilidad con Firestore en objetos anidados.
+ */
+const cleanData = (obj: any): any => {
+    if (typeof obj !== 'object' || obj === null) return obj;
+    
+    // No limpiar objetos especiales de Firestore ni Fechas
+    if (obj instanceof Date || obj.constructor?.name === 'Timestamp' || obj.constructor?.name === 'FieldValue' || obj._methodName) {
+        return obj;
+    }
+
+    if (Array.isArray(obj)) {
+        return obj.map(cleanData);
+    }
+
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        if (value !== undefined && value !== null) {
+            cleaned[key] = cleanData(value);
+        }
+    }
+    return cleaned;
 };
 
 export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> => {
@@ -43,6 +62,7 @@ export const getPendingMaterialRequests = async (): Promise<MaterialRequest[]> =
 export const createMaterialRequest = (requestData: Omit<MaterialRequest, 'id' | 'status' | 'requestedAt'>) => {
     if (!db) return;
     const colRef = collection(db, REQUESTS_COLLECTION);
+    
     const dataToSave = cleanData({
         ...requestData,
         status: 'PENDING' as const,
