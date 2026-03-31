@@ -52,6 +52,7 @@ export const navItems: NavItem[] = [
   
   // Semanas
   { href: '/weeks', icon: CalendarCheck, label: 'Semanas de Guardia', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas'},
+  { href: '/weeks/tasks', icon: ListTodo, label: 'Tareas Pendientes', roles: ['Master', 'Administrador', 'Oficial', 'Encargado', 'Bombero'], module: 'semanas' },
   { href: '/duty-checks', icon: ClipboardCheck, label: 'Control de Guardia', roles: ['Master', 'Administrador', 'Oficial', 'Encargado'], module: 'semanas' },
   
   // Movilidad
