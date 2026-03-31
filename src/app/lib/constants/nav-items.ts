@@ -23,6 +23,7 @@ import {
   BookCopy,
   Droplets,
   ClipboardCheck,
+  BellDot,
 } from 'lucide-react';
 import type { ActiveRole } from '@/lib/types';
 
@@ -63,6 +64,8 @@ export const navItems: NavItem[] = [
 
   // Materiales
   { href: '/materials', icon: Package, label: 'Inventario', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
+  { href: '/materials/requests', icon: BellDot, label: 'Solicitudes', roles: ['Master', 'Administrador'], module: 'materiales' },
+  { href: '/materials/leads', icon: Users, label: 'Encargados', roles: ['Master', 'Administrador'], module: 'materiales' },
   { href: '/materials-reports', icon: BarChart3, label: 'Reportes', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales'},
   { href: '/materials/vehicles', icon: ScanLine, label: 'Móviles (Vista)', roles: ['Master', 'Administrador', 'Encargado', 'Oficial', 'Bombero'], module: 'materiales' },
 
