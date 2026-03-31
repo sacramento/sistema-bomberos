@@ -45,30 +45,32 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     const activeRole = getActiveRole(pathname);
 
     const canUserManageWeek = (week: Week) => {
-        if (!user) return false;
+        if (!user || !loggedInFirefighter) return false;
+        
         // Solo el Master edita TODO
         if (activeRole === 'Master') return true;
         
         // Administradores solo gestionan su cuartel
         if (activeRole === 'Administrador') {
-            return loggedInFirefighter?.firehouse === week.firehouse;
+            return loggedInFirefighter.firehouse === week.firehouse;
         }
 
         // Encargados locales solo gestionan su semana asignada
+        // Usamos el ID de base de datos del bombero logueado
         if (activeRole === 'Encargado') {
-            return user.id === week.leadId;
+            return loggedInFirefighter.id === week.leadId;
         }
 
         return false;
     };
 
     const canUserViewDetails = (week: Week) => {
-        if (!user) return false;
-        // Roles de supervisión ven todo lo que esté listado
+        if (!user || !loggedInFirefighter) return false;
+        // Roles de supervisión ven todo lo que esté listado en su cuartel
         if (['Master', 'Administrador', 'Oficial'].includes(activeRole)) return true;
         
-        // Bomberos solo ven detalles donde participan
-        return week.allMemberIds?.includes(user.id);
+        // Bomberos y Encargados solo ven detalles donde participan
+        return week.allMemberIds?.includes(loggedInFirefighter.id);
     };
 
     const handleDeleteWeek = async (weekId: string) => {

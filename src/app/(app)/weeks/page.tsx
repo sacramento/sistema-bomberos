@@ -70,6 +70,7 @@ export default function WeeksDashboardPage() {
         if (isMaster) return weeks;
         if (!loggedInFirefighter) return [];
         
+        // El filtro se basa en el cuartel del perfil del bombero
         return weeks.filter(w => w.firehouse === loggedInFirefighter.firehouse);
     }, [weeks, mounted, user, isMaster, loggedInFirefighter]);
 
@@ -137,6 +138,7 @@ export default function WeeksDashboardPage() {
                {!loading && filteredWeeks.length === 0 && (
                    <div className="flex flex-col items-center justify-center py-20 text-center border-2 border-dashed rounded-lg bg-muted/10">
                        <p className="text-muted-foreground">No hay semanas registradas para mostrar.</p>
+                       {!loggedInFirefighter && !isMaster && <p className="text-xs text-destructive mt-2">Error: No se encontró un perfil de bombero asociado a tu legajo.</p>}
                    </div>
                )}
             </div>

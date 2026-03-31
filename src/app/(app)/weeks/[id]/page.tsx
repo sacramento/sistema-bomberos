@@ -59,31 +59,29 @@ export default function WeekDetailPage() {
     }, [user, allFirefighters]);
     
     const canManage = useMemo(() => {
-        if (!user || !week) return false;
-        // El Master gestiona TODO
+        if (!user || !week || !loggedInFirefighter) return false;
+        
         if (activeRole === 'Master') return true;
         
-        // Administradores gestionan su propio cuartel
         if (activeRole === 'Administrador') {
-            return loggedInFirefighter?.firehouse === week.firehouse;
+            return loggedInFirefighter.firehouse === week.firehouse;
         }
 
-        // El Lead específico de la semana gestiona su pizarra y tareas
-        if (week.leadId === user.id) return true;
+        // El Encargado específico de la semana gestiona su pizarra y tareas
+        // Usamos el ID interno de base de datos para la comparación
+        if (week.leadId === loggedInFirefighter.id) return true;
 
         return false;
     }, [user, week, activeRole, loggedInFirefighter]);
 
     const canView = useMemo(() => {
-        if (!user || !week) return false;
+        if (!user || !week || !loggedInFirefighter) return false;
         if (canManage) return true;
         if (activeRole === 'Oficial') return true;
         
-        // El Administrador puede ver cualquier semana de su cuartel aunque no la gestione (ej: si es Lead otro)
-        if (activeRole === 'Administrador' && loggedInFirefighter?.firehouse === week.firehouse) return true;
+        if (activeRole === 'Administrador' && loggedInFirefighter.firehouse === week.firehouse) return true;
         
-        // Miembros de la dotación ven su propia semana
-        return week.allMemberIds?.includes(user.id);
+        return week.allMemberIds?.includes(loggedInFirefighter.id);
     }, [canManage, user, week, activeRole, loggedInFirefighter]);
     
 
@@ -184,7 +182,7 @@ export default function WeekDetailPage() {
         return (
             <div className="flex flex-col items-center justify-center py-20 text-center">
                 <h2 className="text-2xl font-bold mb-2 text-destructive">Acceso Denegado</h2>
-                <p className="text-muted-foreground mb-6">No tienes permisos para ver los detalles de esta semana de guardia.</p>
+                <p className="text-muted-foreground mb-6">No tienes permisos para ver los detalles de esta semana de guardia o el móvil no pertenece a tu cuartel.</p>
                 <Button onClick={() => router.push('/weeks')}>Volver a Semanas</Button>
             </div>
         );
