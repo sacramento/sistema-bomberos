@@ -116,7 +116,6 @@ export default function WeeksDashboardPage() {
                                     weeks={weeksGrouped[firehouse]} 
                                     isLoading={loading} 
                                     onDataChange={handleDataChange}
-                                    canManageGenerally={isMaster || isLocalAdmin} 
                                     loggedInFirefighter={loggedInFirefighter}
                                 />
                             </div>

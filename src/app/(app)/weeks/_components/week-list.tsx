@@ -25,7 +25,6 @@ interface WeekListProps {
     weeks: Week[];
     isLoading?: boolean;
     onDataChange: () => void;
-    canManageGenerally: boolean;
     loggedInFirefighter: Firefighter | null;
 }
 
@@ -38,7 +37,7 @@ const getBorderColor = (firehouse: Week['firehouse']) => {
     }
 };
 
-export default function WeekList({ weeks, isLoading, onDataChange, canManageGenerally, loggedInFirefighter }: WeekListProps) {
+export default function WeekList({ weeks, isLoading, onDataChange, loggedInFirefighter }: WeekListProps) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
@@ -47,10 +46,9 @@ export default function WeekList({ weeks, isLoading, onDataChange, canManageGene
     const canUserManageWeekMetadata = (week: Week) => {
         if (!user || !loggedInFirefighter) return false;
         
-        // Master gestiona todo
+        // Solo Master y Administradores gestionan la ficha principal
         if (activeRole === 'Master') return true;
         
-        // Administradores gestionan su propio cuartel
         if (activeRole === 'Administrador') {
             return loggedInFirefighter.firehouse === week.firehouse;
         }
