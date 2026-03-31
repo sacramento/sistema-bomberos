@@ -49,13 +49,11 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
 
   const [formData, setFormData] = useState<Partial<Vehicle>>({});
   const [selectedEncargados, setSelectedEncargados] = useState<Firefighter[]>([]);
-  const [selectedMaterialEncargados, setSelectedMaterialEncargados] = useState<Firefighter[]>([]);
 
   useEffect(() => {
     if (open) {
       setFormData(vehicle);
       setSelectedEncargados(vehicle.encargados || []);
-      setSelectedMaterialEncargados(vehicle.materialEncargados || []);
       getFirefighters().then(setAllFirefighters);
     }
   }, [open, vehicle]);
@@ -80,8 +78,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
     try {
       const finalData = { 
           ...formData, 
-          encargadoIds: selectedEncargados.map(f => f.id),
-          materialEncargadoIds: selectedMaterialEncargados.map(f => f.id)
+          encargadoIds: selectedEncargados.map(f => f.id)
       };
       
       await updateVehicle(vehicle.id, finalData, actor);
@@ -102,7 +99,7 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <DialogHeader className="px-1">
             <DialogTitle className="font-headline">Editar Móvil: {vehicle.numeroMovil}</DialogTitle>
-            <DialogDescription>Modifique la ficha técnica y las asignaciones del vehículo.</DialogDescription>
+            <DialogDescription>Modifique la ficha técnica y los responsables de mecánica.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-4 py-4 scrollbar-thin">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -167,16 +164,9 @@ export default function EditVehicleDialog({ children, vehicle, onVehicleUpdated 
                             disabled={!canEditAllFields}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label>Encargados Materiales</Label>
-                        <MultiFirefighterSelect
-                            title="encargados materiales"
-                            selected={selectedMaterialEncargados}
-                            onSelectedChange={setSelectedMaterialEncargados}
-                            firefighters={activeFirefighters}
-                            disabled={!canEditAllFields}
-                        />
-                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                        Nota: Los encargados de materiales se gestionan ahora desde el módulo de Materiales.
+                    </p>
                 </div>
 
                 <div className="space-y-4 md:col-span-2 lg:col-span-3">

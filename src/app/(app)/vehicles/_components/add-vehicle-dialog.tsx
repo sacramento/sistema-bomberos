@@ -134,7 +134,7 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
         <form onSubmit={handleSubmit} className="flex-1 overflow-hidden flex flex-col">
           <DialogHeader className="px-1">
             <DialogTitle className="font-headline">Agregar Nuevo Móvil</DialogTitle>
-            <DialogDescription>Complete la ficha técnica del vehículo y asigne a los responsables.</DialogDescription>
+            <DialogDescription>Complete la ficha técnica del vehículo y asigne a los responsables de mecánica.</DialogDescription>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto pr-4 py-4 scrollbar-thin">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -198,15 +198,9 @@ export default function AddVehicleDialog({ children, onVehicleAdded }: { childre
                             firefighters={activeFirefighters}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label>Encargados de Materiales</Label>
-                        <MultiFirefighterSelect
-                            title="encargados materiales"
-                            selected={activeFirefighters.filter(f => formData.materialEncargadoIds.includes(f.id))}
-                            onSelectedChange={(fs) => setFormData(p => ({...p, materialEncargadoIds: fs.map(f => f.id)}))}
-                            firefighters={activeFirefighters}
-                        />
-                    </div>
+                    <p className="text-[10px] text-muted-foreground italic">
+                        Nota: Los encargados de materiales se gestionan ahora desde el módulo de Materiales.
+                    </p>
                 </div>
 
                 <div className="space-y-4 md:col-span-2 lg:col-span-3">

@@ -1,8 +1,9 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter, ArrowRight } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Trash2, Edit, Search, QrCode, Upload, AlertCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter, ArrowRight, Users } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -22,6 +23,7 @@ import QrScannerDialog from "./_components/qr-scanner-dialog";
 import MaterialDetailDialog from "./_components/material-detail-dialog";
 import ImportMaterialsDialog from "./_components/import-materials-dialog";
 import MaterialRequestsList from "./_components/material-requests-list";
+import MaterialLeadsManager from "./_components/material-leads-manager";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -251,16 +253,37 @@ export default function MaterialsPage() {
                 </div>
             </PageHeader>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className={cn("grid w-full mb-6", isPrivileged ? "grid-cols-4 max-w-2xl mx-auto" : "grid-cols-3 max-w-md mx-auto")}>
+                <TabsList className={cn("grid w-full mb-6", isPrivileged ? "grid-cols-5 max-w-3xl mx-auto" : "grid-cols-3 max-w-md mx-auto")}>
                     <TabsTrigger value="search">Búsqueda</TabsTrigger>
                     <TabsTrigger value="inventory">Inventario</TabsTrigger>
                     <TabsTrigger value="reports">Informes</TabsTrigger>
+                    {isPrivileged && <TabsTrigger value="leads"><Users className="h-4 w-4 mr-2" /> Encargados</TabsTrigger>}
                     {isPrivileged && <TabsTrigger value="requests" className="relative">Solicitudes <Badge className="absolute -top-2 -right-2 bg-red-600">!</Badge></TabsTrigger>}
                 </TabsList>
-                <TabsContent value="search"><Card><CardHeader><CardTitle className="font-headline">Búsqueda</CardTitle></CardHeader><CardContent><form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Código o nombre..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={handleQrScan}><Button variant="outline" type="button"><QrCode className="mr-2 h-4 w-4" /> Escanear</Button></QrScannerDialog><Button type="submit">Buscar</Button></form></CardContent></Card></TabsContent>
-                <TabsContent value="inventory"><Card><CardHeader><CardTitle className="text-lg font-headline">Equipamiento</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('estado')}>Estado {getSortIcon('estado')}</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader><TableBody>{loading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full"/></TableCell></TableRow> : filteredItems.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Dep. ${m.cuartel}`}</TableCell><TableCell><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right"><AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setDetailItem(m)}>Ver Detalles</DropdownMenuItem>{canEditMaterial(m) && <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Editar</DropdownMenuItem></EditMaterialDialog>}{canDeleteMaterial(m) && <><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Eliminar</DropdownMenuItem></AlertDialogTrigger></>}</DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle><AlertDialogDescription>{isPrivileged ? "Eliminar permanentemente." : "Enviar solicitud de baja."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">{isPrivileged ? "Eliminar" : "Enviar Solicitud"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></TableCell></TableRow>))}</TableBody></Table></CardContent></Card></TabsContent>
-                <TabsContent value="reports"><Card><CardHeader><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5"/> Reportes</CardTitle></CardHeader><CardContent className="flex justify-center py-10"><Button size="lg" onClick={() => router.push('/materials-reports')}>Abrir Informes <ArrowRight className="ml-2 h-5 w-5"/></Button></CardContent></Card></TabsContent>
-                {isPrivileged && <TabsContent value="requests"><MaterialRequestsList onDataChange={handleDataChange} actor={user}/></TabsContent>}
+                
+                <TabsContent value="search">
+                    <Card><CardHeader><CardTitle className="font-headline">Búsqueda</CardTitle></CardHeader><CardContent><form onSubmit={handleFormSubmit} className="flex flex-col sm:flex-row gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Código o nombre..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={handleQrScan}><Button variant="outline" type="button"><QrCode className="mr-2 h-4 w-4" /> Escanear</Button></QrScannerDialog><Button type="submit">Buscar</Button></form></CardContent></Card>
+                </TabsContent>
+                
+                <TabsContent value="inventory">
+                    <Card><CardHeader><CardTitle className="text-lg font-headline">Equipamiento</CardTitle></CardHeader><CardContent><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('estado')}>Estado {getSortIcon('estado')}</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader><TableBody>{loading ? <TableRow><TableCell colSpan={5}><Skeleton className="h-10 w-full"/></TableCell></TableRow> : filteredItems.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Dep. ${m.cuartel}`}</TableCell><TableCell><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right"><AlertDialog><DropdownMenu><DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={() => setDetailItem(m)}>Ver Detalles</DropdownMenuItem>{canEditMaterial(m) && <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}><DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Editar</DropdownMenuItem></EditMaterialDialog>}{canDeleteMaterial(m) && <><DropdownMenuSeparator /><AlertDialogTrigger asChild><DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Eliminar</DropdownMenuItem></AlertDialogTrigger></>}</DropdownMenuContent></DropdownMenu><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle><AlertDialogDescription>{isPrivileged ? "Eliminar permanentemente." : "Enviar solicitud de baja."}</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">{isPrivileged ? "Eliminar" : "Enviar Solicitud"}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog></TableCell></TableRow>))}</TableBody></Table></CardContent></Card>
+                </TabsContent>
+                
+                <TabsContent value="reports">
+                    <Card><CardHeader><CardTitle className="flex items-center gap-2"><Filter className="h-5 w-5"/> Reportes</CardTitle></CardHeader><CardContent className="flex justify-center py-10"><Button size="lg" onClick={() => router.push('/materials-reports')}>Abrir Informes <ArrowRight className="ml-2 h-5 w-5"/></Button></CardContent></Card>
+                </TabsContent>
+
+                {isPrivileged && (
+                    <TabsContent value="leads">
+                        <MaterialLeadsManager actor={user} />
+                    </TabsContent>
+                )}
+
+                {isPrivileged && (
+                    <TabsContent value="requests">
+                        <MaterialRequestsList onDataChange={handleDataChange} actor={user}/>
+                    </TabsContent>
+                )}
             </Tabs>
             <MaterialDetailDialog material={detailItem} open={!!detailItem} onOpenChange={(isOpen) => { if (!isOpen) setDetailItem(null); }} />
         </>
