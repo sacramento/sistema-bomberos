@@ -12,8 +12,6 @@ import { getTasksByWeek, updateTask, deleteTask } from "@/services/tasks.service
 import { getFirefighters } from "@/services/firefighters.service";
 import { useParams, useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Badge } from "@/components/ui/badge";
 import { Users, Truck, User, PlusCircle, CheckCircle2, ListTodo, UserCog, Save, Loader2, ArrowLeft, MoreVertical, Edit, Trash2, CalendarDays } from "lucide-react";
 import { useAuth } from "@/context/auth-context";
@@ -25,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { format, parseISO } from 'date-fns';
 
 const getStatusBadgeColor = (status: Task['status']) => {
     switch (status) {
@@ -189,9 +188,6 @@ export default function WeekDetailPage() {
         return <PageHeader title="Semana no encontrada" description="No se pudo encontrar la semana solicitada." />;
     }
     
-    const formattedStartDate = format(parseISO(week.periodStartDate), "dd MMM yyyy", { locale: es });
-    const formattedEndDate = format(parseISO(week.periodEndDate), "dd MMM yyyy", { locale: es });
-    
     const activeMembers = week.allMembers?.filter(m => m.status === 'Active' || m.status === 'Auxiliar') || [];
 
 
@@ -199,7 +195,7 @@ export default function WeekDetailPage() {
         <>
             <PageHeader 
                 title={week.name}
-                description={`${formattedStartDate} - ${formattedEndDate}`}
+                description={`Cuartel: ${week.firehouse}`}
             >
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => router.push('/weeks/my-week')}>

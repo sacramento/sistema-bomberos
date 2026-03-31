@@ -7,10 +7,7 @@ import WeekList from "./_components/week-list";
 import { Week } from "@/lib/types";
 import { getWeeks } from "@/services/weeks.service";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { parseISO, isWithinInterval, startOfDay, endOfDay, isValid } from 'date-fns';
-import { es } from 'date-fns/locale';
 
 export default function WeeksDashboardPage() {
     const { toast } = useToast();
@@ -46,32 +43,8 @@ export default function WeeksDashboardPage() {
         fetchWeeks();
     }
     
-    const { activeWeeksSummary, weeksToShow } = useMemo(() => {
-        if (!mounted) return { activeWeeksSummary: {}, weeksToShow: {} };
-
-        const today = new Date();
-        const activeSummary: Record<string, string> = {
-            'Cuartel 1': 'Ninguna',
-            'Cuartel 2': 'Ninguna',
-            'Cuartel 3': 'Ninguna'
-        };
-
-        weeks.forEach(week => {
-            try {
-                const sDate = parseISO(week.periodStartDate);
-                const eDate = parseISO(week.periodEndDate);
-                if (!isValid(sDate) || !isValid(eDate)) return;
-
-                const startDate = startOfDay(sDate);
-                const endDate = endOfDay(eDate);
-                
-                if (isWithinInterval(today, { start: startDate, end: endDate })) {
-                    if (activeSummary.hasOwnProperty(week.firehouse)) {
-                        activeSummary[week.firehouse] = week.name;
-                    }
-                }
-            } catch (e) {}
-        });
+    const weeksToShow = useMemo(() => {
+        if (!mounted) return {};
 
         const grouped = weeks.reduce((acc, week) => {
             const firehouse = week.firehouse || 'Sin Depósito';
@@ -82,17 +55,12 @@ export default function WeeksDashboardPage() {
             return acc;
         }, {} as Record<string, Week[]>);
         
-        // Sort weeks inside each group and take the last 4
+        // Take the last 6 weeks per firehouse
         for (const firehouse in grouped) {
-            grouped[firehouse] = grouped[firehouse]
-                .sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime())
-                .slice(0, 4); // Keep only the 4 most recent weeks
+            grouped[firehouse] = grouped[firehouse].slice(0, 6); 
         }
 
-        return { 
-            activeWeeksSummary: activeSummary,
-            weeksToShow: grouped
-        };
+        return grouped;
     }, [weeks, mounted]);
 
     const firehouseOrder = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
@@ -100,50 +68,36 @@ export default function WeeksDashboardPage() {
     return (
         <>
             <PageHeader 
-                title="Semanas de Guardia" 
-                description="Listado de solo lectura de las últimas 4 semanas de guardia, agrupadas por cuartel."
+                title="Historial de Semanas de Guardia" 
+                description="Listado de las semanas de guardia registradas, agrupadas por cuartel."
             />
             
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle className="font-headline">Semanas Activas Actualmente</CardTitle>
-                    <CardDescription>Resumen de las semanas de guardia en curso.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loading || !mounted ? (
-                        <div className="space-y-2">
-                           <Skeleton className="h-6 w-full" />
-                           <Skeleton className="h-6 w-full" />
-                           <Skeleton className="h-6 w-full" />
-                        </div>
-                    ) : (
-                        <div className="text-sm space-y-2">
-                            {Object.entries(activeWeeksSummary).map(([firehouse, weekName]) => (
-                                <div key={firehouse} className="flex justify-between items-center p-2 rounded-md even:bg-muted/50">
-                                    <span className="font-medium text-muted-foreground">{firehouse}:</span>
-                                    <span className="font-semibold">{weekName}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-
             <div className="space-y-12">
-               {firehouseOrder.map(firehouse => (
-                    weeksToShow[firehouse] && weeksToShow[firehouse].length > 0 && (
-                        <div key={firehouse} className="mb-8">
-                            <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
-                            <WeekList 
-                                weeks={weeksToShow[firehouse]} 
-                                isLoading={loading} 
-                                onDataChange={handleDataChange}
-                                canManageGenerally={false} 
-                                loggedInFirefighter={null}
-                            />
-                        </div>
-                    )
-                ))}
+               {loading || !mounted ? (
+                   <div className="space-y-8">
+                       {Array.from({ length: 3 }).map((_, i) => (
+                           <div key={i} className="space-y-4">
+                               <Skeleton className="h-8 w-48" />
+                               <Skeleton className="h-32 w-full" />
+                           </div>
+                       ))}
+                   </div>
+               ) : (
+                   firehouseOrder.map(firehouse => (
+                        weeksToShow[firehouse] && weeksToShow[firehouse].length > 0 && (
+                            <div key={firehouse} className="mb-8">
+                                <h3 className="font-headline text-2xl font-semibold tracking-tight border-b pb-2 mb-4">{firehouse}</h3>
+                                <WeekList 
+                                    weeks={weeksToShow[firehouse]} 
+                                    isLoading={loading} 
+                                    onDataChange={handleDataChange}
+                                    canManageGenerally={false} 
+                                    loggedInFirefighter={null}
+                                />
+                            </div>
+                        )
+                    ))
+               )}
             </div>
         </>
     );

@@ -3,7 +3,7 @@
 
 import { Week, Firefighter, LoggedInUser } from '@/lib/types';
 import { db } from '@/lib/firebase/firestore';
-import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where, setDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs, query, orderBy, doc, getDoc, updateDoc, deleteDoc, writeBatch, where, setDoc, serverTimestamp } from 'firebase/firestore';
 import { getFirefighters } from './firefighters.service';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -38,7 +38,7 @@ const docToWeek = async (docSnap: any, firefighterMap: Map<string, Firefighter>)
 
 export const getWeeks = async (): Promise<Week[]> => {
     if (!db) return [];
-    const q = query(weeksCollection, orderBy('periodStartDate', 'desc'));
+    const q = query(weeksCollection, orderBy('createdAt', 'desc'));
     return getDocs(q)
         .then(async (querySnapshot) => {
             const firefighters = await getFirefighters();
@@ -84,13 +84,12 @@ export const addWeek = async (weekData: Omit<Week, 'id' | 'allMembers' | 'allMem
     const dataToSave = cleanData({
         name: weekData.name,
         firehouse: weekData.firehouse,
-        periodStartDate: weekData.periodStartDate,
-        periodEndDate: weekData.periodEndDate,
         leadId: weekData.leadId,
         driverId: weekData.driverId,
         memberIds: weekData.memberIds,
         allMemberIds: allMemberIds,
-        observations: weekData.observations
+        observations: weekData.observations,
+        createdAt: serverTimestamp()
     });
     const docRef = doc(weeksCollection);
     setDoc(docRef, dataToSave).catch(async (error) => {

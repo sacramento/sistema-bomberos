@@ -27,7 +27,7 @@ export type Firefighter = {
 
 export type AttendanceStatus = "present" | "absent" | "tardy" | "excused" | "recupero";
 
-export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL' | 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE VEHICULAR' | 'RESCATE URBANO' | 'GENERAL';
+export type Specialization = 'APH' | 'BUCEO' | 'FORESTAL', 'FUEGO' | 'GORA' | 'HAZ-MAT' | 'KAIZEN' | 'PAE' | 'RESCATE VEHICULAR' | 'RESCATE URBANO' | 'GENERAL';
 
 export type Session = {
   id: string;
@@ -261,8 +261,6 @@ export type Week = {
     id: string;
     name: string;
     firehouse: 'Cuartel 1' | 'Cuartel 2' | 'Cuartel 3';
-    periodStartDate: string;
-    periodEndDate: string;
     leadId: string; 
     driverId: string; 
     memberIds: string[]; 
@@ -272,6 +270,7 @@ export type Week = {
     driver: Firefighter | null;
     members?: Firefighter[];
     allMembers?: Firefighter[]; 
+    createdAt?: any;
 }
 
 export type Task = {
@@ -319,7 +318,7 @@ export type AuditLogAction =
   | 'CREATE_SERVICE' | 'UPDATE_SERVICE' | 'DELETE_SERVICE'
   | 'CREATE_CASCADE_CHARGE'
   | 'CREATE_CASCADE_SYSTEM_CHARGE'
-  | 'CREATE_DUTY_CHECK' | 'UPDATE_DUTY_CHECK' | 'DELETE_DUTY_CHECK';
+  | 'CREATE_DUTY_CHECK';
 
 export type AuditLog = {
     id: string;

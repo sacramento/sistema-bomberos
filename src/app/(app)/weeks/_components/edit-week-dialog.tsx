@@ -19,13 +19,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { updateWeek } from "@/services/weeks.service";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { DateRange } from "react-day-picker";
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth-context";
@@ -50,7 +45,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   // Form state
   const [name, setName] = useState(week.name);
   const [firehouse, setFirehouse] = useState(week.firehouse);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({ from: parseISO(week.periodStartDate), to: parseISO(week.periodEndDate) });
   const [lead, setLead] = useState<Firefighter | null>(week.lead || null);
   const [driver, setDriver] = useState<Firefighter | null>(week.driver || null);
   const [members, setMembers] = useState<Firefighter[]>(week.members || []);
@@ -66,7 +60,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
     if (open) {
       setName(week.name);
       setFirehouse(week.firehouse);
-      setDateRange({ from: parseISO(week.periodStartDate), to: parseISO(week.periodEndDate) });
       setLead(week.lead || null);
       setDriver(week.driver || null);
       setMembers(week.members || []);
@@ -78,7 +71,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   }, [open, week]);
 
   const handleNext = () => {
-    if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
+    if (step === 1 && (!name || !firehouse)) {
       toast({ title: "Campos incompletos", description: "Por favor, complete los datos básicos.", variant: "destructive" });
       return;
     }
@@ -92,7 +85,7 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
   const handleBack = () => setStep(s => Math.max(s - 1, 1));
 
   const handleSubmit = async () => {
-    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver || !actor) {
+    if (!name || !firehouse || !lead || !driver || !actor) {
         toast({ title: "Error", description: "Faltan datos para actualizar la semana.", variant: "destructive" });
         return;
     }
@@ -102,8 +95,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
         const weekData: Partial<Omit<Week, 'id' | 'allMembers' | 'allMemberIds'>> = {
             name,
             firehouse,
-            periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
-            periodEndDate: format(dateRange.to, 'yyyy-MM-dd'),
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),
@@ -139,20 +130,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                     </SelectContent>
                 </Select>
             </div>
-            <div className="space-y-2">
-                <Label>Período</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button id="date-edit" variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y", { locale: es })} - {format(dateRange.to, "LLL dd, y", { locale: es })}</>) : (format(dateRange.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={1} locale={es} />
-                    </PopoverContent>
-                </Popover>
-            </div>
           </div>
         );
       case 2:
@@ -180,7 +157,6 @@ export default function EditWeekDialog({ children, week, onWeekUpdated }: { chil
                 <div className="p-4 bg-muted/50 rounded-lg space-y-3">
                    <p><strong>Semana:</strong> {name}</p>
                    <p><strong>Cuartel:</strong> {firehouse}</p>
-                   <p><strong>Período:</strong> {dateRange?.from && format(dateRange.from, "P", { locale: es })} - {dateRange?.to && format(dateRange.to, "P", { locale: es })}</p>
                    <p><strong>Encargado:</strong> {lead ? `${lead.legajo} - ${lead.lastName}` : 'N/A'}</p>
                    <p><strong>Chofer:</strong> {driver ? `${driver.legajo} - ${driver.lastName}` : 'N/A'}</p>
                    <div className="pt-2">

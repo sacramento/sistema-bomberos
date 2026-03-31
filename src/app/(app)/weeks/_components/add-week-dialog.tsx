@@ -19,13 +19,8 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Firefighter, Week } from "@/lib/types";
 import { getFirefighters } from "@/services/firefighters.service";
 import { addWeek } from "@/services/weeks.service";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { Calendar as CalendarIcon, ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { DateRange } from "react-day-picker";
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
+import { ArrowRight, ArrowLeft, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth-context";
@@ -50,7 +45,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   // Form state
   const [name, setName] = useState('');
   const [firehouse, setFirehouse] = useState<Week['firehouse'] | ''>('');
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [lead, setLead] = useState<Firefighter | null>(null);
   const [driver, setDriver] = useState<Firefighter | null>(null);
   const [members, setMembers] = useState<Firefighter[]>([]);
@@ -79,7 +73,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   useEffect(() => {
       if (open && initialData) {
           setName('');
-          setDateRange(undefined);
           setFirehouse(initialData.firehouse || '');
           setLead(initialData.lead || null);
           setDriver(initialData.driver || null);
@@ -91,7 +84,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   const resetForm = useCallback(() => {
     setName('');
     setFirehouse('');
-    setDateRange(undefined);
     setLead(null);
     setDriver(null);
     setMembers([]);
@@ -105,7 +97,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
   };
 
   const handleNext = () => {
-    if (step === 1 && (!name || !firehouse || !dateRange?.from)) {
+    if (step === 1 && (!name || !firehouse)) {
       toast({ title: "Campos incompletos", description: "Faltan datos básicos.", variant: "destructive" });
       return;
     }
@@ -120,7 +112,7 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
 
   const handleSubmit = async () => {
     setLoading(true);
-    if (!name || !firehouse || !dateRange?.from || !dateRange?.to || !lead || !driver || !actor) {
+    if (!name || !firehouse || !lead || !driver || !actor) {
         toast({ title: "Error", description: "Faltan datos requeridos o sesión expirada.", variant: "destructive" });
         setLoading(false);
         return;
@@ -130,8 +122,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
         const weekData: Omit<Week, 'id' | 'allMemberIds' | 'allMembers'> = {
             name,
             firehouse,
-            periodStartDate: format(dateRange.from, 'yyyy-MM-dd'),
-            periodEndDate: format(dateRange.to, 'yyyy-MM-dd'),
             leadId: lead.id,
             driverId: driver.id,
             memberIds: members.map(m => m.id),
@@ -166,20 +156,6 @@ export default function AddWeekDialog({ children, onWeekAdded, initialData }: { 
                         {stationOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
                     </SelectContent>
                 </Select>
-            </div>
-            <div className="space-y-2">
-                <Label>Período de la Semana</Label>
-                <Popover>
-                    <PopoverTrigger asChild>
-                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !dateRange && "text-muted-foreground")}>
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {dateRange?.from ? (dateRange.to ? (<>{format(dateRange.from, "LLL dd, y", { locale: es })} - {format(dateRange.to, "LLL dd, y", { locale: es })}</>) : (format(dateRange.from, "LLL dd, y", { locale: es }))) : (<span>Seleccionar rango</span>)}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar initialFocus mode="range" defaultMonth={dateRange?.from} selected={dateRange} onSelect={setDateRange} numberOfMonths={1} locale={es} />
-                    </PopoverContent>
-                </Popover>
             </div>
           </div>
         );

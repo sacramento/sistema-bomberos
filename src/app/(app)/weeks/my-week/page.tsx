@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -11,14 +12,12 @@ import { getWeeks } from "@/services/weeks.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
-import { usePathname, useRouter } from "next/navigation";
-import { parseISO, isWithinInterval, startOfDay, endOfDay, isValid } from 'date-fns';
+import { usePathname } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MyWeekPage() {
     const { user, getActiveRole } = useAuth();
     const pathname = usePathname();
-    const router = useRouter();
     const { toast } = useToast();
     const [allWeeks, setAllWeeks] = useState<Week[]>([]);
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
@@ -59,9 +58,9 @@ export default function MyWeekPage() {
         }
     }, [isMounted, user]);
 
-    const { weeksToShow, activeWeek, canManage, loggedInFirefighter } = useMemo(() => {
+    const { weeksToShow, canManage, loggedInFirefighter } = useMemo(() => {
         if (!isMounted || !user) {
-            return { weeksToShow: [], activeWeek: null, canManage: false, loggedInFirefighter: null };
+            return { weeksToShow: [], canManage: false, loggedInFirefighter: null };
         }
 
         const firefighterData = allFirefighters.find(f => f.legajo === user.id);
@@ -79,40 +78,13 @@ export default function MyWeekPage() {
             );
         }
 
-        const sortedWeeks = [...visibleWeeks].sort((a,b) => parseISO(b.periodStartDate).getTime() - parseISO(a.periodStartDate).getTime());
-        
-        const today = new Date();
-        const foundActiveWeek = allWeeks.find(week => {
-            const isMember = week.allMemberIds?.includes(user.id) || week.leadId === user.id || week.driverId === user.id;
-            if (!isMember) return false;
-            
-            try {
-                const sDate = parseISO(week.periodStartDate);
-                const eDate = parseISO(week.periodEndDate);
-                if (!isValid(sDate) || !isValid(eDate)) return false;
-                
-                const startDate = startOfDay(sDate);
-                const endDate = endOfDay(eDate);
-                return isWithinInterval(today, { start: startDate, end: endDate });
-            } catch (e) {
-                return false;
-            }
-        });
-        
         return {
-            weeksToShow: sortedWeeks, 
-            activeWeek: foundActiveWeek || null,
+            weeksToShow: visibleWeeks, 
             canManage: canManageWeeks,
             loggedInFirefighter: firefighterData || null
         };
 
     }, [isMounted, allWeeks, allFirefighters, user, activeRole, isPrivileged]);
-
-    useEffect(() => {
-        if (isMounted && !loading && activeWeek && !isPrivileged && activeRole !== 'Oficial' && activeRole !== 'Encargado') {
-            router.replace(`/weeks/${activeWeek.id}`);
-        }
-    }, [isMounted, loading, activeWeek, isPrivileged, activeRole, router]);
 
 
     if (!isMounted || loading) {
