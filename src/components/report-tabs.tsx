@@ -276,16 +276,50 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
-                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead><TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead></>)}
+                        {viewMode === 'by-class' ? (
+                            <>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
+                                {!isLimited && (
+                                    <>
+                                        <TableHead className="text-center">P</TableHead>
+                                        <TableHead className="text-center">A</TableHead>
+                                        <TableHead className="text-center">R</TableHead>
+                                    </>
+                                )}
+                                <TableHead className="text-right">Estado</TableHead>
+                            </>
+                        ) : (
+                            <>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
+                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                            </>
+                        )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const myStatus = isLimited && user ? (s.attendance?.[stats[0]?.firefighter.id] || 'present') : 'present';
+                            const attendance = s.attendance || {};
+                            const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
+                            const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
+                            const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
+                            const myStatus = isLimited && user ? (attendance[stats[0]?.firefighter.id] || 'present') : 'present';
+                            
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                    {!isLimited && (
+                                        <>
+                                            <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
+                                            <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
+                                            <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
+                                        </>
+                                    )}
                                     <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge className="text-[10px]">{Object.keys(s.attendance || {}).length} presentes</Badge>}
+                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} presentes</Badge>}
                                     </TableCell>
                                 </TableRow>
                             )
@@ -456,7 +490,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         <div className="space-y-6">
             <Card><CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0"><Calendar mode="range" selected={filterDate} onSelect={setFilterDate} locale={es}/></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
                 </CardContent>
@@ -466,16 +500,49 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[350px]"><Table><TableHeader><TableRow>
-                        {viewMode === 'by-class' ? (<><TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead><TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead><TableHead className="text-right">Estado</TableHead></>) : (<><TableHead>Integrante</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead><TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead><TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead></>)}
+                        {viewMode === 'by-class' ? (
+                            <>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
+                                {!isLimited && (
+                                    <>
+                                        <TableHead className="text-center">P</TableHead>
+                                        <TableHead className="text-center">A</TableHead>
+                                        <TableHead className="text-center">R</TableHead>
+                                    </>
+                                )}
+                                <TableHead className="text-right">Estado</TableHead>
+                            </>
+                        ) : (
+                            <>
+                                <TableHead>Integrante</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
+                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
+                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                            </>
+                        )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const myStatus = isLimited && user ? (s.attendance?.[stats[0]?.firefighter.id] || 'present') : 'present';
+                            const attendance = s.attendance || {};
+                            const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
+                            const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
+                            const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
+                            const myStatus = isLimited && user ? (attendance[stats[0]?.firefighter.id] || 'present') : 'present';
+
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium">{s.title}</TableCell>
+                                    {!isLimited && (
+                                        <>
+                                            <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
+                                            <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
+                                            <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
+                                        </>
+                                    )}
                                     <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge className="text-[10px]">{Object.keys(s.attendance || {}).length} presentes</Badge>}
+                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} presentes</Badge>}
                                     </TableCell>
                                 </TableRow>
                             )
