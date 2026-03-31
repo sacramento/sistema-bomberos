@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Task, Firefighter, LoggedInUser } from '@/lib/types';
@@ -96,7 +97,7 @@ export const getTasksByWeek = async (weekId: string): Promise<Task[]> => {
 export const addTask = async (taskData: Omit<Task, 'id' | 'assignedTo' | 'createdAt'>, actor: LoggedInUser): Promise<string | void> => {
     if (!db) return;
     
-    // Aplicamos limpieza para eliminar campos 'undefined' (como startDate/endDate si no se eligen)
+    // Aplicamos limpieza para eliminar campos 'undefined'
     const dataToSave = cleanData({ 
         ...taskData, 
         createdAt: serverTimestamp() 
@@ -145,11 +146,10 @@ export const deleteTask = async (id: string, actor: LoggedInUser): Promise<void>
     const docRef = doc(db, 'tasks', id);
     
     deleteDoc(docRef).catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
             path: docRef.path,
             operation: 'delete',
-        });
-        errorEmitter.emit('permission-error', permissionError);
+        }));
     });
 
     if (actor) {

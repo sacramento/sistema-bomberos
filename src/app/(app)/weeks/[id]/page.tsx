@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -107,7 +108,6 @@ export default function WeekDetailPage() {
 
     useEffect(() => {
         fetchWeekAndTasks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [weekId]);
 
     const refreshTasks = () => {
