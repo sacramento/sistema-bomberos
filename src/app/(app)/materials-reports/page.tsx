@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -351,7 +350,7 @@ export default function MaterialsReportPage() {
                 doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
                 doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 8;
                 
-                // Add Summary Table in PDF if requested
+                // Summary Table based on filtered material types and measures
                 if (inventorySummary.length > 0) {
                     (doc as any).autoTable({
                         startY: currentY,
@@ -424,38 +423,6 @@ export default function MaterialsReportPage() {
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
                 </CardContent></Card>
             </div>
-
-            {inventorySummary.length > 0 && (
-                <Card className="border-primary/20 shadow-sm overflow-hidden">
-                    <CardHeader className="pb-2 bg-primary/5 border-b">
-                        <CardTitle className="text-sm font-bold uppercase text-primary flex items-center gap-2">
-                            <List className="h-4 w-4" /> Resumen de Cantidades
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pt-4">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                            {inventorySummary.map(([type, data]) => (
-                                <div key={type} className="flex flex-col p-2 border rounded bg-background hover:bg-muted/30 transition-colors">
-                                    <span className="text-[10px] font-bold text-muted-foreground uppercase truncate" title={type}>{type}</span>
-                                    <div className="flex items-baseline gap-1 mt-1">
-                                        <span className="text-lg font-black text-primary">{data.total}</span>
-                                        <span className="text-[9px] text-muted-foreground font-medium">unid.</span>
-                                    </div>
-                                    {Object.keys(data.measures).length > 0 && (
-                                        <div className="mt-1 flex flex-wrap gap-1">
-                                            {Object.entries(data.measures).sort().map(([measure, count]) => (
-                                                <span key={measure} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground font-semibold">
-                                                    {count} de {measure}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                 <Card className="lg:col-span-1 border-primary/20 bg-muted/10 h-fit">
