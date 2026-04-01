@@ -252,6 +252,10 @@ export default function MaterialsReportPage() {
         });
     }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterLocations, filterStates]);
 
+    /**
+     * Resumen cuantitativo granular solicitado por el usuario.
+     * Agrupa por: Tipo de Item + Medida + Acople.
+     */
     const inventorySummary = useMemo(() => {
         if (filteredMaterials.length === 0) return [];
 
@@ -265,21 +269,18 @@ export default function MaterialsReportPage() {
             });
         });
 
-        const summary: Record<string, { total: number, measures: Record<string, number> }> = {};
+        const summary: Record<string, number> = {};
 
         filteredMaterials.forEach(m => {
-            const typeLabel = itemTypeMap.get(m.itemTypeId) || m.nombre;
-            if (!summary[typeLabel]) {
-                summary[typeLabel] = { total: 0, measures: {} };
-            }
-            summary[typeLabel].total++;
+            const baseType = itemTypeMap.get(m.itemTypeId) || m.nombre;
+            const measureInfo = m.medida ? ` ${m.medida}` : '';
+            const couplingInfo = m.acople ? ` (${m.acople})` : '';
             
-            if (m.medida) {
-                summary[typeLabel].measures[m.medida] = (summary[typeLabel].measures[m.medida] || 0) + 1;
-            }
+            const fullLabel = `${baseType}${measureInfo}${couplingInfo}`.trim();
+            summary[fullLabel] = (summary[fullLabel] || 0) + 1;
         });
 
-        return Object.entries(summary).sort((a, b) => b[1].total - a[1].total);
+        return Object.entries(summary).sort((a, b) => b[1] - a[1]);
     }, [filteredMaterials]);
 
     const sortedFilteredMaterials = useMemo(() => {
@@ -343,23 +344,19 @@ export default function MaterialsReportPage() {
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Resumen Estadístico`, 14, currentY); currentY += 10;
+                doc.text(`Resumen Estadístico y de Cantidades`, 14, currentY); currentY += 10;
                 doc.setFontSize(10); doc.setFont('helvetica', 'bold');
                 doc.text(`Total elementos: ${kpis.total}`, 14, currentY); currentY += 6;
                 doc.setFont('helvetica', 'normal');
                 doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
                 doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 8;
                 
-                // Summary Table based on filtered material types and measures
+                // Summary Table with granular counts (Type + Measure + Coupling)
                 if (inventorySummary.length > 0) {
                     (doc as any).autoTable({
                         startY: currentY,
-                        head: [['Tipo de Material', 'Total', 'Desglose por Medidas']],
-                        body: inventorySummary.map(([type, data]) => [
-                            type, 
-                            data.total, 
-                            Object.entries(data.measures).map(([m, c]) => `${c} de ${m}`).join(', ') || '-'
-                        ]),
+                        head: [['Tipo de Material / Medida / Acople', 'Cantidad Total']],
+                        body: inventorySummary.map(([label, count]) => [label, count]),
                         theme: 'grid', styles: { fontSize: 8 }, headStyles: { fillColor: '#666' }
                     });
                     currentY = (doc as any).lastAutoTable.finalY + 10;
@@ -369,7 +366,7 @@ export default function MaterialsReportPage() {
             if (includeInventoryDetails && sortedFilteredMaterials.length > 0) {
                 if (currentY > 180) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(14); doc.setTextColor(40); doc.setFont('helvetica', 'bold');
-                doc.text(`Detalle de Inventario`, 14, currentY); currentY += 6;
+                doc.text(`Detalle de Inventario (Ítem por Ítem)`, 14, currentY); currentY += 6;
                 
                 (doc as any).autoTable({
                     startY: currentY,
@@ -377,7 +374,7 @@ export default function MaterialsReportPage() {
                     body: sortedFilteredMaterials.map(m => [
                         m.codigo || 'S/C', 
                         m.nombre,
-                        m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Dep. ${m.cuartel}`,
+                        m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Depósito`,
                         m.medida || '-',
                         m.acople || '-',
                         m.estado
@@ -434,7 +431,7 @@ export default function MaterialsReportPage() {
                     <CardContent className="space-y-4 pt-2">
                         <div className="flex items-center space-x-2">
                             <Checkbox id="kpi-opt" checked={includeKPIs} onCheckedChange={(v) => setIncludeKPIs(!!v)} />
-                            <Label htmlFor="kpi-opt" className="text-xs cursor-pointer">Incluir Resumen Estadístico</Label>
+                            <Label htmlFor="kpi-opt" className="text-xs cursor-pointer font-bold">Incluir Resumen Cuantitativo</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Checkbox id="list-opt" checked={includeInventoryDetails} onCheckedChange={(v) => setIncludeInventoryDetails(!!v)} />
