@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -250,6 +250,36 @@ export default function MaterialsReportPage() {
         });
     }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterLocations, filterStates]);
 
+    const inventorySummary = useMemo(() => {
+        if (filteredMaterials.length === 0) return [];
+
+        const itemTypeMap = new Map<string, string>();
+        MATERIAL_CATEGORIES.forEach(cat => {
+            cat.subCategories.forEach(sub => {
+                sub.items.forEach(item => {
+                    const parts = item.label.split(' ');
+                    itemTypeMap.set(item.id, parts.slice(1).join(' '));
+                });
+            });
+        });
+
+        const summary: Record<string, { total: number, measures: Record<string, number> }> = {};
+
+        filteredMaterials.forEach(m => {
+            const typeLabel = itemTypeMap.get(m.itemTypeId) || m.nombre;
+            if (!summary[typeLabel]) {
+                summary[typeLabel] = { total: 0, measures: {} };
+            }
+            summary[typeLabel].total++;
+            
+            if (m.medida) {
+                summary[typeLabel].measures[m.medida] = (summary[typeLabel].measures[m.medida] || 0) + 1;
+            }
+        });
+
+        return Object.entries(summary).sort((a, b) => b[1].total - a[1].total);
+    }, [filteredMaterials]);
+
     const sortedFilteredMaterials = useMemo(() => {
         let sortableItems = [...filteredMaterials];
         if (sortConfig !== null) {
@@ -372,6 +402,39 @@ export default function MaterialsReportPage() {
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
                 </CardContent></Card>
             </div>
+
+            {inventorySummary.length > 0 && (
+                <Card className="border-primary/20 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
+                            <List className="h-4 w-4" /> Resumen de Cantidades
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex flex-wrap gap-3">
+                            {inventorySummary.map(([type, data]) => (
+                                <div key={type} className="flex flex-col border rounded-lg p-2 bg-muted/30 min-w-[120px] max-w-[200px]">
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground truncate" title={type}>{type}</span>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-xl font-black">{data.total}</span>
+                                        <span className="text-[10px] text-muted-foreground">unid.</span>
+                                    </div>
+                                    {Object.keys(data.measures).length > 0 && (
+                                        <div className="mt-1 flex flex-wrap gap-1">
+                                            {Object.entries(data.measures).sort().map(([measure, count]) => (
+                                                <Badge key={measure} variant="outline" className="text-[9px] py-0 px-1 bg-background font-normal border-primary/20">
+                                                    {count} de {measure}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
             <Card><CardHeader className="border-b"><div className="flex justify-between items-center"><CardTitle className="font-headline">Detalle de Equipamiento</CardTitle><Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exportar PDF</Button></div></CardHeader>
                 <CardContent className="p-0 overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead>Medida</TableHead><TableHead>Acople</TableHead><TableHead className="text-right">Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
                     <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right">
