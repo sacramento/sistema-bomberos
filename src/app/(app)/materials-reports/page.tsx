@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List } from "lucide-react";
+import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Specialization, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -22,6 +22,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import EditMaterialDialog from "../materials/_components/edit-material-dialog";
 import MaterialDetailDialog from "../materials/_components/material-detail-dialog";
 import jsPDF from 'jspdf';
@@ -120,6 +121,8 @@ export default function MaterialsReportPage() {
     
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
+    
+    // PDF Export Options
     const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
@@ -346,10 +349,29 @@ export default function MaterialsReportPage() {
                 doc.text(`Total elementos: ${kpis.total}`, 14, currentY); currentY += 6;
                 doc.setFont('helvetica', 'normal');
                 doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
-                doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 10;
+                doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 8;
+                
+                // Add Summary Table in PDF if requested
+                if (inventorySummary.length > 0) {
+                    (doc as any).autoTable({
+                        startY: currentY,
+                        head: [['Tipo de Material', 'Total', 'Desglose por Medidas']],
+                        body: inventorySummary.map(([type, data]) => [
+                            type, 
+                            data.total, 
+                            Object.entries(data.measures).map(([m, c]) => `${c} de ${m}`).join(', ') || '-'
+                        ]),
+                        theme: 'grid', styles: { fontSize: 8 }, headStyles: { fillColor: '#666' }
+                    });
+                    currentY = (doc as any).lastAutoTable.finalY + 10;
+                }
             }
 
             if (includeInventoryDetails && sortedFilteredMaterials.length > 0) {
+                if (currentY > 180) { doc.addPage(); currentY = 20; }
+                doc.setFontSize(14); doc.setTextColor(40); doc.setFont('helvetica', 'bold');
+                doc.text(`Detalle de Inventario`, 14, currentY); currentY += 6;
+                
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['Código', 'Nombre', 'Ubicación', 'Medida', 'Acople', 'Estado']],
@@ -404,27 +426,27 @@ export default function MaterialsReportPage() {
             </div>
 
             {inventorySummary.length > 0 && (
-                <Card className="border-primary/20 shadow-sm">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-bold uppercase text-muted-foreground flex items-center gap-2">
+                <Card className="border-primary/20 shadow-sm overflow-hidden">
+                    <CardHeader className="pb-2 bg-primary/5 border-b">
+                        <CardTitle className="text-sm font-bold uppercase text-primary flex items-center gap-2">
                             <List className="h-4 w-4" /> Resumen de Cantidades
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-3">
+                    <CardContent className="pt-4">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                             {inventorySummary.map(([type, data]) => (
-                                <div key={type} className="flex flex-col border rounded-lg p-2 bg-muted/30 min-w-[120px] max-w-[200px]">
-                                    <span className="text-[10px] uppercase font-bold text-muted-foreground truncate" title={type}>{type}</span>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl font-black">{data.total}</span>
-                                        <span className="text-[10px] text-muted-foreground">unid.</span>
+                                <div key={type} className="flex flex-col p-2 border rounded bg-background hover:bg-muted/30 transition-colors">
+                                    <span className="text-[10px] font-bold text-muted-foreground uppercase truncate" title={type}>{type}</span>
+                                    <div className="flex items-baseline gap-1 mt-1">
+                                        <span className="text-lg font-black text-primary">{data.total}</span>
+                                        <span className="text-[9px] text-muted-foreground font-medium">unid.</span>
                                     </div>
                                     {Object.keys(data.measures).length > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">
                                             {Object.entries(data.measures).sort().map(([measure, count]) => (
-                                                <Badge key={measure} variant="outline" className="text-[9px] py-0 px-1 bg-background font-normal border-primary/20">
+                                                <span key={measure} className="text-[9px] bg-muted px-1.5 py-0.5 rounded-full text-muted-foreground font-semibold">
                                                     {count} de {measure}
-                                                </Badge>
+                                                </span>
                                             ))}
                                         </div>
                                     )}
@@ -435,47 +457,102 @@ export default function MaterialsReportPage() {
                 </Card>
             )}
 
-            <Card><CardHeader className="border-b"><div className="flex justify-between items-center"><CardTitle className="font-headline">Detalle de Equipamiento</CardTitle><Button onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Exportar PDF</Button></div></CardHeader>
-                <CardContent className="p-0 overflow-x-auto"><Table><TableHeader><TableRow><TableHead className="cursor-pointer" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead><TableHead className="cursor-pointer" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead><TableHead>Medida</TableHead><TableHead>Acople</TableHead><TableHead className="text-right">Estado</TableHead><TableHead className="text-right">Acciones</TableHead></TableRow></TableHeader>
-                    <TableBody>{sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (<TableRow key={m.id}><TableCell className="font-mono text-xs font-bold">{m.codigo || 'S/C'}</TableCell><TableCell className="text-sm font-medium">{m.nombre}</TableCell><TableCell className="text-xs">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell><TableCell className="text-xs">{m.medida || '-'}</TableCell><TableCell className="text-xs">{m.acople || '-'}</TableCell><TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[10px]">{m.estado}</Badge></TableCell><TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                            <AlertDialog>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4"/></Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => setDetailItem(m)}><Eye className="h-4 w-4 mr-2" /> Ver Detalles</DropdownMenuItem>
-                                        {canEditMaterial(m) && (
-                                            <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
-                                                <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Editar</DropdownMenuItem>
-                                            </EditMaterialDialog>
-                                        )}
-                                        {canDeleteMaterial(m) && (
-                                            <>
-                                                <DropdownMenuSeparator />
-                                                <AlertDialogTrigger asChild>
-                                                    <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Eliminar</DropdownMenuItem>
-                                                </AlertDialogTrigger>
-                                            </>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
-                                        <AlertDialogDescription>{isPrivileged ? "Esta acción eliminará el material permanentemente." : "Se enviará una solicitud de baja para revisión del administrador."}</AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">{isPrivileged ? "Eliminar" : "Enviar Solicitud"}</AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                            </AlertDialog>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <Card className="lg:col-span-1 border-primary/20 bg-muted/10 h-fit">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-bold uppercase flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-primary" /> Opciones de PDF
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-2">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="kpi-opt" checked={includeKPIs} onCheckedChange={(v) => setIncludeKPIs(!!v)} />
+                            <Label htmlFor="kpi-opt" className="text-xs cursor-pointer">Incluir Resumen Estadístico</Label>
                         </div>
-                    </TableCell></TableRow>)) : (<TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>)}</TableBody>
-                </Table></CardContent>
-            </Card>
+                        <div className="flex items-center space-x-2">
+                            <Checkbox id="list-opt" checked={includeInventoryDetails} onCheckedChange={(v) => setIncludeInventoryDetails(!!v)} />
+                            <Label htmlFor="list-opt" className="text-xs cursor-pointer">Incluir Listado Detallado</Label>
+                        </div>
+                        <Button className="w-full mt-2" onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
+                            {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                            Descargar Informe
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-3">
+                    <CardHeader className="border-b bg-muted/20">
+                        <div className="flex justify-between items-center">
+                            <CardTitle className="font-headline text-lg">Detalle de Equipamiento</CardTitle>
+                            <Badge variant="outline">{sortedFilteredMaterials.length} resultados</Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0 overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="cursor-pointer text-[11px]" onClick={() => requestSort('codigo')}>Código {getSortIcon('codigo')}</TableHead>
+                                    <TableHead className="cursor-pointer text-[11px]" onClick={() => requestSort('nombre')}>Nombre {getSortIcon('nombre')}</TableHead>
+                                    <TableHead className="cursor-pointer text-[11px]" onClick={() => requestSort('ubicacion')}>Ubicación {getSortIcon('ubicacion')}</TableHead>
+                                    <TableHead className="text-[11px]">Medida</TableHead>
+                                    <TableHead className="text-[11px]">Acople</TableHead>
+                                    <TableHead className="text-right text-[11px]">Estado</TableHead>
+                                    <TableHead className="text-right text-[11px]">Acciones</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sortedFilteredMaterials.length > 0 ? sortedFilteredMaterials.map(m => (
+                                    <TableRow key={m.id}>
+                                        <TableCell className="font-mono text-[10px] font-bold">{m.codigo || 'S/C'}</TableCell>
+                                        <TableCell className="text-[11px] font-medium">{m.nombre}</TableCell>
+                                        <TableCell className="text-[10px]">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell>
+                                        <TableCell className="text-[10px]">{m.medida || '-'}</TableCell>
+                                        <TableCell className="text-[10px]">{m.acople || '-'}</TableCell>
+                                        <TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[9px] h-5">{m.estado}</Badge></TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <AlertDialog>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon" className="h-7 w-7"><MoreHorizontal className="h-3 w-3"/></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => setDetailItem(m)}><Eye className="h-4 w-4 mr-2" /> Ver Detalles</DropdownMenuItem>
+                                                            {canEditMaterial(m) && (
+                                                                <EditMaterialDialog material={m} onMaterialUpdated={handleDataChange}>
+                                                                    <DropdownMenuItem onSelect={e => e.preventDefault()}><Edit className="mr-2 h-4 w-4"/> Editar</DropdownMenuItem>
+                                                                </EditMaterialDialog>
+                                                            )}
+                                                            {canDeleteMaterial(m) && (
+                                                                <>
+                                                                    <DropdownMenuSeparator />
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem className="text-destructive"><Trash2 className="mr-2 h-4 w-4"/> Eliminar</DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                </>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                    <AlertDialogContent>
+                                                        <AlertDialogHeader>
+                                                            <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                                                            <AlertDialogDescription>{isPrivileged ? "Esta acción eliminará el material permanentemente." : "Se enviará una solicitud de baja para revisión del administrador."}</AlertDialogDescription>
+                                                        </AlertDialogHeader>
+                                                        <AlertDialogFooter>
+                                                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                            <AlertDialogAction onClick={() => handleDelete(m)} variant="destructive">{isPrivileged ? "Eliminar" : "Enviar Solicitud"}</AlertDialogAction>
+                                                        </AlertDialogFooter>
+                                                    </AlertDialogContent>
+                                                </AlertDialog>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                )) : (<TableRow><TableCell colSpan={7} className="h-24 text-center italic text-muted-foreground">Sin resultados.</TableCell></TableRow>)}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </div>
             <MaterialDetailDialog material={detailItem} open={!!detailItem} onOpenChange={(isOpen) => { if (!isOpen) setDetailItem(null); }} />
         </div>
     );
