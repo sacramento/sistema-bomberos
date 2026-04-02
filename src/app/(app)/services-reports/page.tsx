@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -236,21 +236,30 @@ export default function ServicesReportPage() {
     }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes, filterFirefighter, filterStationOfficer, filterServiceId]);
 
     const summaryStats = useMemo(() => {
-        const servicesByType = filteredServices.reduce((acc, service) => {
-            acc[service.serviceType] = (acc[service.serviceType] || 0) + 1;
-            return acc;
-        }, {} as Record<ServiceType, number>);
+        const stats: Record<string, { count: number, ids: string[] }> = {};
+        
+        filteredServices.forEach(s => {
+            const type = s.serviceType;
+            if (!stats[type]) stats[type] = { count: 0, ids: [] };
+            stats[type].count++;
+            stats[type].ids.push(getServiceId(s));
+        });
 
-        const pieData = Object.entries(servicesByType).map(([name, value]) => ({
-            name,
-            value,
-            fill: SERVICE_TYPE_COLORS[name as ServiceType] || '#ccc'
-        })).filter(item => item.value > 0);
+        const total = filteredServices.length;
+        const tableData = Object.entries(stats).map(([type, data]) => ({
+            type,
+            count: data.count,
+            percentage: total > 0 ? (data.count / total) * 100 : 0,
+            ids: data.ids.join(', ')
+        })).sort((a, b) => b.count - a.count);
 
-        return {
-            totalServices: filteredServices.length,
-            pieData
-        }
+        const pieData = tableData.map(item => ({
+            name: item.type,
+            value: item.count,
+            fill: SERVICE_TYPE_COLORS[item.type as ServiceType] || '#ccc'
+        }));
+
+        return { totalServices: total, pieData, tableData };
     }, [filteredServices]);
     
     const generateSummaryPdf = async () => {
@@ -392,11 +401,78 @@ export default function ServicesReportPage() {
                     <div className="space-y-2"><Label>Zona</Label><MultiSelectFilter title="Zonas" options={zones.map(z => ({ value: z, label: `Zona ${z}` }))} selected={filterZones} onSelectedChange={setFilterZones} /></div>
                 </CardContent>
             </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="font-headline">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2"><CardHeader><CardTitle className="font-headline">Detalle de Servicios</CardTitle></CardHeader><CardContent className="max-h-[400px] overflow-y-auto"><Table><TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Tipo</TableHead><TableHead>Fecha</TableHead><TableHead>Duración</TableHead></TableRow></TableHeader><TableBody>{filteredServices.length > 0 ? filteredServices.map((service) => (<TableRow key={service.id}><TableCell className="font-mono">{getServiceId(service)}</TableCell><TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white">{service.serviceType}</Badge></TableCell><TableCell>{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell><TableCell>{formatExactDuration(service.startDateTime, service.endDateTime)}</TableCell></TableRow>)) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">No se encontraron servicios.</TableCell></TableRow>)}</TableBody></Table></CardContent></Card>
+                <Card className="lg:col-span-1">
+                    <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Distribución</CardTitle></CardHeader>
+                    <CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent>
+                </Card>
+                
+                <Card className="lg:col-span-2">
+                    <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><List className="h-5 w-5 text-primary" /> Resumen por Tipo</CardTitle></CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Tipo de Servicio</TableHead>
+                                    <TableHead className="text-center">Cantidad</TableHead>
+                                    <TableHead className="text-center">%</TableHead>
+                                    <TableHead>Nº de Servicios</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {summaryStats.tableData.length > 0 ? summaryStats.tableData.map((row) => (
+                                    <TableRow key={row.type}>
+                                        <TableCell className="font-medium">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SERVICE_TYPE_COLORS[row.type as ServiceType] }} />
+                                                {row.type}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center font-bold">{row.count}</TableCell>
+                                        <TableCell className="text-center text-xs text-muted-foreground">{row.percentage.toFixed(1)}%</TableCell>
+                                        <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate">{row.ids}</TableCell>
+                                    </TableRow>
+                                )) : (
+                                    <TableRow><TableCell colSpan={4} className="h-24 text-center">Sin datos para mostrar.</TableCell></TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
-            <Card><CardHeader><CardTitle className="font-headline">Exportar</CardTitle></CardHeader><CardContent className="flex gap-4"><Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0}>{generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} PDF Resumido</Button><Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary">{generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} PDF Detallado</Button></CardContent></Card>
+
+            <Card>
+                <CardHeader><CardTitle className="font-headline">Detalle Individual de Servicios</CardTitle></CardHeader>
+                <CardContent className="max-h-[400px] overflow-y-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>ID</TableHead>
+                                <TableHead>Tipo</TableHead>
+                                <TableHead>Fecha</TableHead>
+                                <TableHead>Duración</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredServices.length > 0 ? filteredServices.map((service) => (<TableRow key={service.id}><TableCell className="font-mono text-xs">{getServiceId(service)}</TableCell><TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white text-[10px]">{service.serviceType}</Badge></TableCell><TableCell className="text-xs">{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell><TableCell className="text-xs">{formatExactDuration(service.startDateTime, service.endDateTime)}</TableCell></TableRow>)) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">No se encontraron servicios.</TableCell></TableRow>)}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
+            <Card><CardHeader><CardTitle className="font-headline">Exportar Reportes</CardTitle></CardHeader>
+                <CardContent className="flex gap-4">
+                    <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0}>
+                        {generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} 
+                        PDF Resumido
+                    </Button>
+                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary">
+                        {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} 
+                        PDF Detallado
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
 }
