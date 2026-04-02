@@ -282,7 +282,7 @@ export default function ServicesReportPage() {
             doc.setFontSize(14); doc.setTextColor(40);
             doc.text(`Distribución de Servicios`, 14, currentY); currentY += 10;
             
-            // Draw Pie Chart manually in PDF
+            // Draw Pie Chart using doc.triangle for maximum compatibility
             const centerX = 150;
             const centerY = currentY + 30;
             const radius = 25;
@@ -298,16 +298,19 @@ export default function ServicesReportPage() {
                 
                 doc.setFillColor(r, g, b);
                 
-                const points = [[centerX, centerY]];
-                const segments = 20;
-                for (let i = 0; i <= segments; i++) {
-                    const angle = startAngle + (i / segments) * sliceAngle;
-                    points.push([
-                        centerX + radius * Math.cos(angle),
-                        centerY + radius * Math.sin(angle)
-                    ]);
+                const segments = 30; // High resolution for the arc
+                for (let i = 0; i < segments; i++) {
+                    const angle1 = startAngle + (i / segments) * sliceAngle;
+                    const angle2 = startAngle + ((i + 1) / segments) * sliceAngle;
+                    
+                    const x1 = centerX + radius * Math.cos(angle1);
+                    const y1 = centerY + radius * Math.sin(angle1);
+                    const x2 = centerX + radius * Math.cos(angle2);
+                    const y2 = centerY + radius * Math.sin(angle2);
+                    
+                    // Each slice is a series of small triangles sharing the center point
+                    doc.triangle(centerX, centerY, x1, y1, x2, y2, 'F');
                 }
-                doc.polygon(points, 'F');
                 startAngle += sliceAngle;
             });
 
