@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List, FileText, LayoutList } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List, FileText, LayoutList, ArrowUpDown, ArrowUp, ArrowDown, Eye } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -213,6 +213,7 @@ export default function ServicesReportPage() {
                 const personnelIds = new Set([
                     service.commandId,
                     service.serviceChiefId,
+                    service.stationOfficerId,
                     ...(service.onDutyIds || []),
                     ...(service.offDutyIds || [])
                 ]);
@@ -279,19 +280,49 @@ export default function ServicesReportPage() {
             
             let currentY = 45;
             doc.setFontSize(14); doc.setTextColor(40);
-            doc.text(`Resumen Estadístico por Tipo`, 14, currentY); currentY += 10;
+            doc.text(`Distribución de Servicios`, 14, currentY); currentY += 10;
             
-            // Stats Table (The data of the Pie Chart)
+            // Draw Pie Chart manually in PDF
+            const centerX = 150;
+            const centerY = currentY + 30;
+            const radius = 25;
+            let startAngle = 0;
+            const total = summaryStats.totalServices;
+
+            summaryStats.tableData.forEach(item => {
+                const sliceAngle = (item.count / total) * 2 * Math.PI;
+                const colorHex = SERVICE_TYPE_COLORS[item.type as ServiceType] || '#cccccc';
+                const r = parseInt(colorHex.slice(1, 3), 16);
+                const g = parseInt(colorHex.slice(3, 5), 16);
+                const b = parseInt(colorHex.slice(5, 7), 16);
+                
+                doc.setFillColor(r, g, b);
+                
+                const points = [[centerX, centerY]];
+                const segments = 20;
+                for (let i = 0; i <= segments; i++) {
+                    const angle = startAngle + (i / segments) * sliceAngle;
+                    points.push([
+                        centerX + radius * Math.cos(angle),
+                        centerY + radius * Math.sin(angle)
+                    ]);
+                }
+                doc.polygon(points, 'F');
+                startAngle += sliceAngle;
+            });
+
+            // Summary Table
             (doc as any).autoTable({
                 startY: currentY,
-                head: [['Tipo de Servicio', 'Cantidad', 'Porcentaje (%)']],
+                margin: { right: 80 },
+                head: [['Tipo de Servicio', 'Cant.', '%']],
                 body: summaryStats.tableData.map(item => [item.type, item.count, `${item.percentage.toFixed(1)}%`]),
                 theme: 'grid', headStyles: { fillColor: '#666' }, styles: { fontSize: 9 }
             });
             
-            currentY = (doc as any).lastAutoTable.finalY + 15;
+            currentY = Math.max((doc as any).lastAutoTable.finalY + 15, centerY + radius + 15);
             doc.setFontSize(14); doc.setTextColor(40);
-            doc.text(`Listado General de Intervenciones`, 14, currentY); currentY += 8;
+            doc.text(`Listado de Intervenciones`, 14, currentY); currentY += 8;
 
             (doc as any).autoTable({
                 startY: currentY,
@@ -315,13 +346,13 @@ export default function ServicesReportPage() {
         const doc = new jsPDF();
         try {
             filteredServices.forEach((service, index) => {
+                if (index > 0) doc.addPage();
                 addPdfHeader(doc, "Ficha Detallada de Servicio");
                 
                 let currentY = 45;
                 doc.setFontSize(16); doc.setTextColor(220, 53, 69);
                 doc.text(`SERVICIO Nº ${getServiceId(service)}`, 14, currentY); currentY += 10;
                 
-                // Section 1: Basic Info
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['DATOS GENERALES', 'DETALLE']],
@@ -342,7 +373,6 @@ export default function ServicesReportPage() {
                 
                 currentY = (doc as any).lastAutoTable.finalY + 10;
 
-                // Section 2: Personnel
                 const getF = (id?: string) => { if(!id) return 'N/A'; const f = firefighterMap.get(id); return f ? `${f.legajo} - ${f.lastName}` : 'ID No encontrado'; };
                 
                 (doc as any).autoTable({
@@ -358,21 +388,19 @@ export default function ServicesReportPage() {
 
                 currentY = (doc as any).lastAutoTable.finalY + 10;
 
-                // Section 3: Narratives
                 (doc as any).autoTable({
                     startY: currentY,
                     head: [['NARRATIVA Y OBSERVACIONES']],
                     body: [
-                        [`COLABORACIÓN:\n${service.collaboration || 'Ninguna'}`],
-                        [`RECONOCIMIENTO:\n${service.recognition || 'Ninguno'}`],
-                        [`OBSERVACIONES:\n${service.observations || 'Sin observaciones.'}`]
+                        [`COLABORACIÓN: ${service.collaboration || 'Ninguna'}`],
+                        [`RECONOCIMIENTO: ${service.recognition || 'Ninguno'}`],
+                        [`OBSERVACIONES: ${service.observations || 'Sin observaciones.'}`]
                     ],
                     theme: 'grid', styles: { fontSize: 9, cellPadding: 3 },
                 });
 
                 currentY = (doc as any).lastAutoTable.finalY + 10;
 
-                // Section 4: Dotaciones
                 const onDuty = service.onDutyIds?.map(id => getF(id)).join(', ') || 'Ninguno';
                 const offDuty = service.offDutyIds?.map(id => getF(id)).join(', ') || 'Ninguno';
 
@@ -385,8 +413,6 @@ export default function ServicesReportPage() {
                     ],
                     theme: 'grid', styles: { fontSize: 8 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
                 });
-
-                if (index < filteredServices.length - 1) doc.addPage();
             });
             doc.save(`reporte-servicios-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingDetailedPdf(false); }
@@ -474,7 +500,7 @@ export default function ServicesReportPage() {
             <Card className="shadow-md">
                 <CardHeader className="border-b bg-muted/30">
                     <div className="flex justify-between items-center">
-                        <CardTitle className="font-headline text-lg">Historial Detallado</CardTitle>
+                        <CardTitle className="font-headline text-lg">Historial de Intervenciones</CardTitle>
                         <Badge variant="outline" className="h-6">{filteredServices.length} servicios</Badge>
                     </div>
                 </CardHeader>
@@ -505,11 +531,11 @@ export default function ServicesReportPage() {
                 <CardFooter className="border-t bg-muted/10 p-6 flex flex-col sm:flex-row gap-4">
                     <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0} className="w-full sm:w-auto">
                         {generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} 
-                        Descargar Informe Resumido (Torta + Tabla)
+                        Descargar PDF Resumido
                     </Button>
                     <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary" className="w-full sm:w-auto">
                         {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} 
-                        Descargar Fichas Detalladas (1 por hoja)
+                        Descargar PDF Detallado (1 por hoja)
                     </Button>
                 </CardFooter>
             </Card>
