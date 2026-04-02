@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List } from "lucide-react";
+import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List, FileText, LayoutList } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,6 @@ import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip } from "recha
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { APP_CONFIG } from "@/lib/config";
 
 
@@ -165,10 +164,8 @@ export default function ServicesReportPage() {
     const [filterZones, setFilterZones] = useState<string[]>([]);
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
-    const [filterStationOfficer, setFilterStationOfficer] = useState('all');
     const [filterServiceId, setFilterServiceId] = useState('');
     const [openFirefighterCombobox, setOpenFirefighterCombobox] = useState(false);
-    const [openStationOfficerCombobox, setOpenStationOfficerCombobox] = useState(false);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -211,7 +208,7 @@ export default function ServicesReportPage() {
             if (filterCuarteles.length > 0 && !filterCuarteles.includes(service.cuartel)) return false;
             if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
             if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
-            if (filterStationOfficer !== 'all' && service.stationOfficerId !== filterStationOfficer) return false;
+            
             if (filterFirefighter !== 'all') {
                 const personnelIds = new Set([
                     service.commandId,
@@ -233,7 +230,7 @@ export default function ServicesReportPage() {
             }
             return true;
         });
-    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterFirefighter, filterStationOfficer, filterServiceId]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterFirefighter, filterServiceId]);
 
     const summaryStats = useMemo(() => {
         const stats: Record<string, { count: number, ids: string[] }> = {};
@@ -262,18 +259,40 @@ export default function ServicesReportPage() {
         return { totalServices: total, pieData, tableData };
     }, [filteredServices]);
     
+    const firefighterMap = useMemo(() => new Map(allFirefighters.map(f => [f.id, f])), [allFirefighters]);
+    const vehicleMap = useMemo(() => new Map(allVehicles.map(v => [v.id, v])), [allVehicles]);
+
+    const addPdfHeader = (doc: jsPDF, title: string) => {
+        doc.setFillColor(220, 53, 69);
+        doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
+        doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
+        doc.text(`${title} - ${APP_CONFIG.name}`, 14, 22);
+        if (logoDataUrl) doc.addImage(logoDataUrl, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+    };
+
     const generateSummaryPdf = async () => {
         if (!logoDataUrl) return;
         setGeneratingSummaryPdf(true);
         const doc = new jsPDF();
         try {
-            doc.setFillColor(220, 53, 69);
-            doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
-            doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-            doc.text(`Reporte de Servicios - ${APP_CONFIG.name}`, 14, 22);
-            doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
+            addPdfHeader(doc, "Reporte de Servicios (Resumen)");
             
-            let currentY = 50;
+            let currentY = 45;
+            doc.setFontSize(14); doc.setTextColor(40);
+            doc.text(`Resumen Estadístico por Tipo`, 14, currentY); currentY += 10;
+            
+            // Stats Table (The data of the Pie Chart)
+            (doc as any).autoTable({
+                startY: currentY,
+                head: [['Tipo de Servicio', 'Cantidad', 'Porcentaje (%)']],
+                body: summaryStats.tableData.map(item => [item.type, item.count, `${item.percentage.toFixed(1)}%`]),
+                theme: 'grid', headStyles: { fillColor: '#666' }, styles: { fontSize: 9 }
+            });
+            
+            currentY = (doc as any).lastAutoTable.finalY + 15;
+            doc.setFontSize(14); doc.setTextColor(40);
+            doc.text(`Listado General de Intervenciones`, 14, currentY); currentY += 8;
+
             (doc as any).autoTable({
                 startY: currentY,
                 head: [['ID', 'Tipo', 'Fecha', 'Dirección', 'Duración']],
@@ -284,7 +303,7 @@ export default function ServicesReportPage() {
                     item.address,
                     formatExactDuration(item.startDateTime, item.endDateTime)
                 ]),
-                theme: 'striped', headStyles: { fillColor: '#333' },
+                theme: 'striped', headStyles: { fillColor: '#333' }, styles: { fontSize: 8 }
             });
             doc.save(`reporte-servicios-resumen-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingSummaryPdf(false); }
@@ -296,45 +315,104 @@ export default function ServicesReportPage() {
         const doc = new jsPDF();
         try {
             filteredServices.forEach((service, index) => {
-                doc.setFillColor(220, 53, 69);
-                doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
-                doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-                doc.text(`Ficha de Servicio - ${APP_CONFIG.name}`, 14, 22);
-                doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+                addPdfHeader(doc, "Ficha Detallada de Servicio");
                 
                 let currentY = 45;
-                doc.setFontSize(12); doc.setTextColor(0); doc.text(getServiceId(service), 14, currentY); currentY += 10;
+                doc.setFontSize(16); doc.setTextColor(220, 53, 69);
+                doc.text(`SERVICIO Nº ${getServiceId(service)}`, 14, currentY); currentY += 10;
+                
+                // Section 1: Basic Info
                 (doc as any).autoTable({
                     startY: currentY,
-                    body: [['Tipo', service.serviceType], ['Dirección', service.address], ['Inicio', service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'], ['Fin', service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A']],
-                    theme: 'grid', styles: { fontSize: 10 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+                    head: [['DATOS GENERALES', 'DETALLE']],
+                    body: [
+                        ['Tipo de Servicio', service.serviceType],
+                        ['Código', service.serviceCode || 'N/A'],
+                        ['Dirección', service.address],
+                        ['Zona', `Zona ${service.zone}`],
+                        ['Inicio', service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'],
+                        ['Fin', service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A'],
+                        ['Duración', formatExactDuration(service.startDateTime, service.endDateTime)],
+                        ['Convocatoria', service.summonMethods?.join(', ') || 'N/A'],
+                        ['En Conjunto', service.inConjunction ? 'SÍ' : 'NO'],
+                        ['Estado', service.status || 'Activo']
+                    ],
+                    theme: 'grid', styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
                 });
+                
                 currentY = (doc as any).lastAutoTable.finalY + 10;
+
+                // Section 2: Personnel
+                const getF = (id?: string) => { if(!id) return 'N/A'; const f = firefighterMap.get(id); return f ? `${f.legajo} - ${f.lastName}` : 'ID No encontrado'; };
+                
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['RESPONSABLES', 'NOMBRE Y LEGAJO']],
+                    body: [
+                        ['Comando', getF(service.commandId)],
+                        ['Jefe de Servicio', getF(service.serviceChiefId)],
+                        ['Cuartelero', getF(service.stationOfficerId)]
+                    ],
+                    theme: 'grid', styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
+                });
+
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+
+                // Section 3: Narratives
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['NARRATIVA Y OBSERVACIONES']],
+                    body: [
+                        [`COLABORACIÓN:\n${service.collaboration || 'Ninguna'}`],
+                        [`RECONOCIMIENTO:\n${service.recognition || 'Ninguno'}`],
+                        [`OBSERVACIONES:\n${service.observations || 'Sin observaciones.'}`]
+                    ],
+                    theme: 'grid', styles: { fontSize: 9, cellPadding: 3 },
+                });
+
+                currentY = (doc as any).lastAutoTable.finalY + 10;
+
+                // Section 4: Dotaciones
+                const onDuty = service.onDutyIds?.map(id => getF(id)).join(', ') || 'Ninguno';
+                const offDuty = service.offDutyIds?.map(id => getF(id)).join(', ') || 'Ninguno';
+
+                (doc as any).autoTable({
+                    startY: currentY,
+                    head: [['DOTACIÓN', 'INTEGRANTES']],
+                    body: [
+                        ['Personal de Servicio', onDuty],
+                        ['Personal de Pasiva', offDuty]
+                    ],
+                    theme: 'grid', styles: { fontSize: 8 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 } },
+                });
+
                 if (index < filteredServices.length - 1) doc.addPage();
             });
             doc.save(`reporte-servicios-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingDetailedPdf(false); }
     };
     
-    if (loading) return <Skeleton className="w-full h-[600px]" />;
-    
     return (
-        <div className="space-y-8">
-            <PageHeader title="Reportes de Servicios" description="Análisis de intervenciones y estadísticas operativas." />
-            <Card><CardHeader><CardTitle className="font-headline">Filtros del Reporte</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2"><Label>Rango de Fechas</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} /></PopoverContent></Popover></div>
-                    <div className="space-y-2"><Label>Buscar por ID</Label><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Ej: C1-24/001" className="pl-9" value={filterServiceId} onChange={(e) => setFilterServiceId(e.target.value)} /></div></div>
-                    <div className="space-y-2"><Label>Tipo de Servicio</Label><MultiSelectFilter title="Tipos" options={serviceTypes.map(t => ({ value: t, label: t }))} selected={filterServiceTypes} onSelectedChange={setFilterServiceTypes} /></div>
-                    <div className="space-y-2"><Label>Cuartel</Label><MultiSelectFilter title="Cuarteles" options={cuarteles.map(t => ({ value: t, label: t }))} selected={filterCuarteles} onSelectedChange={setFilterCuarteles} /></div>
-                    <div className="space-y-2"><Label>Zona</Label><MultiSelectFilter title="Zonas" options={zones.map(z => ({ value: z, label: `Zona ${z}` }))} selected={filterZones} onSelectedChange={setFilterZones} /></div>
+        <div className="space-y-8 pb-20">
+            <PageHeader title="Reportes Operativos de Servicios" description="Filtre intervenciones y genere informes de gestión o fichas técnicas." />
+            
+            <Card className="shadow-sm">
+                <CardHeader className="bg-muted/30 border-b">
+                    <CardTitle className="text-base flex items-center gap-2"><LayoutList className="h-5 w-5 text-primary" /> Filtros de Búsqueda</CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 pt-6">
+                    <div className="space-y-2"><Label className="text-xs font-bold">Rango de Fechas</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-xs h-10", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Historial Completo"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Buscar por ID</Label><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Ej: C1-24/001" className="pl-9 h-10 text-xs" value={filterServiceId} onChange={(e) => setFilterServiceId(e.target.value)} /></div></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Tipo de Servicio</Label><MultiSelectFilter title="Tipos" options={serviceTypes.map(t => ({ value: t, label: t }))} selected={filterServiceTypes} onSelectedChange={setFilterServiceTypes} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={cuarteles.map(t => ({ value: t, label: t }))} selected={filterCuarteles} onSelectedChange={setFilterCuarteles} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Zona</Label><MultiSelectFilter title="Zonas" options={zones.map(z => ({ value: z, label: `Zona ${z}` }))} selected={filterZones} onSelectedChange={setFilterZones} /></div>
                 </CardContent>
             </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1">
-                    <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Distribución</CardTitle></CardHeader>
-                    <CardContent className="h-64">
+                <Card className="lg:col-span-1 shadow-md overflow-hidden">
+                    <CardHeader className="bg-muted/20 border-b"><CardTitle className="font-headline text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Distribución (%)</CardTitle></CardHeader>
+                    <CardContent className="h-72 pt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie 
@@ -343,47 +421,49 @@ export default function ServicesReportPage() {
                                     nameKey="name" 
                                     cx="50%" 
                                     cy="50%" 
-                                    outerRadius={80} 
-                                    innerRadius={50}
+                                    outerRadius={85} 
+                                    innerRadius={55}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >
                                     {summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                                 </Pie>
-                                <Legend verticalAlign="bottom" height={36}/>
+                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/>
                                 <Tooltip />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
                 
-                <Card className="lg:col-span-2">
-                    <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><List className="h-5 w-5 text-primary" /> Resumen por Tipo</CardTitle></CardHeader>
+                <Card className="lg:col-span-2 shadow-md">
+                    <CardHeader className="bg-muted/20 border-b"><CardTitle className="font-headline text-lg flex items-center gap-2"><List className="h-5 w-5 text-primary" /> Resumen Estadístico por Tipo</CardTitle></CardHeader>
                     <CardContent className="p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Tipo</TableHead>
-                                    <TableHead className="text-center">Cant.</TableHead>
-                                    <TableHead className="text-center">%</TableHead>
-                                    <TableHead>Nº Planillas</TableHead>
+                                    <TableHead className="text-center">Cantidad</TableHead>
+                                    <TableHead className="text-center">% Incidencia</TableHead>
+                                    <TableHead className="hidden sm:table-cell">IDs Asociados</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {summaryStats.tableData.length > 0 ? summaryStats.tableData.map((row) => (
                                     <TableRow key={row.type}>
-                                        <TableCell className="font-medium">
+                                        <TableCell className="font-medium text-xs">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-2 h-2 rounded-full" style={{ backgroundColor: SERVICE_TYPE_COLORS[row.type as ServiceType] }} />
                                                 {row.type}
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-center font-bold">{row.count}</TableCell>
-                                        <TableCell className="text-center text-xs text-muted-foreground">{row.percentage.toFixed(1)}%</TableCell>
-                                        <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate">{row.ids}</TableCell>
+                                        <TableCell className="text-center font-bold text-sm">{row.count}</TableCell>
+                                        <TableCell className="text-center">
+                                            <Badge variant="secondary" className="text-[10px] font-bold">{row.percentage.toFixed(1)}%</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-[10px] text-muted-foreground max-w-[200px] truncate hidden sm:table-cell">{row.ids}</TableCell>
                                     </TableRow>
                                 )) : (
-                                    <TableRow><TableCell colSpan={4} className="h-24 text-center">Sin datos para mostrar.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={4} className="h-24 text-center italic text-muted-foreground">Sin datos en la selección.</TableCell></TableRow>
                                 )}
                             </TableBody>
                         </Table>
@@ -391,36 +471,47 @@ export default function ServicesReportPage() {
                 </Card>
             </div>
 
-            <Card>
-                <CardHeader><CardTitle className="font-headline text-lg">Historial Detallado</CardTitle></CardHeader>
-                <CardContent className="max-h-[400px] overflow-y-auto">
+            <Card className="shadow-md">
+                <CardHeader className="border-b bg-muted/30">
+                    <div className="flex justify-between items-center">
+                        <CardTitle className="font-headline text-lg">Historial Detallado</CardTitle>
+                        <Badge variant="outline" className="h-6">{filteredServices.length} servicios</Badge>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0 overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Tipo</TableHead>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Duración</TableHead>
+                                <TableHead className="text-xs">ID Planilla</TableHead>
+                                <TableHead className="text-xs">Tipo</TableHead>
+                                <TableHead className="text-xs">Fecha</TableHead>
+                                <TableHead className="text-xs">Zona</TableHead>
+                                <TableHead className="text-right text-xs">Duración</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredServices.length > 0 ? filteredServices.map((service) => (<TableRow key={service.id}><TableCell className="font-mono text-xs">{getServiceId(service)}</TableCell><TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white text-[10px]">{service.serviceType}</Badge></TableCell><TableCell className="text-xs">{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell><TableCell className="text-xs">{formatExactDuration(service.startDateTime, service.endDateTime)}</TableCell></TableRow>)) : (<TableRow><TableCell colSpan={4} className="h-24 text-center">No se encontraron servicios.</TableCell></TableRow>)}
+                            {filteredServices.length > 0 ? filteredServices.map((service) => (
+                                <TableRow key={service.id}>
+                                    <TableCell className="font-mono text-xs font-bold">{getServiceId(service)}</TableCell>
+                                    <TableCell><Badge style={{ backgroundColor: SERVICE_TYPE_COLORS[service.serviceType] }} className="text-white text-[9px] h-5">{service.serviceType}</Badge></TableCell>
+                                    <TableCell className="text-xs whitespace-nowrap">{service.startDateTime ? format(parseISO(service.startDateTime), 'P', { locale: es }) : 'N/A'}</TableCell>
+                                    <TableCell className="text-xs">Z-{service.zone}</TableCell>
+                                    <TableCell className="text-right text-xs font-mono">{formatExactDuration(service.startDateTime, service.endDateTime)}</TableCell>
+                                </TableRow>
+                            )) : (<TableRow><TableCell colSpan={5} className="h-32 text-center italic text-muted-foreground">No se encontraron servicios con los filtros aplicados.</TableCell></TableRow>)}
                         </TableBody>
                     </Table>
                 </CardContent>
-            </Card>
-
-            <Card><CardHeader><CardTitle className="font-headline">Exportar Reportes</CardTitle></CardHeader>
-                <CardContent className="flex gap-4">
-                    <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0}>
+                <CardFooter className="border-t bg-muted/10 p-6 flex flex-col sm:flex-row gap-4">
+                    <Button onClick={generateSummaryPdf} disabled={generatingSummaryPdf || filteredServices.length === 0} className="w-full sm:w-auto">
                         {generatingSummaryPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} 
-                        PDF Resumido
+                        Descargar Informe Resumido (Torta + Tabla)
                     </Button>
-                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary">
-                        {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} 
-                        PDF Detallado
+                    <Button onClick={generateDetailedPdf} disabled={generatingDetailedPdf || filteredServices.length === 0} variant="secondary" className="w-full sm:w-auto">
+                        {generatingDetailedPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />} 
+                        Descargar Fichas Detalladas (1 por hoja)
                     </Button>
-                </CardContent>
+                </CardFooter>
             </Card>
         </div>
     );
