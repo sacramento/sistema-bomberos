@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarIcon, Download, Loader2, Siren, Check, ChevronsUpDown, Search, BarChart3, List } from "lucide-react";
@@ -35,16 +35,6 @@ const serviceTypes: ServiceType[] = ['Incendio', 'Rescate', 'Accidente', 'HazMat
 const cuarteles = ['C1', 'C2', 'C3'];
 const zones = Array.from({ length: 12 }, (_, i) => (i + 1).toString());
 
-const serviceCodesList = [
-    { group: 'Accidente', codes: ['1.1 AEREO', '1.2 EMBARCACIÓN', '1.3 TRÁNSITO', '1.4 OTROS'] },
-    { group: 'Fenómeno Natural', codes: ['2.1 CICLÓN', '2.2 TORNADOS Y HURACANES', '2.3 NEVADAS', '2.4 GRANIZO', '2.5 TORMENTAS', '2.6 VOLCÁN', '2.7 AVALANCHA Y ALUD', '2.8 INUNDACIÓN', '2.9 OTROS'] },
-    { group: 'Incendio', codes: ['3.1 AERONAVES', '3.2 COMERCIO', '3.3 EMBARCACIÓN', '3.4 ESTABLECIMIENTO EDUCATIVO', '3.5 ESTABLECIMIENTO PÚBLICO', '3.6 FORESTAL', '3.7 HOSPITAL Y CLINICA', '3.8 INDUSTRIA', '3.9 VEHICULO', '3.10 VIVIENDA', '3.11 OTROS'] },
-    { group: 'Materiales Peligrosos', codes: ['4.1 ESCAPE O FUGA', '4.2 DERRAME', '4.3 EXPLOSIÓN'] },
-    { group: 'Rescate', codes: ['5.1 PERSONAS', '5.2 ANIMALES', '5.3 SERV. DE AMBULANCIA'] },
-    { group: 'Servicio Especial', codes: ['6.1 CAPACITACION', '6.2 SERV. ESPECIALES', '6.3 PREVENCIÓN', '6.4 FALSA ALARMA', '6.5 REPRESENTACIÓN', '6.6 FALSO AVISO', '6.7 OTROS', '6.8 SUMINISTRO DE AGUA', '6.9 EXTRACCION DE PANALES', '6.10 RETIRO DE OBITO', '6.11 COLABORACIÓN C/FZAS. DE SEGURIDAD', '6.12 COLOCACIÓN DE DRIZA'] },
-].flatMap(group => group.codes);
-
-
 const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Incendio': "#EF4444", 
     'Rescate': "#3B82F6",
@@ -57,6 +47,19 @@ const SERVICE_TYPE_COLORS: Record<ServiceType, string> = {
     'Otros': "#64748B",
 };
 
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
+};
 
 const MultiSelectFilter = ({
     title,
@@ -161,7 +164,6 @@ export default function ServicesReportPage() {
     const [filterCuarteles, setFilterCuarteles] = useState<string[]>([]);
     const [filterZones, setFilterZones] = useState<string[]>([]);
     const [filterVehicles, setFilterVehicles] = useState<string[]>([]);
-    const [filterServiceCodes, setFilterServiceCodes] = useState<string[]>([]);
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterStationOfficer, setFilterStationOfficer] = useState('all');
     const [filterServiceId, setFilterServiceId] = useState('');
@@ -181,7 +183,7 @@ export default function ServicesReportPage() {
                 setAllVehicles(vehiclesData);
                 setAllFirefighters(firefightersData);
             } catch (error) {
-                toast({ title: "Error", description: "No se pudieron cargar los datos para los reportes.", variant: "destructive" });
+                toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
             } finally {
                 setLoading(false);
             }
@@ -194,7 +196,7 @@ export default function ServicesReportPage() {
                 reader.onloadend = () => { setLogoDataUrl(reader.result as string); };
                 reader.readAsDataURL(blob);
              } catch (error) {
-                 console.error("Failed to load logo for PDF", error);
+                 console.error("Failed to load logo", error);
              }
         }
         fetchData();
@@ -208,7 +210,6 @@ export default function ServicesReportPage() {
             if (filterServiceTypes.length > 0 && !filterServiceTypes.includes(service.serviceType)) return false;
             if (filterCuarteles.length > 0 && !filterCuarteles.includes(service.cuartel)) return false;
             if (filterZones.length > 0 && !filterZones.includes(service.zone.toString())) return false;
-            if (filterServiceCodes.length > 0 && !filterServiceCodes.includes(service.serviceCode)) return false;
             if (filterVehicles.length > 0 && !service.interveningVehicles?.some(iv => filterVehicles.includes(iv.vehicleId))) return false;
             if (filterStationOfficer !== 'all' && service.stationOfficerId !== filterStationOfficer) return false;
             if (filterFirefighter !== 'all') {
@@ -222,8 +223,7 @@ export default function ServicesReportPage() {
             }
             if(filterServiceId) {
                 const serviceIdString = getServiceId(service).toLowerCase();
-                const serviceManualId = service.manualId.toString();
-                if (!serviceIdString.includes(filterServiceId.toLowerCase()) && !serviceManualId.includes(filterServiceId)) return false;
+                if (!serviceIdString.includes(filterServiceId.toLowerCase())) return false;
             }
 
             if (filterDate?.from && service.startDateTime) {
@@ -233,7 +233,7 @@ export default function ServicesReportPage() {
             }
             return true;
         });
-    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterServiceCodes, filterFirefighter, filterStationOfficer, filterServiceId]);
+    }, [allServices, filterDate, filterServiceTypes, filterCuarteles, filterZones, filterVehicles, filterFirefighter, filterStationOfficer, filterServiceId]);
 
     const summaryStats = useMemo(() => {
         const stats: Record<string, { count: number, ids: string[] }> = {};
@@ -274,26 +274,15 @@ export default function ServicesReportPage() {
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25, undefined, 'FAST');
             
             let currentY = 50;
-            const getVehicleUsageHours = (service: Service) => {
-                 const totalMillis = service.interveningVehicles?.reduce((acc, v) => {
-                    if (v.departureDateTime && v.returnDateTime) {
-                        return acc + Math.abs(parseISO(v.returnDateTime).getTime() - parseISO(v.departureDateTime).getTime());
-                    }
-                    return acc;
-                }, 0) || 0;
-                 return (totalMillis / 36e5).toFixed(1);
-            };
-
             (doc as any).autoTable({
                 startY: currentY,
-                head: [['ID', 'Tipo', 'Fecha', 'Dirección', 'Duración', 'Uso Móviles (hs)']],
+                head: [['ID', 'Tipo', 'Fecha', 'Dirección', 'Duración']],
                 body: filteredServices.map(item => [
                     getServiceId(item),
                     item.serviceType,
                     item.startDateTime ? format(parseISO(item.startDateTime), 'P', { locale: es }) : 'N/A',
                     item.address,
-                    formatExactDuration(item.startDateTime, item.endDateTime),
-                    getVehicleUsageHours(item),
+                    formatExactDuration(item.startDateTime, item.endDateTime)
                 ]),
                 theme: 'striped', headStyles: { fillColor: '#333' },
             });
@@ -305,81 +294,25 @@ export default function ServicesReportPage() {
         if (!logoDataUrl) return;
         setGeneratingDetailedPdf(true);
         const doc = new jsPDF();
-        const pageHeight = doc.internal.pageSize.height;
-        const pageMargin = 15;
-        const addPageIfNeeded = (y: number) => {
-            if (y > pageHeight - 20) {
-                doc.addPage();
-                return pageMargin;
-            }
-            return y;
-        };
-
         try {
             filteredServices.forEach((service, index) => {
                 doc.setFillColor(220, 53, 69);
                 doc.rect(0, 0, doc.internal.pageSize.getWidth(), 35, 'F');
                 doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
-                doc.text(`Ficha de Servicio - ${APP_CONFIG.name}`, pageMargin, 22);
-                doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - (pageMargin + 25), 5, 25, 25);
+                doc.text(`Ficha de Servicio - ${APP_CONFIG.name}`, 14, 22);
+                doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
                 
-                doc.setFontSize(12); doc.setFont('helvetica', 'normal');
-                doc.text(getServiceId(service), pageMargin, 30);
-
                 let currentY = 45;
-                doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(0);
-                doc.text('Detalles del Servicio', pageMargin, currentY); currentY += 6;
+                doc.setFontSize(12); doc.setTextColor(0); doc.text(getServiceId(service), 14, currentY); currentY += 10;
                 (doc as any).autoTable({
                     startY: currentY,
-                    body: [['Tipo', service.serviceType], ['Código', service.serviceCode], ['Dirección', `${service.address} (Zona: ${service.zone})`], ['Inicio', service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'], ['Fin', service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A']],
-                    theme: 'grid', styles: { fontSize: 9 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
+                    body: [['Tipo', service.serviceType], ['Dirección', service.address], ['Inicio', service.startDateTime ? format(parseISO(service.startDateTime), 'Pp', { locale: es }) : 'N/A'], ['Fin', service.endDateTime ? format(parseISO(service.endDateTime), 'Pp', { locale: es }) : 'N/A']],
+                    theme: 'grid', styles: { fontSize: 10 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
                 });
                 currentY = (doc as any).lastAutoTable.finalY + 10;
-                currentY = addPageIfNeeded(currentY);
-
-                doc.setFontSize(12); doc.text('Personal Interviniente', pageMargin, currentY); currentY += 6;
-                const personnelBody = [['Comando', service.command?.legajo || 'N/A'], ['Jefe de Servicio', service.serviceChief?.legajo || 'N/A'], ['Cuartelero', service.stationOfficer?.legajo || 'N/A'], ['Dotación de Servicio', service.onDutyPersonnel?.map(p => p.legajo).join(', ') || 'N/A'], ['Dotación de Pasiva', service.offDutyPersonnel?.map(p => p.legajo).join(', ') || 'N/A']];
-                (doc as any).autoTable({
-                    startY: currentY, body: personnelBody, theme: 'grid', styles: { fontSize: 9, cellPadding: 2 }, columnStyles: { 0: { fontStyle: 'bold', cellWidth: 40 } },
-                });
-                currentY = (doc as any).lastAutoTable.finalY + 10;
-                currentY = addPageIfNeeded(currentY);
-
-                doc.setFontSize(12); doc.text('Móviles Intervinientes', pageMargin, currentY); currentY += 6;
-                if (service.interveningVehicles?.length) {
-                    (doc as any).autoTable({
-                        startY: currentY,
-                        head: [['Móvil', 'Salida', 'Regreso', 'Duración']],
-                        body: service.interveningVehicles.map(iv => {
-                            const vehicle = allVehicles.find(v => v.id === iv.vehicleId);
-                            return [vehicle?.numeroMovil || '?', iv.departureDateTime ? format(parseISO(iv.departureDateTime), 'p', { locale: es }) : 'N/A', iv.returnDateTime ? format(parseISO(iv.returnDateTime), 'p', { locale: es }) : 'N/A', formatExactDuration(iv.departureDateTime, iv.returnDateTime)];
-                        }),
-                        theme: 'striped', headStyles: { fillColor: '#333' }, styles: { fontSize: 9 },
-                    });
-                    currentY = (doc as any).lastAutoTable.finalY + 10;
-                } else {
-                    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.text('No se registraron móviles.', pageMargin, currentY); currentY += 10;
-                }
-                currentY = addPageIfNeeded(currentY);
-
-                const addNotesSection = (title: string, content?: string) => {
-                    if (!content) return;
-                    currentY = addPageIfNeeded(currentY);
-                    doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.text(title, pageMargin, currentY); currentY += 5;
-                    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-                    const splitContent = doc.splitTextToSize(content, doc.internal.pageSize.getWidth() - (pageMargin * 2));
-                    doc.text(splitContent, pageMargin, currentY);
-                    currentY += splitContent.length * 4 + 6;
-                }
-                addNotesSection('Observaciones', service.observations);
-                addNotesSection('Reconocimiento', service.recognition);
-                addNotesSection('Colaboración', service.collaboration);
-
                 if (index < filteredServices.length - 1) doc.addPage();
             });
             doc.save(`reporte-servicios-detallado-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-        } catch (error) {
-            toast({ title: "Error al generar PDF", variant: "destructive" });
         } finally { setGeneratingDetailedPdf(false); }
     };
     
@@ -387,15 +320,11 @@ export default function ServicesReportPage() {
     
     return (
         <div className="space-y-8">
-            <PageHeader title="Reportes de Servicios" description="Filtre y visualice los servicios realizados." />
+            <PageHeader title="Reportes de Servicios" description="Análisis de intervenciones y estadísticas operativas." />
             <Card><CardHeader><CardTitle className="font-headline">Filtros del Reporte</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div className="space-y-2"><Label>Rango de Fechas</Label><Popover><PopoverTrigger asChild><Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} numberOfMonths={2} locale={es} /></PopoverContent></Popover></div>
-                    <div className="space-y-2"><Label>Buscar por ID</Label><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Ej: 123 ó C1-24/123" className="pl-9" value={filterServiceId} onChange={(e) => setFilterServiceId(e.target.value)} /></div></div>
-                    <div className="space-y-2"><Label>Bombero</Label><Popover open={openFirefighterCombobox} onOpenChange={setOpenFirefighterCombobox}>
-                        <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                        <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenFirefighterCombobox(false);}}>Todos</CommandItem>{allFirefighters.map(f => (<CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenFirefighterCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>))}</CommandGroup></CommandList></Command></PopoverContent></Popover>
-                    </div>
+                    <div className="space-y-2"><Label>Buscar por ID</Label><div className="relative"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Ej: C1-24/001" className="pl-9" value={filterServiceId} onChange={(e) => setFilterServiceId(e.target.value)} /></div></div>
                     <div className="space-y-2"><Label>Tipo de Servicio</Label><MultiSelectFilter title="Tipos" options={serviceTypes.map(t => ({ value: t, label: t }))} selected={filterServiceTypes} onSelectedChange={setFilterServiceTypes} /></div>
                     <div className="space-y-2"><Label>Cuartel</Label><MultiSelectFilter title="Cuarteles" options={cuarteles.map(t => ({ value: t, label: t }))} selected={filterCuarteles} onSelectedChange={setFilterCuarteles} /></div>
                     <div className="space-y-2"><Label>Zona</Label><MultiSelectFilter title="Zonas" options={zones.map(z => ({ value: z, label: `Zona ${z}` }))} selected={filterZones} onSelectedChange={setFilterZones} /></div>
@@ -405,7 +334,27 @@ export default function ServicesReportPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1">
                     <CardHeader><CardTitle className="font-headline text-lg flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /> Distribución</CardTitle></CardHeader>
-                    <CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={50}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent>
+                    <CardContent className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={summaryStats.pieData} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    outerRadius={80} 
+                                    innerRadius={50}
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                >
+                                    {summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                                </Pie>
+                                <Legend verticalAlign="bottom" height={36}/>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
                 </Card>
                 
                 <Card className="lg:col-span-2">
@@ -414,10 +363,10 @@ export default function ServicesReportPage() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Tipo de Servicio</TableHead>
-                                    <TableHead className="text-center">Cantidad</TableHead>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead className="text-center">Cant.</TableHead>
                                     <TableHead className="text-center">%</TableHead>
-                                    <TableHead>Nº de Servicios</TableHead>
+                                    <TableHead>Nº Planillas</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -443,7 +392,7 @@ export default function ServicesReportPage() {
             </div>
 
             <Card>
-                <CardHeader><CardTitle className="font-headline">Detalle Individual de Servicios</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="font-headline text-lg">Historial Detallado</CardTitle></CardHeader>
                 <CardContent className="max-h-[400px] overflow-y-auto">
                     <Table>
                         <TableHeader>
