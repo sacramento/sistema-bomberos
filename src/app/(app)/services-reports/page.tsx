@@ -282,48 +282,15 @@ export default function ServicesReportPage() {
             doc.setFontSize(14); doc.setTextColor(40);
             doc.text(`Distribución de Servicios`, 14, currentY); currentY += 10;
             
-            // Draw Pie Chart using doc.triangle for maximum compatibility
-            const centerX = 150;
-            const centerY = currentY + 30;
-            const radius = 25;
-            let startAngle = 0;
-            const total = summaryStats.totalServices;
-
-            summaryStats.tableData.forEach(item => {
-                const sliceAngle = (item.count / total) * 2 * Math.PI;
-                const colorHex = SERVICE_TYPE_COLORS[item.type as ServiceType] || '#cccccc';
-                const r = parseInt(colorHex.slice(1, 3), 16);
-                const g = parseInt(colorHex.slice(3, 5), 16);
-                const b = parseInt(colorHex.slice(5, 7), 16);
-                
-                doc.setFillColor(r, g, b);
-                
-                const segments = 30; // High resolution for the arc
-                for (let i = 0; i < segments; i++) {
-                    const angle1 = startAngle + (i / segments) * sliceAngle;
-                    const angle2 = startAngle + ((i + 1) / segments) * sliceAngle;
-                    
-                    const x1 = centerX + radius * Math.cos(angle1);
-                    const y1 = centerY + radius * Math.sin(angle1);
-                    const x2 = centerX + radius * Math.cos(angle2);
-                    const y2 = centerY + radius * Math.sin(angle2);
-                    
-                    // Each slice is a series of small triangles sharing the center point
-                    doc.triangle(centerX, centerY, x1, y1, x2, y2, 'F');
-                }
-                startAngle += sliceAngle;
-            });
-
             // Summary Table
             (doc as any).autoTable({
                 startY: currentY,
-                margin: { right: 80 },
                 head: [['Tipo de Servicio', 'Cant.', '%']],
                 body: summaryStats.tableData.map(item => [item.type, item.count, `${item.percentage.toFixed(1)}%`]),
                 theme: 'grid', headStyles: { fillColor: '#666' }, styles: { fontSize: 9 }
             });
             
-            currentY = Math.max((doc as any).lastAutoTable.finalY + 15, centerY + radius + 15);
+            currentY = (doc as any).lastAutoTable.finalY + 15;
             doc.setFontSize(14); doc.setTextColor(40);
             doc.text(`Listado de Intervenciones`, 14, currentY); currentY += 8;
 
