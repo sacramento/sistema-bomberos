@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -73,6 +74,17 @@ const getPercentageColor = (pct: number) => {
     return "bg-rose-500 text-white";
 };
 
+const getStatusBadgeClass = (status: AttendanceStatus) => {
+    switch (status) {
+        case "present": return "bg-green-600 text-white";
+        case "absent": return "bg-red-600 text-white";
+        case "tardy": return "bg-yellow-500 text-black";
+        case "excused": return "bg-violet-600 text-white";
+        case "recupero": return "bg-blue-600 text-white";
+        default: return "";
+    }
+}
+
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
@@ -91,17 +103,6 @@ type SortConfig = {
 
 function ScrollArea({ className, children }: { className?: string, children: React.ReactNode }) {
     return <div className={cn("relative overflow-auto", className)}>{children}</div>;
-}
-
-const getStatusBadgeClass = (status: AttendanceStatus) => {
-    switch (status) {
-        case "present": return "bg-green-600 text-white";
-        case "absent": return "bg-red-600 text-white";
-        case "tardy": return "bg-yellow-500 text-black";
-        case "excused": return "bg-violet-600 text-white";
-        case "recupero": return "bg-blue-600 text-white";
-        default: return "";
-    }
 }
 
 export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
@@ -296,7 +297,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={35} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={40} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
@@ -543,7 +544,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={35} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={40} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (

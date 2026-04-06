@@ -17,6 +17,8 @@ const PIE_CHART_COLORS: Record<string, string> = {
     presente: "#22C55E", // green-500
     ausente: "#EF4444", // red-500
     tarde: "#FBBF24",   // yellow-400
+    excused: "#8B5CF6",
+    recupero: "#3B82F6",
 };
 
 type AttendanceSummary = {
@@ -132,14 +134,14 @@ export default function AspirantesDashboardPage() {
   const renderChart = (title: string, data: AttendanceSummary) => {
     const hasData = data && data.totalForPercentage > 0;
     const pieData = hasData ? [
-        { name: "Presente", value: data.present + data.recupero },
-        { name: "Ausente", value: data.absent + data.excused },
-        { name: "Tarde", value: data.tardy },
+        { name: "Presente", value: data.present + data.recupero, fill: PIE_CHART_COLORS.presente },
+        { name: "Ausente", value: data.absent + data.excused, fill: PIE_CHART_COLORS.ausente },
+        { name: "Tarde", value: data.tardy, fill: PIE_CHART_COLORS.tarde },
       ].filter(d => d.value > 0) : [];
 
     return (
-        <Card className="flex flex-col">
-             <CardHeader className="items-center pb-2">
+        <Card className="flex flex-col overflow-hidden shadow-sm">
+             <CardHeader className="items-center pb-2 bg-muted/20 border-b">
                 <CardTitle className="font-headline text-lg text-center">{title}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col items-center justify-center p-4">
@@ -167,22 +169,22 @@ export default function AspirantesDashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={45}
-                                  outerRadius={80}
+                                  innerRadius={40}
+                                  outerRadius={85}
                                   strokeWidth={2}
                                   labelLine={false}
                                   label={renderCustomizedLabel}
                                 >
-                                    {pieData.map((entry) => (
-                                        <Cell key={`cell-${entry.name}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
                                     ))}
                                 </Pie>
-                                <Legend />
+                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/>
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
                 ) : (
-                    <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-muted-foreground">
+                    <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-muted-foreground italic border-2 border-dashed rounded-lg w-full">
                         <p>Sin datos</p>
                     </div>
                 )}
@@ -194,11 +196,11 @@ export default function AspirantesDashboardPage() {
   return (
     <>
       <PageHeader title="Dashboard Aspirantes" description="Resumen de actividad y formación del personal aspirante." />
-        <div className="mb-8">{renderChart('Asistencia General de Aspirantes', attendanceDataByGroup['General'])}</div>
+        <div className="mb-8 max-w-lg mx-auto">{renderChart('Asistencia General de Aspirantes', attendanceDataByGroup['General'])}</div>
         {specializationsWithData.length > 0 && (
             <div>
-                <h2 className="font-headline text-2xl font-semibold tracking-tight mb-4">Por Especialidad</h2>
-                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <h2 className="font-headline text-2xl font-semibold tracking-tight mb-4 border-b pb-2">Por Especialidad</h2>
+                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                     {specializationsWithData.map(spec => <div key={spec}>{renderChart(spec, attendanceDataByGroup[spec])}</div>)}
                  </div>
             </div>

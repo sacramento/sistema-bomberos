@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -135,7 +136,6 @@ export default function MaterialsReportPage() {
     const [generatingPdf, setGeneratingPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     
-    // PDF Export Options
     const [includeKPIs, setIncludeKPIs] = useState(true);
     const [includeInventoryDetails, setIncludeInventoryDetails] = useState(true);
 
@@ -354,12 +354,7 @@ export default function MaterialsReportPage() {
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Resumen Estadístico y de Cantidades`, 14, currentY); currentY += 10;
-                doc.setFontSize(10); doc.setFont('helvetica', 'bold');
-                doc.text(`Total elementos: ${kpis.total}`, 14, currentY); currentY += 6;
-                doc.setFont('helvetica', 'normal');
-                doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
-                doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 8;
+                doc.text(`Resumen Cuantitativo`, 14, currentY); currentY += 10;
                 
                 if (inventorySummary.length > 0) {
                     (doc as any).autoTable({
@@ -413,7 +408,7 @@ export default function MaterialsReportPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="md:col-span-1 h-64"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader><CardContent className="h-full pt-0"><ResponsiveContainer width="100%" height="80%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={70} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="md:col-span-1 h-64"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader><CardContent className="h-full pt-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={85} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent>
                 <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent>
                 <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent>
@@ -456,7 +451,7 @@ export default function MaterialsReportPage() {
                             <Checkbox id="list-opt" checked={includeInventoryDetails} onCheckedChange={(v) => setIncludeInventoryDetails(!!v)} />
                             <Label htmlFor="list-opt" className="text-xs cursor-pointer">Incluir Listado Detallado</Label>
                         </div>
-                        <Button className="w-full mt-2" onClick={generatePdf} disabled={generatingPdf || sortedFilteredMaterials.length === 0}>
+                        <Button className="w-full mt-2" onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0}>
                             {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
                             Descargar Informe
                         </Button>
@@ -467,7 +462,7 @@ export default function MaterialsReportPage() {
                     <CardHeader className="border-b bg-muted/20">
                         <div className="flex justify-between items-center">
                             <CardTitle className="font-headline text-lg">Detalle de Equipamiento</CardTitle>
-                            <Badge variant="outline">{sortedFilteredMaterials.length} resultados</Badge>
+                            <Badge variant="outline" className="h-6">{filteredMaterials.length} resultados</Badge>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0 overflow-x-auto">
@@ -488,7 +483,7 @@ export default function MaterialsReportPage() {
                                     <TableRow key={m.id}>
                                         <TableCell className="font-mono text-[10px] font-bold">{m.codigo || 'S/C'}</TableCell>
                                         <TableCell className="text-[11px] font-medium">{m.nombre}</TableCell>
-                                        <TableCell className="text-[10px]">{m.ubicacion.type === 'vehiculo' ? `Móvil ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell>
+                                        <TableCell className="text-[10px]">{m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell>
                                         <TableCell className="text-[10px]">{m.medida || '-'}</TableCell>
                                         <TableCell className="text-[10px]">{m.acople || '-'}</TableCell>
                                         <TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[9px] h-5">{m.estado}</Badge></TableCell>

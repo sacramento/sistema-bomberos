@@ -172,15 +172,70 @@ export default function ClothingReportsPage() {
             <Card>
                 <CardHeader><CardTitle className="text-lg">Filtros</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2"><Label>Bombero</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild disabled={isBomberoRole}><Button variant="outline" className="w-full justify-between h-10 overflow-hidden"><span className="truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}</span><ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>No encontrado.</CommandEmpty><CommandItem onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>Todos</CommandItem>{allFirefighters.map(f => (<CommandItem key={f.id} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>{f.legajo} - {f.lastName}</CommandItem>))}</CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Bombero</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild disabled={isBomberoRole}><Button variant="outline" className="w-full justify-between h-10 overflow-hidden"><span className="truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}</span><ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>No encontrado.</CommandEmpty><CommandGroup><CommandItem onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>Todos</CommandItem>{allFirefighters.map(f => (<CommandItem key={f.id} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>{f.legajo} - {f.lastName}</CommandItem>))}</CommandList></Command></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label>Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-base">Estado del Equipo</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={45} labelLine={false} label={renderCustomizedLabel}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">Vista Previa ({filteredItems.length} items)</CardTitle></CardHeader><CardContent className="max-h-[400px] overflow-y-auto"><Table><TableHeader><TableRow><TableHead>Código</TableHead><TableHead>Tipo</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>{filteredItems.map(item => (<TableRow key={item.id}><TableCell className="font-mono text-xs">{item.code}</TableCell><TableCell className="text-sm font-medium">{item.type}</TableCell><TableCell><Badge variant="outline" className="text-[10px]">{item.state}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent><CardFooter className="pt-4"><Button onClick={generateGeneralPdf} disabled={generatingPdf || filteredItems.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar Listado PDF</Button></CardFooter></Card>
+                <Card className="lg:col-span-1 shadow-md overflow-hidden">
+                    <CardHeader className="bg-muted/20 border-b">
+                        <CardTitle className="text-base flex items-center gap-2">Distribución por Estado</CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-72 pt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={summaryStats.pieData} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    outerRadius={85} 
+                                    innerRadius={40}
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                >
+                                    {summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                                </Pie>
+                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/>
+                                <Tooltip />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+                <Card className="lg:col-span-2 shadow-md">
+                    <CardHeader className="bg-muted/20 border-b">
+                        <CardTitle className="text-base flex items-center gap-2">Vista Previa ({filteredItems.length} items)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="max-h-[400px] overflow-y-auto p-0">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Código</TableHead>
+                                    <TableHead>Tipo</TableHead>
+                                    <TableHead>Estado</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredItems.map(item => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="font-mono text-xs">{item.code}</TableCell>
+                                        <TableCell className="text-sm font-medium">{item.type}</TableCell>
+                                        <TableCell><Badge variant="outline" className="text-[10px]">{item.state}</Badge></TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                    <CardFooter className="pt-4 border-t bg-muted/10">
+                        <Button onClick={generateGeneralPdf} disabled={generatingPdf || filteredItems.length === 0}>
+                            {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} 
+                            Exportar Listado PDF
+                        </Button>
+                    </CardFooter>
+                </Card>
             </div>
         </div>
     );

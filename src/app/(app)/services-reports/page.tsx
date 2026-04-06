@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -405,7 +406,7 @@ export default function ServicesReportPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={85} 
-                                    innerRadius={35}
+                                    innerRadius={40}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >
