@@ -23,7 +23,6 @@ import { getWorkshops } from "@/services/workshops.service";
 import { getAspiranteWorkshops } from "@/services/aspirantes-workshops.service";
 import { getCourses } from "@/services/courses.service";
 import { getFirefighters } from "@/services/firefighters.service";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -164,9 +163,10 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allSessions]);
 
-    const { filteredSessions, stats, pieData } = useMemo(() => {
+    const { filteredSessions, stats, pieData, sessionsByCuartel } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
+        const fhTotals = { 'C1': 0, 'C2': 0, 'C3': 0 };
 
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
@@ -202,7 +202,16 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 sessionIncluded = true;
             });
 
-            if (sessionIncluded) sessionMatches.push(s);
+            if (sessionIncluded) {
+                sessionMatches.push(s);
+                // Categorizar sesión por mayoría de asistentes para el mini-resumen
+                const counts: any = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
+                s.attendees.forEach(a => { if(counts[a.firehouse] !== undefined) counts[a.firehouse]++; });
+                const majority = Object.entries(counts).reduce((a:any, b:any) => b[1] > a[1] ? b : a)[0];
+                if (majority === 'Cuartel 1') fhTotals.C1++;
+                else if (majority === 'Cuartel 2') fhTotals.C2++;
+                else if (majority === 'Cuartel 3') fhTotals.C3++;
+            }
         });
 
         if (viewMode === 'by-class') {
@@ -242,7 +251,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 }))
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData };
+        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByCuartel: fhTotals };
     }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -260,7 +269,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
             let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
-            doc.text(`Período: ${rangeText}`, 14, curY); curY += 15;
+            doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
+            
+            // Mini resumen de sesiones
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
+            doc.text(`Total de Clases: C1: ${sessionsByCuartel.C1} | C2: ${sessionsByCuartel.C2} | C3: ${sessionsByCuartel.C3}`, 14, curY); curY += 10;
             
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
@@ -314,7 +327,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={35} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
@@ -438,9 +451,10 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allWorkshops]);
 
-    const { filteredSessions, stats, pieData } = useMemo(() => {
+    const { filteredSessions, stats, pieData, sessionsByCuartel } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
+        const fhTotals = { 'C1': 0, 'C2': 0, 'C3': 0 };
 
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
@@ -472,7 +486,15 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 sessionIncluded = true;
             });
 
-            if (sessionIncluded) sessionMatches.push(s);
+            if (sessionIncluded) {
+                sessionMatches.push(s);
+                const counts: any = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
+                s.attendees.forEach(a => { if(counts[a.firehouse] !== undefined) counts[a.firehouse]++; });
+                const majority = Object.entries(counts).reduce((a:any, b:any) => b[1] > a[1] ? b : a)[0];
+                if (majority === 'Cuartel 1') fhTotals.C1++;
+                else if (majority === 'Cuartel 2') fhTotals.C2++;
+                else if (majority === 'Cuartel 3') fhTotals.C3++;
+            }
         });
 
         if (viewMode === 'by-class') {
@@ -509,7 +531,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, recupero: 0 }))
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData };
+        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByCuartel: fhTotals };
     }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -527,7 +549,11 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             
             let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
-            doc.text(`Período: ${rangeText}`, 14, curY); curY += 15;
+            doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
+
+            // Mini resumen de sesiones
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
+            doc.text(`Total de Talleres: C1: ${sessionsByCuartel.C1} | C2: ${sessionsByCuartel.C2} | C3: ${sessionsByCuartel.C3}`, 14, curY); curY += 10;
 
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
@@ -583,7 +609,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={35} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
@@ -766,7 +792,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             </div>
                         ) : (
                             <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                             </Popover>
                         )}

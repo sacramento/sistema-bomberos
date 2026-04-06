@@ -432,25 +432,9 @@ export default function MaterialsReportPage() {
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div>
-                    </CardContent></Card>
-                <Card className="border-l-4 border-l-amber-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader>
-                    <CardContent className="grid grid-cols-3 gap-2">
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div>
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div>
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div>
-                    </CardContent></Card>
-                <Card className="border-l-4 border-l-slate-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div>
-                    </CardContent></Card>
+                <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent></Card>
+                <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent></Card>
+                <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent></Card>
             </div>
 
             <Card className="shadow-md">
@@ -522,7 +506,7 @@ export default function MaterialsReportPage() {
                                     <TableRow key={m.id}>
                                         <TableCell className="font-mono text-[10px] font-bold">{m.codigo || 'S/C'}</TableCell>
                                         <TableCell className="text-[11px] font-medium">{m.nombre}</TableCell>
-                                        <TableCell className="text-[10px]">{m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil || '?'}` : `Depósito`}</TableCell>
+                                        <TableCell className="text-[10px]">{m.ubicacion.type === 'vehiculo' ? `Móv. ${m.vehiculo?.numeroMovil}` : `Depósito`}</TableCell>
                                         <TableCell className="text-[10px]">{m.medida || '-'}</TableCell>
                                         <TableCell className="text-[10px]">{m.acople || '-'}</TableCell>
                                         <TableCell className="text-right"><Badge variant={m.estado === 'En Servicio' ? 'default' : 'destructive'} className="text-[9px] h-5">{m.estado}</Badge></TableCell>

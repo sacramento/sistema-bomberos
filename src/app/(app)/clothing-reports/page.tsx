@@ -175,7 +175,7 @@ export default function ClothingReportsPage() {
                         <Label>Bombero</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isBomberoRole}>
-                                <Button variant="outline" className="w-full justify-between h-10 overflow-hidden text-xs">
+                                <Button variant="outline" className="w-full justify-between h-10 overflow-hidden text-xs text-left">
                                     <span className="truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}</span>
                                     <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                                 </Button>
