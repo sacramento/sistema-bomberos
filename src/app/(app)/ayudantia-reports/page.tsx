@@ -12,10 +12,24 @@ import { getGeneralInventory } from "@/services/general-inventory.service";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { Pie, PieChart, Cell, ResponsiveContainer, Legend } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { parseISO, isWithinInterval } from "date-fns";
 
 const PIE_COLORS = ["#3B82F6", "#EF4444", "#FBBF24", "#22C55E", "#8B5CF6"];
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
+};
 
 export default function AyudantiaReportsPage() {
     const { toast } = useToast();
@@ -80,14 +94,24 @@ export default function AyudantiaReportsPage() {
             <Card>
                 <CardHeader><CardTitle>Condición General del Inventario</CardTitle></CardHeader>
                 <CardContent>
-                    <ChartContainer config={{}} className="h-64">
+                    <ChartContainer config={{}} className="h-80">
                         <ResponsiveContainer>
                             <PieChart>
-                                <Pie data={stats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}>
+                                <Pie 
+                                    data={stats.pieData} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    outerRadius={100} 
+                                    innerRadius={50}
+                                    labelLine={false}
+                                    label={renderCustomizedLabel}
+                                >
                                     {stats.pieData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                 </Pie>
                                 <Legend />
-                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <Tooltip />
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>

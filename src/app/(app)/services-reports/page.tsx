@@ -407,7 +407,7 @@ export default function ServicesReportPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={85} 
-                                    innerRadius={60}
+                                    innerRadius={45}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >

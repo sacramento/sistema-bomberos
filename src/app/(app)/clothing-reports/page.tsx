@@ -17,7 +17,7 @@ import { Check, ChevronsUpDown, Archive, User, Shirt, Download, Loader2, FileSig
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth-context";
@@ -36,6 +36,20 @@ const CONDITION_CHART_COLORS: Record<string, string> = {
     Regular: "#FBBF24",
     Malo: "#F97316",
     Baja: "#EF4444",
+};
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
 };
 
 export default function ClothingReportsPage() {
@@ -165,7 +179,7 @@ export default function ClothingReportsPage() {
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-base">Estado del Equipo</CardTitle></CardHeader><CardContent><ChartContainer config={{}} className="h-64"><ResponsiveContainer><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><ChartTooltip content={<ChartTooltipContent hideLabel />} /></PieChart></ResponsiveContainer></ChartContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-base">Estado del Equipo</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer><PieChart><Pie data={summaryStats.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={45} labelLine={false} label={renderCustomizedLabel}>{summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-base">Vista Previa ({filteredItems.length} items)</CardTitle></CardHeader><CardContent className="max-h-[400px] overflow-y-auto"><Table><TableHeader><TableRow><TableHead>Código</TableHead><TableHead>Tipo</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader><TableBody>{filteredItems.map(item => (<TableRow key={item.id}><TableCell className="font-mono text-xs">{item.code}</TableCell><TableCell className="text-sm font-medium">{item.type}</TableCell><TableCell><Badge variant="outline" className="text-[10px]">{item.state}</Badge></TableCell></TableRow>))}</TableBody></Table></CardContent><CardFooter className="pt-4"><Button onClick={generateGeneralPdf} disabled={generatingPdf || filteredItems.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar Listado PDF</Button></CardFooter></Card>
             </div>
         </div>

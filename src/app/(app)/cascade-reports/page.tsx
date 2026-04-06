@@ -22,7 +22,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, differenceInM
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,6 +36,21 @@ const PIE_CHART_COLORS: Record<string, string> = {
     'Cuartel 2': "#3b82f6", // blue-500
     'Cuartel 3': "#22c55e", // green-500
 };
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
+};
+
 const cascadeTubes = ['Tubo 1', 'Tubo 2', 'Tubo 3', 'Tubo 4'] as const;
 
 const formatDuration = (start: string | null, end: string | null) => {
@@ -120,7 +135,6 @@ export default function CascadeReportsPage() {
     const [userComboboxOpen, setUserComboboxOpen] = useState(false);
     
     const [generatingPdf, setGeneratingPdf] = useState(false);
-    const [generatingSystemPdf, setGeneratingSystemPdf] = useState(false);
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
 
     useEffect(() => {
@@ -274,7 +288,7 @@ export default function CascadeReportsPage() {
         <div className="space-y-8">
             <PageHeader title="Reportes de Cascada" description="Estadísticas de uso y recarga de equipos de respiración." />
             <Tabs defaultValue="tubosERA" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto"><TabsTrigger value="tubosERA">Tubos ERA</TabsTrigger><TabsTrigger value="cascada">Sistema Cascada</TabsTrigger></TabsList>
+                <TabsList className="grid w-full grid-cols-2 max-md:max-w-md mx-auto"><TabsTrigger value="tubosERA">Tubos ERA</TabsTrigger><TabsTrigger value="cascada">Sistema Cascada</TabsTrigger></TabsList>
                 <TabsContent value="tubosERA" className="mt-6 space-y-8">
                     <Card><CardHeader><CardTitle className="font-headline">Filtros</CardTitle></CardHeader>
                         <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -284,7 +298,7 @@ export default function CascadeReportsPage() {
                         </CardContent>
                     </Card>
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <Card className="lg:col-span-1"><CardHeader><CardTitle className="font-headline">Cargas por Cuartel</CardTitle></CardHeader><CardContent><ChartContainer config={{}} className="h-64"><ResponsiveContainer><PieChart><Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60}>{reportData.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><ChartTooltip content={<ChartTooltipContent hideLabel />} /></PieChart></ResponsiveContainer></ChartContainer></CardContent></Card>
+                        <Card className="lg:col-span-1"><CardHeader><CardTitle className="font-headline">Cargas por Cuartel</CardTitle></CardHeader><CardContent><ChartContainer config={{}} className="h-64"><ResponsiveContainer><PieChart><Pie data={reportData.pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={45} labelLine={false} label={renderCustomizedLabel}>{reportData.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend /><Tooltip /></PieChart></ResponsiveContainer></ChartContainer></CardContent></Card>
                         <Card className="lg:col-span-2"><CardHeader><CardTitle className="font-headline">Detalle por Tubo</CardTitle></CardHeader><CardContent className="max-h-[400px] overflow-y-auto"><Table><TableHeader><TableRow><TableHead>Código</TableHead><TableHead>Cuartel</TableHead><TableHead>Cargas</TableHead></TableRow></TableHeader><TableBody>{reportData.tableData.map((item) => (<TableRow key={item.code}><TableCell className="font-mono font-medium">{item.code}</TableCell><TableCell>{item.cuartel}</TableCell><TableCell className="font-bold">{item.chargeCount}</TableCell></TableRow>))}</TableBody></Table></CardContent></Card>
                     </div>
                     <Card><CardHeader><CardTitle className="font-headline">Exportar Reporte</CardTitle></CardHeader><CardContent><Button onClick={generatePdf} disabled={generatingPdf}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />} Generar PDF</Button></CardContent></Card>

@@ -10,7 +10,7 @@ import { getFirefighters } from '@/services/firefighters.service';
 import { getSessions } from '@/services/sessions.service';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { Pie, PieChart, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 
 const PIE_CHART_COLORS: Record<string, string> = {
     presente: "#22C55E", // green-500
@@ -30,13 +30,13 @@ type AttendanceSummary = {
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
-    if (!percent) return null;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.7;
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -197,7 +197,7 @@ export default function DashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={50}
+                                  innerRadius={45}
                                   outerRadius={80}
                                   strokeWidth={2}
                                   labelLine={false}
@@ -207,6 +207,7 @@ export default function DashboardPage() {
                                         <Cell key={`cell-${entry.name}`} fill={PIE_CHART_COLORS[entry.name.toLowerCase() as keyof typeof PIE_CHART_COLORS]} />
                                     ))}
                                 </Pie>
+                                <Legend />
                             </PieChart>
                         </ResponsiveContainer>
                     </ChartContainer>
