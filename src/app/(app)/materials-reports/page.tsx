@@ -3,9 +3,9 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, AlertCircle, CheckCircle2, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText } from "lucide-react";
+import { Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
-import { Material, Vehicle, Specialization, Firefighter } from "@/lib/types";
+import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
 import { getVehicles } from "@/services/vehicles.service";
 import { getFirefighters } from "@/services/firefighters.service";
@@ -13,7 +13,7 @@ import { createMaterialRequest } from "@/services/material-requests.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +27,11 @@ import EditMaterialDialog from "../materials/_components/edit-material-dialog";
 import MaterialDetailDialog from "../materials/_components/material-detail-dialog";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import QrScannerDialog from "../materials/_components/qr-scanner-dialog";
 import { MATERIAL_CATEGORIES } from "@/app/lib/constants/material-categories";
@@ -354,12 +353,12 @@ export default function MaterialsReportPage() {
             let currentY = 45;
             if (includeKPIs) {
                 doc.setFontSize(14); doc.setTextColor(40);
-                doc.text(`Resumen Cuantitativo`, 14, currentY); currentY += 10;
+                doc.text(`Resumen Cuantitativo desglosado por variante`, 14, currentY); currentY += 10;
                 
                 if (inventorySummary.length > 0) {
                     (doc as any).autoTable({
                         startY: currentY,
-                        head: [['Tipo de Material / Medida / Acople', 'Cantidad Total']],
+                        head: [['Variante Técnica (Tipo, Medida, Acople)', 'Cantidad Total']],
                         body: inventorySummary.map(([label, count]) => [label, count]),
                         theme: 'grid', styles: { fontSize: 8 }, headStyles: { fillColor: '#666' }
                     });
@@ -370,7 +369,7 @@ export default function MaterialsReportPage() {
             if (includeInventoryDetails && sortedFilteredMaterials.length > 0) {
                 if (currentY > 180) { doc.addPage(); currentY = 20; }
                 doc.setFontSize(14); doc.setTextColor(40); doc.setFont('helvetica', 'bold');
-                doc.text(`Detalle de Inventario (Ítem por Ítem)`, 14, currentY); currentY += 6;
+                doc.text(`Detalle Individual de Equipamiento`, 14, currentY); currentY += 6;
                 
                 (doc as any).autoTable({
                     startY: currentY,
@@ -401,17 +400,60 @@ export default function MaterialsReportPage() {
 
     return (
         <div className="space-y-8 pb-20">
-            <PageHeader title="Reportes Avanzados de Materiales" description="Filtre por cualquier parámetro técnico para obtener inventarios precisos."/>
+            <PageHeader title="Informes de Materiales" description="Gestione y audite el equipamiento técnico de la flota y depósitos."/>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="lg:col-span-3"><CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle></CardHeader><CardContent className="flex gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={(c) => setSearchTerm(c)}><Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button></QrScannerDialog></CardContent></Card>
-                <Card className="border-primary/50 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total en Selección</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div><p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen los filtros</p></CardContent></Card>
+                <Card className="lg:col-span-3"><CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda Rápida</CardTitle></CardHeader><CardContent className="flex gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={(c) => setSearchTerm(c)}><Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button></QrScannerDialog></CardContent></Card>
+                <Card className="border-primary/50 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total Seleccionado</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div><p className="text-[10px] text-muted-foreground mt-1">Ítems según filtros actuales</p></CardContent></Card>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="md:col-span-1 h-64"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader><CardContent className="h-full pt-0"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={85} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Tooltip /><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent>
-                <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent>
-                <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent>
+                <Card className="md:col-span-1 h-64">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader>
+                    <CardContent className="h-full pt-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie 
+                                    data={pieData} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    innerRadius={45} 
+                                    outerRadius={85} 
+                                    labelLine={false} 
+                                    label={renderCustomizedLabel}
+                                    strokeWidth={2}
+                                >
+                                    {pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                                </Pie>
+                                <Tooltip />
+                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/>
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div>
+                    </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-amber-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-3 gap-2">
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div>
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div>
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div>
+                    </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-slate-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div>
+                    </CardContent>
+                </Card>
             </div>
 
             <Card className="shadow-md">
@@ -428,9 +470,9 @@ export default function MaterialsReportPage() {
                     <div className="space-y-2"><Label className="text-xs font-bold">Medida / Diámetro</Label><MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={['Tela', 'Goma'].map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
                 </CardContent></Card>
-                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación y Estado</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                     <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
-                    <div className="space-y-2"><Label className="text-xs font-bold">Ubicación Actual</Label><MultiSelectFilter title="Ubicaciones" options={locationOptions} selected={filterLocations} onSelectedChange={setFilterLocations} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Ubicación</Label><MultiSelectFilter title="Ubicaciones" options={locationOptions} selected={filterLocations} onSelectedChange={setFilterLocations} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
                 </CardContent></Card>
             </div>
@@ -445,11 +487,11 @@ export default function MaterialsReportPage() {
                     <CardContent className="space-y-4 pt-2">
                         <div className="flex items-center space-x-2">
                             <Checkbox id="kpi-opt" checked={includeKPIs} onCheckedChange={(v) => setIncludeKPIs(!!v)} />
-                            <Label htmlFor="kpi-opt" className="text-xs cursor-pointer font-bold">Incluir Resumen Cuantitativo</Label>
+                            <Label htmlFor="kpi-opt" className="text-xs cursor-pointer font-bold">Resumen Desglosado (Variantes)</Label>
                         </div>
                         <div className="flex items-center space-x-2">
                             <Checkbox id="list-opt" checked={includeInventoryDetails} onCheckedChange={(v) => setIncludeInventoryDetails(!!v)} />
-                            <Label htmlFor="list-opt" className="text-xs cursor-pointer">Incluir Listado Detallado</Label>
+                            <Label htmlFor="list-opt" className="text-xs cursor-pointer">Listado Individual Detallado</Label>
                         </div>
                         <Button className="w-full mt-2" onClick={generatePdf} disabled={generatingPdf || filteredMaterials.length === 0}>
                             {generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}

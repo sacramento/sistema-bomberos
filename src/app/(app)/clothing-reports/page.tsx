@@ -4,7 +4,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useState, useEffect, useMemo } from "react";
-import { ClothingItem, Firefighter, ClothingCategory, ClothingSubCategory } from "@/lib/types";
+import { ClothingItem, Firefighter } from "@/lib/types";
 import { getClothingItems } from "@/services/clothing.service";
 import { getFirefighters } from "@/services/firefighters.service";
 import { useToast } from "@/hooks/use-toast";
@@ -13,10 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Archive, User, Shirt, Download, Loader2, FileSignature } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -155,7 +154,7 @@ export default function ClothingReportsPage() {
                 head: [['Código', 'Tipo', 'Talle', 'Asignado a', 'Estado']],
                 body: filteredItems.map(i => [
                     i.code, i.type, i.size, 
-                    i.firefighter ? `${i.firefighter.legajo} - ${i.firefighter.lastName}` : 'En Depósito',
+                    i.firefighter ? `${i.firefighter.legajo} - ${i.firefighter.lastName}, ${i.firefighter.firstName}` : 'En Depósito',
                     i.state
                 ]),
                 theme: 'striped', headStyles: { fillColor: '#333' }
@@ -172,7 +171,33 @@ export default function ClothingReportsPage() {
             <Card>
                 <CardHeader><CardTitle className="text-lg">Filtros</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2"><Label>Bombero</Label><Popover open={openCombobox} onOpenChange={setOpenCombobox}><PopoverTrigger asChild disabled={isBomberoRole}><Button variant="outline" className="w-full justify-between h-10 overflow-hidden"><span className="truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}</span><ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger><PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>No encontrado.</CommandEmpty><CommandGroup><CommandItem onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>Todos</CommandItem>{allFirefighters.map(f => (<CommandItem key={f.id} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>{f.legajo} - {f.lastName}</CommandItem>))}</CommandList></Command></PopoverContent></Popover></div>
+                    <div className="space-y-2">
+                        <Label>Bombero</Label>
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild disabled={isBomberoRole}>
+                                <Button variant="outline" className="w-full justify-between h-10 overflow-hidden text-xs">
+                                    <span className="truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}</span>
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                                <Command>
+                                    <CommandInput placeholder="Buscar integrante..." />
+                                    <CommandList>
+                                        <CommandEmpty>No encontrado.</CommandEmpty>
+                                        <CommandGroup>
+                                            <CommandItem onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>Todos</CommandItem>
+                                            {allFirefighters.map(f => (
+                                                <CommandItem key={f.id} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>
+                                                    {f.legajo} - {f.lastName}, {f.firstName}
+                                                </CommandItem>
+                                            ))}
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
                     <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label>Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
@@ -193,9 +218,10 @@ export default function ClothingReportsPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={85} 
-                                    innerRadius={40}
+                                    innerRadius={45}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
+                                    strokeWidth={2}
                                 >
                                     {summaryStats.pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}
                                 </Pie>
@@ -215,6 +241,7 @@ export default function ClothingReportsPage() {
                                 <TableRow>
                                     <TableHead>Código</TableHead>
                                     <TableHead>Tipo</TableHead>
+                                    <TableHead>Asignado a</TableHead>
                                     <TableHead>Estado</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -223,6 +250,7 @@ export default function ClothingReportsPage() {
                                     <TableRow key={item.id}>
                                         <TableCell className="font-mono text-xs">{item.code}</TableCell>
                                         <TableCell className="text-sm font-medium">{item.type}</TableCell>
+                                        <TableCell className="text-[10px]">{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'Depósito'}</TableCell>
                                         <TableCell><Badge variant="outline" className="text-[10px]">{item.state}</Badge></TableCell>
                                     </TableRow>
                                 ))}
