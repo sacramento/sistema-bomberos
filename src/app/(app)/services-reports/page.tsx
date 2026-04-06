@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -22,7 +21,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
@@ -407,7 +405,7 @@ export default function ServicesReportPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={85} 
-                                    innerRadius={45}
+                                    innerRadius={35}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >

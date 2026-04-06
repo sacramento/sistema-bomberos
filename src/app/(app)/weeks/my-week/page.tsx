@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -119,7 +118,6 @@ export default function MyWeekPage() {
                 weeks={weeksToShow} 
                 isLoading={loading} 
                 onDataChange={fetchAllData} 
-                canManageGenerally={canManage} 
                 loggedInFirefighter={loggedInFirefighter}
             />
         </>

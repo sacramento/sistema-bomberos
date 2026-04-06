@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -197,7 +196,7 @@ export default function DashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={45}
+                                  innerRadius={35}
                                   outerRadius={80}
                                   strokeWidth={2}
                                   labelLine={false}
