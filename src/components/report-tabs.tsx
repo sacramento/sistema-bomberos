@@ -84,6 +84,32 @@ const getStatusBadgeClass = (status: AttendanceStatus) => {
     }
 }
 
+const getSessionGroup = (session: Session) => {
+    const attendees = session.attendees;
+    if (!attendees || attendees.length === 0) return 'Varios';
+
+    const totalAttendees = attendees.length;
+    const suboficialRanks = new Set(['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL']);
+    
+    const aspirantesCount = attendees.filter(a => a.rank === 'ASPIRANTE').length;
+    const officersCount = attendees.filter(a => suboficialRanks.has(a.rank)).length;
+
+    const firehouseCounts: Record<string, number> = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
+    attendees.forEach(a => {
+        if (firehouseCounts.hasOwnProperty(a.firehouse)) {
+            firehouseCounts[a.firehouse]++;
+        }
+    });
+
+    if (aspirantesCount / totalAttendees > 0.8) return 'Aspirantes';
+    if (officersCount / totalAttendees > 0.8) return 'Suboficiales';
+    if (firehouseCounts['Cuartel 1'] / totalAttendees > 0.6) return 'Cuartel 1';
+    if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'Cuartel 2';
+    if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'Cuartel 3';
+
+    return 'Varios'; // Significa General
+};
+
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
@@ -163,10 +189,10 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allSessions]);
 
-    const { filteredSessions, stats, pieData, sessionsByCuartel } = useMemo(() => {
+    const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const fhTotals = { 'C1': 0, 'C2': 0, 'C3': 0 };
+        const groupCounts = { 'C1': 0, 'C2': 0, 'C3': 0, 'Suboficiales': 0, 'Aspirantes': 0 };
 
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
@@ -204,13 +230,15 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
             if (sessionIncluded) {
                 sessionMatches.push(s);
-                // Categorizar sesión por mayoría de asistentes para el mini-resumen
-                const counts: any = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
-                s.attendees.forEach(a => { if(counts[a.firehouse] !== undefined) counts[a.firehouse]++; });
-                const majority = Object.entries(counts).reduce((a:any, b:any) => b[1] > a[1] ? b : a)[0];
-                if (majority === 'Cuartel 1') fhTotals.C1++;
-                else if (majority === 'Cuartel 2') fhTotals.C2++;
-                else if (majority === 'Cuartel 3') fhTotals.C3++;
+                const group = getSessionGroup(s);
+                if (group === 'Cuartel 1') groupCounts.C1++;
+                else if (group === 'Cuartel 2') groupCounts.C2++;
+                else if (group === 'Cuartel 3') groupCounts.C3++;
+                else if (group === 'Suboficiales') groupCounts.Suboficiales++;
+                else if (group === 'Aspirantes') groupCounts.Aspirantes++;
+                else if (group === 'Varios') { // General
+                    groupCounts.C1++; groupCounts.C2++; groupCounts.C3++;
+                }
             }
         });
 
@@ -251,7 +279,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 }))
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByCuartel: fhTotals };
+        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
     }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -271,9 +299,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
-            // Mini resumen de sesiones
+            // Mini resumen de sesiones por grupo
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            doc.text(`Total de Clases: C1: ${sessionsByCuartel.C1} | C2: ${sessionsByCuartel.C2} | C3: ${sessionsByCuartel.C3}`, 14, curY); curY += 10;
+            doc.text(`Total de Clases: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
             
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
@@ -451,10 +479,10 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allWorkshops]);
 
-    const { filteredSessions, stats, pieData, sessionsByCuartel } = useMemo(() => {
+    const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const fhTotals = { 'C1': 0, 'C2': 0, 'C3': 0 };
+        const groupCounts = { 'C1': 0, 'C2': 0, 'C3': 0, 'Suboficiales': 0, 'Aspirantes': 0 };
 
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
@@ -488,12 +516,15 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
             if (sessionIncluded) {
                 sessionMatches.push(s);
-                const counts: any = { 'Cuartel 1': 0, 'Cuartel 2': 0, 'Cuartel 3': 0 };
-                s.attendees.forEach(a => { if(counts[a.firehouse] !== undefined) counts[a.firehouse]++; });
-                const majority = Object.entries(counts).reduce((a:any, b:any) => b[1] > a[1] ? b : a)[0];
-                if (majority === 'Cuartel 1') fhTotals.C1++;
-                else if (majority === 'Cuartel 2') fhTotals.C2++;
-                else if (majority === 'Cuartel 3') fhTotals.C3++;
+                const group = getSessionGroup(s);
+                if (group === 'Cuartel 1') groupCounts.C1++;
+                else if (group === 'Cuartel 2') groupCounts.C2++;
+                else if (group === 'Cuartel 3') groupCounts.C3++;
+                else if (group === 'Suboficiales') groupCounts.Suboficiales++;
+                else if (group === 'Aspirantes') groupCounts.Aspirantes++;
+                else if (group === 'Varios') { // General
+                    groupCounts.C1++; groupCounts.C2++; groupCounts.C3++;
+                }
             }
         });
 
@@ -531,7 +562,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, recupero: 0 }))
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByCuartel: fhTotals };
+        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
     }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -551,9 +582,9 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
-            // Mini resumen de sesiones
+            // Mini resumen de sesiones por grupo
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            doc.text(`Total de Talleres: C1: ${sessionsByCuartel.C1} | C2: ${sessionsByCuartel.C2} | C3: ${sessionsByCuartel.C3}`, 14, curY); curY += 10;
+            doc.text(`Total de Talleres: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
 
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
