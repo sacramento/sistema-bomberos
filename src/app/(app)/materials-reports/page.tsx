@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -40,6 +41,20 @@ import { APP_CONFIG } from "@/lib/config";
 const STATUS_COLORS: Record<string, string> = { 'En Servicio': "#22C55E", 'Fuera de Servicio': "#EF4444" };
 const acopleOptions = ['Storz', 'NH', 'QC', 'DSP', 'Withworth', 'Otro'];
 const diameterOptions = ['25mm', '38mm', '44.5mm', '63.5mm', '70mm'];
+
+const RADIAN = Math.PI / 180;
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+    if (!percent || percent < 0.05) return null;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+            {`${(percent * 100).toFixed(0)}%`}
+        </text>
+    );
+};
 
 const MultiSelectFilter = ({ 
     title, 
@@ -252,10 +267,6 @@ export default function MaterialsReportPage() {
         });
     }, [materials, searchTerm, filterCategories, filterSubCategories, filterItemTypes, filterAcoples, filterMedidas, filterComposiciones, filterFirehouses, filterLocations, filterStates]);
 
-    /**
-     * Resumen cuantitativo granular solicitado por el usuario.
-     * Agrupa por: Tipo de Item + Medida + Acople.
-     */
     const inventorySummary = useMemo(() => {
         if (filteredMaterials.length === 0) return [];
 
@@ -351,7 +362,6 @@ export default function MaterialsReportPage() {
                 doc.text(`Operatividad: ${kpis.inService} En Servicio (${kpis.servicePercent})`, 14, currentY); currentY += 6;
                 doc.text(`Condición: ${kpis.good} Bueno (${kpis.goodPercent}) | ${kpis.regular} Regular | ${kpis.bad} Malo`, 14, currentY); currentY += 8;
                 
-                // Summary Table with granular counts (Type + Measure + Coupling)
                 if (inventorySummary.length > 0) {
                     (doc as any).autoTable({
                         startY: currentY,
@@ -386,6 +396,13 @@ export default function MaterialsReportPage() {
         } finally { setGeneratingPdf(false); }
     };
 
+    const pieData = useMemo(() => {
+        return [
+            { name: 'En Servicio', value: kpis.inService, fill: STATUS_COLORS['En Servicio'] },
+            { name: 'Fuera de Servicio', value: kpis.outOfService, fill: STATUS_COLORS['Fuera de Servicio'] }
+        ].filter(d => d.value > 0);
+    }, [kpis]);
+
     if (loading) return <Skeleton className="w-full h-[600px]" />;
 
     return (
@@ -395,11 +412,14 @@ export default function MaterialsReportPage() {
                 <Card className="lg:col-span-3"><CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda y Control de Stock</CardTitle></CardHeader><CardContent className="flex gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={(c) => setSearchTerm(c)}><Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button></QrScannerDialog></CardContent></Card>
                 <Card className="border-primary/50 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total en Selección</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div><p className="text-[10px] text-muted-foreground mt-1">Elementos que cumplen los filtros</p></CardContent></Card>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card className="md:col-span-1 h-64"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader><CardContent className="h-full pt-0"><ResponsiveContainer width="100%" height="80%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={70} labelLine={false} label={renderCustomizedLabel}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent></Card>
                 <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent></Card>
                 <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent></Card>
             </div>
+
             <Card className="shadow-md">
                 <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Layers className="h-5 w-5 text-primary" /> Filtros de Clasificación Jerárquica</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">

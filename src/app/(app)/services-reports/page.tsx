@@ -123,24 +123,13 @@ function formatExactDuration(start?: string, end?: string): string {
     if (!start || !end) return 'N/A';
     
     const minutes = differenceInMinutes(parseISO(end), parseISO(start));
-    if (isNaN(minutes) || minutes < 0) {
-        return 'N/A';
-    }
-    if (minutes === 0) {
-        return '0min';
-    }
-
+    if (isNaN(minutes) || minutes < 0) return 'N/A';
+    if (minutes === 0) return '0min';
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    
     let result = '';
-    if (hours > 0) {
-        result += `${hours}h `;
-    }
-    if (remainingMinutes > 0) {
-        result += `${remainingMinutes}min`;
-    }
-    
+    if (hours > 0) result += `${hours}h `;
+    if (remainingMinutes > 0) result += `${remainingMinutes}min`;
     return result.trim();
 }
 
@@ -418,7 +407,7 @@ export default function ServicesReportPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={85} 
-                                    innerRadius={55}
+                                    innerRadius={60}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >
