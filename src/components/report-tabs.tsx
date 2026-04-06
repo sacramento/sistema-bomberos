@@ -91,6 +91,23 @@ const getStatusBadgeClass = (status: AttendanceStatus) => {
     }
 }
 
+function formatExactDuration(start?: string, end?: string): string {
+    if (!start || !end) return 'N/A';
+    const minutes = differenceInMinutes(parseISO(end), parseISO(start));
+    if (isNaN(minutes) || minutes < 0) return 'N/A';
+    if (minutes === 0) return '0min';
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    let result = '';
+    if (hours > 0) result += `${hours}h `;
+    if (remainingMinutes > 0) result += `${remainingMinutes}min`;
+    return result.trim();
+}
+
+function differenceInMinutes(end: Date, start: Date): number {
+    return Math.floor((end.getTime() - start.getTime()) / 60000);
+}
+
 export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -105,6 +122,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterHierarchy, setFilterHierarchy] = useState('all');
@@ -144,14 +162,20 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
     }, [context, toast, isLimited, user]);
 
+    const availableYears = useMemo(() => {
+        const years = new Set(allSessions.map(s => parseISO(s.date).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [allSessions]);
+
     const { filteredSessions, stats, pieData } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
 
         allSessions.forEach(s => {
+            const sDate = parseISO(s.date);
+            if (filterYear !== 'all' && sDate.getFullYear().toString() !== filterYear) return;
             if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return;
             if (filterDate?.from) {
-                const sDate = parseISO(s.date);
                 const toDate = filterDate.to || filterDate.from;
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return;
             }
@@ -222,7 +246,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData };
-    }, [allSessions, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
+    }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -238,7 +262,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
 
             let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
-            doc.text(filterDate?.from ? `Período: ${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : "Historial Completo", 14, curY); curY += 15;
+            const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
+            doc.text(`Período: ${rangeText}`, 14, curY); curY += 15;
             
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
@@ -264,7 +289,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     return (
         <div className="space-y-6">
             <Card><CardHeader><div className="flex justify-between items-center"><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></div></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
@@ -318,7 +344,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
                             const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
                             const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
-                            const myStatus = isLimited && user ? (attendance[stats[0]?.firefighter.id] || 'present') : 'present';
+                            const myStatus = isLimited && user ? (attendance[stats.find(st => st.firefighter.legajo === user.id)?.firefighter.id || ''] || 'present') : 'present';
                             
                             return (
                                 <TableRow key={s.id}>
@@ -341,7 +367,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                         </>
                                     )}
                                     <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} presentes</Badge>}
+                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} asistentes</Badge>}
                                     </TableCell>
                                 </TableRow>
                             )
@@ -366,6 +392,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterParticipation, setFilterParticipation] = useState<'alumno' | 'todos'>('todos');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
@@ -402,13 +429,19 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         });
     }, [context, toast, isLimited, user]);
 
+    const availableYears = useMemo(() => {
+        const years = new Set(allWorkshops.map(s => parseISO(s.date).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [allWorkshops]);
+
     const { filteredSessions, stats, pieData } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
 
         allWorkshops.forEach(s => {
+            const sDate = parseISO(s.date);
+            if (filterYear !== 'all' && sDate.getFullYear().toString() !== filterYear) return;
             if (filterDate?.from) {
-                const sDate = parseISO(s.date);
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to || filterDate.from) })) return;
             }
 
@@ -473,7 +506,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData };
-    }, [allWorkshops, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
+    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -503,7 +536,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     return (
         <div className="space-y-6">
             <Card><CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
@@ -556,7 +590,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
                             const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
                             const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
-                            const myStatus = isLimited && user ? (attendance[stats[0]?.firefighter.id] || 'present') : 'present';
+                            const myStatus = isLimited && user ? (attendance[stats.find(st => st.firefighter.legajo === user.id)?.firefighter.id || ''] || 'present') : 'present';
 
                             return (
                                 <TableRow key={s.id}>
@@ -579,7 +613,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                         </>
                                     )}
                                     <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} presentes</Badge>}
+                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} asistentes</Badge>}
                                     </TableCell>
                                 </TableRow>
                             )
@@ -604,6 +638,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name', direction: 'asc' });
     
+    const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -646,8 +681,14 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
     }, [context, toast, isLimited, user]);
 
+    const availableYears = useMemo(() => {
+        const years = new Set(allCourses.map(c => parseISO(c.startDate).getFullYear().toString()));
+        return Array.from(years).sort((a, b) => b.localeCompare(a));
+    }, [allCourses]);
+
     const filtered = useMemo(() => {
         let res = allCourses.filter(c => {
+            if (filterYear !== 'all' && parseISO(c.startDate).getFullYear().toString() !== filterYear) return false;
             if (filterFirefighter !== 'all' && c.firefighterId !== filterFirefighter) return false;
             if (filterFirehouse !== 'all') { const f = allFirefighters.find(f => f.id === c.firefighterId); if (f?.firehouse !== filterFirehouse) return false; }
             return true;
@@ -659,7 +700,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
         return res;
-    }, [allCourses, filterFirefighter, filterFirehouse, allFirefighters, sortConfig]);
+    }, [allCourses, filterYear, filterFirefighter, filterFirehouse, allFirefighters, sortConfig]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -684,7 +725,8 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     return (
         <div className="space-y-6">
             <Card><CardHeader><CardTitle className="text-lg">Filtros de Cursos</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         {isLimited ? (
@@ -692,7 +734,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                 {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
                             </div>
                         ) : (
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <Popover open={openCombobox} onOpenChange={openCombobox}>
                                 <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                             </Popover>
