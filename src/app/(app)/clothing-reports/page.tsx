@@ -45,7 +45,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -198,9 +198,9 @@ export default function ClothingReportsPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger className="h-10 text-xs"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger className="h-10 text-xs"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger className="h-10 text-xs"><SelectValue/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -217,8 +217,8 @@ export default function ClothingReportsPage() {
                                     nameKey="name" 
                                     cx="50%" 
                                     cy="50%" 
-                                    outerRadius={85} 
-                                    innerRadius={45}
+                                    outerRadius={90} 
+                                    innerRadius={35}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                     strokeWidth={2}

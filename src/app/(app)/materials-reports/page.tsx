@@ -49,7 +49,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -418,8 +418,8 @@ export default function MaterialsReportPage() {
                                     nameKey="name" 
                                     cx="50%" 
                                     cy="50%" 
-                                    innerRadius={45} 
-                                    outerRadius={85} 
+                                    innerRadius={35} 
+                                    outerRadius={90} 
                                     labelLine={false} 
                                     label={renderCustomizedLabel}
                                     strokeWidth={2}
@@ -437,23 +437,20 @@ export default function MaterialsReportPage() {
                     <CardContent className="space-y-2">
                         <div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div>
                         <div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div>
-                    </CardContent>
-                </Card>
+                    </CardContent></Card>
                 <Card className="border-l-4 border-l-amber-500">
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader>
                     <CardContent className="grid grid-cols-3 gap-2">
                         <div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div>
                         <div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div>
                         <div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div>
-                    </CardContent>
-                </Card>
+                    </CardContent></Card>
                 <Card className="border-l-4 border-l-slate-500">
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader>
                     <CardContent>
                         <div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div>
                         <div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div>
-                    </CardContent>
-                </Card>
+                    </CardContent></Card>
             </div>
 
             <Card className="shadow-md">

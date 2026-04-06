@@ -38,7 +38,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -199,8 +199,8 @@ export default function DashboardPage() {
                                   data={pieData}
                                   dataKey="value"
                                   nameKey="name"
-                                  innerRadius={40}
-                                  outerRadius={85}
+                                  innerRadius={35}
+                                  outerRadius={90}
                                   strokeWidth={2}
                                   labelLine={false}
                                   label={renderCustomizedLabel}

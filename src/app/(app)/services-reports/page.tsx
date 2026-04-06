@@ -23,7 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Pie, PieChart, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
-import { Command, CommandEmpty, CommandInput, CommandItem, CommandList, CommandGroup } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { APP_CONFIG } from "@/lib/config";
@@ -53,7 +53,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -331,7 +331,7 @@ export default function ServicesReportPage() {
                 
                 currentY = (doc as any).lastAutoTable.finalY + 10;
 
-                const getF = (id?: string) => { if(!id) return 'N/A'; const f = firefighterMap.get(id); return f ? `${f.legajo} - ${f.lastName}` : 'ID No encontrado'; };
+                const getF = (id?: string) => { if(!id) return 'N/A'; const f = firefighterMap.get(id); return f ? `${f.legajo} - ${f.lastName}, ${f.firstName}` : 'ID No encontrado'; };
                 
                 (doc as any).autoTable({
                     startY: currentY,
@@ -405,8 +405,8 @@ export default function ServicesReportPage() {
                                     nameKey="name" 
                                     cx="50%" 
                                     cy="50%" 
-                                    outerRadius={85} 
-                                    innerRadius={40}
+                                    outerRadius={90} 
+                                    innerRadius={35}
                                     labelLine={false}
                                     label={renderCustomizedLabel}
                                 >

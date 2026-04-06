@@ -57,7 +57,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold">
+        <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-[11px] font-bold">
             {`${(percent * 100).toFixed(0)}%`}
         </text>
     );
@@ -265,7 +265,24 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             (doc as any).autoTable({
                 startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
                 body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
-                theme: 'striped', headStyles: { fillColor: '#333' }
+                theme: 'striped', headStyles: { fillColor: '#333' },
+                didParseCell: function (data: any) {
+                    if (data.section === 'body' && data.column.index === 4) {
+                        const val = parseFloat(data.cell.raw);
+                        if (!isNaN(val)) {
+                            if (val >= 70) {
+                                data.cell.styles.fillColor = [16, 185, 129];
+                                data.cell.styles.textColor = [255, 255, 255];
+                            } else if (val >= 60) {
+                                data.cell.styles.fillColor = [245, 158, 11];
+                                data.cell.styles.textColor = [0, 0, 0];
+                            } else {
+                                data.cell.styles.fillColor = [244, 63, 94];
+                                data.cell.styles.textColor = [255, 255, 255];
+                            }
+                        }
+                    }
+                }
             });
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
@@ -283,7 +300,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Integrante</Label>
                         {isLimited ? (
                             <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
+                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
                             </div>
                         ) : (
                             <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -297,7 +314,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={45} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={35} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
@@ -507,10 +524,32 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
             doc.text(`Reporte de Talleres - ${APP_CONFIG.name}`, 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+            
+            let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
+            const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
+            doc.text(`Período: ${rangeText}`, 14, curY); curY += 15;
+
             (doc as any).autoTable({
-                startY: 45, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
                 body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
-                theme: 'striped', headStyles: { fillColor: '#333' }
+                theme: 'striped', headStyles: { fillColor: '#333' },
+                didParseCell: function (data: any) {
+                    if (data.section === 'body' && data.column.index === 4) {
+                        const val = parseFloat(data.cell.raw);
+                        if (!isNaN(val)) {
+                            if (val >= 70) {
+                                data.cell.styles.fillColor = [16, 185, 129];
+                                data.cell.styles.textColor = [255, 255, 255];
+                            } else if (val >= 60) {
+                                data.cell.styles.fillColor = [245, 158, 11];
+                                data.cell.styles.textColor = [0, 0, 0];
+                            } else {
+                                data.cell.styles.fillColor = [244, 63, 94];
+                                data.cell.styles.textColor = [255, 255, 255];
+                            }
+                        }
+                    }
+                }
             });
             doc.save(`reporte-talleres-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
@@ -530,7 +569,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Integrante</Label>
                         {isLimited ? (
                             <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
+                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
                             </div>
                         ) : (
                             <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -544,7 +583,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} innerRadius={45} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={35} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
@@ -698,8 +737,13 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.setFontSize(22); doc.setTextColor(255); doc.setFont('helvetica', 'bold');
             doc.text(`Cursos Externos - ${APP_CONFIG.name}`, 14, 22);
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
+            
+            let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
+            const rangeText = filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
+            doc.text(`Período: ${rangeText}`, 14, curY); curY += 15;
+
             (doc as any).autoTable({
-                startY: 45, head: [['Integrante', 'Curso', 'Lugar', 'Fecha']],
+                startY: curY, head: [['Integrante', 'Curso', 'Lugar', 'Fecha']],
                 body: filtered.map(c => [`${c.firefighterLegajo} - ${c.firefighterName}`, c.title, c.location, format(parseISO(c.startDate), 'dd/MM/yyyy')]),
                 theme: 'striped', headStyles: { fillColor: '#333' }
             });
@@ -718,11 +762,11 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Integrante</Label>
                         {isLimited ? (
                             <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter)?.lastName || 'Cargando...'}
+                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
                             </div>
                         ) : (
                             <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
                                 <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                             </Popover>
                         )}
