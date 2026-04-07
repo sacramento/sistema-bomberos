@@ -16,7 +16,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-f
 import { es } from 'date-fns/locale';
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Firefighter, Session, AttendanceStatus, Course } from "@/lib/types";
+import { Firefighter, Session, AttendanceStatus, Course, Specialization } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getAspiranteSessions } from "@/services/aspirantes-sessions.service";
 import { getWorkshops } from "@/services/workshops.service";
@@ -39,6 +39,7 @@ const PIE_CHART_COLORS = {
 };
 
 const firehouses = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
+const specializations: Specialization[] = ['APH', 'BUCEO', 'FORESTAL', 'FUEGO', 'GORA', 'HAZ-MAT', 'KAIZEN', 'PAE', 'RESCATE VEHICULAR', 'RESCATE URBANO', 'GENERAL'];
 
 const RADIAN = Math.PI / 180;
 const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
@@ -57,7 +58,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 const getStatusLabel = (status: AttendanceStatus) => {
     switch(status) {
         case 'present': return "Presente";
-        case 'recupero': return "Presente (R)";
+        case 'recupero': return "Recuperó";
         case 'absent': return "Ausente";
         case 'tardy': return "Tarde";
         case 'excused': return "Justificado";
@@ -143,6 +144,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterHierarchy, setFilterHierarchy] = useState<'all' | 'bomberos' | 'oficiales'>('all');
+    const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterRole, setFilterRole] = useState<'all' | 'student' | 'staff'>('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
@@ -190,6 +193,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
             if (filterYear !== 'all' && sDate.getFullYear().toString() !== filterYear) return;
+            if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return;
             if (filterDate?.from) {
                 const toDate = filterDate.to || filterDate.from;
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return;
@@ -204,12 +208,19 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
-                if (!f) return;
+                if (!f || f.status === 'Inactive') return;
 
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
+
+                if (filterHierarchy !== 'all') {
+                    const suboficialRanks = new Set(['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL']);
+                    const isOfficer = suboficialRanks.has(f.rank);
+                    if (filterHierarchy === 'bomberos' && isOfficer) return;
+                    if (filterHierarchy === 'oficiales' && !isOfficer) return;
+                }
 
                 const isStaff = instructorIds.has(fid) || assistantIds.has(fid);
                 const isStudent = attendeeIds.has(fid);
@@ -226,7 +237,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 cur.total++;
 
                 if (isStaff) {
-                    cur.present++; // Instructores siempre presentes
+                    cur.present++; 
                 } else {
                     const status = (s.attendance?.[fid] || 'present') as AttendanceStatus;
                     if (status === 'present' || status === 'recupero') cur.present++;
@@ -279,7 +290,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allSessions, filterYear, filterDate, filterFirehouse, filterFirefighter, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
+    }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, filterHierarchy, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -301,7 +312,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
             const resText = context === 'aspirantes' 
                 ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` 
-                : `Oferta: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Gen: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
+                : `Cant. Clases - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
 
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
@@ -341,45 +352,50 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         } finally { setGeneratingPdf(false); }
     };
 
-    const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
+    const firefighterList = allFirefighters.filter(f => f.status !== 'Inactive' && (context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE'));
 
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Capacitación</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Especialidad</Label><Select value={filterSpecialization} onValueChange={setFilterSpecialization}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                            <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={(v: any) => setFilterHierarchy(v)} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="bomberos">Bomberos</SelectItem><SelectItem value="oficiales">Oficiales/Subof</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rol en Clase</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rango de Fechas</Label>
+                        <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-xs h-10", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Historial Completo"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover>
+                    </div>
+                    <div className="space-y-2"><Label>Modo de Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen de Totales</SelectItem><SelectItem value="by-class">Detalle de Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Generar Informe PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1 shadow-md h-fit"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución (%)</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Historial de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
+                <Card className="lg:col-span-1 shadow-md h-fit"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución de Asistencia</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Ficha de Actividades' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Clase</TableHead>
-                                <TableHead>Rol</TableHead>
-                                <TableHead className="text-right">Estado</TableHead>
+                                <TableHead className="text-[11px]">Fecha</TableHead>
+                                <TableHead className="text-[11px]">Título de Clase</TableHead>
+                                <TableHead className="text-[11px]">Rol</TableHead>
+                                <TableHead className="text-right text-[11px]">Estado</TableHead>
                             </>
                         ) : (
                             <>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center">P</TableHead>
-                                <TableHead className="text-center">A</TableHead>
-                                <TableHead className="text-center">T</TableHead>
-                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Apellido y Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center text-[11px]">P</TableHead>
+                                <TableHead className="text-center text-[11px]">A</TableHead>
+                                <TableHead className="text-center text-[11px]">T</TableHead>
+                                <TableHead className="text-right cursor-pointer text-[11px]" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
@@ -389,13 +405,13 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-[10px] uppercase font-bold">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
-                                    <TableCell className="text-right"><Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
+                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[250px]">{s.title}</TableCell>
+                                    <TableCell className="text-[10px] uppercase font-bold text-muted-foreground">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
+                                    <TableCell className="text-right"><Badge className={cn("text-[9px] h-5", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
@@ -417,8 +433,10 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+    const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterHierarchy, setFilterHierarchy] = useState<'all' | 'bomberos' | 'oficiales'>('all');
     const [filterRole, setFilterRole] = useState<'all' | 'student' | 'staff'>('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
@@ -466,6 +484,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
             if (filterYear !== 'all' && sDate.getFullYear().toString() !== filterYear) return;
+            if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return;
             if (filterDate?.from) {
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to || filterDate.from) })) return;
             }
@@ -478,12 +497,19 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
-                if (!f) return;
+                if (!f || f.status === 'Inactive') return;
 
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
+
+                if (filterHierarchy !== 'all') {
+                    const suboficialRanks = new Set(['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL']);
+                    const isOfficer = suboficialRanks.has(f.rank);
+                    if (filterHierarchy === 'bomberos' && isOfficer) return;
+                    if (filterHierarchy === 'oficiales' && !isOfficer) return;
+                }
 
                 const isStaff = instructorIds.has(fid) || assistantIds.has(fid);
                 if (filterRole === 'student' && isStaff) return;
@@ -527,6 +553,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             const dir = sortConfig.direction === 'asc' ? 1 : -1;
             let aVal: any, bVal: any;
             switch (sortConfig.key) {
+                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
                 case 'present': aVal = a.present; bVal = b.present; break;
                 case 'absent': aVal = a.absent; bVal = b.absent; break;
                 case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
@@ -548,7 +576,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterFirefighter, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
+    }, [allWorkshops, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, filterHierarchy, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -570,7 +598,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
             const resText = context === 'aspirantes' 
                 ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` 
-                : `Oferta: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Gen: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
+                : `Cant. Talleres - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
 
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
@@ -610,24 +638,29 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         } finally { setGeneratingPdf(false); }
     };
 
-    const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
+    const firefighterList = allFirefighters.filter(f => f.status !== 'Inactive' && (context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE'));
 
     if (loading) return <Skeleton className="h-96 w-full" />;
 
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                    <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Taller</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Especialidad</Label><Select value={filterSpecialization} onValueChange={setFilterSpecialization}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                            <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
+                    <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={(v: any) => setFilterHierarchy(v)} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="bomberos">Bomberos</SelectItem><SelectItem value="oficiales">Oficiales/Subof</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rango de Fechas</Label>
+                        <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-xs h-10", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Historial Completo"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover>
+                    </div>
                     <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
@@ -637,21 +670,21 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle Individual' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
-                            <TableRow>
-                                <TableHead>Fecha</TableHead>
-                                <TableHead>Taller</TableHead>
-                                <TableHead>Rol</TableHead>
-                                <TableHead className="text-right">Estado</TableHead>
-                            </TableRow>
+                            <>
+                                <TableHead className="text-[11px]">Fecha</TableHead>
+                                <TableHead className="text-[11px]">Taller</TableHead>
+                                <TableHead className="text-[11px]">Rol</TableHead>
+                                <TableHead className="text-right text-[11px]">Estado</TableHead>
+                            </>
                         ) : (
-                            <TableRow>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center">P</TableHead>
-                                <TableHead className="text-center">A</TableHead>
-                                <TableHead className="text-center">T</TableHead>
-                                <TableHead className="text-right" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
-                            </TableRow>
+                            <>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Apellido y Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center text-[11px]">P</TableHead>
+                                <TableHead className="text-center text-[11px]">A</TableHead>
+                                <TableHead className="text-center text-[11px]">T</TableHead>
+                                <TableHead className="text-right cursor-pointer text-[11px]" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                            </>
                         )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
@@ -660,13 +693,13 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-[10px] uppercase font-bold">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
-                                    <TableCell className="text-right"><Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
+                                    <TableCell className="text-[10px] uppercase font-bold text-muted-foreground">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
+                                    <TableCell className="text-right"><Badge className={cn("text-[9px] h-5", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
@@ -688,6 +721,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'name' as any, direction: 'asc' });
     
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
+    const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -737,9 +771,13 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
     const filtered = useMemo(() => {
         let res = allCourses.filter(c => {
+            const f = allFirefighters.find(ff => ff.id === c.firefighterId);
+            if (!f || f.status === 'Inactive') return false;
+
             if (filterYear !== 'all' && parseISO(c.startDate).getFullYear().toString() !== filterYear) return false;
+            if (filterSpecialization !== 'all' && c.specialization !== filterSpecialization) return false;
             if (filterFirefighter !== 'all' && c.firefighterId !== filterFirefighter) return false;
-            if (filterFirehouse !== 'all') { const f = allFirefighters.find(f => f.id === c.firefighterId); if (f?.firehouse !== filterFirehouse) return false; }
+            if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return false;
             return true;
         });
         res.sort((a, b) => {
@@ -749,7 +787,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
         return res;
-    }, [allCourses, filterYear, filterFirefighter, filterFirehouse, allFirefighters, sortConfig]);
+    }, [allCourses, filterYear, filterSpecialization, filterFirefighter, filterFirehouse, allFirefighters, sortConfig]);
 
     const generatePdf = async () => {
         if (!logoDataUrl) return;
@@ -774,24 +812,25 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
         } finally { setGeneratingPdf(false); }
     };
 
-    const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
+    const firefighterList = allFirefighters.filter(f => f.status !== 'Inactive' && (context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE'));
 
     return (
         <div className="space-y-6">
-            <Card><CardHeader><CardTitle className="text-lg">Filtros de Cursos</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+            <Card><CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Cursos</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Especialidad</Label><Select value={filterSpecialization} onValueChange={setFilterSpecialization}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                            <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
-            <Card><CardContent className="p-0"><Table><TableHeader><TableRow><TableHead>Integrante</TableHead><TableHead>Curso</TableHead><TableHead>Lugar</TableHead><TableHead className="text-right">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></CardContent></Card>
+            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Apellido y Nombre</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
         </div>
     );
 }
