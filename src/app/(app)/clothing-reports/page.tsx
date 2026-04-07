@@ -204,7 +204,7 @@ export default function ClothingReportsPage() {
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <Card className="lg:col-span-1 shadow-md overflow-hidden">
+                <Card className="lg:col-span-1 shadow-md overflow-hidden h-fit">
                     <CardHeader className="bg-muted/20 border-b">
                         <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shirt className="h-4 w-4" /> Distribución por Estado</CardTitle>
                     </CardHeader>
@@ -235,7 +235,7 @@ export default function ClothingReportsPage() {
                     <CardHeader className="bg-muted/20 border-b">
                         <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4" /> Vista Previa ({filteredItems.length} items)</CardTitle>
                     </CardHeader>
-                    <CardContent className="max-h-[400px] overflow-y-auto p-0">
+                    <CardContent className="max-h-[450px] overflow-y-auto p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>

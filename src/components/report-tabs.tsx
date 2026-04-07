@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Loader2, Filter, Check, ChevronsUpDown } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Loader2, Filter, Check, ChevronsUpDown, UserCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -84,7 +84,7 @@ const getStatusBadgeClass = (status: AttendanceStatus) => {
 
 const getSessionGroup = (session: Session) => {
     const attendees = session.attendees || [];
-    if (attendees.length === 0) return 'Varios';
+    if (attendees.length === 0) return 'General';
 
     const total = attendees.length;
     const suboficialRanks = new Set(['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL']);
@@ -99,17 +99,23 @@ const getSessionGroup = (session: Session) => {
 
     if (aspirantesCount / total > 0.8) return 'Aspirantes';
     if (officersCount / total > 0.8) return 'Suboficiales';
+    
+    const hasC1 = firehouseCounts['Cuartel 1'] > 0;
+    const hasC2 = firehouseCounts['Cuartel 2'] > 0;
+    const hasC3 = firehouseCounts['Cuartel 3'] > 0;
+    if (hasC1 && hasC2 && hasC3) return 'General';
+
     if (firehouseCounts['Cuartel 1'] / total > 0.6) return 'Cuartel 1';
     if (firehouseCounts['Cuartel 2'] / total > 0.6) return 'Cuartel 2';
     if (firehouseCounts['Cuartel 3'] / total > 0.6) return 'Cuartel 3';
 
-    return 'Varios';
+    return 'General';
 };
 
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
-    present: number; // Sum of present + recupero
+    present: number; 
     absent: number;
     tardy: number;
     percentage: number;
@@ -135,9 +141,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
-    const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterRole, setFilterRole] = useState<'all' | 'student' | 'staff'>('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -179,50 +185,65 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const groupCounts = { C1: 0, C2: 0, C3: 0, Suboficiales: 0, Aspirantes: 0 };
+        const groupCounts = { C1: 0, C2: 0, C3: 0, General: 0, Suboficiales: 0, Aspirantes: 0 };
 
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
             if (filterYear !== 'all' && sDate.getFullYear().toString() !== filterYear) return;
-            if (filterSpecialization !== 'all' && s.specialization !== filterSpecialization) return;
             if (filterDate?.from) {
                 const toDate = filterDate.to || filterDate.from;
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return;
             }
 
-            const attendeesList = s.attendees || [];
-            let sessionIncludedInFilters = false;
+            const instructorIds = new Set(s.instructorIds || []);
+            const assistantIds = new Set(s.assistantIds || []);
+            const attendeeIds = new Set(s.attendeeIds || []);
+            
+            const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
+            let sessionMatchFound = false;
 
-            attendeesList.forEach(f => {
+            allInvolvedIds.forEach(fid => {
+                const f = allFirefighters.find(ff => ff.id === fid);
+                if (!f) return;
+
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
 
-                sessionIncludedInFilters = true;
-                const status = (s.attendance?.[f.id] || 'present') as AttendanceStatus;
+                const isStaff = instructorIds.has(fid) || assistantIds.has(fid);
+                const isStudent = attendeeIds.has(fid);
 
-                if (!statsMap.has(f.id)) {
-                    statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
-                }
-                const cur = statsMap.get(f.id)!;
-                cur.total++;
+                if (filterRole === 'student' && !isStudent) return;
+                if (filterRole === 'staff' && !isStaff) return;
+
+                sessionMatchFound = true;
                 
-                // Lógica simplificada: Recuperó es Presente
-                if (status === 'present' || status === 'recupero') cur.present++;
-                else if (status === 'absent' || status === 'excused') cur.absent++;
-                else if (status === 'tardy') cur.tardy++;
+                if (!statsMap.has(fid)) {
+                    statsMap.set(fid, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
+                }
+                const cur = statsMap.get(fid)!;
+                cur.total++;
+
+                if (isStaff) {
+                    cur.present++; // Instructores siempre presentes
+                } else {
+                    const status = (s.attendance?.[fid] || 'present') as AttendanceStatus;
+                    if (status === 'present' || status === 'recupero') cur.present++;
+                    else if (status === 'absent' || status === 'excused') cur.absent++;
+                    else if (status === 'tardy') cur.tardy++;
+                }
             });
 
-            if (sessionIncludedInFilters) {
+            if (sessionMatchFound) {
                 sessionMatches.push(s);
                 const group = getSessionGroup(s);
                 if (group === 'Cuartel 1') groupCounts.C1++;
                 else if (group === 'Cuartel 2') groupCounts.C2++;
                 else if (group === 'Cuartel 3') groupCounts.C3++;
+                else if (group === 'General') groupCounts.General++;
                 else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                 else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                else if (group === 'Varios') { groupCounts.C1++; groupCounts.C2++; groupCounts.C3++; }
             }
         });
 
@@ -246,19 +267,19 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
-        const globalCounts = statsArray.reduce((acc, s) => {
+        const counts = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy;
             return acc;
         }, { present: 0, absent: 0, tardy: 0 });
 
         const pData = [
-            { name: 'Presente', value: globalCounts.present, fill: PIE_CHART_COLORS.present },
-            { name: 'Ausente', value: globalCounts.absent, fill: PIE_CHART_COLORS.absent },
-            { name: 'Tarde', value: globalCounts.tardy, fill: PIE_CHART_COLORS.tardy }
+            { name: 'Presente', value: counts.present, fill: PIE_CHART_COLORS.present },
+            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent },
+            { name: 'Tarde', value: counts.tardy, fill: PIE_CHART_COLORS.tardy }
         ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, context, sortConfig, isLimited, user]);
+    }, [allSessions, filterYear, filterDate, filterFirehouse, filterFirefighter, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -274,21 +295,31 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
 
             let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
-            const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
+            const rangeText = filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` : `Oferta Académica: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resText = context === 'aspirantes' 
+                ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` 
+                : `Oferta: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Gen: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
-            
+
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
             
             if (isIndividual) {
                 const s = stats[0];
-                doc.setFontSize(14); doc.text(`Informe Personal: ${s.firefighter.lastName}, ${s.firefighter.firstName} (Legajo: ${s.firefighter.legajo})`, 14, curY); curY += 10;
+                doc.setFontSize(14); doc.text(`Ficha Individual: ${s.firefighter.lastName}, ${s.firefighter.firstName}`, 14, curY); curY += 10;
                 (doc as any).autoTable({
-                    startY: curY, head: [['Fecha', 'Título de la Clase', 'Especialidad', 'Estado']],
-                    body: filteredSessions.map(sess => [format(parseISO(sess.date), 'dd/MM/yyyy'), sess.title, sess.specialization, getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')]),
+                    startY: curY, head: [['Fecha', 'Clase', 'Rol', 'Estado']],
+                    body: filteredSessions.map(sess => {
+                        const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
+                        return [
+                            format(parseISO(sess.date), 'dd/MM/yyyy'), 
+                            sess.title, 
+                            isStaff ? 'Instructor' : 'Alumno',
+                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')
+                        ];
+                    }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
                 });
             } else {
@@ -299,32 +330,25 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     didParseCell: function (data: any) {
                         if (data.section === 'body' && data.column.index === 4) {
                             const val = parseFloat(data.cell.raw);
-                            if (!isNaN(val)) {
-                                if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
-                                else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
-                                else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
-                            }
+                            if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
+                            else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
+                            else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
                         }
                     }
                 });
             }
-            doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            doc.save(`reporte-clases-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
 
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
 
-    if (loading) return <Skeleton className="h-96 w-full" />;
-
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -332,39 +356,43 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Sesiones</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución General</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle por Sesión' : 'Estadística por Integrante'}</CardTitle></CardHeader>
+                <Card className="lg:col-span-1 shadow-md h-fit"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución (%)</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Historial de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Clase</TableHead>
-                                <TableHead className="text-right">Estado Individual</TableHead>
+                                <TableHead>Rol</TableHead>
+                                <TableHead className="text-right">Estado</TableHead>
                             </>
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Integrante {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('tardy')}>T {getSortIcon('tardy')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center">P</TableHead>
+                                <TableHead className="text-center">A</TableHead>
+                                <TableHead className="text-center">T</TableHead>
                                 <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
-                            const status = targetId ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
+                            const isStaff = targetId ? (s.instructorIds?.includes(targetId) || s.assistantIds?.includes(targetId)) : false;
+                            const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Global</span>}</TableCell>
+                                    <TableCell className="text-[10px] uppercase font-bold">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
+                                    <TableCell className="text-right"><Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
                         }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
@@ -391,6 +419,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterFirehouse, setFilterFirehouse] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
+    const [filterRole, setFilterRole] = useState<'all' | 'student' | 'staff'>('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
     const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -432,7 +461,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const groupCounts = { C1: 0, C2: 0, C3: 0, Suboficiales: 0, Aspirantes: 0 };
+        const groupCounts = { C1: 0, C2: 0, C3: 0, General: 0, Suboficiales: 0, Aspirantes: 0 };
 
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
@@ -441,37 +470,51 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to || filterDate.from) })) return;
             }
 
-            const attendeesList = s.attendees || [];
-            let sessionIncludedInFilters = false;
+            const instructorIds = new Set(s.instructorIds || []);
+            const assistantIds = new Set(s.assistantIds || []);
+            const attendeeIds = new Set(s.attendeeIds || []);
+            const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
+            let sessionMatchFound = false;
 
-            attendeesList.forEach(f => {
+            allInvolvedIds.forEach(fid => {
+                const f = allFirefighters.find(ff => ff.id === fid);
+                if (!f) return;
+
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
 
-                sessionIncludedInFilters = true;
-                const status = (s.attendance?.[f.id] || 'present') as AttendanceStatus;
+                const isStaff = instructorIds.has(fid) || assistantIds.has(fid);
+                if (filterRole === 'student' && isStaff) return;
+                if (filterRole === 'staff' && !isStaff) return;
 
-                if (!statsMap.has(f.id)) {
-                    statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
+                sessionMatchFound = true;
+                if (!statsMap.has(fid)) {
+                    statsMap.set(fid, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
                 }
-                const cur = statsMap.get(f.id)!;
+                const cur = statsMap.get(fid)!;
                 cur.total++;
-                if (status === 'present' || status === 'recupero') cur.present++;
-                else if (status === 'absent' || status === 'excused') cur.absent++;
-                else if (status === 'tardy') cur.tardy++;
+
+                if (isStaff) {
+                    cur.present++;
+                } else {
+                    const status = (s.attendance?.[fid] || 'present') as AttendanceStatus;
+                    if (status === 'present' || status === 'recupero') cur.present++;
+                    else if (status === 'absent' || status === 'excused') cur.absent++;
+                    else if (status === 'tardy') cur.tardy++;
+                }
             });
 
-            if (sessionIncludedInFilters) {
+            if (sessionMatchFound) {
                 sessionMatches.push(s);
                 const group = getSessionGroup(s);
                 if (group === 'Cuartel 1') groupCounts.C1++;
                 else if (group === 'Cuartel 2') groupCounts.C2++;
                 else if (group === 'Cuartel 3') groupCounts.C3++;
+                else if (group === 'General') groupCounts.General++;
                 else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                 else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                else if (group === 'Varios') { groupCounts.C1++; groupCounts.C2++; groupCounts.C3++; }
             }
         });
 
@@ -505,7 +548,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterFirefighter, context, sortConfig, isLimited, user]);
+    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterFirefighter, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -525,17 +568,27 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` : `Oferta Académica: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resText = context === 'aspirantes' 
+                ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` 
+                : `Oferta: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Gen: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
 
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
 
             if (isIndividual) {
                 const s = stats[0];
-                doc.setFontSize(14); doc.text(`Informe Personal: ${s.firefighter.lastName}, ${s.firefighter.firstName} (Legajo: ${s.firefighter.legajo})`, 14, curY); curY += 10;
+                doc.setFontSize(14); doc.text(`Ficha Individual: ${s.firefighter.lastName}, ${s.firefighter.firstName}`, 14, curY); curY += 10;
                 (doc as any).autoTable({
-                    startY: curY, head: [['Fecha', 'Título del Taller', 'Estado']],
-                    body: filteredSessions.map(sess => [format(parseISO(sess.date), 'dd/MM/yyyy'), sess.title, getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')]),
+                    startY: curY, head: [['Fecha', 'Taller', 'Rol', 'Estado']],
+                    body: filteredSessions.map(sess => {
+                        const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
+                        return [
+                            format(parseISO(sess.date), 'dd/MM/yyyy'), 
+                            sess.title, 
+                            isStaff ? 'Instructor' : 'Alumno',
+                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')
+                        ];
+                    }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
                 });
             } else {
@@ -546,11 +599,9 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     didParseCell: function (data: any) {
                         if (data.section === 'body' && data.column.index === 4) {
                             const val = parseFloat(data.cell.raw);
-                            if (!isNaN(val)) {
-                                if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
-                                else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
-                                else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
-                            }
+                            if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
+                            else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
+                            else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
                         }
                     }
                 });
@@ -566,10 +617,9 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                     <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -577,39 +627,43 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
+                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-1 shadow-md h-fit"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle Individual' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader>
+                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <TableRow>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Taller</TableHead>
-                                <TableHead className="text-right">Estado Individual</TableHead>
+                                <TableHead>Rol</TableHead>
+                                <TableHead className="text-right">Estado</TableHead>
                             </TableRow>
                         ) : (
                             <TableRow>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Integrante {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
-                                <TableHead className="text-center" onClick={() => toggleSort('tardy')}>T {getSortIcon('tardy')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center">P</TableHead>
+                                <TableHead className="text-center">A</TableHead>
+                                <TableHead className="text-center">T</TableHead>
                                 <TableHead className="text-right" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
                             </TableRow>
                         )}
-                    </TableHeader><TableBody>
+                    </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
-                            const status = targetId ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
+                            const isStaff = targetId ? (s.instructorIds?.includes(targetId) || s.assistantIds?.includes(targetId)) : false;
+                            const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Global</span>}</TableCell>
+                                    <TableCell className="text-[10px] uppercase font-bold">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
+                                    <TableCell className="text-right"><Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
                         }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
