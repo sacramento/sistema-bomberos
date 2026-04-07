@@ -40,12 +40,6 @@ const PIE_CHART_COLORS = {
     recupero: "#3B82F6",
 };
 
-const hierarchyGroups = [
-    { id: 'aspirantes', label: 'Aspirantes', ranks: ['ASPIRANTE'] },
-    { id: 'bomberos', label: 'Bomberos', ranks: ['BOMBERO', 'ADAPTACION'] },
-    { id: 'suboficiales_oficiales', label: 'Oficiales y Suboficiales', ranks: ['CABO', 'CABO PRIMERO', 'SARGENTO', 'SARGENTO PRIMERO', 'SUBOFICIAL PRINCIPAL', 'SUBOFICIAL MAYOR', 'OFICIAL AYUDANTE', 'OFICIAL INSPECTOR', 'OFICIAL PRINCIPAL', 'SUBCOMANDANTE', 'COMANDANTE', 'COMANDANTE MAYOR', 'COMANDANTE GENERAL'] }
-];
-
 const firehouses = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 
 const RADIAN = Math.PI / 180;
@@ -126,10 +120,6 @@ type SortConfig = {
     direction: 'asc' | 'desc';
 };
 
-function ScrollArea({ className, children }: { className?: string, children: React.ReactNode }) {
-    return <div className={cn("relative overflow-auto", className)}>{children}</div>;
-}
-
 export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asistencia' | 'aspirantes' }) {
     const { toast } = useToast();
     const { user, getActiveRole } = useAuth();
@@ -147,12 +137,9 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterSpecialization, setFilterSpecialization] = useState('all');
     const [filterFirehouse, setFilterFirehouse] = useState('all');
-    const [filterHierarchy, setFilterHierarchy] = useState('all');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
-    const [filterStatuses, setFilterStatuses] = useState<string[]>([]);
-    const [filterParticipation, setFilterParticipation] = useState<'alumno' | 'todos'>('todos');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
-    const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
+    const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
@@ -192,7 +179,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const groupCounts = { 'C1': 0, 'C2': 0, 'C3': 0, 'Suboficiales': 0, 'Aspirantes': 0 };
+        const groupCounts = { C1: 0, C2: 0, C3: 0, Suboficiales: 0, Aspirantes: 0 };
 
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
@@ -203,36 +190,31 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(toDate) })) return;
             }
 
-            const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
-            s.attendees.forEach(f => { participants.push({ f, status: (s.attendance?.[f.id] || 'present') as AttendanceStatus }); });
-            
-            if (filterParticipation === 'todos') {
-                s.instructors.forEach(f => { if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' }); });
-                s.assistants.forEach(f => { if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' }); });
-            }
+            const attendeesList = s.attendees || [];
+            let sessionIncludedInFilters = false;
 
-            let sessionIncluded = false;
-
-            participants.forEach(({ f, status }) => {
+            attendeesList.forEach(f => {
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
-                if (filterHierarchy !== 'all') { const g = hierarchyGroups.find(g => g.id === filterHierarchy); if (!g?.ranks.includes(f.rank)) return; }
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
-                if (filterStatuses.length > 0 && !filterStatuses.includes(status)) return;
 
-                if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
-                const cur = statsMap.get(f.id)!; cur.total++;
-                if (status === 'present') cur.present++; 
-                else if (status === 'absent') cur.absent++; 
-                else if (status === 'tardy') cur.tardy++; 
-                else if (status === 'excused') cur.excused++; 
+                sessionIncludedInFilters = true;
+                const status = (s.attendance?.[f.id] || 'present') as AttendanceStatus;
+
+                if (!statsMap.has(f.id)) {
+                    statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
+                }
+                const cur = statsMap.get(f.id)!;
+                cur.total++;
+                if (status === 'present') cur.present++;
+                else if (status === 'absent') cur.absent++;
+                else if (status === 'tardy') cur.tardy++;
+                else if (status === 'excused') cur.excused++;
                 else if (status === 'recupero') cur.recupero++;
-                
-                sessionIncluded = true;
             });
 
-            if (sessionIncluded) {
+            if (sessionIncludedInFilters) {
                 sessionMatches.push(s);
                 const group = getSessionGroup(s);
                 if (group === 'Cuartel 1') groupCounts.C1++;
@@ -264,17 +246,19 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
-        const pData = filterFirefighter !== 'all' && statsArray.length === 1 
-            ? [
-                { name: 'Presente', value: statsArray[0].present + statsArray[0].recupero, fill: PIE_CHART_COLORS.present },
-                { name: 'Ausente', value: statsArray[0].absent + statsArray[0].excused, fill: PIE_CHART_COLORS.absent },
-                { name: 'Tarde', value: statsArray[0].tardy, fill: PIE_CHART_COLORS.tardy }
-              ].filter(d => d.value > 0)
-            : Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 }))
-                .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
+        const counts = statsArray.reduce((acc, s) => {
+            acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero;
+            return acc;
+        }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 });
+
+        const pData = [
+            { name: 'Presente', value: counts.present + counts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Ausente', value: counts.absent + counts.excused, fill: PIE_CHART_COLORS.absent },
+            { name: 'Tarde', value: counts.tardy, fill: PIE_CHART_COLORS.tardy }
+        ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
+    }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, context, sortConfig, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -294,7 +278,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            doc.text(`Total de Clases: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
+            const resText = context === 'aspirantes' ? `Clases: ${sessionsByGroup.Aspirantes}` : `Clases: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            doc.text(resText, 14, curY); curY += 10;
             
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
             
@@ -308,7 +293,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 });
             } else {
                 (doc as any).autoTable({
-                    startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                    startY: curY, head: [['Integrante', 'P', 'A', 'R', '%']],
                     body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
                     theme: 'striped', headStyles: { fillColor: '#333' },
                     didParseCell: function (data: any) {
@@ -329,85 +314,61 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
     const firefighterList = allFirefighters.filter(f => context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE');
 
+    if (loading) return <Skeleton className="h-96 w-full" />;
+
     return (
         <div className="space-y-6">
-            <Card><CardHeader><div className="flex justify-between items-center"><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle></div></CardHeader>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
+                </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Año</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
-                        {isLimited ? (
-                            <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
-                            </div>
-                        ) : (
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
-                            </Popover>
-                        )}
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
+                <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle por Sesión' : 'Estadística por Integrante'}</CardTitle></CardHeader>
+                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead>Fecha</TableHead>
-                                <TableHead>Título de la Clase</TableHead>
-                                {filterFirefighter === 'all' && !isLimited ? (
-                                    <>
-                                        <TableHead className="text-center">P</TableHead>
-                                        <TableHead className="text-center">A</TableHead>
-                                        <TableHead className="text-center">R</TableHead>
-                                    </>
-                                ) : (
-                                    <TableHead className="text-right">Estado Individual</TableHead>
-                                )}
-                            </TableRow>
+                                <TableHead>Clase</TableHead>
+                                <TableHead className="text-right">Asistencia</TableHead>
+                            </>
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Nombre {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Integrante {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center">P</TableHead>
+                                <TableHead className="text-center">A</TableHead>
+                                <TableHead className="text-center">R</TableHead>
                                 <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const attendance = s.attendance || {};
-                            if (filterFirefighter !== 'all' || isLimited) {
-                                const targetId = isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : filterFirefighter;
-                                const status = (attendance[targetId || ''] || 'present') as AttendanceStatus;
-                                return (
-                                    <TableRow key={s.id}>
-                                        <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                        <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
-                                        <TableCell className="text-right"><Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
-                                    </TableRow>
-                                );
-                            }
-                            const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
-                            const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
-                            const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
+                            const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
+                            const status = targetId ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
+                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
+                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Elija un integrante</span>}</TableCell>
                                 </TableRow>
-                            )
+                            );
                         }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
-                    </TableBody></Table></ScrollArea></CardContent></Card>
+                    </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
     );
@@ -429,10 +390,9 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const [filterDate, setFilterDate] = useState<DateRange | undefined>();
     const [filterYear, setFilterYear] = useState<string>(new Date().getFullYear().toString());
     const [filterFirehouse, setFilterFirehouse] = useState('all');
-    const [filterParticipation, setFilterParticipation] = useState<'alumno' | 'todos'>('todos');
     const [filterFirefighter, setFilterFirefighter] = useState('all');
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'percentage', direction: 'desc' });
-    const [viewMode, setViewMode] = useState<'totals' | 'percentages' | 'by-class'>('totals');
+    const [viewMode, setViewMode] = useState<'totals' | 'by-class'>('totals');
     const [openCombobox, setOpenCombobox] = useState(false);
 
     useEffect(() => {
@@ -451,7 +411,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     if (me) setFilterFirefighter(me.id);
                 }
             } catch (error) {
-                toast({ title: "Error", description: "No se pudieron cargar los datos.", variant: "destructive" });
+                toast({ title: "Error", description: "Fallo al cargar datos.", variant: "destructive" });
             } finally {
                 setLoading(false);
             }
@@ -472,7 +432,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
     const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
         const sessionMatches: Session[] = [];
-        const groupCounts = { 'C1': 0, 'C2': 0, 'C3': 0, 'Suboficiales': 0, 'Aspirantes': 0 };
+        const groupCounts = { C1: 0, C2: 0, C3: 0, Suboficiales: 0, Aspirantes: 0 };
 
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
@@ -481,30 +441,29 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 if (!isWithinInterval(sDate, { start: startOfDay(filterDate.from), end: endOfDay(filterDate.to || filterDate.from) })) return;
             }
 
-            const participants: { f: Firefighter, status: AttendanceStatus }[] = [];
-            s.attendees.forEach(f => participants.push({ f, status: (s.attendance?.[f.id] || 'present') as AttendanceStatus }));
-            
-            if (filterParticipation === 'todos') {
-                s.instructors.forEach(f => { if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' }); });
-                s.assistants.forEach(f => { if (!participants.some(p => p.f.id === f.id)) participants.push({ f, status: 'present' }); });
-            }
+            const attendeesList = s.attendees || [];
+            let sessionIncludedInFilters = false;
 
-            let sessionIncluded = false;
-
-            participants.forEach(({ f, status }) => {
+            attendeesList.forEach(f => {
                 if (isLimited && user && f.legajo !== user.id) return;
                 if (context === 'aspirantes' && f.rank !== 'ASPIRANTE') return;
                 if (filterFirehouse !== 'all' && f.firehouse !== filterFirehouse) return;
                 if (filterFirefighter !== 'all' && f.id !== filterFirefighter) return;
 
-                if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
-                const cur = statsMap.get(f.id)!; cur.total++;
-                if (status === 'present') cur.present++; else if (status === 'absent') cur.absent++; else if (status === 'recupero') cur.recupero++;
-                
-                sessionIncluded = true;
+                sessionIncludedInFilters = true;
+                const status = (s.attendance?.[f.id] || 'present') as AttendanceStatus;
+
+                if (!statsMap.has(f.id)) {
+                    statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
+                }
+                const cur = statsMap.get(f.id)!;
+                cur.total++;
+                if (status === 'present') cur.present++;
+                else if (status === 'absent') cur.absent++;
+                else if (status === 'recupero') cur.recupero++;
             });
 
-            if (sessionIncluded) {
+            if (sessionIncludedInFilters) {
                 sessionMatches.push(s);
                 const group = getSessionGroup(s);
                 if (group === 'Cuartel 1') groupCounts.C1++;
@@ -516,7 +475,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             }
         });
 
-        let statsArray = Array.from(statsMap.values()).map(s => {
+        const statsArray = Array.from(statsMap.values()).map(s => {
             s.percentage = s.total > 0 ? ((s.present + s.recupero) / s.total) * 100 : 0;
             return s;
         });
@@ -533,17 +492,18 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
-        const pData = filterFirefighter !== 'all' && statsArray.length === 1 
-            ? [
-                { name: 'Presente', value: statsArray[0].present + statsArray[0].recupero, fill: PIE_CHART_COLORS.present },
-                { name: 'Ausente', value: statsArray[0].absent + statsArray[0].excused, fill: PIE_CHART_COLORS.absent },
-                { name: 'Tarde', value: statsArray[0].tardy, fill: PIE_CHART_COLORS.tardy }
-              ].filter(d => d.value > 0)
-            : Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, recupero: 0 }))
-                .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
+        const counts = statsArray.reduce((acc, s) => {
+            acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero;
+            return acc;
+        }, { present: 0, absent: 0, recupero: 0 });
+
+        const pData = [
+            { name: 'Presente', value: counts.present + counts.recupero, fill: PIE_CHART_COLORS.present },
+            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent }
+        ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
-    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
+    }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterFirefighter, context, sortConfig, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     const getSortIcon = (key: SortConfig['key']) => sortConfig.key !== key ? <ArrowUpDown className="h-3 w-3 ml-1 opacity-30" /> : sortConfig.direction === 'asc' ? <ArrowUp className="h-3 w-3 ml-1 text-primary" /> : <ArrowDown className="h-3 w-3 ml-1 text-primary" />;
@@ -559,11 +519,12 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.addImage(logoDataUrl!, 'PNG', doc.internal.pageSize.getWidth() - 35, 5, 25, 25);
             
             let curY = 45; doc.setFontSize(10); doc.setTextColor(100);
-            const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
+            const rangeText = filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            doc.text(`Total de Talleres: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
+            const resText = context === 'aspirantes' ? `Talleres: ${sessionsByGroup.Aspirantes}` : `Talleres: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            doc.text(resText, 14, curY); curY += 10;
 
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
 
@@ -577,7 +538,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 });
             } else {
                 (doc as any).autoTable({
-                    startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                    startY: curY, head: [['Integrante', 'P', 'A', 'R', '%']],
                     body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
                     theme: 'striped', headStyles: { fillColor: '#333' },
                     didParseCell: function (data: any) {
@@ -602,82 +563,55 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
 
     return (
         <div className="space-y-6">
-            <Card><CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
+            <Card>
+                <CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
-                        {isLimited ? (
-                            <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
-                            </div>
-                        ) : (
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
-                            </Popover>
-                        )}
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Participación</Label><Select value={filterParticipation} onValueChange={(v: any) => setFilterParticipation(v)} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="todos">Todo el Personal</SelectItem><SelectItem value="alumno">Solo Alumnos</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-between items-center"><div className="flex bg-muted p-1 rounded-md gap-1"><Button variant={viewMode === 'totals' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('totals')} className="h-8 text-xs">Totales</Button><Button variant={viewMode === 'by-class' ? 'default' : 'ghost'} size="sm" onClick={() => setViewMode('by-class')} className="h-8 text-xs">Sesiones</Button></div><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
                 <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
+                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead>Fecha</TableHead>
-                                <TableHead>Título del Taller</TableHead>
-                                {filterFirefighter === 'all' && !isLimited ? (
-                                    <>
-                                        <TableHead className="text-center">P</TableHead>
-                                        <TableHead className="text-center">A</TableHead>
-                                        <TableHead className="text-center">R</TableHead>
-                                    </>
-                                ) : (
-                                    <TableHead className="text-right">Estado Individual</TableHead>
-                                )}
+                                <TableHead>Taller</TableHead>
+                                <TableHead className="text-right">Asistencia</TableHead>
                             </>
                         ) : (
                             <>
+                                <TableHead>Legajo</TableHead>
                                 <TableHead>Integrante</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
-                                <TableHead className="text-center cursor-pointer" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
-                                <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                                <TableHead className="text-center">P</TableHead>
+                                <TableHead className="text-center">A</TableHead>
+                                <TableHead className="text-center">R</TableHead>
+                                <TableHead className="text-right">%</TableHead>
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const attendance = s.attendance || {};
-                            if (filterFirefighter !== 'all' || isLimited) {
-                                const targetId = isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : filterFirefighter;
-                                const status = (attendance[targetId || ''] || 'present') as AttendanceStatus;
-                                return (
-                                    <TableRow key={s.id}>
-                                        <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                        <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
-                                        <TableCell className="text-right"><Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
-                                    </TableRow>
-                                );
-                            }
-                            const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
-                            const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
-                            const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
+                            const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
+                            const status = targetId ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
-                                    <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
-                                    <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
+                                    <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
+                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Elija un integrante</span>}</TableCell>
                                 </TableRow>
-                            )
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
-                    </TableBody></Table></ScrollArea></CardContent></Card>
+                            );
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                    </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
     );
@@ -793,16 +727,10 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos los años</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
-                        {isLimited ? (
-                            <div className="h-10 px-3 flex items-center border rounded-md bg-muted text-xs font-medium">
-                                {firefighterList.find(f => f.id === filterFirefighter) ? `${firefighterList.find(f => f.id === filterFirefighter)?.lastName}, ${firefighterList.find(f => f.id === filterFirefighter)?.firstName}` : 'Cargando...'}
-                            </div>
-                        ) : (
-                            <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                                <PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
-                            </Popover>
-                        )}
+                        <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
+                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
+                        </Popover>
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
