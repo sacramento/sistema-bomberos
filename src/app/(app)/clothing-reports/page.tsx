@@ -188,7 +188,7 @@ export default function ClothingReportsPage() {
                                         <CommandGroup>
                                             <CommandItem onSelect={() => { setFilterFirefighter('all'); setOpenCombobox(false); }}>Todos</CommandItem>
                                             {allFirefighters.map(f => (
-                                                <CommandItem key={f.id} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>
+                                                <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => { setFilterFirefighter(f.id); setOpenCombobox(false); }}>
                                                     {f.legajo} - {f.lastName}, {f.firstName}
                                                 </CommandItem>
                                             ))}

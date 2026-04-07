@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, UserCheck, UserX, Clock, ShieldAlert, Percent, GraduationCap, Users, Check, ChevronsUpDown, BarChart3, ListFilter, LayoutGrid, Download, Loader2, List, ArrowUpDown, ArrowUp, ArrowDown, Filter, UserCog } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Loader2, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -16,7 +16,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from 'date-f
 import { es } from 'date-fns/locale';
 import { useState, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { Firefighter, Session, AttendanceStatus, Specialization, Course } from "@/lib/types";
+import { Firefighter, Session, AttendanceStatus, Course } from "@/lib/types";
 import { getSessions } from "@/services/sessions.service";
 import { getAspiranteSessions } from "@/services/aspirantes-sessions.service";
 import { getWorkshops } from "@/services/workshops.service";
@@ -107,7 +107,7 @@ const getSessionGroup = (session: Session) => {
     if (firehouseCounts['Cuartel 2'] / totalAttendees > 0.6) return 'Cuartel 2';
     if (firehouseCounts['Cuartel 3'] / totalAttendees > 0.6) return 'Cuartel 3';
 
-    return 'Varios'; // Significa General
+    return 'Varios';
 };
 
 type AttendanceStats = {
@@ -223,7 +223,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
                 if (!statsMap.has(f.id)) statsMap.set(f.id, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0, percentage: 0 });
                 const cur = statsMap.get(f.id)!; cur.total++;
-                if (status === 'present') cur.present++; else if (status === 'absent') cur.absent++; else if (status === 'tardy') cur.tardy++; else if (status === 'excused') cur.excused++; else if (status === 'recupero') cur.recupero++;
+                if (status === 'present') cur.present++; 
+                else if (status === 'absent') cur.absent++; 
+                else if (status === 'tardy') cur.tardy++; 
+                else if (status === 'excused') cur.excused++; 
+                else if (status === 'recupero') cur.recupero++;
                 
                 sessionIncluded = true;
             });
@@ -236,48 +240,38 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 else if (group === 'Cuartel 3') groupCounts.C3++;
                 else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                 else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                else if (group === 'Varios') { // General
-                    groupCounts.C1++; groupCounts.C2++; groupCounts.C3++;
-                }
+                else if (group === 'Varios') { groupCounts.C1++; groupCounts.C2++; groupCounts.C3++; }
             }
         });
 
-        if (viewMode === 'by-class') {
-            sessionMatches.sort((a, b) => {
-                let aVal: any;
-                let bVal: any;
-                if (sortConfig.key === 'date') { aVal = parseISO(a.date).getTime(); bVal = parseISO(b.date).getTime(); }
-                else if (sortConfig.key === 'title') { aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); }
-                else { aVal = parseISO(a.date).getTime(); bVal = parseISO(b.date).getTime(); }
-                const dir = sortConfig.direction === 'asc' ? 1 : -1;
-                return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
-            });
-        }
-
-        let statsArray = Array.from(statsMap.values()).map(s => {
+        const statsArray = Array.from(statsMap.values()).map(s => {
             s.percentage = s.total > 0 ? ((s.present + s.recupero + (s.tardy * 0.5)) / s.total) * 100 : 0;
             return s;
         });
 
-        if (viewMode !== 'by-class') {
-            statsArray.sort((a, b) => {
-                let aVal: any, bVal: any;
-                switch (sortConfig.key) {
-                    case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
-                    case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
-                    case 'present': aVal = a.present; bVal = b.present; break;
-                    case 'absent': aVal = a.absent; bVal = b.absent; break;
-                    case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
-                    case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
-                    default: return 0;
-                }
-                const dir = sortConfig.direction === 'asc' ? 1 : -1;
-                return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
-            });
-        }
+        statsArray.sort((a, b) => {
+            const dir = sortConfig.direction === 'asc' ? 1 : -1;
+            let aVal: any, bVal: any;
+            switch (sortConfig.key) {
+                case 'legajo': aVal = a.firefighter.legajo; bVal = b.firefighter.legajo; break;
+                case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
+                case 'present': aVal = a.present; bVal = b.present; break;
+                case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
+                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
+                default: return 0;
+            }
+            return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
+        });
 
-        const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 }))
-            .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
+        const pData = filterFirefighter !== 'all' && statsArray.length === 1 
+            ? [
+                { name: 'Presente', value: statsArray[0].present + statsArray[0].recupero, fill: PIE_CHART_COLORS.present },
+                { name: 'Ausente', value: statsArray[0].absent + statsArray[0].excused, fill: PIE_CHART_COLORS.absent },
+                { name: 'Tarde', value: statsArray[0].tardy, fill: PIE_CHART_COLORS.tardy }
+              ].filter(d => d.value > 0)
+            : Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.excused += s.excused; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, tardy: 0, excused: 0, recupero: 0 }))
+                .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
     }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterHierarchy, filterFirefighter, filterStatuses, filterParticipation, context, sortConfig, viewMode, isLimited, user]);
@@ -299,32 +293,36 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
-            // Mini resumen de sesiones por grupo
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
             doc.text(`Total de Clases: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
             
-            (doc as any).autoTable({
-                startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
-                body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
-                theme: 'striped', headStyles: { fillColor: '#333' },
-                didParseCell: function (data: any) {
-                    if (data.section === 'body' && data.column.index === 4) {
-                        const val = parseFloat(data.cell.raw);
-                        if (!isNaN(val)) {
-                            if (val >= 70) {
-                                data.cell.styles.fillColor = [16, 185, 129];
-                                data.cell.styles.textColor = [255, 255, 255];
-                            } else if (val >= 60) {
-                                data.cell.styles.fillColor = [245, 158, 11];
-                                data.cell.styles.textColor = [0, 0, 0];
-                            } else {
-                                data.cell.styles.fillColor = [244, 63, 94];
-                                data.cell.styles.textColor = [255, 255, 255];
+            const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
+            
+            if (isIndividual) {
+                const s = stats[0];
+                doc.setFontSize(14); doc.text(`Informe Personal: ${s.firefighter.lastName}, ${s.firefighter.firstName} (Legajo: ${s.firefighter.legajo})`, 14, curY); curY += 10;
+                (doc as any).autoTable({
+                    startY: curY, head: [['Fecha', 'Título de la Clase', 'Especialidad', 'Estado']],
+                    body: filteredSessions.map(sess => [format(parseISO(sess.date), 'dd/MM/yyyy'), sess.title, sess.specialization, getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')]),
+                    theme: 'striped', headStyles: { fillColor: '#333' }
+                });
+            } else {
+                (doc as any).autoTable({
+                    startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
+                    theme: 'striped', headStyles: { fillColor: '#333' },
+                    didParseCell: function (data: any) {
+                        if (data.section === 'body' && data.column.index === 4) {
+                            const val = parseFloat(data.cell.raw);
+                            if (!isNaN(val)) {
+                                if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
+                                else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
+                                else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
             doc.save(`reporte-asistencia-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
@@ -360,19 +358,18 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
-                                {!isLimited && (
+                                <TableHead>Fecha</TableHead>
+                                <TableHead>Título de la Clase</TableHead>
+                                {filterFirefighter === 'all' && !isLimited ? (
                                     <>
-                                        <TableHead>Personal</TableHead>
-                                        <TableHead>Alumnos</TableHead>
                                         <TableHead className="text-center">P</TableHead>
                                         <TableHead className="text-center">A</TableHead>
                                         <TableHead className="text-center">R</TableHead>
                                     </>
+                                ) : (
+                                    <TableHead className="text-right">Estado Individual</TableHead>
                                 )}
-                                <TableHead className="text-right">Estado</TableHead>
-                            </>
+                            </TableRow>
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
@@ -386,34 +383,27 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const attendance = s.attendance || {};
+                            if (filterFirefighter !== 'all' || isLimited) {
+                                const targetId = isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : filterFirefighter;
+                                const status = (attendance[targetId || ''] || 'present') as AttendanceStatus;
+                                return (
+                                    <TableRow key={s.id}>
+                                        <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                        <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
+                                        <TableCell className="text-right"><Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
+                                    </TableRow>
+                                );
+                            }
                             const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
                             const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
                             const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
-                            const myStatus = isLimited && user ? (attendance[stats.find(st => st.firefighter.legajo === user.id)?.firefighter.id || ''] || 'present') : 'present';
-                            
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium max-w-[120px] truncate">{s.title}</TableCell>
-                                    {!isLimited && (
-                                        <>
-                                            <TableCell className="text-[9px] max-w-[150px]">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold">I: {s.instructors.map(i => `${i.lastName}, ${i.firstName}`).join('; ')}</span>
-                                                    {s.assistants.length > 0 && <span className="text-muted-foreground">A: {s.assistants.map(a => `${a.lastName}, ${a.firstName}`).join('; ')}</span>}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-[9px] max-w-[150px] truncate">
-                                                {s.attendees.map(a => a.lastName).join(', ')}
-                                            </TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
-                                        </>
-                                    )}
-                                    <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} asistentes</Badge>}
-                                    </TableCell>
+                                    <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
                                 </TableRow>
                             )
                         }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
@@ -522,45 +512,35 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 else if (group === 'Cuartel 3') groupCounts.C3++;
                 else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                 else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                else if (group === 'Varios') { // General
-                    groupCounts.C1++; groupCounts.C2++; groupCounts.C3++;
-                }
+                else if (group === 'Varios') { groupCounts.C1++; groupCounts.C2++; groupCounts.C3++; }
             }
         });
-
-        if (viewMode === 'by-class') {
-            sessionMatches.sort((a, b) => {
-                let aVal: any;
-                let bVal: any;
-                if (sortConfig.key === 'date') { aVal = parseISO(a.date).getTime(); bVal = parseISO(b.date).getTime(); }
-                else if (sortConfig.key === 'title') { aVal = a.title.toLowerCase(); bVal = b.title.toLowerCase(); }
-                else { aVal = parseISO(a.date).getTime(); bVal = parseISO(b.date).getTime(); }
-                const dir = sortConfig.direction === 'asc' ? 1 : -1;
-                return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
-            });
-        }
 
         let statsArray = Array.from(statsMap.values()).map(s => {
             s.percentage = s.total > 0 ? ((s.present + s.recupero) / s.total) * 100 : 0;
             return s;
         });
 
-        if (viewMode !== 'by-class') {
-            statsArray.sort((a, b) => {
-                let aVal: any, bVal: any;
-                switch (sortConfig.key) {
-                    case 'present': aVal = a.present; bVal = b.present; break;
-                    case 'absent': aVal = a.absent; bVal = b.absent; break;
-                    case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
-                    default: aVal = a.percentage; bVal = b.percentage; break;
-                }
-                const dir = sortConfig.direction === 'asc' ? 1 : -1;
-                return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
-            });
-        }
+        statsArray.sort((a, b) => {
+            const dir = sortConfig.direction === 'asc' ? 1 : -1;
+            let aVal: any, bVal: any;
+            switch (sortConfig.key) {
+                case 'present': aVal = a.present; bVal = b.present; break;
+                case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
+                default: aVal = a.percentage; bVal = b.percentage; break;
+            }
+            return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
+        });
 
-        const pData = Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, recupero: 0 }))
-            .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
+        const pData = filterFirefighter !== 'all' && statsArray.length === 1 
+            ? [
+                { name: 'Presente', value: statsArray[0].present + statsArray[0].recupero, fill: PIE_CHART_COLORS.present },
+                { name: 'Ausente', value: statsArray[0].absent + statsArray[0].excused, fill: PIE_CHART_COLORS.absent },
+                { name: 'Tarde', value: statsArray[0].tardy, fill: PIE_CHART_COLORS.tardy }
+              ].filter(d => d.value > 0)
+            : Object.entries(statsArray.reduce((acc, s) => { acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero; return acc; }, { present: 0, absent: 0, recupero: 0 }))
+                .map(([name, value]) => ({ name: getStatusLabel(name as any), value, fill: (PIE_CHART_COLORS as any)[name] || '#ccc' })).filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
     }, [allWorkshops, filterYear, filterDate, filterFirehouse, filterParticipation, context, sortConfig, isLimited, user, viewMode, filterFirefighter]);
@@ -582,32 +562,36 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             const rangeText = filterDate?.from ? `${format(filterDate.from, "P", { locale: es })} - ${format(filterDate.to || filterDate.from, "P", { locale: es })}` : filterYear === 'all' ? "Historial Completo" : `Ciclo ${filterYear}`;
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
-            // Mini resumen de sesiones por grupo
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
             doc.text(`Total de Talleres: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`, 14, curY); curY += 10;
 
-            (doc as any).autoTable({
-                startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
-                body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
-                theme: 'striped', headStyles: { fillColor: '#333' },
-                didParseCell: function (data: any) {
-                    if (data.section === 'body' && data.column.index === 4) {
-                        const val = parseFloat(data.cell.raw);
-                        if (!isNaN(val)) {
-                            if (val >= 70) {
-                                data.cell.styles.fillColor = [16, 185, 129];
-                                data.cell.styles.textColor = [255, 255, 255];
-                            } else if (val >= 60) {
-                                data.cell.styles.fillColor = [245, 158, 11];
-                                data.cell.styles.textColor = [0, 0, 0];
-                            } else {
-                                data.cell.styles.fillColor = [244, 63, 94];
-                                data.cell.styles.textColor = [255, 255, 255];
+            const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
+
+            if (isIndividual) {
+                const s = stats[0];
+                doc.setFontSize(14); doc.text(`Informe Personal: ${s.firefighter.lastName}, ${s.firefighter.firstName} (Legajo: ${s.firefighter.legajo})`, 14, curY); curY += 10;
+                (doc as any).autoTable({
+                    startY: curY, head: [['Fecha', 'Título del Taller', 'Estado']],
+                    body: filteredSessions.map(sess => [format(parseISO(sess.date), 'dd/MM/yyyy'), sess.title, getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')]),
+                    theme: 'striped', headStyles: { fillColor: '#333' }
+                });
+            } else {
+                (doc as any).autoTable({
+                    startY: curY, head: [['Integrante', 'Presentes', 'Ausentes', 'Recuperos', 'Tasa %']],
+                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
+                    theme: 'striped', headStyles: { fillColor: '#333' },
+                    didParseCell: function (data: any) {
+                        if (data.section === 'body' && data.column.index === 4) {
+                            const val = parseFloat(data.cell.raw);
+                            if (!isNaN(val)) {
+                                if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
+                                else if (val >= 60) { data.cell.styles.fillColor = [245, 158, 11]; data.cell.styles.textColor = [0, 0, 0]; }
+                                else { data.cell.styles.fillColor = [244, 63, 94]; data.cell.styles.textColor = [255, 255, 255]; }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
             doc.save(`reporte-talleres-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
         } finally { setGeneratingPdf(false); }
     };
@@ -645,18 +629,17 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <CardContent className="p-0"><ScrollArea className="h-[450px]"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('date')}>Fecha {getSortIcon('date')}</TableHead>
-                                <TableHead className="cursor-pointer" onClick={() => toggleSort('title')}>Título {getSortIcon('title')}</TableHead>
-                                {!isLimited && (
+                                <TableHead>Fecha</TableHead>
+                                <TableHead>Título del Taller</TableHead>
+                                {filterFirefighter === 'all' && !isLimited ? (
                                     <>
-                                        <TableHead>Personal</TableHead>
-                                        <TableHead>Alumnos</TableHead>
                                         <TableHead className="text-center">P</TableHead>
                                         <TableHead className="text-center">A</TableHead>
                                         <TableHead className="text-center">R</TableHead>
                                     </>
+                                ) : (
+                                    <TableHead className="text-right">Estado Individual</TableHead>
                                 )}
-                                <TableHead className="text-right">Estado</TableHead>
                             </>
                         ) : (
                             <>
@@ -670,34 +653,27 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     </TableRow></TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const attendance = s.attendance || {};
+                            if (filterFirefighter !== 'all' || isLimited) {
+                                const targetId = isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : filterFirefighter;
+                                const status = (attendance[targetId || ''] || 'present') as AttendanceStatus;
+                                return (
+                                    <TableRow key={s.id}>
+                                        <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
+                                        <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
+                                        <TableCell className="text-right"><Badge className={cn("text-[10px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
+                                    </TableRow>
+                                );
+                            }
                             const pCount = Object.values(attendance).filter(v => v === 'present' || v === 'recupero').length;
                             const aCount = Object.values(attendance).filter(v => v === 'absent' || v === 'excused').length;
                             const rCount = Object.values(attendance).filter(v => v === 'recupero').length;
-                            const myStatus = isLimited && user ? (attendance[stats.find(st => st.firefighter.legajo === user.id)?.firefighter.id || ''] || 'present') : 'present';
-
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium max-w-[120px] truncate">{s.title}</TableCell>
-                                    {!isLimited && (
-                                        <>
-                                            <TableCell className="text-[9px] max-w-[150px]">
-                                                <div className="flex flex-col">
-                                                    <span className="font-bold">I: {s.instructors.map(i => `${i.lastName}, ${i.firstName}`).join('; ')}</span>
-                                                    {s.assistants.length > 0 && <span className="text-muted-foreground">A: {s.assistants.map(a => `${a.lastName}, ${a.firstName}`).join('; ')}</span>}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-[9px] max-w-[150px] truncate">
-                                                {s.attendees.map(a => a.lastName).join(', ')}
-                                            </TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
-                                            <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
-                                        </>
-                                    )}
-                                    <TableCell className="text-right">
-                                        {isLimited ? <Badge className={cn("text-[10px]", getStatusBadgeClass(myStatus as any))}>{getStatusLabel(myStatus as any)}</Badge> : <Badge variant="outline" className="text-[10px]">{pCount} asistentes</Badge>}
-                                    </TableCell>
+                                    <TableCell className="text-xs font-medium max-w-[200px] truncate">{s.title}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-green-600">{pCount}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-red-600">{aCount}</TableCell>
+                                    <TableCell className="text-center text-[10px] font-bold text-blue-600">{rCount}</TableCell>
                                 </TableRow>
                             )
                         }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}

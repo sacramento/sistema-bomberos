@@ -402,8 +402,25 @@ export default function MaterialsReportPage() {
         <div className="space-y-8 pb-20">
             <PageHeader title="Informes de Materiales" description="Gestione y audite el equipamiento técnico de la flota y depósitos."/>
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="lg:col-span-3"><CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda Rápida</CardTitle></CardHeader><CardContent className="flex gap-4"><div className="relative flex-grow"><Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" /><Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div><QrScannerDialog onScan={(c) => setSearchTerm(c)}><Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button></QrScannerDialog></CardContent></Card>
-                <Card className="border-primary/50 bg-primary/5"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total Seleccionado</CardTitle></CardHeader><CardContent><div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div><p className="text-[10px] text-muted-foreground mt-1">Ítems según filtros actuales</p></CardContent></Card>
+                <Card className="lg:col-span-3">
+                    <CardHeader className="pb-3"><CardTitle className="text-lg">Búsqueda Rápida</CardTitle></CardHeader>
+                    <CardContent className="flex gap-4">
+                        <div className="relative flex-grow">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Buscar por código o nombre..." className="pl-9 h-12" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        </div>
+                        <QrScannerDialog onScan={(c) => setSearchTerm(c)}>
+                            <Button size="lg" variant="outline" className="h-12"><QrCode className="mr-2 h-5 w-5" />Escanear</Button>
+                        </QrScannerDialog>
+                    </CardContent>
+                </Card>
+                <Card className="border-primary/50 bg-primary/5">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total Seleccionado</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div>
+                        <p className="text-[10px] text-muted-foreground mt-1">Ítems según filtros actuales</p>
+                    </CardContent>
+                </Card>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -432,9 +449,28 @@ export default function MaterialsReportPage() {
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-blue-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent></Card>
-                <Card className="border-l-4 border-l-amber-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent></Card>
-                <Card className="border-l-4 border-l-slate-500"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent></Card>
+                <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader>
+                    <CardContent className="space-y-2">
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div>
+                    </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-amber-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-3 gap-2">
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div>
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div>
+                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div>
+                    </CardContent>
+                </Card>
+                <Card className="border-l-4 border-l-slate-500">
+                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader>
+                    <CardContent>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div>
+                    </CardContent>
+                </Card>
             </div>
 
             <Card className="shadow-md">
