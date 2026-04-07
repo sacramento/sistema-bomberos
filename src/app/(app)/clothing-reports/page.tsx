@@ -218,8 +218,8 @@ export default function ClothingReportsPage() {
                                     cx="50%" 
                                     cy="50%" 
                                     outerRadius={90} 
-                                    innerRadius={35}
-                                    labelLine={false}
+                                    innerRadius={35} 
+                                    labelLine={false} 
                                     label={renderCustomizedLabel}
                                     strokeWidth={2}
                                 >
