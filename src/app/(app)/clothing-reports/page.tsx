@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Download, Loader2 } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2, Filter, Shirt, Shield, Tag, UserCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -168,11 +168,11 @@ export default function ClothingReportsPage() {
     return (
         <div className="space-y-8">
             <PageHeader title={isBomberoRole ? "Mi Ropería" : "Informes de Ropería"} description="Análisis de stock y asignaciones de equipo personal." />
-            <Card>
-                <CardHeader><CardTitle className="text-lg">Filtros</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="shadow-md">
+                <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5 text-primary" /> Filtros Operativos</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
                     <div className="space-y-2">
-                        <Label>Bombero</Label>
+                        <Label className="text-xs font-bold">Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                             <PopoverTrigger asChild disabled={isBomberoRole}>
                                 <Button variant="outline" className="w-full justify-between h-10 overflow-hidden text-xs text-left">
@@ -182,7 +182,7 @@ export default function ClothingReportsPage() {
                             </PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start">
                                 <Command>
-                                    <CommandInput placeholder="Buscar integrante..." />
+                                    <CommandInput placeholder="Buscar..." />
                                     <CommandList>
                                         <CommandEmpty>No encontrado.</CommandEmpty>
                                         <CommandGroup>
@@ -198,15 +198,15 @@ export default function ClothingReportsPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Todos"/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Todos"/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 shadow-md overflow-hidden">
                     <CardHeader className="bg-muted/20 border-b">
-                        <CardTitle className="text-base flex items-center gap-2">Distribución por Estado</CardTitle>
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shirt className="h-4 w-4" /> Distribución por Estado</CardTitle>
                     </CardHeader>
                     <CardContent className="h-72 pt-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -233,25 +233,25 @@ export default function ClothingReportsPage() {
                 </Card>
                 <Card className="lg:col-span-2 shadow-md">
                     <CardHeader className="bg-muted/20 border-b">
-                        <CardTitle className="text-base flex items-center gap-2">Vista Previa ({filteredItems.length} items)</CardTitle>
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4" /> Vista Previa ({filteredItems.length} items)</CardTitle>
                     </CardHeader>
                     <CardContent className="max-h-[400px] overflow-y-auto p-0">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Código</TableHead>
-                                    <TableHead>Tipo</TableHead>
-                                    <TableHead>Asignado a</TableHead>
-                                    <TableHead>Estado</TableHead>
+                                    <TableHead className="text-xs">Código</TableHead>
+                                    <TableHead className="text-xs">Tipo</TableHead>
+                                    <TableHead className="text-xs">Asignado a</TableHead>
+                                    <TableHead className="text-right text-xs">Estado</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredItems.map(item => (
                                     <TableRow key={item.id}>
-                                        <TableCell className="font-mono text-xs">{item.code}</TableCell>
-                                        <TableCell className="text-sm font-medium">{item.type}</TableCell>
+                                        <TableCell className="font-mono text-[10px] font-bold">{item.code}</TableCell>
+                                        <TableCell className="text-xs font-medium">{item.type}</TableCell>
                                         <TableCell className="text-[10px]">{item.firefighter ? `${item.firefighter.lastName}, ${item.firefighter.firstName}` : 'Depósito'}</TableCell>
-                                        <TableCell><Badge variant="outline" className="text-[10px]">{item.state}</Badge></TableCell>
+                                        <TableCell className="text-right"><Badge variant="outline" className="text-[9px] h-5">{item.state}</Badge></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>

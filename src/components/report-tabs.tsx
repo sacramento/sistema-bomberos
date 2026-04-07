@@ -227,6 +227,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         });
 
         const statsArray = Array.from(statsMap.values()).map(s => {
+            // Fórmula: (P + R + (T * 0.5)) / Total
             s.percentage = s.total > 0 ? ((s.present + s.recupero + (s.tardy * 0.5)) / s.total) * 100 : 0;
             return s;
         });
@@ -239,6 +240,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 case 'name': aVal = a.firefighter.lastName; bVal = b.firefighter.lastName; break;
                 case 'present': aVal = a.present; bVal = b.present; break;
                 case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
                 case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
                 case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                 default: return 0;
@@ -278,7 +280,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' ? `Clases: ${sessionsByGroup.Aspirantes}` : `Clases: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resText = context === 'aspirantes' ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` : `Oferta Académica: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
             
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
@@ -293,11 +295,11 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 });
             } else {
                 (doc as any).autoTable({
-                    startY: curY, head: [['Integrante', 'P', 'A', 'R', '%']],
-                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
+                    startY: curY, head: [['Integrante', 'P', 'A', 'T', 'R', '%']],
+                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`]),
                     theme: 'striped', headStyles: { fillColor: '#333' },
                     didParseCell: function (data: any) {
-                        if (data.section === 'body' && data.column.index === 4) {
+                        if (data.section === 'body' && data.column.index === 5) {
                             const val = parseFloat(data.cell.raw);
                             if (!isNaN(val)) {
                                 if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
@@ -323,8 +325,8 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros</CardTitle>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    <div className="space-y-2"><Label>Año</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
+                    <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-between h-10 text-xs truncate"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -337,22 +339,23 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle por Sesión' : 'Estadística por Integrante'}</CardTitle></CardHeader>
+                <Card className="lg:col-span-1 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución General</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle por Sesión' : 'Estadística por Integrante'}</CardTitle></CardHeader>
                     <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Clase</TableHead>
-                                <TableHead className="text-right">Asistencia</TableHead>
+                                <TableHead className="text-right">{filterFirefighter === 'all' ? 'Total' : 'Estado'}</TableHead>
                             </>
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
                                 <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Integrante {getSortIcon('name')}</TableHead>
-                                <TableHead className="text-center">P</TableHead>
-                                <TableHead className="text-center">A</TableHead>
-                                <TableHead className="text-center">R</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('tardy')}>T {getSortIcon('tardy')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
                                 <TableHead className="text-right cursor-pointer" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
                             </>
                         )}
@@ -364,10 +367,10 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Elija un integrante</span>}</TableCell>
+                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Global</span>}</TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
@@ -460,6 +463,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 cur.total++;
                 if (status === 'present') cur.present++;
                 else if (status === 'absent') cur.absent++;
+                else if (status === 'tardy') cur.tardy++;
                 else if (status === 'recupero') cur.recupero++;
             });
 
@@ -476,7 +480,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         });
 
         const statsArray = Array.from(statsMap.values()).map(s => {
-            s.percentage = s.total > 0 ? ((s.present + s.recupero) / s.total) * 100 : 0;
+            // Fórmula: (P + R + (T * 0.5)) / Total
+            s.percentage = s.total > 0 ? ((s.present + s.recupero + (s.tardy * 0.5)) / s.total) * 100 : 0;
             return s;
         });
 
@@ -486,20 +491,23 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             switch (sortConfig.key) {
                 case 'present': aVal = a.present; bVal = b.present; break;
                 case 'absent': aVal = a.absent; bVal = b.absent; break;
+                case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
                 case 'recupero': aVal = a.recupero; bVal = b.recupero; break;
+                case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
                 default: aVal = a.percentage; bVal = b.percentage; break;
             }
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
         const counts = statsArray.reduce((acc, s) => {
-            acc.present += s.present; acc.absent += s.absent; acc.recupero += s.recupero;
+            acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy; acc.recupero += s.recupero;
             return acc;
-        }, { present: 0, absent: 0, recupero: 0 });
+        }, { present: 0, absent: 0, tardy: 0, recupero: 0 });
 
         const pData = [
             { name: 'Presente', value: counts.present + counts.recupero, fill: PIE_CHART_COLORS.present },
-            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent }
+            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent },
+            { name: 'Tarde', value: counts.tardy, fill: PIE_CHART_COLORS.tardy }
         ].filter(d => d.value > 0);
 
         return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
@@ -523,7 +531,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' ? `Talleres: ${sessionsByGroup.Aspirantes}` : `Talleres: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resText = context === 'aspirantes' ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` : `Oferta Académica: C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resText, 14, curY); curY += 10;
 
             const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
@@ -538,11 +546,11 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 });
             } else {
                 (doc as any).autoTable({
-                    startY: curY, head: [['Integrante', 'P', 'A', 'R', '%']],
-                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.recupero, `${s.percentage.toFixed(0)}%`]),
+                    startY: curY, head: [['Integrante', 'P', 'A', 'T', 'R', '%']],
+                    body: stats.map(s => [`${s.firefighter.legajo} - ${s.firefighter.lastName}, ${s.firefighter.firstName}`, s.present, s.absent, s.tardy, s.recupero, `${s.percentage.toFixed(0)}%`]),
                     theme: 'striped', headStyles: { fillColor: '#333' },
                     didParseCell: function (data: any) {
-                        if (data.section === 'body' && data.column.index === 4) {
+                        if (data.section === 'body' && data.column.index === 5) {
                             const val = parseFloat(data.cell.raw);
                             if (!isNaN(val)) {
                                 if (val >= 70) { data.cell.styles.fillColor = [16, 185, 129]; data.cell.styles.textColor = [255, 255, 255]; }
@@ -566,7 +574,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             <Card>
                 <CardHeader><CardTitle className="text-lg">Filtros de Taller</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-                    <div className="space-y-2"><Label>Ciclo Lectivo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Año..." /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Período</Label><Popover><PopoverTrigger asChild><Button variant="outline" className="w-full justify-start text-xs h-10"><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Cualquier fecha"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover></div>
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
@@ -575,31 +583,32 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             <PopoverContent className="w-[300px] p-0"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Sesiones</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="lg:col-span-1"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
-                <Card className="lg:col-span-2"><CardHeader><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle de Sesiones' : 'Resumen por Integrante'}</CardTitle></CardHeader>
-                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow>
+                <Card className="lg:col-span-1 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
+                <Card className="lg:col-span-2 shadow-md"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">{viewMode === 'by-class' ? 'Detalle Individual' : 'Resumen por Integrante'}</CardTitle></CardHeader>
+                    <CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader>
                         {viewMode === 'by-class' ? (
-                            <>
+                            <TableRow>
                                 <TableHead>Fecha</TableHead>
                                 <TableHead>Taller</TableHead>
-                                <TableHead className="text-right">Asistencia</TableHead>
-                            </>
+                                <TableHead className="text-right">{filterFirefighter === 'all' ? 'Total' : 'Estado'}</TableHead>
+                            </TableRow>
                         ) : (
-                            <>
-                                <TableHead>Legajo</TableHead>
-                                <TableHead>Integrante</TableHead>
-                                <TableHead className="text-center">P</TableHead>
-                                <TableHead className="text-center">A</TableHead>
-                                <TableHead className="text-center">R</TableHead>
-                                <TableHead className="text-right">%</TableHead>
-                            </>
+                            <TableRow>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
+                                <TableHead className="cursor-pointer" onClick={() => toggleSort('name')}>Integrante {getSortIcon('name')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('present')}>P {getSortIcon('present')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('absent')}>A {getSortIcon('absent')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('tardy')}>T {getSortIcon('tardy')}</TableHead>
+                                <TableHead className="text-center" onClick={() => toggleSort('recupero')}>R {getSortIcon('recupero')}</TableHead>
+                                <TableHead className="text-right" onClick={() => toggleSort('percentage')}>% {getSortIcon('percentage')}</TableHead>
+                            </TableRow>
                         )}
-                    </TableRow></TableHeader><TableBody>
+                    </TableHeader><TableBody>
                         {viewMode === 'by-class' ? filteredSessions.map(s => {
                             const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
                             const status = targetId ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
@@ -607,10 +616,10 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px]">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
                                     <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
-                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Elija un integrante</span>}</TableCell>
+                                    <TableCell className="text-right">{targetId ? <Badge className={cn("text-[9px]", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge> : <span className="text-[10px] text-muted-foreground">Global</span>}</TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-center text-xs">{s.recupero}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>

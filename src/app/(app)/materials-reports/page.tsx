@@ -13,7 +13,7 @@ import { createMaterialRequest } from "@/services/material-requests.service";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/auth-context";
 import { usePathname } from "next/navigation";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -424,9 +424,9 @@ export default function MaterialsReportPage() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="md:col-span-1 h-64">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader>
-                    <CardContent className="h-full pt-0">
+                <Card className="md:col-span-1 h-64 shadow-md overflow-hidden">
+                    <CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Estado Operativo</CardTitle></CardHeader>
+                    <CardContent className="h-full pt-4">
                         <ResponsiveContainer width="100%" height="100%">
                             <PieChart>
                                 <Pie 
@@ -449,28 +449,9 @@ export default function MaterialsReportPage() {
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-blue-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader>
-                    <CardContent className="space-y-2">
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div>
-                    </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-amber-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader>
-                    <CardContent className="grid grid-cols-3 gap-2">
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div>
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div>
-                        <div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div>
-                    </CardContent>
-                </Card>
-                <Card className="border-l-4 border-l-slate-500">
-                    <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader>
-                    <CardContent>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div>
-                    </CardContent>
-                </Card>
+                <Card className="border-l-4 border-l-blue-500 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Activity className="h-3 w-3" /> Operatividad</CardTitle></CardHeader><CardContent className="space-y-2"><div className="flex justify-between items-center"><span className="text-sm font-medium">En Servicio:</span><span className="text-xl font-bold text-green-600">{kpis.inService}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Fuera de Servicio:</span><span className="text-xl font-bold text-red-600">{kpis.outOfService}</span></div></CardContent></Card>
+                <Card className="border-l-4 border-l-amber-500 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shield className="h-3 w-3" /> Condición Física</CardTitle></CardHeader><CardContent className="grid grid-cols-3 gap-2"><div className="text-center"><p className="text-[10px] text-muted-foreground">Bueno</p><p className="text-lg font-bold text-green-600">{kpis.good}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Regular</p><p className="text-lg font-bold text-amber-600">{kpis.regular}</p></div><div className="text-center"><p className="text-[10px] text-muted-foreground">Malo</p><p className="text-lg font-bold text-red-600">{kpis.bad}</p></div></CardContent></Card>
+                <Card className="border-l-4 border-l-slate-500 shadow-sm"><CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Layers className="h-3 w-3" /> Integridad de Datos</CardTitle></CardHeader><CardContent><div className="flex justify-between items-center"><span className="text-sm font-medium">Codificados:</span><span className="text-lg font-bold">{filteredMaterials.filter(m => !!m.codigo).length}</span></div><div className="flex justify-between items-center"><span className="text-sm font-medium">Sin Código:</span><span className="text-lg font-bold text-amber-600">{filteredMaterials.filter(m => !m.codigo).length}</span></div></CardContent></Card>
             </div>
 
             <Card className="shadow-md">
@@ -482,12 +463,12 @@ export default function MaterialsReportPage() {
                 </CardContent>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                <Card className="shadow-md"><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><Settings2 className="h-5 w-5 text-primary" /> Filtros Técnicos</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                     <div className="space-y-2"><Label className="text-xs font-bold">Acople</Label><MultiSelectFilter title="Acoples" options={acopleOptions.map(a => ({ value: a, label: a }))} selected={filterAcoples} onSelectedChange={setFilterAcoples} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Medida / Diámetro</Label><MultiSelectFilter title="Medidas" options={diameterOptions.map(d => ({ value: d, label: d }))} selected={filterMedidas} onSelectedChange={setFilterMedidas} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Composición</Label><MultiSelectFilter title="Composición" options={['Tela', 'Goma'].map(c => ({ value: c, label: c }))} selected={filterComposiciones} onSelectedChange={setFilterComposiciones} /></div>
                 </CardContent></Card>
-                <Card><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
+                <Card className="shadow-md"><CardHeader className="bg-muted/30 border-b"><CardTitle className="text-base flex items-center gap-2"><MapPin className="h-5 w-5 text-primary" /> Filtros de Ubicación</CardTitle></CardHeader><CardContent className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6">
                     <div className="space-y-2"><Label className="text-xs font-bold">Cuartel</Label><MultiSelectFilter title="Cuarteles" options={['Cuartel 1', 'Cuartel 2', 'Cuartel 3'].map(fh => ({ value: fh, label: fh }))} selected={filterFirehouses} onSelectedChange={setFilterFirehouses} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Ubicación</Label><MultiSelectFilter title="Ubicaciones" options={locationOptions} selected={filterLocations} onSelectedChange={setFilterLocations} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><MultiSelectFilter title="Estados" options={['En Servicio', 'Fuera de Servicio'].map(s => ({ value: s, label: s }))} selected={filterStates} onSelectedChange={setFilterStates} /></div>
@@ -495,7 +476,7 @@ export default function MaterialsReportPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="lg:col-span-1 border-primary/20 bg-muted/10 h-fit">
+                <Card className="lg:col-span-1 border-primary/20 bg-muted/10 h-fit shadow-md">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-bold uppercase flex items-center gap-2">
                             <FileText className="h-4 w-4 text-primary" /> Opciones de PDF
@@ -517,7 +498,7 @@ export default function MaterialsReportPage() {
                     </CardContent>
                 </Card>
 
-                <Card className="lg:col-span-3">
+                <Card className="lg:col-span-3 shadow-md">
                     <CardHeader className="border-b bg-muted/20">
                         <div className="flex justify-between items-center">
                             <CardTitle className="font-headline text-lg">Detalle de Equipamiento</CardTitle>
