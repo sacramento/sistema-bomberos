@@ -154,7 +154,7 @@ export default function ClothingReportsPage() {
                 head: [['Código', 'Tipo', 'Talle', 'Asignado a', 'Estado']],
                 body: filteredItems.map(i => [
                     i.code, i.type, i.size, 
-                    i.firefighter ? `${i.firefighter.legajo} - ${i.firefighter.lastName}, ${i.firefighter.firstName}` : 'En Depósito',
+                    i.firefighter ? `${i.firefighter.lastName}, ${i.firefighter.firstName}` : 'En Depósito',
                     i.state
                 ]),
                 theme: 'striped', headStyles: { fillColor: '#333' }

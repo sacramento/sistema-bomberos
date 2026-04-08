@@ -712,7 +712,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium truncate max-w-[250px]">{s.title}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
                                     <TableCell className="text-[10px] uppercase font-bold text-muted-foreground">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
                                     <TableCell className="text-right"><Badge className={cn("text-[9px] h-5", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
@@ -858,7 +858,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
-            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Nombre y Apellido</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
+            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Nombre y Apellido</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yyyy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
         </div>
     );
 }

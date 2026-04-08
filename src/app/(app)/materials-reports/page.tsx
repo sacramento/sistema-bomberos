@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText } from "lucide-react";
+import { Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText, MoreHorizontal } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
@@ -27,7 +27,7 @@ import EditMaterialDialog from "../materials/_components/edit-material-dialog";
 import MaterialDetailDialog from "../materials/_components/material-detail-dialog";
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
