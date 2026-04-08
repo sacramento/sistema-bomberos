@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Download, Loader2, Filter, Shirt, Shield, Tag, UserCircle } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2, Filter, Shirt, Shield, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -80,10 +80,10 @@ export default function ClothingReportsPage() {
                     getFirefighters()
                 ]);
                 setAllItems(itemsData);
-                setAllFirefighters(firefightersData);
+                setAllFirefighters(firefightersData.filter(f => f.status !== 'Inactive'));
 
                 if (isBomberoRole && user) {
-                    const firefighterUser = firefightersData.find(f => f.legajo === user.id);
+                    const firefighterUser = firefightersData.find(f => f.id === user.id);
                     if(firefighterUser) setFilterFirefighter(firefighterUser.id);
                 }
             } catch (error) {
@@ -130,8 +130,6 @@ export default function ClothingReportsPage() {
         
         return {
             total: filteredItems.length,
-            deposit: filteredItems.filter(i => !i.firefighterId).length,
-            assigned: filteredItems.filter(i => !!i.firefighterId).length,
             pieData: Object.entries(counts).map(([name, value]) => ({
                 name, value, fill: CONDITION_CHART_COLORS[name] || '#ccc'
             }))
@@ -206,7 +204,7 @@ export default function ClothingReportsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 shadow-md overflow-hidden h-fit">
                     <CardHeader className="bg-muted/20 border-b">
-                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Shirt className="h-4 w-4" /> Distribución por Estado</CardTitle>
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución por Estado</CardTitle>
                     </CardHeader>
                     <CardContent className="h-72 pt-4">
                         <ResponsiveContainer width="100%" height="100%">
@@ -233,7 +231,7 @@ export default function ClothingReportsPage() {
                 </Card>
                 <Card className="lg:col-span-2 shadow-md">
                     <CardHeader className="bg-muted/20 border-b">
-                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2"><Tag className="h-4 w-4" /> Vista Previa ({filteredItems.length} items)</CardTitle>
+                        <CardTitle className="text-xs font-bold uppercase text-muted-foreground">Vista Previa ({filteredItems.length} items)</CardTitle>
                     </CardHeader>
                     <CardContent className="max-h-[450px] overflow-y-auto p-0">
                         <Table>

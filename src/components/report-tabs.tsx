@@ -116,9 +116,9 @@ const getSessionGroup = (session: Session) => {
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
-    present: number; 
-    absent: number;
-    tardy: number;
+    present: number; // Suma de Presente + Recupero
+    absent: number;  // Suma de Ausente + Justificado
+    tardy: number;   // Tarde (vale 0.5)
     percentage: number;
 };
 
@@ -208,7 +208,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
-                // REGLA: Excluir inactivos
+                // EXCLUSIÓN CRÍTICA: Solo personal activo
                 if (!f || f.status === 'Inactive') return;
 
                 if (isLimited && user && f.legajo !== user.id) return;
@@ -799,7 +799,6 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const filtered = useMemo(() => {
         let res = allCourses.filter(c => {
             const f = allFirefighters.find(ff => ff.id === c.firefighterId);
-            // REGLA: Excluir inactivos
             if (!f || f.status === 'Inactive') return false;
 
             if (filterYear !== 'all' && parseISO(c.startDate).getFullYear().toString() !== filterYear) return false;
