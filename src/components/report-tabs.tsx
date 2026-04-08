@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Loader2, Filter, Check, ChevronsUpDown, UserCheck } from "lucide-react";
+import { Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, Download, Loader2, Filter, Check, ChevronsUpDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -185,10 +185,10 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allSessions]);
 
-    const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
+    const { stats, pieData, sessionsByGroup, filteredIndividualSessions } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
-        const sessionMatches: Session[] = [];
         const groupCounts = { C1: 0, C2: 0, C3: 0, General: 0, Suboficiales: 0, Aspirantes: 0 };
+        const individualMatches: Session[] = [];
 
         allSessions.forEach(s => {
             const sDate = parseISO(s.date);
@@ -202,12 +202,13 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const instructorIds = new Set(s.instructorIds || []);
             const assistantIds = new Set(s.assistantIds || []);
             const attendeeIds = new Set(s.attendeeIds || []);
-            
             const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
-            let sessionMatchFound = false;
+            
+            let countedForGroup = false;
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
+                // REGLA: Excluir inactivos
                 if (!f || f.status === 'Inactive') return;
 
                 if (isLimited && user && f.legajo !== user.id) return;
@@ -228,7 +229,20 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 if (filterRole === 'student' && !isStudent) return;
                 if (filterRole === 'staff' && !isStaff) return;
 
-                sessionMatchFound = true;
+                if (!countedForGroup) {
+                    const group = getSessionGroup(s);
+                    if (group === 'Cuartel 1') groupCounts.C1++;
+                    else if (group === 'Cuartel 2') groupCounts.C2++;
+                    else if (group === 'Cuartel 3') groupCounts.C3++;
+                    else if (group === 'General') groupCounts.General++;
+                    else if (group === 'Suboficiales') groupCounts.Suboficiales++;
+                    else if (group === 'Aspirantes') groupCounts.Aspirantes++;
+                    countedForGroup = true;
+                }
+
+                if (filterFirefighter !== 'all' || isLimited) {
+                    individualMatches.push(s);
+                }
                 
                 if (!statsMap.has(fid)) {
                     statsMap.set(fid, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
@@ -245,17 +259,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     else if (status === 'tardy') cur.tardy++;
                 }
             });
-
-            if (sessionMatchFound) {
-                sessionMatches.push(s);
-                const group = getSessionGroup(s);
-                if (group === 'Cuartel 1') groupCounts.C1++;
-                else if (group === 'Cuartel 2') groupCounts.C2++;
-                else if (group === 'Cuartel 3') groupCounts.C3++;
-                else if (group === 'General') groupCounts.General++;
-                else if (group === 'Suboficiales') groupCounts.Suboficiales++;
-                else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-            }
         });
 
         const statsArray = Array.from(statsMap.values()).map(s => {
@@ -278,18 +281,18 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
-        const counts = statsArray.reduce((acc, s) => {
+        const globalCounts = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy;
             return acc;
         }, { present: 0, absent: 0, tardy: 0 });
 
         const pData = [
-            { name: 'Presente', value: counts.present, fill: PIE_CHART_COLORS.present },
-            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent },
-            { name: 'Tarde', value: counts.tardy, fill: PIE_CHART_COLORS.tardy }
+            { name: 'Presente', value: globalCounts.present, fill: PIE_CHART_COLORS.present },
+            { name: 'Ausente', value: globalCounts.absent, fill: PIE_CHART_COLORS.absent },
+            { name: 'Tarde', value: globalCounts.tardy, fill: PIE_CHART_COLORS.tardy }
         ].filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
+        return { stats: statsArray, pieData: pData, sessionsByGroup: groupCounts, filteredIndividualSessions: individualMatches };
     }, [allSessions, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, filterHierarchy, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -310,19 +313,19 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' 
+            const resLine = context === 'aspirantes' 
                 ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` 
                 : `Cant. Clases - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
-            doc.text(resText, 14, curY); curY += 10;
+            doc.text(resLine, 14, curY); curY += 10;
 
-            const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
+            const isIndividual = (filterFirefighter !== 'all' || isLimited) && stats.length === 1;
             
             if (isIndividual) {
                 const s = stats[0];
                 doc.setFontSize(14); doc.text(`Ficha Individual: ${s.firefighter.lastName}, ${s.firefighter.firstName}`, 14, curY); curY += 10;
                 (doc as any).autoTable({
                     startY: curY, head: [['Fecha', 'Clase', 'Rol', 'Estado']],
-                    body: filteredSessions.map(sess => {
+                    body: filteredIndividualSessions.map(sess => {
                         const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
                         return [
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
@@ -354,10 +357,12 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
     const firefighterList = allFirefighters.filter(f => f.status !== 'Inactive' && (context === 'aspirantes' ? f.rank === 'ASPIRANTE' : f.rank !== 'ASPIRANTE'));
 
+    if (loading) return <Skeleton className="h-96 w-full" />;
+
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Capacitación</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5" /> Filtros de Reporte</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     <div className="space-y-2"><Label>Ciclo</Label><Select value={filterYear} onValueChange={setFilterYear}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{availableYears.map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Especialidad</Label><Select value={filterSpecialization} onValueChange={setFilterSpecialization}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas</SelectItem>{specializations.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
@@ -369,13 +374,13 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         </Popover>
                     </div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={(v: any) => setFilterHierarchy(v)} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="bomberos">Bomberos</SelectItem><SelectItem value="oficiales">Oficiales/Subof</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Rol en Clase</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Rango de Fechas</Label>
+                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Alumno</SelectItem><SelectItem value="staff">Instructor/Ayud</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rango Fechas</Label>
                         <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-xs h-10", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Historial Completo"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover>
                     </div>
-                    <div className="space-y-2"><Label>Modo de Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen de Totales</SelectItem><SelectItem value="by-class">Detalle de Sesiones</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Modo de Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Totales Acumulados</SelectItem><SelectItem value="by-class">Detalle por Sesión</SelectItem></SelectContent></Select></div>
                 </CardContent>
-                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Generar Informe PDF</Button></CardFooter>
+                <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || stats.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Generar PDF</Button></CardFooter>
             </Card>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-1 shadow-md h-fit"><CardHeader className="bg-muted/20 border-b"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Distribución de Asistencia</CardTitle></CardHeader><CardContent className="h-64 pt-4"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={35} outerRadius={90} labelLine={false} label={renderCustomizedLabel} strokeWidth={2}>{pieData.map((e, i) => <Cell key={i} fill={e.fill} />)}</Pie><Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '10px' }}/><Tooltip /></PieChart></ResponsiveContainer></CardContent></Card>
@@ -384,14 +389,14 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         {viewMode === 'by-class' ? (
                             <>
                                 <TableHead className="text-[11px]">Fecha</TableHead>
-                                <TableHead className="text-[11px]">Título de Clase</TableHead>
+                                <TableHead className="text-[11px]">Clase</TableHead>
                                 <TableHead className="text-[11px]">Rol</TableHead>
                                 <TableHead className="text-right text-[11px]">Estado</TableHead>
                             </>
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Apellido y Nombre {getSortIcon('name')}</TableHead>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Nombre y Apellido {getSortIcon('name')}</TableHead>
                                 <TableHead className="text-center text-[11px]">P</TableHead>
                                 <TableHead className="text-center text-[11px]">A</TableHead>
                                 <TableHead className="text-center text-[11px]">T</TableHead>
@@ -399,19 +404,28 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
-                        {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
+                        {viewMode === 'by-class' ? filteredIndividualSessions.map(s => {
+                            const targetId = (filterFirefighter !== 'all') ? filterFirefighter : (isLimited ? stats[0]?.firefighter.id : null);
                             const isStaff = targetId ? (s.instructorIds?.includes(targetId) || s.assistantIds?.includes(targetId)) : false;
                             const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium truncate max-w-[250px]">{s.title}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
                                     <TableCell className="text-[10px] uppercase font-bold text-muted-foreground">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
                                     <TableCell className="text-right"><Badge className={cn("text-[9px] h-5", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (
+                            <TableRow key={s.firefighter.id}>
+                                <TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell>
+                                <TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell>
+                                <TableCell className="text-center text-xs">{s.present}</TableCell>
+                                <TableCell className="text-center text-xs">{s.absent}</TableCell>
+                                <TableCell className="text-center text-xs">{s.tardy}</TableCell>
+                                <TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                            </TableRow>
+                        ))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
@@ -476,10 +490,10 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
         return Array.from(years).sort((a, b) => b.localeCompare(a));
     }, [allWorkshops]);
 
-    const { filteredSessions, stats, pieData, sessionsByGroup } = useMemo(() => {
+    const { stats, pieData, sessionsByGroup, filteredIndividualSessions } = useMemo(() => {
         const statsMap = new Map<string, AttendanceStats>();
-        const sessionMatches: Session[] = [];
         const groupCounts = { C1: 0, C2: 0, C3: 0, General: 0, Suboficiales: 0, Aspirantes: 0 };
+        const individualMatches: Session[] = [];
 
         allWorkshops.forEach(s => {
             const sDate = parseISO(s.date);
@@ -493,7 +507,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             const assistantIds = new Set(s.assistantIds || []);
             const attendeeIds = new Set(s.attendeeIds || []);
             const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
-            let sessionMatchFound = false;
+            
+            let countedForGroup = false;
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
@@ -515,7 +530,21 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 if (filterRole === 'student' && isStaff) return;
                 if (filterRole === 'staff' && !isStaff) return;
 
-                sessionMatchFound = true;
+                if (!countedForGroup) {
+                    const group = getSessionGroup(s);
+                    if (group === 'Cuartel 1') groupCounts.C1++;
+                    else if (group === 'Cuartel 2') groupCounts.C2++;
+                    else if (group === 'Cuartel 3') groupCounts.C3++;
+                    else if (group === 'General') groupCounts.General++;
+                    else if (group === 'Suboficiales') groupCounts.Suboficiales++;
+                    else if (group === 'Aspirantes') groupCounts.Aspirantes++;
+                    countedForGroup = true;
+                }
+
+                if (filterFirefighter !== 'all' || isLimited) {
+                    individualMatches.push(s);
+                }
+
                 if (!statsMap.has(fid)) {
                     statsMap.set(fid, { firefighter: f, total: 0, present: 0, absent: 0, tardy: 0, percentage: 0 });
                 }
@@ -531,17 +560,6 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     else if (status === 'tardy') cur.tardy++;
                 }
             });
-
-            if (sessionMatchFound) {
-                sessionMatches.push(s);
-                const group = getSessionGroup(s);
-                if (group === 'Cuartel 1') groupCounts.C1++;
-                else if (group === 'Cuartel 2') groupCounts.C2++;
-                else if (group === 'Cuartel 3') groupCounts.C3++;
-                else if (group === 'General') groupCounts.General++;
-                else if (group === 'Suboficiales') groupCounts.Suboficiales++;
-                else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-            }
         });
 
         const statsArray = Array.from(statsMap.values()).map(s => {
@@ -559,23 +577,23 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 case 'absent': aVal = a.absent; bVal = b.absent; break;
                 case 'tardy': aVal = a.tardy; bVal = b.tardy; break;
                 case 'percentage': aVal = a.percentage; bVal = b.percentage; break;
-                default: aVal = a.percentage; bVal = b.percentage; break;
+                default: return 0;
             }
             return aVal < bVal ? -1 * dir : aVal > bVal ? 1 * dir : 0;
         });
 
-        const counts = statsArray.reduce((acc, s) => {
+        const globalCounts = statsArray.reduce((acc, s) => {
             acc.present += s.present; acc.absent += s.absent; acc.tardy += s.tardy;
             return acc;
         }, { present: 0, absent: 0, tardy: 0 });
 
         const pData = [
-            { name: 'Presente', value: counts.present, fill: PIE_CHART_COLORS.present },
-            { name: 'Ausente', value: counts.absent, fill: PIE_CHART_COLORS.absent },
-            { name: 'Tarde', value: counts.tardy, fill: PIE_CHART_COLORS.tardy }
+            { name: 'Presente', value: globalCounts.present, fill: PIE_CHART_COLORS.present },
+            { name: 'Ausente', value: globalCounts.absent, fill: PIE_CHART_COLORS.absent },
+            { name: 'Tarde', value: globalCounts.tardy, fill: PIE_CHART_COLORS.tardy }
         ].filter(d => d.value > 0);
 
-        return { filteredSessions: sessionMatches, stats: statsArray, pieData: pData, sessionsByGroup: groupCounts };
+        return { stats: statsArray, pieData: pData, sessionsByGroup: groupCounts, filteredIndividualSessions: individualMatches };
     }, [allWorkshops, filterYear, filterSpecialization, filterDate, filterFirehouse, filterFirefighter, filterHierarchy, filterRole, context, sortConfig, allFirefighters, isLimited, user]);
 
     const toggleSort = (key: SortConfig['key']) => setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
@@ -596,19 +614,19 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resText = context === 'aspirantes' 
+            const resLine = context === 'aspirantes' 
                 ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` 
                 : `Cant. Talleres - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
-            doc.text(resText, 14, curY); curY += 10;
+            doc.text(resLine, 14, curY); curY += 10;
 
-            const isIndividual = filterFirefighter !== 'all' && stats.length === 1;
+            const isIndividual = (filterFirefighter !== 'all' || isLimited) && stats.length === 1;
 
             if (isIndividual) {
                 const s = stats[0];
                 doc.setFontSize(14); doc.text(`Ficha Individual: ${s.firefighter.lastName}, ${s.firefighter.firstName}`, 14, curY); curY += 10;
                 (doc as any).autoTable({
                     startY: curY, head: [['Fecha', 'Taller', 'Rol', 'Estado']],
-                    body: filteredSessions.map(sess => {
+                    body: filteredIndividualSessions.map(sess => {
                         const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
                         return [
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
@@ -657,8 +675,8 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                         </Popover>
                     </div>
                     <div className="space-y-2"><Label>Jerarquía</Label><Select value={filterHierarchy} onValueChange={(v: any) => setFilterHierarchy(v)} disabled={context === 'aspirantes'}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="bomberos">Bomberos</SelectItem><SelectItem value="oficiales">Oficiales/Subof</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Solo Alumno</SelectItem><SelectItem value="staff">Solo Instructor</SelectItem></SelectContent></Select></div>
-                    <div className="space-y-2"><Label>Rango de Fechas</Label>
+                    <div className="space-y-2"><Label>Rol</Label><Select value={filterRole} onValueChange={(v: any) => setFilterRole(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem><SelectItem value="student">Alumno</SelectItem><SelectItem value="staff">Instructor/Ayud</SelectItem></SelectContent></Select></div>
+                    <div className="space-y-2"><Label>Rango Fechas</Label>
                         <Popover><PopoverTrigger asChild><Button variant="outline" className={cn("w-full justify-start text-xs h-10", !filterDate && "text-muted-foreground")}><CalendarIcon className="mr-2 h-4 w-4" />{filterDate?.from ? format(filterDate.from, "P", {locale: es}) : "Historial Completo"}</Button></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar initialFocus mode="range" defaultMonth={filterDate?.from} selected={filterDate} onSelect={setFilterDate} locale={es} numberOfMonths={2}/></PopoverContent></Popover>
                     </div>
                     <div className="space-y-2"><Label>Vista</Label><Select value={viewMode} onValueChange={(v: any) => setViewMode(v)}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="totals">Resumen</SelectItem><SelectItem value="by-class">Detalle Sesiones</SelectItem></SelectContent></Select></div>
@@ -687,19 +705,28 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             </>
                         )}
                     </TableRow></TableHeader><TableBody>
-                        {viewMode === 'by-class' ? filteredSessions.map(s => {
-                            const targetId = filterFirefighter !== 'all' ? filterFirefighter : (isLimited ? stats.find(st => st.firefighter.legajo === user?.id)?.firefighter.id : null);
+                        {viewMode === 'by-class' ? filteredIndividualSessions.map(s => {
+                            const targetId = (filterFirefighter !== 'all') ? filterFirefighter : (isLimited ? stats[0]?.firefighter.id : null);
                             const isStaff = targetId ? (s.instructorIds?.includes(targetId) || s.assistantIds?.includes(targetId)) : false;
                             const status = (targetId && !isStaff) ? (s.attendance?.[targetId] || 'present') as AttendanceStatus : 'present';
                             return (
                                 <TableRow key={s.id}>
                                     <TableCell className="text-[10px] whitespace-nowrap">{format(parseISO(s.date), 'dd/MM/yy')}</TableCell>
-                                    <TableCell className="text-xs font-medium truncate max-w-[200px]">{s.title}</TableCell>
+                                    <TableCell className="text-xs font-medium truncate max-w-[250px]">{s.title}</TableCell>
                                     <TableCell className="text-[10px] uppercase font-bold text-muted-foreground">{isStaff ? 'Instructor' : 'Alumno'}</TableCell>
                                     <TableCell className="text-right"><Badge className={cn("text-[9px] h-5", getStatusBadgeClass(status))}>{getStatusLabel(status)}</Badge></TableCell>
                                 </TableRow>
                             );
-                        }) : stats.map(s => (<TableRow key={s.firefighter.id}><TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell><TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell><TableCell className="text-center text-xs">{s.present}</TableCell><TableCell className="text-center text-xs">{s.absent}</TableCell><TableCell className="text-center text-xs">{s.tardy}</TableCell><TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell></TableRow>))}
+                        }) : stats.map(s => (
+                            <TableRow key={s.firefighter.id}>
+                                <TableCell className="text-[10px] font-mono">{s.firefighter.legajo}</TableCell>
+                                <TableCell className="text-xs font-medium">{s.firefighter.lastName}, {s.firefighter.firstName}</TableCell>
+                                <TableCell className="text-center text-xs">{s.present}</TableCell>
+                                <TableCell className="text-center text-xs">{s.absent}</TableCell>
+                                <TableCell className="text-center text-xs">{s.tardy}</TableCell>
+                                <TableCell className="text-right"><Badge className={cn("text-[10px] font-bold min-w-[40px] justify-center h-5", getPercentageColor(s.percentage))}>{s.percentage.toFixed(0)}%</Badge></TableCell>
+                            </TableRow>
+                        ))}
                     </TableBody></Table></div></CardContent></Card>
             </div>
         </div>
@@ -772,6 +799,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
     const filtered = useMemo(() => {
         let res = allCourses.filter(c => {
             const f = allFirefighters.find(ff => ff.id === c.firefighterId);
+            // REGLA: Excluir inactivos
             if (!f || f.status === 'Inactive') return false;
 
             if (filterYear !== 'all' && parseISO(c.startDate).getFullYear().toString() !== filterYear) return false;
@@ -830,7 +858,7 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
-            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Apellido y Nombre</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
+            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Nombre y Apellido</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
         </div>
     );
 }
