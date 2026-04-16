@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -116,9 +115,9 @@ const getSessionGroup = (session: Session) => {
 type AttendanceStats = {
     firefighter: Firefighter;
     total: number;
-    present: number; // Suma de Presente + Recupero
-    absent: number;  // Suma de Ausente + Justificado
-    tardy: number;   // Tarde (vale 0.5)
+    present: number; 
+    absent: number;  
+    tardy: number;   
     percentage: number;
 };
 
@@ -208,7 +207,6 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
-                // EXCLUSIÓN CRÍTICA: Solo personal activo
                 if (!f || f.status === 'Inactive') return;
 
                 if (isLimited && user && f.legajo !== user.id) return;
@@ -224,9 +222,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 }
 
                 const isStaff = instructorIds.has(fid) || assistantIds.has(fid);
-                const isStudent = attendeeIds.has(fid);
-
-                if (filterRole === 'student' && !isStudent) return;
+                if (filterRole === 'student' && isStaff) return;
                 if (filterRole === 'staff' && !isStaff) return;
 
                 if (!countedForGroup) {
@@ -326,12 +322,13 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 (doc as any).autoTable({
                     startY: curY, head: [['Fecha', 'Clase', 'Rol', 'Estado']],
                     body: filteredIndividualSessions.map(sess => {
-                        const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
+                        const targetId = s.firefighter.id;
+                        const isStaff = sess.instructorIds?.includes(targetId) || sess.assistantIds?.includes(targetId);
                         return [
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
                             sess.title, 
                             isStaff ? 'Instructor' : 'Alumno',
-                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')
+                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[targetId] || 'present')
                         ];
                     }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
@@ -627,12 +624,13 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 (doc as any).autoTable({
                     startY: curY, head: [['Fecha', 'Taller', 'Rol', 'Estado']],
                     body: filteredIndividualSessions.map(sess => {
-                        const isStaff = sess.instructorIds?.includes(s.firefighter.id) || sess.assistantIds?.includes(s.firefighter.id);
+                        const targetId = s.firefighter.id;
+                        const isStaff = sess.instructorIds?.includes(targetId) || sess.assistantIds?.includes(targetId);
                         return [
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
                             sess.title, 
                             isStaff ? 'Instructor' : 'Alumno',
-                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[s.firefighter.id] || 'present')
+                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[targetId] || 'present')
                         ];
                     }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
@@ -861,3 +859,4 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
         </div>
     );
 }
+

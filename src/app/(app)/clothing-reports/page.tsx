@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -13,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, ChevronsUpDown, Download, Loader2, Filter, Shirt, Shield, Tag } from "lucide-react";
+import { Check, ChevronsUpDown, Download, Loader2, Filter, Shirt, Shield, Tag, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
@@ -25,6 +24,7 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { format } from 'date-fns';
 import { APP_CONFIG } from "@/lib/config";
+import { CLOTHING_CATEGORIES } from "@/app/lib/constants/clothing-categories";
 
 const firehouses = ['Cuartel 1', 'Cuartel 2', 'Cuartel 3'];
 const clothingStates: ClothingItem['state'][] = ['Nuevo', 'Bueno', 'Regular', 'Malo', 'Baja'];
@@ -51,6 +51,58 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
     );
 };
 
+const MultiSelectFilter = ({ 
+    title, 
+    options, 
+    selected, 
+    onSelectedChange, 
+    searchPlaceholder 
+}: { 
+    title: string; 
+    options: { value: string; label: string }[]; 
+    selected: string[]; 
+    onSelectedChange: (selected: string[]) => void; 
+    searchPlaceholder?: string; 
+}) => {
+    const [open, setOpen] = useState(false);
+    const handleSelect = (value: string) => {
+        const isSelected = selected.includes(value);
+        onSelectedChange(isSelected ? selected.filter(s => s !== value) : [...selected, value]);
+    };
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between h-auto min-h-10 text-xs text-left">
+                    <div className="flex gap-1 flex-wrap">
+                         {selected.length > 0 ? selected.map(v => (
+                             <Badge variant="secondary" key={v} className="text-[10px] py-0 px-1">
+                                 {options.find(o => o.value === v)?.label || v}
+                             </Badge>
+                         )) : `Filtrar ${title.toLowerCase()}...`}
+                    </div>
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0" align="start">
+                <Command>
+                    <CommandInput placeholder={searchPlaceholder || `Buscar...`} />
+                    <CommandList>
+                        <CommandEmpty>Sin resultados.</CommandEmpty>
+                        <CommandGroup>
+                            {options.map((opt) => (
+                                <CommandItem key={opt.value} value={opt.label} onSelect={() => handleSelect(opt.value)}>
+                                    <Check className={cn("mr-2 h-4 w-4", selected.includes(opt.value) ? "opacity-100" : "opacity-0")} />
+                                    {opt.label}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
 export default function ClothingReportsPage() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
@@ -61,7 +113,9 @@ export default function ClothingReportsPage() {
     const [allFirefighters, setAllFirefighters] = useState<Firefighter[]>([]);
 
     const [filterFirefighter, setFilterFirefighter] = useState('all');
-    const [filterType, setFilterType] = useState('all');
+    const [filterCategories, setFilterCategories] = useState<string[]>([]);
+    const [filterSubCategories, setFilterSubCategories] = useState<string[]>([]);
+    const [filterItemTypes, setFilterItemTypes] = useState<string[]>([]);
     const [filterCuartel, setFilterCuartel] = useState('all');
     const [filterState, setFilterState] = useState('all');
     const [openCombobox, setOpenCombobox] = useState(false);
@@ -80,6 +134,7 @@ export default function ClothingReportsPage() {
                     getFirefighters()
                 ]);
                 setAllItems(itemsData);
+                // EXCLUSIÓN CRÍTICA: Solo personal activo
                 setAllFirefighters(firefightersData.filter(f => f.status !== 'Inactive'));
 
                 if (isBomberoRole && user) {
@@ -100,14 +155,26 @@ export default function ClothingReportsPage() {
         });
     }, [toast, user, isBomberoRole]);
 
-    const clothingTypes = useMemo(() => {
-        const types = new Set(allItems.map(i => i.type));
-        return Array.from(types).sort();
-    }, [allItems]);
+    const subCategoryOptions = useMemo(() => {
+        if (filterCategories.length === 0) return [];
+        return CLOTHING_CATEGORIES
+            .filter(c => filterCategories.includes(c.id))
+            .flatMap(c => c.subCategories.map(s => ({ value: s.id, label: s.label })));
+    }, [filterCategories]);
+
+    const itemTypeOptions = useMemo(() => {
+        if (filterSubCategories.length === 0) return [];
+        return CLOTHING_CATEGORIES
+            .flatMap(c => c.subCategories)
+            .filter(s => filterSubCategories.includes(s.id))
+            .flatMap(s => s.items.map(i => ({ value: i.id, label: i.label })));
+    }, [filterSubCategories]);
 
     const filteredItems = useMemo(() => {
         return allItems.filter(item => {
-            if (filterType !== 'all' && item.type !== filterType) return false;
+            if (filterCategories.length > 0 && !filterCategories.includes(item.categoryId)) return false;
+            if (filterSubCategories.length > 0 && !filterSubCategories.includes(item.subCategoryId)) return false;
+            if (filterItemTypes.length > 0 && !filterItemTypes.includes(item.itemTypeId)) return false;
             if (filterState !== 'all' && item.state !== filterState) return false;
             if (filterFirefighter !== 'all' && item.firefighterId !== filterFirefighter) return false;
             if (filterCuartel !== 'all') {
@@ -120,7 +187,7 @@ export default function ClothingReportsPage() {
             }
             return true;
         });
-    }, [allItems, allFirefighters, filterType, filterState, filterFirefighter, filterCuartel]);
+    }, [allItems, allFirefighters, filterCategories, filterSubCategories, filterItemTypes, filterState, filterFirefighter, filterCuartel]);
 
     const summaryStats = useMemo(() => {
         const counts = filteredItems.reduce((acc, item) => {
@@ -166,9 +233,10 @@ export default function ClothingReportsPage() {
     return (
         <div className="space-y-8">
             <PageHeader title={isBomberoRole ? "Mi Ropería" : "Informes de Ropería"} description="Análisis de stock y asignaciones de equipo personal." />
+            
             <Card className="shadow-md">
                 <CardHeader className="bg-muted/30 border-b"><CardTitle className="text-lg flex items-center gap-2"><Filter className="h-5 w-5 text-primary" /> Filtros Operativos</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-6">
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pt-6">
                     <div className="space-y-2">
                         <Label className="text-xs font-bold">Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
@@ -196,11 +264,14 @@ export default function ClothingReportsPage() {
                             </PopoverContent>
                         </Popover>
                     </div>
-                    <div className="space-y-2"><Label className="text-xs font-bold">Tipo de Prenda</Label><Select value={filterType} onValueChange={setFilterType}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Todos"/></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{clothingTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent></Select></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Categoría Principal</Label><MultiSelectFilter title="Categorías" options={CLOTHING_CATEGORIES.map(c => ({ value: c.id, label: c.label }))} selected={filterCategories} onSelectedChange={(v) => { setFilterCategories(v); setFilterSubCategories([]); setFilterItemTypes([]); }} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Subcategoría</Label><MultiSelectFilter title="Subcategorías" options={subCategoryOptions} selected={filterSubCategories} onSelectedChange={(v) => { setFilterSubCategories(v); setFilterItemTypes([]); }} /></div>
+                    <div className="space-y-2"><Label className="text-xs font-bold">Tipo de Prenda</Label><MultiSelectFilter title="Tipos" options={itemTypeOptions} selected={filterItemTypes} onSelectedChange={setFilterItemTypes} /></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Ubicación</Label><Select value={filterCuartel} onValueChange={setFilterCuartel}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{firehouses.map(fh => <SelectItem key={fh} value={fh}>{fh}</SelectItem>)}<SelectItem value="En Depósito">En Depósito</SelectItem></SelectContent></Select></div>
                     <div className="space-y-2"><Label className="text-xs font-bold">Estado</Label><Select value={filterState} onValueChange={setFilterState}><SelectTrigger className="h-10 text-xs"><SelectValue placeholder="Cualquiera"/></SelectTrigger><SelectContent><SelectItem value="all">Cualquiera</SelectItem>{clothingStates.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
                 </CardContent>
             </Card>
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <Card className="lg:col-span-1 shadow-md overflow-hidden h-fit">
                     <CardHeader className="bg-muted/20 border-b">
@@ -266,3 +337,4 @@ export default function ClothingReportsPage() {
         </div>
     );
 }
+
