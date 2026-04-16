@@ -24,6 +24,12 @@ Este documento contiene la jerarquía completa de clasificación utilizada para 
     *   01.4.1 Camas / Marcos
     *   01.4.2 Colchones
     *   01.4.3 Almohadas
+*   **01.5 Ropa de Cama y Blancos**
+    *   01.5.1 Juegos de Sábanas
+    *   01.5.2 Frazadas / Mantas
+    *   01.5.3 Cubrecamas / Edredones
+    *   01.5.4 Fundas de almohada
+    *   01.5.5 Toallas y Toallones
 
 ---
 

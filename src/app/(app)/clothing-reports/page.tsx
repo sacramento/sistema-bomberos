@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -134,7 +135,6 @@ export default function ClothingReportsPage() {
                     getFirefighters()
                 ]);
                 setAllItems(itemsData);
-                // EXCLUSIÓN CRÍTICA: Solo personal activo
                 setAllFirefighters(firefightersData.filter(f => f.status !== 'Inactive'));
 
                 if (isBomberoRole && user) {
@@ -337,4 +337,3 @@ export default function ClothingReportsPage() {
         </div>
     );
 }
-

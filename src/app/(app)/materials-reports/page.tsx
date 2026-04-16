@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from "@/components/page-header";
@@ -402,7 +403,7 @@ export default function MaterialsReportPage() {
             <PageHeader title="Informes de Materiales" description="Gestione y audite el equipamiento técnico de la flota y depósitos."/>
             
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <Card className="lg:col-span-3">
+                <Card className="lg:col-span-3 shadow-sm">
                     <CardHeader className="pb-3"><CardTitle className="text-lg font-headline">Búsqueda Rápida</CardTitle></CardHeader>
                     <CardContent className="flex gap-4">
                         <div className="relative flex-grow">
@@ -414,7 +415,7 @@ export default function MaterialsReportPage() {
                         </QrScannerDialog>
                     </CardContent>
                 </Card>
-                <Card className="border-primary/50 bg-primary/5">
+                <Card className="border-primary/50 bg-primary/5 shadow-sm">
                     <CardHeader className="pb-2"><CardTitle className="text-xs font-bold uppercase text-muted-foreground">Total Seleccionado</CardTitle></CardHeader>
                     <CardContent>
                         <div className="text-3xl font-bold text-primary">{filteredMaterials.length}</div>
@@ -601,4 +602,3 @@ export default function MaterialsReportPage() {
         </div>
     );
 }
-

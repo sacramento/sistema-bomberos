@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -56,12 +57,12 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 const getStatusLabel = (status: AttendanceStatus) => {
     switch(status) {
-        case 'present': return "Presente";
-        case 'recupero': return "Recuperó";
-        case 'absent': return "Ausente";
-        case 'tardy': return "Tarde";
-        case 'excused': return "Justificado";
-        default: return "N/A";
+        case 'present': return "P";
+        case 'recupero': return "P";
+        case 'absent': return "A";
+        case 'tardy': return "T";
+        case 'excused': return "A";
+        default: return "-";
     }
 }
 
@@ -309,9 +310,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
             
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resLine = context === 'aspirantes' 
-                ? `Oferta Académica: ${sessionsByGroup.Aspirantes} clases` 
-                : `Cant. Clases - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resLine = `Cant. Clases - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resLine, 14, curY); curY += 10;
 
             const isIndividual = (filterFirefighter !== 'all' || isLimited) && stats.length === 1;
@@ -328,7 +327,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
                             sess.title, 
                             isStaff ? 'Instructor' : 'Alumno',
-                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[targetId] || 'present')
+                            isStaff ? 'P' : getStatusLabel(sess.attendance?.[targetId] || 'present')
                         ];
                     }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
@@ -611,9 +610,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             doc.text(`Período: ${rangeText}`, 14, curY); curY += 6;
 
             doc.setFont('helvetica', 'bold'); doc.setTextColor(40);
-            const resLine = context === 'aspirantes' 
-                ? `Oferta Académica: ${sessionsByGroup.Aspirantes} talleres` 
-                : `Cant. Talleres - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
+            const resLine = `Cant. Talleres - C1: ${sessionsByGroup.C1} | C2: ${sessionsByGroup.C2} | C3: ${sessionsByGroup.C3} | General: ${sessionsByGroup.General} | Subof: ${sessionsByGroup.Suboficiales}`;
             doc.text(resLine, 14, curY); curY += 10;
 
             const isIndividual = (filterFirefighter !== 'all' || isLimited) && stats.length === 1;
@@ -630,7 +627,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                             format(parseISO(sess.date), 'dd/MM/yyyy'), 
                             sess.title, 
                             isStaff ? 'Instructor' : 'Alumno',
-                            isStaff ? 'Presente' : getStatusLabel(sess.attendance?.[targetId] || 'present')
+                            isStaff ? 'P' : getStatusLabel(sess.attendance?.[targetId] || 'present')
                         ];
                     }),
                     theme: 'striped', headStyles: { fillColor: '#333' }
@@ -859,4 +856,3 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
         </div>
     );
 }
-

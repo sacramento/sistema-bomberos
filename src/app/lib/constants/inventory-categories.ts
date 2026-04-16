@@ -58,6 +58,17 @@ export const INVENTORY_CATEGORIES: InventoryCategory[] = [
                     { id: "01.4.2", label: "01.4.2 Colchones" },
                     { id: "01.4.3", label: "01.4.3 Almohadas" }
                 ]
+            },
+            {
+                id: "01.5",
+                label: "01.5 Ropa de Cama y Blancos",
+                items: [
+                    { id: "01.5.1", label: "01.5.1 Juegos de Sábanas" },
+                    { id: "01.5.2", label: "01.5.2 Frazadas / Mantas" },
+                    { id: "01.5.3", label: "01.5.3 Cubrecamas / Edredones" },
+                    { id: "01.5.4", label: "01.5.4 Fundas de almohada" },
+                    { id: "01.5.5", label: "01.5.5 Toallas y Toallones" }
+                ]
             }
         ]
     },
