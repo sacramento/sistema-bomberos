@@ -57,11 +57,11 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 const getStatusLabel = (status: AttendanceStatus) => {
     switch(status) {
-        case 'present': return "P";
+        case 'present':
         case 'recupero': return "P";
-        case 'absent': return "A";
-        case 'tardy': return "T";
+        case 'absent':
         case 'excused': return "A";
+        case 'tardy': return "T";
         default: return "-";
     }
 }
@@ -204,7 +204,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
             const attendeeIds = new Set(s.attendeeIds || []);
             const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
             
-            let countedForGroup = false;
+            let groupCountedForThisSession = false;
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
@@ -226,7 +226,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                 if (filterRole === 'student' && isStaff) return;
                 if (filterRole === 'staff' && !isStaff) return;
 
-                if (!countedForGroup) {
+                if (!groupCountedForThisSession) {
                     const group = getSessionGroup(s);
                     if (group === 'Cuartel 1') groupCounts.C1++;
                     else if (group === 'Cuartel 2') groupCounts.C2++;
@@ -234,7 +234,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     else if (group === 'General') groupCounts.General++;
                     else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                     else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                    countedForGroup = true;
+                    groupCountedForThisSession = true;
                 }
 
                 if (filterFirefighter !== 'all' || isLimited) {
@@ -392,7 +392,7 @@ export function ClassesReportTab({ context = 'asistencia' }: { context?: 'asiste
                         ) : (
                             <>
                                 <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('legajo')}>Legajo {getSortIcon('legajo')}</TableHead>
-                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Nombre y Apellido {getSortIcon('name')}</TableHead>
+                                <TableHead className="cursor-pointer text-[11px]" onClick={() => toggleSort('name')}>Apellido y Nombre {getSortIcon('name')}</TableHead>
                                 <TableHead className="text-center text-[11px]">P</TableHead>
                                 <TableHead className="text-center text-[11px]">A</TableHead>
                                 <TableHead className="text-center text-[11px]">T</TableHead>
@@ -504,7 +504,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
             const attendeeIds = new Set(s.attendeeIds || []);
             const allInvolvedIds = new Set([...instructorIds, ...assistantIds, ...attendeeIds]);
             
-            let countedForGroup = false;
+            let groupCountedForThisSession = false;
 
             allInvolvedIds.forEach(fid => {
                 const f = allFirefighters.find(ff => ff.id === fid);
@@ -526,7 +526,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                 if (filterRole === 'student' && isStaff) return;
                 if (filterRole === 'staff' && !isStaff) return;
 
-                if (!countedForGroup) {
+                if (!groupCountedForThisSession) {
                     const group = getSessionGroup(s);
                     if (group === 'Cuartel 1') groupCounts.C1++;
                     else if (group === 'Cuartel 2') groupCounts.C2++;
@@ -534,7 +534,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     else if (group === 'General') groupCounts.General++;
                     else if (group === 'Suboficiales') groupCounts.Suboficiales++;
                     else if (group === 'Aspirantes') groupCounts.Aspirantes++;
-                    countedForGroup = true;
+                    groupCountedForThisSession = true;
                 }
 
                 if (filterFirefighter !== 'all' || isLimited) {
@@ -665,7 +665,7 @@ export function WorkshopsReportTab({ context = 'asistencia' }: { context?: 'asis
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
@@ -845,14 +845,14 @@ export function CoursesReportTab({ context = 'asistencia' }: { context?: 'asiste
                     <div className="space-y-2"><Label>Cuartel</Label><Select value={filterFirehouse} onValueChange={setFilterFirehouse} disabled={isLimited}><SelectTrigger className="h-10 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos</SelectItem>{firehouses.map(f => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent></Select></div>
                     <div className="space-y-2"><Label>Integrante</Label>
                         <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
-                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" /></Button></PopoverTrigger>
+                            <PopoverTrigger asChild disabled={isLimited}><Button variant="outline" className="w-full justify-between h-10 text-xs truncate">{filterFirefighter !== 'all' ? allFirefighters.find(f => f.id === filterFirefighter)?.lastName : "Todos"}<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
                             <PopoverContent className="w-[300px] p-0" align="start"><Command><CommandInput placeholder="Buscar..." /><CommandList><CommandEmpty>Sin resultados.</CommandEmpty><CommandGroup><CommandItem onSelect={() => {setFilterFirefighter('all'); setOpenCombobox(false);}}>Todos</CommandItem>{firefighterList.map(f => <CommandItem key={f.id} value={`${f.legajo} ${f.lastName} ${f.firstName}`} onSelect={() => {setFilterFirefighter(f.id); setOpenCombobox(false);}}>{f.legajo} - {f.lastName}, {f.firstName}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent>
                         </Popover>
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-4 flex justify-end"><Button onClick={generatePdf} disabled={generatingPdf || filtered.length === 0}>{generatingPdf ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Download className="mr-2 h-4 w-4"/>} Exportar PDF</Button></CardFooter>
             </Card>
-            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Nombre y Apellido</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yyyy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
+            <Card><CardContent className="p-0"><div className="h-[450px] overflow-auto"><Table><TableHeader><TableRow><TableHead className="text-[11px]">Apellido y Nombre</TableHead><TableHead className="text-[11px]">Título del Curso</TableHead><TableHead className="text-[11px]">Lugar</TableHead><TableHead className="text-right text-[11px]">Fecha</TableHead></TableRow></TableHeader><TableBody>{filtered.map(c => (<TableRow key={c.id}><TableCell className="text-xs font-medium">{c.firefighterName}</TableCell><TableCell className="text-xs">{c.title}</TableCell><TableCell className="text-xs">{c.location}</TableCell><TableCell className="text-right text-[10px] font-mono whitespace-nowrap">{format(parseISO(c.startDate), 'dd/MM/yyyy')}</TableCell></TableRow>))}</TableBody></Table></div></CardContent></Card>
         </div>
     );
 }

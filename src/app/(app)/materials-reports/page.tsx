@@ -3,7 +3,7 @@
 
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
-import { Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText, MoreHorizontal } from "lucide-react";
+import { Download, Loader2, Package, Shield, HeartPulse, Search, ChevronsUpDown, Check, Ruler, QrCode, Trash2, Edit, Layers, Settings2, MapPin, Activity, Droplets, ArrowUpDown, ArrowUp, ArrowDown, Eye, List, FileText, LayoutList, MoreHorizontal } from "lucide-react";
 import { useEffect, useState, useMemo } from "react";
 import { Material, Vehicle, Firefighter } from "@/lib/types";
 import { getMaterials, deleteMaterial } from "@/services/materials.service";
